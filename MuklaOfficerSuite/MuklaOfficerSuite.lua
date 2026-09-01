@@ -363,11 +363,11 @@ MOS:SetScript("OnEvent", function()
         local scanMode = MOS.pendingScan
         if MOS.pendingScan and SaveGuildRoster() then
             RefreshDashboard()
-            if scanMode ~= "quiet" then
-                Print("Roster saved. Members: " .. CountSavedMembers())
-            end
             if scanMode == "reload" then
+                Print("Roster scanned. Reloading UI to save it to disk...")
                 ReloadUI()
+            elseif scanMode ~= "quiet" then
+                Print("Roster scanned. Members: " .. CountSavedMembers())
             end
         end
     end
