@@ -201,7 +201,7 @@ local function RefreshDashboard()
     if not key then
         statusText:SetText("No guild found. Log in with a character who belongs to a guild.")
     elseif not data then
-        statusText:SetText(guildName .. " - no saved roster. Click Scan roster.")
+        statusText:SetText(guildName .. " - no saved roster. Click Scan or Scan & Reload.")
     else
         statusText:SetText(guildName .. " - saved members: " .. table.getn(data.members) .. " | last scan: " .. date("%Y-%m-%d %H:%M", data.updatedAt))
     end
@@ -234,29 +234,40 @@ rosterScrollFrame:SetScript("OnVerticalScroll", function()
     FauxScrollFrame_OnVerticalScroll(rowHeight, RefreshDashboard)
 end)
 
-local function RequestRosterScan(quiet)
+local function RequestRosterScan(scanMode)
     EnsureDatabase()
     if not IsInGuild() then
         Print("This character is not in a guild.")
         return
     end
-    MOS.pendingScan = quiet and "quiet" or "manual"
+    MOS.pendingScan = scanMode or "manual"
     GuildRoster()
-    if not quiet then
+    if MOS.pendingScan == "reload" then
+        Print("Requesting guild roster. The UI will reload after the scan completes...")
+    else
         Print("Requesting guild roster...")
     end
 end
 
 local scanButton = CreateFrame("Button", nil, dashboard, "UIPanelButtonTemplate")
-scanButton:SetWidth(125)
+scanButton:SetWidth(85)
 scanButton:SetHeight(24)
 scanButton:SetPoint("BOTTOMLEFT", dashboard, "BOTTOMLEFT", 28, 24)
-scanButton:SetText("Scan roster")
-scanButton:SetScript("OnClick", function() RequestRosterScan(false) end)
+scanButton:SetText("Scan")
+scanButton:SetScript("OnClick", function() RequestRosterScan("manual") end)
+
+local scanReloadButton = CreateFrame("Button", nil, dashboard, "UIPanelButtonTemplate")
+scanReloadButton:SetWidth(125)
+scanReloadButton:SetHeight(24)
+scanReloadButton:SetPoint("LEFT", scanButton, "RIGHT", 8, 0)
+scanReloadButton:SetText("Scan & Reload")
+scanReloadButton:SetScript("OnClick", function() RequestRosterScan("reload") end)
 
 local infoText = dashboard:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-infoText:SetPoint("LEFT", scanButton, "RIGHT", 14, 0)
-infoText:SetText("Run /reload to write SavedVariables to disk.")
+infoText:SetPoint("LEFT", scanReloadButton, "RIGHT", 12, 0)
+infoText:SetWidth(315)
+infoText:SetJustifyH("LEFT")
+infoText:SetText("Use Scan & Reload to save the roster to disk.")
 
 dashboard:SetScript("OnShow", RefreshDashboard)
 
@@ -326,7 +337,7 @@ SlashCmdList["MUKLAOFFICERSUITE"] = function(message)
     if command == "scan" then
         if not dashboard:IsVisible() then dashboard:Show() end
         RefreshDashboard()
-        Print("Click the 'Scan roster' button on the dashboard.")
+        Print("Click 'Scan' or 'Scan & Reload' on the dashboard.")
     elseif command == "show" or command == "open" or command == "" then
         ToggleDashboard()
     elseif command == "hide" then
@@ -354,6 +365,9 @@ MOS:SetScript("OnEvent", function()
             RefreshDashboard()
             if scanMode ~= "quiet" then
                 Print("Roster saved. Members: " .. CountSavedMembers())
+            end
+            if scanMode == "reload" then
+                ReloadUI()
             end
         end
     end

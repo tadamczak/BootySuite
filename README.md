@@ -6,7 +6,8 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - `/mos`, `/mos status`, `/mos minimap`, and `/mos hide` commands,
 - a main window displaying the last saved guild roster,
 - aligned roster columns with scrolling for the complete member list,
-- manual storage of all guild members in `MuklaOfficerSuiteDB` after clicking `Scan roster`.
+- an in-memory roster scan with `Scan`,
+- a `Scan & Reload` action that scans the roster and reloads the UI to write SavedVariables to disk.
 
 ## Installation
 
@@ -14,7 +15,7 @@ Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`,
 
 `Interface/AddOns/MuklaOfficerSuite/MuklaOfficerSuite.toc`
 
-After logging in, open the dashboard with `/mos` and click `Scan roster`. The addon does not save the roster automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
+After logging in, open the dashboard with `/mos`. Click `Scan` to refresh the roster in memory and display it without reloading the UI. Click `Scan & Reload` when the roster should also be written to disk. The addon does not scan automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
 
 `WTF/Account/<ACCOUNT>/SavedVariables/MuklaOfficerSuite.lua`
 
