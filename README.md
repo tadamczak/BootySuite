@@ -38,3 +38,13 @@ MuklaOfficerSuite/          # IntelliJ project root
 Run `Deploy-Addon.ps1` to copy only the required addon files to:
 
 `C:\Gry\OctoWoWPvP\Interface\AddOns\MuklaOfficerSuite`
+
+## CSV export
+
+Run `Export-Roster.ps1` after using `Scan & Reload` in game. The script automatically locates the newest `MuklaOfficerSuite.lua` under the game's `WTF/Account` directory and writes a UTF-8 CSV file to `exports/`.
+
+An explicit input or output path can be supplied when needed:
+
+```powershell
+.\Export-Roster.ps1 -InputPath "C:\path\to\MuklaOfficerSuite.lua" -OutputPath "C:\path\to\roster.csv"
+```
