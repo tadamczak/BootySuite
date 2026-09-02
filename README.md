@@ -13,6 +13,7 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - manually refreshed shared guild data for roster and statistics views,
 - guild class and rank statistics with a level 60 filter,
 - Raid Management snapshots enriched with guild roster data,
+- attendance snapshots exported with `Export-Attendance.ps1`,
 - an `Export Roster` page with `Scan & Save` and last-scan information,
 
 The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.

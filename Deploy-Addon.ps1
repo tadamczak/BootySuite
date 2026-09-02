@@ -10,7 +10,8 @@ $addonFiles = @(
     "MuklaOfficerSuite.lua"
 )
 $textureFiles = @(
-    "DashboardBackground.tga"
+    "DashboardBackground.tga",
+    "AboutArtwork.tga"
 )
 
 if (-not (Test-Path -LiteralPath $gameDirectory -PathType Container)) {

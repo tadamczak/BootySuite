@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.8.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.9.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -70,6 +70,19 @@ StaticPopupDialogs["MUKLA_OFFICER_SUITE_CSR_RELOAD"] = {
         if type(ReloadUI) == "function" then ReloadUI() elseif type(ConsoleExec) == "function" then ConsoleExec("reloadui") end
     end,
     OnCancel = function() Print("CSR remains in memory. Use /reload before closing the game to save it.") end,
+    timeout = 0,
+    whileDead = 1,
+    hideOnEscape = 1,
+}
+
+StaticPopupDialogs["MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD"] = {
+    text = "Attendance snapshot is ready. Reload the UI now to write it to disk?",
+    button1 = "Reload now",
+    button2 = "Later",
+    OnAccept = function()
+        if type(ReloadUI) == "function" then ReloadUI() elseif type(ConsoleExec) == "function" then ConsoleExec("reloadui") end
+    end,
+    OnCancel = function() Print("Attendance remains in memory. Use /reload before running Export-Attendance.ps1.") end,
     timeout = 0,
     whileDead = 1,
     hideOnEscape = 1,
@@ -305,7 +318,7 @@ background:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 5, -5)
 background:SetPoint("BOTTOMRIGHT", sidebar, "BOTTOMRIGHT", -5, 5)
 background:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\DashboardBackground")
 background:SetTexCoord(0.22, 0.58, 0, 1)
-background:SetAlpha(0.58)
+background:SetAlpha(0.72)
 
 local backgroundShade = sidebar:CreateTexture(nil, "BORDER")
 backgroundShade:SetAllPoints(sidebar)
@@ -380,7 +393,7 @@ rosterRefreshButton:SetText("Refresh Data")
 rosterRefreshButton:Hide()
 
 local rosterSortHint = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-rosterSortHint:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -4, -75)
+rosterSortHint:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -4, -101)
 rosterSortHint:SetText("Click a column header to sort")
 rosterSortHint:Hide()
 
@@ -411,11 +424,16 @@ filtersLabel:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -80)
 filtersLabel:SetText("Filters")
 
 local function CreateFilterToggle(text, x)
-    local button = CreateFrame("Button", nil, rosterPage, "UIPanelButtonTemplate")
+    local button = CreateFrame("Button", nil, rosterPage)
     button:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", x, -74)
-    button:SetWidth(92)
-    button:SetHeight(22)
-    button:SetText(text)
+    button:SetWidth(84)
+    button:SetHeight(19)
+    button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+    button:SetBackdropColor(0.08, 0.07, 0.05, 0.95)
+    button:SetBackdropBorderColor(0.42, 0.35, 0.20, 1)
+    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    button.label:SetPoint("LEFT", button, "LEFT", 8, 0)
+    button.label:SetText(text)
     button.arrow = button:CreateTexture(nil, "OVERLAY")
     button.arrow:SetWidth(16)
     button.arrow:SetHeight(16)
@@ -650,30 +668,30 @@ exportTitle:SetPoint("TOPLEFT", exportPage, "TOPLEFT", 12, -10)
 exportTitle:SetText("Export Roster")
 
 local exportDescription = exportPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-exportDescription:SetPoint("TOP", exportPage, "TOP", 0, -72)
-exportDescription:SetWidth(545)
-exportDescription:SetJustifyH("CENTER")
-exportDescription:SetText("Scan the complete guild roster and save it to SavedVariables. After the UI reloads, run Export-Roster.ps1 to create the CSV file.")
+exportDescription:SetPoint("TOPLEFT", exportPage, "TOPLEFT", 12, -66)
+exportDescription:SetWidth(520)
+exportDescription:SetJustifyH("LEFT")
+exportDescription:SetText("Create a fresh guild roster snapshot.\nConfirm the UI reload to write it to disk, then run Export-Roster.ps1 to create the CSV file.")
 
 local lastScanLabel = exportPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-lastScanLabel:SetPoint("TOP", exportPage, "TOP", 0, -155)
+lastScanLabel:SetPoint("TOPLEFT", exportPage, "TOPLEFT", 12, -150)
 lastScanLabel:SetText("Last saved scan")
 
 local lastScanValue = exportPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-lastScanValue:SetPoint("TOP", lastScanLabel, "BOTTOM", 0, -12)
+lastScanValue:SetPoint("TOPLEFT", lastScanLabel, "BOTTOMLEFT", 0, -10)
 lastScanValue:SetWidth(545)
-lastScanValue:SetJustifyH("CENTER")
+lastScanValue:SetJustifyH("LEFT")
 
 local scanSaveButton = CreateFrame("Button", nil, exportPage, "UIPanelButtonTemplate")
 scanSaveButton:SetWidth(150)
 scanSaveButton:SetHeight(28)
-scanSaveButton:SetPoint("CENTER", exportPage, "CENTER", 0, -36)
+scanSaveButton:SetPoint("TOPLEFT", exportPage, "TOPLEFT", 12, -220)
 scanSaveButton:SetText("Scan & Save")
 
 local exportHint = exportPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-exportHint:SetPoint("TOP", scanSaveButton, "BOTTOM", 0, -12)
-exportHint:SetWidth(480)
-exportHint:SetJustifyH("CENTER")
+exportHint:SetPoint("LEFT", scanSaveButton, "RIGHT", 14, 0)
+exportHint:SetWidth(350)
+exportHint:SetJustifyH("LEFT")
 exportHint:SetText("A confirmation dialog will reload the UI and write the roster to disk.")
 
 local statisticsTitle = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -730,6 +748,20 @@ statisticsSummary:SetJustifyH("LEFT")
 statisticsSummary:SetJustifyV("TOP")
 statisticsSummary:Hide()
 
+local statisticsClassPanel = statisticsPage:CreateTexture(nil, "BACKGROUND")
+statisticsClassPanel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 12, -154)
+statisticsClassPanel:SetWidth(272)
+statisticsClassPanel:SetHeight(245)
+statisticsClassPanel:SetTexture(0.07, 0.065, 0.055, 0.82)
+statisticsClassPanel:Hide()
+
+local statisticsRankPanel = statisticsPage:CreateTexture(nil, "BACKGROUND")
+statisticsRankPanel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 300, -154)
+statisticsRankPanel:SetWidth(262)
+statisticsRankPanel:SetHeight(245)
+statisticsRankPanel:SetTexture(0.07, 0.065, 0.055, 0.82)
+statisticsRankPanel:Hide()
+
 local statisticsClasses = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 statisticsClasses:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 24, -165)
 statisticsClasses:SetWidth(260)
@@ -764,6 +796,13 @@ raidScanButton:SetHeight(32)
 raidScanButton:SetPoint("CENTER", raidPage, "CENTER", 0, 12)
 raidScanButton:SetText("Scan Raid")
 raidScanButton:Hide()
+
+local raidExportButton = CreateFrame("Button", nil, raidPage, "UIPanelButtonTemplate")
+raidExportButton:SetWidth(142)
+raidExportButton:SetHeight(24)
+raidExportButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -142, -42)
+raidExportButton:SetText("Export Attendance")
+raidExportButton:Hide()
 
 local raidStatus = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 raidStatus:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -48)
@@ -868,21 +907,30 @@ local aboutTitle = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLar
 aboutTitle:SetPoint("TOPLEFT", aboutPage, "TOPLEFT", 12, -10)
 aboutTitle:SetText("About")
 
+local aboutArtwork = aboutPage:CreateTexture(nil, "ARTWORK")
+aboutArtwork:SetPoint("TOPRIGHT", aboutPage, "TOPRIGHT", -4, -4)
+aboutArtwork:SetPoint("BOTTOMRIGHT", aboutPage, "BOTTOMRIGHT", -4, 4)
+aboutArtwork:SetWidth(365)
+aboutArtwork:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\AboutArtwork")
+aboutArtwork:SetTexCoord(0, 1, 0, 1)
+aboutArtwork:SetAlpha(0.88)
+
 local aboutName = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-aboutName:SetPoint("TOP", aboutPage, "TOP", 0, -95)
+aboutName:SetPoint("TOPLEFT", aboutPage, "TOPLEFT", 28, -105)
 aboutName:SetText("Mukla Officer Suite")
 
 local aboutVersion = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-aboutVersion:SetPoint("TOP", aboutName, "BOTTOM", 0, -12)
+aboutVersion:SetPoint("TOPLEFT", aboutName, "BOTTOMLEFT", 0, -12)
 aboutVersion:SetText("Version " .. VERSION)
 
 local aboutAuthor = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-aboutAuthor:SetPoint("TOP", aboutVersion, "BOTTOM", 0, -24)
+aboutAuthor:SetPoint("TOPLEFT", aboutVersion, "BOTTOMLEFT", 0, -24)
 aboutAuthor:SetText("Created by Bootybaker")
 
 local aboutDescription = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-aboutDescription:SetPoint("TOP", aboutAuthor, "BOTTOM", 0, -34)
-aboutDescription:SetWidth(450)
+aboutDescription:SetPoint("TOPLEFT", aboutAuthor, "BOTTOMLEFT", 0, -34)
+aboutDescription:SetWidth(220)
+aboutDescription:SetJustifyH("LEFT")
 aboutDescription:SetText("Guild management tools for World of Warcraft 1.12.1")
 
 local function GetCurrentGuildData()
@@ -911,9 +959,8 @@ end
 local function RefreshFilterPanel(panel, values, selected, filterType)
     if not panel.selectAll then
         panel.selectAll = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-        panel.selectAll:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10)
-        panel.selectAll:SetWidth(158)
-        panel.selectAll:SetHeight(20)
+        panel.selectAll:SetWidth(88)
+        panel.selectAll:SetHeight(17)
         panel.selectAll:SetText("Select all")
         panel.selectAll.filterType = filterType
         panel.selectAll:SetScript("OnClick", function()
@@ -926,7 +973,9 @@ local function RefreshFilterPanel(panel, values, selected, filterType)
         end)
     end
     panel.values = values
-    panel:SetHeight(40 + table.getn(values) * 20)
+    panel.selectAll:ClearAllPoints()
+    panel.selectAll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 9)
+    panel:SetHeight(38 + table.getn(values) * 20)
 
     local optionIndex
     for optionIndex = 1, table.getn(values) do
@@ -935,7 +984,7 @@ local function RefreshFilterPanel(panel, values, selected, filterType)
             checkbox = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
             checkbox:SetWidth(20)
             checkbox:SetHeight(20)
-            checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -31 - ((optionIndex - 1) * 20))
+            checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10 - ((optionIndex - 1) * 20))
             checkbox.label = checkbox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 2, 0)
             checkbox.label:SetWidth(132)
@@ -1089,8 +1138,8 @@ RefreshRosterPage = function(resetScroll)
     if not rosterReady then
         SetRosterDataVisible(false)
         rosterScanButton:Show()
-        rosterStatusText:SetText(guildName and "Guild data is loaded only when requested." or "No guild found.")
-        rosterLastScan:SetText(data and ("Last scan: " .. (data.scannedAtText or "Unknown")) or "No scan in this session")
+        rosterStatusText:SetText("")
+        rosterLastScan:SetText("")
         return
     end
     rosterScanButton:Hide()
@@ -1275,16 +1324,18 @@ RefreshStatisticsPage = function()
     end
     local total = table.getn(data.members)
     statisticsSummary:SetText(
-        "|cffffd200" .. (guildName or "Guild") .. "|r\n" ..
-        "Included members: " .. included .. (onlyLevel60 and " (level 60 only)" or (" of " .. total)) .. "\n" ..
-        "Last scan: " .. (data.scannedAtText or "Unknown")
+        "|cffffd200" .. (guildName or "Guild") .. "|r   |   Included members: " .. included ..
+        (onlyLevel60 and " (level 60 only)" or (" of " .. total))
     )
     statisticsClasses:SetText(SortedClassLines(classes))
     statisticsRanks:SetText(SortedRankLines(ranks))
     statisticsSummary:Show()
     statisticsClasses:Show()
     statisticsRanks:Show()
+    statisticsClassPanel:Show()
+    statisticsRankPanel:Show()
     statisticsOnlyLevel60:Show()
+    statisticsScanButton:Hide()
     statisticsLastScan:SetText("Last scan: " .. (data.scannedAtText or "Unknown"))
     statisticsLastScan:Show()
     statisticsRefreshButton:Show()
@@ -1299,6 +1350,7 @@ RefreshRaidPage = function()
         MOS.raidScanReady = false
         raidUnavailable:Show()
         raidScanButton:Hide()
+        raidExportButton:Hide()
         raidHeaders:Hide()
         raidGroupHeader:Hide(); raidClassHeader:Hide(); raidRankHeader:Hide()
         raidScrollFrame:Hide()
@@ -1314,6 +1366,7 @@ RefreshRaidPage = function()
         raidScanButton:SetHeight(32)
         raidScanButton:SetText("Scan Raid")
         raidScanButton:Show()
+        raidExportButton:Hide()
         raidHeaders:Hide()
         raidGroupHeader:Hide(); raidClassHeader:Hide(); raidRankHeader:Hide()
         raidScrollFrame:Hide()
@@ -1326,6 +1379,7 @@ RefreshRaidPage = function()
     raidScanButton:SetWidth(120)
     raidScanButton:SetHeight(24)
     raidScanButton:SetText("Scan again")
+    raidExportButton:Show()
     local data = MuklaOfficerSuiteDB.csr
     local members = data and data.raidMembers or {}
     raidStatus:SetText((data and data.scannedAtText or "Unknown") .. " | " .. table.getn(members) .. " raid members")
@@ -1468,6 +1522,8 @@ local function StartSharedGuildScan(origin)
         statisticsSummary:Hide()
         statisticsClasses:Hide()
         statisticsRanks:Hide()
+        statisticsClassPanel:Hide()
+        statisticsRankPanel:Hide()
         statisticsOnlyLevel60:Hide()
         statisticsLastScan:Hide()
         statisticsRefreshButton:Hide()
@@ -1552,6 +1608,17 @@ raidScanButton:SetScript("OnClick", function()
     raidScanButton:Hide()
     raidStatus:SetText("Scanning raid and guild data...")
     RequestRosterScan("raid")
+end)
+
+raidExportButton:SetScript("OnClick", function()
+    if (GetNumRaidMembers() or 0) < 1 then
+        RefreshRaidPage()
+        return
+    end
+    local count = SaveRaidRoster()
+    RefreshRaidPage()
+    Print("Attendance snapshot prepared. Raid members: " .. count)
+    StaticPopup_Show("MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD")
 end)
 
 statisticsScanButton:SetScript("OnClick", function() StartSharedGuildScan("statistics") end)

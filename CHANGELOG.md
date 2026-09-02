@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0
+
+- Added full-height About artwork and expanded the sidebar artwork to its full height.
+- Refined compact roster filter controls and moved Select all below filter options.
+- Removed pre-scan roster metadata and repositioned the sorting hint above the table.
+- Rebuilt Guild Statistics into balanced class and rank panels with clean metadata hierarchy.
+- Fixed the stale statistics scan button remaining above loaded results.
+- Added Export Attendance to Raid Management with reload confirmation and a CSV conversion script.
+- Improved Export Roster instructions and restored a clean left-aligned workflow.
+
 ## 0.8.0
 
 - Unified Roster Management and Guild Statistics around one manually refreshed guild snapshot.

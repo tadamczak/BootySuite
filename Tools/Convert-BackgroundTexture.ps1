@@ -7,7 +7,7 @@ param(
 Add-Type -AssemblyName System.Drawing
 
 $textureSize = 512
-$contentHeight = 320
+$contentHeight = 512
 $source = [System.Drawing.Image]::FromFile($SourcePath)
 $bitmap = New-Object System.Drawing.Bitmap $textureSize, $textureSize, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
