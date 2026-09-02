@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.1
+
+- Changed Guild Statistics details from floating overlays to toggleable inline expansions.
+- Aligned the Name, Rank, and optional Level columns in expanded statistics.
+- Made Raid Management filter dropdowns fit their longest option on one line.
+- Reduced and repositioned Raid Management action buttons.
+- Kept Raid Management column headers on one line.
+- Reserved table space for expanded roster actions so all records remain inside the scrollable area.
+
 ## 0.12.0
 
 - Added a shared progress bar for guild, roster export, raid, and quiet refresh scans.

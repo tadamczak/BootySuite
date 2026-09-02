@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.12.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.12.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -849,7 +849,14 @@ for i = 1, 10 do
     classRow.button = CreateFrame("Button", nil, statisticsPage)
     classRow.button:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 20, -194 - ((i - 1) * 24))
     classRow.button:SetWidth(248); classRow.button:SetHeight(22)
-    classRow.button:SetScript("OnClick", function() MOS.statisticsExpandedType = "class"; MOS.statisticsExpandedValue = this.value; RefreshStatisticsDetails() end)
+    classRow.button:SetScript("OnClick", function()
+        if MOS.statisticsExpandedType == "class" and MOS.statisticsExpandedValue == this.value then
+            MOS.statisticsExpandedType = nil; MOS.statisticsExpandedValue = nil
+        else
+            MOS.statisticsExpandedType = "class"; MOS.statisticsExpandedValue = this.value
+        end
+        RefreshStatisticsPage()
+    end)
     classRow.icon:Hide(); classRow.name:Hide(); classRow.count:Hide(); classRow.button:Hide()
     statisticsClassRows[i] = classRow
 
@@ -865,7 +872,14 @@ for i = 1, 10 do
     rankRow.button = CreateFrame("Button", nil, statisticsPage)
     rankRow.button:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 312, -194 - ((i - 1) * 24))
     rankRow.button:SetWidth(230); rankRow.button:SetHeight(22)
-    rankRow.button:SetScript("OnClick", function() MOS.statisticsExpandedType = "rank"; MOS.statisticsExpandedValue = this.value; RefreshStatisticsDetails() end)
+    rankRow.button:SetScript("OnClick", function()
+        if MOS.statisticsExpandedType == "rank" and MOS.statisticsExpandedValue == this.value then
+            MOS.statisticsExpandedType = nil; MOS.statisticsExpandedValue = nil
+        else
+            MOS.statisticsExpandedType = "rank"; MOS.statisticsExpandedValue = this.value
+        end
+        RefreshStatisticsPage()
+    end)
     rankRow.name:Hide(); rankRow.count:Hide(); rankRow.button:Hide()
     statisticsRankRows[i] = rankRow
 end
@@ -874,20 +888,29 @@ local function CreateStatisticsDetailPanel(x)
     local panel = CreateFrame("Frame", nil, statisticsPage)
     panel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x, -154)
     panel:SetWidth(x < 100 and 272 or 262); panel:SetHeight(270)
-    panel:SetFrameLevel(statisticsPage:GetFrameLevel() + 20)
+    panel:SetFrameLevel(statisticsPage:GetFrameLevel() + 3)
     panel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 10, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     panel:SetBackdropColor(0.055, 0.055, 0.048, 0.98); panel:SetBackdropBorderColor(0.34, 0.38, 0.34, 1)
     panel.title = CreateFrame("Button", nil, panel)
     panel.title:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -8); panel.title:SetWidth(panel:GetWidth() - 20); panel.title:SetHeight(22)
     panel.title.label = panel.title:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     panel.title.label:SetAllPoints(panel.title); panel.title.label:SetJustifyH("LEFT")
-    panel.title:SetScript("OnClick", function() MOS.statisticsExpandedType = nil; MOS.statisticsExpandedValue = nil; RefreshStatisticsDetails() end)
-    panel.columns = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    panel.columns:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -36); panel.columns:SetText("Name                         Rank")
+    panel.title:SetScript("OnClick", function() MOS.statisticsExpandedType = nil; MOS.statisticsExpandedValue = nil; RefreshStatisticsPage() end)
+    panel.nameHeader = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    panel.nameHeader:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -36); panel.nameHeader:SetWidth(92); panel.nameHeader:SetJustifyH("LEFT"); panel.nameHeader:SetText("Name")
+    panel.rankHeader = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    panel.rankHeader:SetPoint("TOPLEFT", panel, "TOPLEFT", 108, -36); panel.rankHeader:SetWidth(112); panel.rankHeader:SetJustifyH("LEFT"); panel.rankHeader:SetText("Rank")
+    panel.levelHeader = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    panel.levelHeader:SetPoint("TOPLEFT", panel, "TOPLEFT", 224, -36); panel.levelHeader:SetWidth(28); panel.levelHeader:SetJustifyH("RIGHT"); panel.levelHeader:SetText("Lvl")
     panel.rows = {}
     for detailIndex = 1, 9 do
-        local line = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        line:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -58 - ((detailIndex - 1) * 21)); line:SetWidth(panel:GetWidth() - 24); line:SetJustifyH("LEFT")
+        local line = {}
+        line.name = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        line.name:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -58 - ((detailIndex - 1) * 21)); line.name:SetWidth(92); line.name:SetJustifyH("LEFT")
+        line.rank = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        line.rank:SetPoint("TOPLEFT", panel, "TOPLEFT", 108, -58 - ((detailIndex - 1) * 21)); line.rank:SetWidth(112); line.rank:SetJustifyH("LEFT")
+        line.level = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        line.level:SetPoint("TOPLEFT", panel, "TOPLEFT", 224, -58 - ((detailIndex - 1) * 21)); line.level:SetWidth(28); line.level:SetJustifyH("RIGHT")
         panel.rows[detailIndex] = line
     end
     panel.scroll = CreateFrame("ScrollFrame", x < 100 and "MuklaOfficerSuiteStatisticsClassScroll" or "MuklaOfficerSuiteStatisticsRankScroll", panel, "FauxScrollFrameTemplate")
@@ -971,22 +994,22 @@ StyleCompactButton(raidScanButton, "Scan Raid")
 raidScanButton:Hide()
 
 local raidExportButton = CreateFrame("Button", nil, raidPage)
-raidExportButton:SetWidth(132)
+raidExportButton:SetWidth(118)
 raidExportButton:SetHeight(22)
-raidExportButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -140, -42)
+raidExportButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -110, -42)
 StyleCompactButton(raidExportButton, "Export Attendance")
 raidExportButton:Hide()
 
 local raidImportButton = CreateFrame("Button", nil, raidPage)
-raidImportButton:SetWidth(100); raidImportButton:SetHeight(22)
-raidImportButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -280, -42)
+raidImportButton:SetWidth(82); raidImportButton:SetHeight(22)
+raidImportButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -236, -42)
 StyleCompactButton(raidImportButton, "Import SR")
 raidImportButton:Hide()
 raidImportButton:SetScript("OnClick", function() end)
 
 local raidStatus = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 raidStatus:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -48)
-raidStatus:SetWidth(545)
+raidStatus:SetWidth(245)
 raidStatus:SetJustifyH("LEFT")
 
 local raidHeaders = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -997,26 +1020,26 @@ raidHeaders:SetText("Name")
 raidHeaders:Hide()
 
 local raidGroupHeader = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-raidGroupHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 180, -110)
-raidGroupHeader:SetWidth(50)
+raidGroupHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 172, -110)
+raidGroupHeader:SetWidth(70)
 raidGroupHeader:SetJustifyH("CENTER")
 raidGroupHeader:SetText("Group")
 raidGroupHeader:Hide()
 local raidClassHeader = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-raidClassHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 245, -110)
+raidClassHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 252, -110)
 raidClassHeader:SetWidth(85)
 raidClassHeader:SetJustifyH("LEFT")
 raidClassHeader:SetText("Class")
 raidClassHeader:Hide()
 local raidRankHeader = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-raidRankHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 345, -110)
+raidRankHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 347, -110)
 raidRankHeader:SetWidth(135)
 raidRankHeader:SetJustifyH("LEFT")
 raidRankHeader:SetText("Guild rank")
 raidRankHeader:Hide()
 
 local raidSRHeader = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-raidSRHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 495, -110)
+raidSRHeader:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 500, -110)
 raidSRHeader:SetWidth(55); raidSRHeader:SetJustifyH("LEFT"); raidSRHeader:SetText("SR"); raidSRHeader:Hide()
 
 local raidHeaderButtons = {}
@@ -1035,10 +1058,10 @@ local function AddRaidHeaderButton(label, baseText, key, x, width)
     table.insert(raidHeaderButtons, button)
 end
 AddRaidHeaderButton(raidHeaders, "Name", "name", 12, 155)
-AddRaidHeaderButton(raidGroupHeader, "Group", "subgroup", 180, 50)
-AddRaidHeaderButton(raidClassHeader, "Class", "class", 245, 85)
-AddRaidHeaderButton(raidRankHeader, "Guild rank", "guildRank", 345, 135)
-AddRaidHeaderButton(raidSRHeader, "SR", "sr", 495, 55)
+AddRaidHeaderButton(raidGroupHeader, "Group", "subgroup", 172, 70)
+AddRaidHeaderButton(raidClassHeader, "Class", "class", 252, 85)
+AddRaidHeaderButton(raidRankHeader, "Guild rank", "guildRank", 347, 138)
+AddRaidHeaderButton(raidSRHeader, "SR", "sr", 500, 55)
 
 local raidRows = {}
 for i = 1, 15 do
@@ -1048,22 +1071,22 @@ for i = 1, 15 do
     raidRow:SetHeight(20)
     raidRow:SetJustifyH("LEFT")
     raidRow.group = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    raidRow.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 180, -132 - ((i - 1) * 21))
-    raidRow.group:SetWidth(50)
+    raidRow.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 172, -132 - ((i - 1) * 21))
+    raidRow.group:SetWidth(70)
     raidRow.group:SetHeight(20)
     raidRow.group:SetJustifyH("CENTER")
     raidRow.class = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    raidRow.class:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 245, -132 - ((i - 1) * 21))
+    raidRow.class:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 252, -132 - ((i - 1) * 21))
     raidRow.class:SetWidth(85)
     raidRow.class:SetHeight(20)
     raidRow.class:SetJustifyH("LEFT")
     raidRow.rank = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    raidRow.rank:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 345, -132 - ((i - 1) * 21))
+    raidRow.rank:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 347, -132 - ((i - 1) * 21))
     raidRow.rank:SetWidth(135)
     raidRow.rank:SetHeight(20)
     raidRow.rank:SetJustifyH("LEFT")
     raidRow.sr = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    raidRow.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 495, -132 - ((i - 1) * 21))
+    raidRow.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 500, -132 - ((i - 1) * 21))
     raidRow.sr:SetWidth(55); raidRow.sr:SetHeight(20); raidRow.sr:SetJustifyH("LEFT")
     raidRow:Hide()
     raidRow.group:Hide()
@@ -1399,7 +1422,10 @@ RefreshRosterPage = function(resetScroll)
         rosterScrollFrame.offset = 0
         rosterScrollFrame:SetVerticalScroll(0)
     end
-    FauxScrollFrame_Update(rosterScrollFrame, table.getn(visibleMembers), rowCount, rowHeight)
+    -- The expanded action area consumes the space of two regular rows. Reduce
+    -- the visible capacity so the final records stay inside the table frame.
+    local visibleRowCount = selectedMemberName and (rowCount - 2) or rowCount
+    FauxScrollFrame_Update(rosterScrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
     local offset = FauxScrollFrame_GetOffset(rosterScrollFrame)
 
     local rowY = -154
@@ -1407,7 +1433,7 @@ RefreshRosterPage = function(resetScroll)
         local member = visibleMembers[offset + i]
         rows[i]:ClearAllPoints()
         rows[i]:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12, rowY)
-        if member then
+        if member and i <= visibleRowCount then
             local notes = member.publicNote or ""
             if member.officerNote and member.officerNote ~= "" then
                 notes = notes .. " / " .. member.officerNote
@@ -1522,6 +1548,18 @@ RefreshStatisticsPage = function()
     local classNames = {}
     statisticsClasses:SetText("Members by class")
     statisticsRanks:SetText("Members by rank")
+    -- Restore the compact row layout before applying an optional inline expansion.
+    for i = 1, table.getn(statisticsClassRows) do
+        local classRow = statisticsClassRows[i]
+        classRow.icon:ClearAllPoints(); classRow.icon:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 24, -196 - ((i - 1) * 24))
+        classRow.name:ClearAllPoints(); classRow.name:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 52, -198 - ((i - 1) * 24))
+        classRow.count:ClearAllPoints(); classRow.count:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 222, -198 - ((i - 1) * 24))
+        classRow.button:ClearAllPoints(); classRow.button:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 20, -194 - ((i - 1) * 24))
+        local rankRow = statisticsRankRows[i]
+        rankRow.name:ClearAllPoints(); rankRow.name:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 316, -198 - ((i - 1) * 24))
+        rankRow.count:ClearAllPoints(); rankRow.count:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 500, -198 - ((i - 1) * 24))
+        rankRow.button:ClearAllPoints(); rankRow.button:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 312, -194 - ((i - 1) * 24))
+    end
     local className, classCount
     for className, classCount in pairs(classes) do
         table.insert(classNames, className)
@@ -1583,20 +1621,49 @@ RefreshStatisticsDetails = function()
         if matchesType and (not onlyLevel60 or tonumber(member.level) == 60) then table.insert(matches, member) end
     end
     table.sort(matches, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
-    local panel = MOS.statisticsExpandedType == "class" and statisticsClassDetail or statisticsRankDetail
+    local isClass = MOS.statisticsExpandedType == "class"
+    local panel = isClass and statisticsClassDetail or statisticsRankDetail
+    local sourceRows = isClass and statisticsClassRows or statisticsRankRows
+    local selectedIndex = 1
+    for i = 1, table.getn(sourceRows) do
+        if sourceRows[i].button.value == MOS.statisticsExpandedValue then selectedIndex = i; break end
+    end
+    local displayedRows = math.min(table.getn(matches), 5)
+    local panelHeight = 54 + (displayedRows * 21)
+    panel:ClearAllPoints()
+    panel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", isClass and 12 or 300, -194 - (selectedIndex * 24))
+    panel:SetHeight(panelHeight)
     panel.title.label:SetText(MOS.statisticsExpandedValue .. " (" .. table.getn(matches) .. ")  ^")
-    panel.columns:SetText(onlyLevel60 and "Name                         Rank" or "Name                    Rank                 Lvl")
-    FauxScrollFrame_Update(panel.scroll, table.getn(matches), table.getn(panel.rows), 21)
+    if onlyLevel60 then panel.levelHeader:Hide() else panel.levelHeader:Show() end
+    FauxScrollFrame_Update(panel.scroll, table.getn(matches), displayedRows, 21)
     local detailOffset = FauxScrollFrame_GetOffset(panel.scroll)
     for i = 1, table.getn(panel.rows) do
         local member = matches[detailOffset + i]
-        if member then
-            local text = Short(member.name, 17) .. "     " .. Short(member.rank, 16)
-            if not onlyLevel60 then text = text .. "     " .. tostring(member.level or "") end
-            panel.rows[i]:SetText(text); panel.rows[i]:Show()
-        else panel.rows[i]:Hide() end
+        local line = panel.rows[i]
+        if member and i <= displayedRows then
+            line.name:SetText(Short(member.name, 14)); line.rank:SetText(Short(member.rank, 16)); line.level:SetText(tostring(member.level or ""))
+            line.name:Show(); line.rank:Show(); if onlyLevel60 then line.level:Hide() else line.level:Show() end
+        else line.name:Hide(); line.rank:Hide(); line.level:Hide() end
     end
     panel:Show()
+
+    -- Push the following summary rows down, matching the expandable roster-row
+    -- interaction instead of covering the list with a floating window.
+    local extra = panelHeight + 4
+    for i = selectedIndex + 1, table.getn(sourceRows) do
+        local row = sourceRows[i]
+        local baseY = -194 - ((i - 1) * 24) - extra
+        if isClass then
+            row.icon:ClearAllPoints(); row.icon:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 24, baseY - 2)
+            row.name:ClearAllPoints(); row.name:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 52, baseY - 4)
+            row.count:ClearAllPoints(); row.count:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 222, baseY - 4)
+            row.button:ClearAllPoints(); row.button:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 20, baseY)
+        else
+            row.name:ClearAllPoints(); row.name:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 316, baseY - 4)
+            row.count:ClearAllPoints(); row.count:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 500, baseY - 4)
+            row.button:ClearAllPoints(); row.button:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 312, baseY)
+        end
+    end
 end
 
 RefreshCSRPage = function()
@@ -1604,6 +1671,10 @@ end
 
 local function RefreshRaidFilterOptions(panel, values, selected)
     table.sort(values, function(a, b) return string.lower(a) < string.lower(b) end)
+    local widest = 0
+    for i = 1, table.getn(values) do widest = math.max(widest, string.len(tostring(values[i]))) end
+    local panelWidth = math.max(112, math.min(190, 42 + (widest * 7)))
+    panel:SetWidth(panelWidth)
     panel:SetHeight(38 + table.getn(values) * 20)
     if not panel.selectAll then
         panel.selectAll = CreateFrame("Button", nil, panel)
@@ -1623,7 +1694,7 @@ local function RefreshRaidFilterOptions(panel, values, selected)
             option:SetWidth(20); option:SetHeight(20)
             option:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10 - ((i - 1) * 20))
             option.label = option:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            option.label:SetPoint("LEFT", option, "RIGHT", 2, 0); option.label:SetWidth(80); option.label:SetJustifyH("LEFT")
+            option.label:SetPoint("LEFT", option, "RIGHT", 2, 0); option.label:SetWidth(panelWidth - 42); option.label:SetHeight(18); option.label:SetJustifyH("LEFT")
             option:SetScript("OnClick", function() selected[this.value] = this:GetChecked() and true or false; RefreshRaidPage() end)
             panel.options[i] = option
         end
@@ -1704,7 +1775,7 @@ RefreshRaidPage = function()
     raidScanButton:Show()
     raidScanButton:ClearAllPoints()
     raidScanButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -42)
-    raidScanButton:SetWidth(132)
+    raidScanButton:SetWidth(98)
     raidScanButton:SetHeight(22)
     raidScanButton:SetText("Scan again")
     raidExportButton:Show()
