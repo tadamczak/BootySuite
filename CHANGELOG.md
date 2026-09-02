@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.0
+
+- Kept expanded Raid Management row text fully highlighted like Roster Management.
+- Matched Raid Management filter controls to the Roster Management styling.
+- Moved the close button inside the title bar with consistent padding.
+- Rebuilt the Loot Master toolbar as one compact row containing filters, mode, scan, and search.
+- Hid the Group column and Import SR action in Loot Master Mode.
+- Reduced Loot Master outer and inner margins and tightened its remaining columns.
+- Reduced minimum window sizes, including a Loot Master height that still shows at least three rows.
+- Temporarily expands a short Loot Master window for loot details and restores its previous height on collapse.
+
 ## 0.15.0
 
 - Sorted expanded Guild Statistics members by guild rank and then by name.

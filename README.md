@@ -24,6 +24,8 @@ Raid Management records loot received after the raid roster has been scanned. Cl
 
 Loot Master Mode hides the dashboard navigation, title chrome, attendance export, and scan metadata while keeping the raid controls and table visible. It opens as a compact 30%-opacity window and becomes fully opaque while the cursor is anywhere inside the addon. Drag the bottom-right grip to resize width and height independently; normal and Loot Master sizes are saved separately.
 
+Its compact toolbar keeps filters, the mode toggle, scan, and search on one line. The Group column is hidden. Expanding loot temporarily increases a window that is too short and restores the previous height when the row is collapsed.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:

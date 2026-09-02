@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.15.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.16.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -309,7 +309,7 @@ dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
 dashboard:SetFrameStrata("DIALOG")
 dashboard:SetMovable(true)
 dashboard:SetResizable(true)
-dashboard:SetMinResize(810, 500)
+dashboard:SetMinResize(760, 420)
 dashboard:SetMaxResize(1100, 760)
 dashboard:EnableMouse(true)
 dashboard:RegisterForDrag("LeftButton")
@@ -384,7 +384,8 @@ title:SetText("Mukla Officer Suite")
 
 local closeButton = CreateFrame("Button", nil, dashboard, "UIPanelCloseButton")
 closeButton:SetWidth(24); closeButton:SetHeight(24)
-closeButton:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -10, -10)
+closeButton:SetParent(titleBar)
+closeButton:SetPoint("TOPRIGHT", titleBar, "TOPRIGHT", -4, -4)
 
 local versionText = dashboard:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 versionText:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -22, 17)
@@ -1149,7 +1150,11 @@ local function CreateRaidFilterButton(text, x)
     local button = CreateFrame("Button", nil, raidPage)
     button:SetPoint("TOPLEFT", raidPage, "TOPLEFT", x, -76)
     button:SetWidth(84); button:SetHeight(19)
-    StyleCompactButton(button, text)
+    button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+    button:SetBackdropColor(0.08, 0.07, 0.05, 0.95); button:SetBackdropBorderColor(0.42, 0.35, 0.20, 1)
+    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    button.label:SetPoint("LEFT", button, "LEFT", 8, 0); button.label:SetText(text)
+    button.SetText = function(self, value) self.label:SetText(value) end
     button.arrow = button:CreateTexture(nil, "OVERLAY")
     button.arrow:SetWidth(14); button.arrow:SetHeight(14)
     button.arrow:SetPoint("RIGHT", button, "RIGHT", -4, 0)
@@ -1315,7 +1320,15 @@ for i = 1, 15 do
     raidRow.lootPanel:Hide()
     raidRow:SetScript("OnClick", function()
         if not this.displayedMember then return end
-        if selectedRaidMemberName == this.displayedMember.name then selectedRaidMemberName = nil else selectedRaidMemberName = this.displayedMember.name end
+        if selectedRaidMemberName == this.displayedMember.name then
+            selectedRaidMemberName = nil
+            if MOS.raidHeightBeforeExpansion then dashboard:SetHeight(MOS.raidHeightBeforeExpansion); MOS.raidHeightBeforeExpansion = nil end
+        else
+            if not selectedRaidMemberName and MOS.lootMasterMode and dashboard:GetHeight() < 320 then
+                MOS.raidHeightBeforeExpansion = dashboard:GetHeight(); dashboard:SetHeight(320)
+            end
+            selectedRaidMemberName = this.displayedMember.name
+        end
         RefreshRaidPage()
     end)
     raidRow:Hide()
@@ -2017,8 +2030,7 @@ RefreshRaidPage = function()
     raidScanButton:SetWidth(98)
     raidScanButton:SetHeight(22)
     raidScanButton:SetText("Scan again")
-    if MOS.lootMasterMode then raidExportButton:Hide() else raidExportButton:Show() end
-    raidImportButton:Show()
+    if MOS.lootMasterMode then raidExportButton:Hide(); raidImportButton:Hide() else raidExportButton:Show(); raidImportButton:Show() end
     local data = MuklaOfficerSuiteDB.raidAttendance
     local members = data and data.members or {}
     BuildRaidFilters(members)
@@ -2036,35 +2048,59 @@ RefreshRaidPage = function()
     for i = 1, table.getn(visibleRaidMembers) do
         if visibleRaidMembers[i].name == selectedRaidMemberName then selectedRaidMemberVisible = true; break end
     end
-    if not selectedRaidMemberVisible then selectedRaidMemberName = nil end
+    if not selectedRaidMemberVisible then
+        selectedRaidMemberName = nil
+        if MOS.raidHeightBeforeExpansion then dashboard:SetHeight(MOS.raidHeightBeforeExpansion); MOS.raidHeightBeforeExpansion = nil end
+    end
     raidStatus:SetText((data and data.scannedAtText or "Unknown") .. " | showing " .. table.getn(visibleRaidMembers) .. " of " .. table.getn(members) .. " raid members")
     if MOS.lootMasterMode then raidStatus:Hide() else raidStatus:Show() end
+    if MOS.lootMasterMode then
+        raidFilterLabel:ClearAllPoints(); raidFilterLabel:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 8, -14)
+        raidClassFilterButton:ClearAllPoints(); raidClassFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 50, -8); raidClassFilterButton:SetWidth(76)
+        raidRankFilterButton:ClearAllPoints(); raidRankFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 132, -8); raidRankFilterButton:SetWidth(76)
+        raidModeButton:ClearAllPoints(); raidModeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 214, -8); raidModeButton:SetWidth(112)
+        raidScanButton:ClearAllPoints(); raidScanButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 332, -8); raidScanButton:SetWidth(88)
+        raidSearchLabel:ClearAllPoints(); raidSearchLabel:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 428, -14)
+        raidSearchBox:ClearAllPoints(); raidSearchBox:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 478, -8); raidSearchBox:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -8, -8); raidSearchBox:SetWidth(140)
+    else
+        raidFilterLabel:ClearAllPoints(); raidFilterLabel:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -82)
+        raidClassFilterButton:ClearAllPoints(); raidClassFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 58, -76); raidClassFilterButton:SetWidth(84)
+        raidRankFilterButton:ClearAllPoints(); raidRankFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 150, -76); raidRankFilterButton:SetWidth(84)
+        raidModeButton:ClearAllPoints(); raidModeButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -8); raidModeButton:SetWidth(118)
+        raidScanButton:ClearAllPoints(); raidScanButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -42); raidScanButton:SetWidth(98)
+        raidSearchLabel:ClearAllPoints(); raidSearchLabel:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -192, -82)
+        raidSearchBox:ClearAllPoints(); raidSearchBox:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -76); raidSearchBox:SetWidth(178)
+    end
     raidSearchLabel:Show(); raidSearchBox:Show(); raidFilterLabel:Show(); raidClassFilterButton:Show(); raidRankFilterButton:Show()
-    local headerPositions = MOS.lootMasterMode and { 12, 142, 207, 287, 422 } or { 12, 172, 252, 347, 500 }
-    local headerWidths = MOS.lootMasterMode and { 120, 55, 70, 125, 45 } or { 155, 70, 85, 138, 55 }
+    local raidHeaderY = MOS.lootMasterMode and -42 or -110
+    local raidRowStartY = MOS.lootMasterMode and -64 or -132
+    local headerPositions = MOS.lootMasterMode and { 12, 0, 172, 267, 417 } or { 12, 172, 252, 347, 500 }
+    local headerWidths = MOS.lootMasterMode and { 150, 0, 85, 140, 45 } or { 155, 70, 85, 138, 55 }
     local headerLabels = { raidHeaders, raidGroupHeader, raidClassHeader, raidRankHeader, raidSRHeader }
     for headerIndex = 1, 5 do
-        headerLabels[headerIndex]:ClearAllPoints(); headerLabels[headerIndex]:SetPoint("TOPLEFT", raidPage, "TOPLEFT", headerPositions[headerIndex], -110); headerLabels[headerIndex]:SetWidth(headerWidths[headerIndex])
-        raidHeaderButtons[headerIndex]:ClearAllPoints(); raidHeaderButtons[headerIndex]:SetPoint("TOPLEFT", raidPage, "TOPLEFT", headerPositions[headerIndex], -106); raidHeaderButtons[headerIndex]:SetWidth(headerWidths[headerIndex])
+        headerLabels[headerIndex]:ClearAllPoints(); headerLabels[headerIndex]:SetPoint("TOPLEFT", raidPage, "TOPLEFT", headerPositions[headerIndex], raidHeaderY); headerLabels[headerIndex]:SetWidth(headerWidths[headerIndex])
+        raidHeaderButtons[headerIndex]:ClearAllPoints(); raidHeaderButtons[headerIndex]:SetPoint("TOPLEFT", raidPage, "TOPLEFT", headerPositions[headerIndex], raidHeaderY + 4); raidHeaderButtons[headerIndex]:SetWidth(headerWidths[headerIndex])
     end
     raidHeaders:Show()
-    raidGroupHeader:Show(); raidClassHeader:Show(); raidRankHeader:Show(); raidSRHeader:Show()
+    if MOS.lootMasterMode then raidGroupHeader:Hide() else raidGroupHeader:Show() end
+    raidClassHeader:Show(); raidRankHeader:Show(); raidSRHeader:Show()
     for i = 1, table.getn(raidHeaderButtons) do
         local header = raidHeaderButtons[i]
-        header:Show()
+        if MOS.lootMasterMode and header.sortKey == "subgroup" then header:Hide() else header:Show() end
         if raidSortKey == header.sortKey then header.label:SetText(header.baseText .. (raidSortAscending and " ^" or " v")) else header.label:SetText(header.baseText .. " <>") end
     end
-    raidScrollFrame:Show()
-    local availableRaidRows = math.max(3, math.min(table.getn(raidRows), math.floor((raidPage:GetHeight() - 150) / 21)))
+    raidScrollFrame:ClearAllPoints(); raidScrollFrame:SetPoint("TOPLEFT", raidPage, "TOPLEFT", -4, raidRowStartY + 11); raidScrollFrame:SetPoint("BOTTOMRIGHT", raidPage, "BOTTOMRIGHT", -12, 18); raidScrollFrame:Show()
+    local reservedHeight = MOS.lootMasterMode and 78 or 150
+    local availableRaidRows = math.max(3, math.min(table.getn(raidRows), math.floor((raidPage:GetHeight() - reservedHeight) / 21)))
     local raidVisibleRowCount = selectedRaidMemberName and math.max(1, availableRaidRows - 5) or availableRaidRows
     FauxScrollFrame_Update(raidScrollFrame, table.getn(visibleRaidMembers), raidVisibleRowCount, 21)
     local raidOffset = FauxScrollFrame_GetOffset(raidScrollFrame)
-    local raidRowY = -132
+    local raidRowY = raidRowStartY
     for i = 1, table.getn(raidRows) do
         local member = visibleRaidMembers[raidOffset + i]
         local row = raidRows[i]
         local groupX, classX, rankX, srX = 172, 252, 347, 500
-        if MOS.lootMasterMode then groupX, classX, rankX, srX = 142, 207, 287, 422 end
+        if MOS.lootMasterMode then groupX, classX, rankX, srX = 0, 172, 267, 417 end
         row:ClearAllPoints(); row:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, raidRowY)
         row.group:ClearAllPoints(); row.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", groupX, raidRowY)
         row.class:ClearAllPoints(); row.class:SetPoint("TOPLEFT", raidPage, "TOPLEFT", classX, raidRowY)
@@ -2072,11 +2108,11 @@ RefreshRaidPage = function()
         row.sr:ClearAllPoints(); row.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", srX, raidRowY)
         if member and i <= raidVisibleRowCount then
             row.displayedMember = member
-            row:SetWidth(MOS.lootMasterMode and 455 or 543)
-            row.name:SetWidth(MOS.lootMasterMode and 120 or 148)
-            row.group:SetWidth(MOS.lootMasterMode and 55 or 70)
-            row.class:SetWidth(MOS.lootMasterMode and 70 or 85)
-            row.rank:SetWidth(MOS.lootMasterMode and 125 or 135)
+            row:SetWidth(MOS.lootMasterMode and 462 or 543)
+            row.name:SetWidth(MOS.lootMasterMode and 150 or 148)
+            row.group:SetWidth(MOS.lootMasterMode and 0 or 70)
+            row.class:SetWidth(MOS.lootMasterMode and 85 or 85)
+            row.rank:SetWidth(MOS.lootMasterMode and 140 or 135)
             row.sr:SetWidth(MOS.lootMasterMode and 45 or 55)
             row.lootPanel:SetWidth(MOS.lootMasterMode and 447 or 535)
             for lootLayoutIndex = 1, table.getn(row.lootRows) do row.lootRows[lootLayoutIndex].name:SetWidth(MOS.lootMasterMode and 367 or 455) end
@@ -2085,7 +2121,8 @@ RefreshRaidPage = function()
             raidRows[i].class:SetText(Short(member.class, 12))
             raidRows[i].rank:SetText(Short(member.guildRank ~= "" and member.guildRank or "Not in guild", 18))
             raidRows[i].sr:SetText(member.sr or "")
-            row:Show(); row.name:Show(); row.group:Show(); row.class:Show(); row.rank:Show(); row.sr:Show()
+            row.name:SetTextColor(1, 1, 1); row.group:SetTextColor(1, 1, 1); row.class:SetTextColor(1, 1, 1); row.rank:SetTextColor(1, 1, 1); row.sr:SetTextColor(1, 1, 1)
+            row:Show(); row.name:Show(); if MOS.lootMasterMode then row.group:Hide() else row.group:Show() end; row.class:Show(); row.rank:Show(); row.sr:Show()
             if member.name == selectedRaidMemberName then
                 row:SetHeight(131); row:SetBackdropColor(0.16, 0.20, 0.17, 0.82); row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
                 row.lootPanel:Show()
@@ -2137,11 +2174,12 @@ end
 
 ToggleLootMasterMode = function()
     MOS.lootMasterMode = not MOS.lootMasterMode
+    MOS.raidHeightBeforeExpansion = nil
     if MOS.lootMasterMode then
         MuklaOfficerSuiteDB.windowWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.windowHeight = dashboard:GetHeight()
-        dashboard:SetMinResize(560, 260); dashboard:SetMaxResize(1100, 760)
-        dashboard:SetWidth(tonumber(MuklaOfficerSuiteDB.lootMasterWidth) or 600)
-        dashboard:SetHeight(tonumber(MuklaOfficerSuiteDB.lootMasterHeight) or 300)
+        dashboard:SetMinResize(700, 170); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(math.max(700, tonumber(MuklaOfficerSuiteDB.lootMasterWidth) or 760))
+        dashboard:SetHeight(math.min(260, tonumber(MuklaOfficerSuiteDB.lootMasterHeight) or 220))
         dashboard:SetAlpha(0.3)
         sidebar:Hide(); titleBar:Hide(); closeButton:Hide(); versionText:Hide(); raidTitle:Hide()
         contentPanel:ClearAllPoints()
@@ -2152,9 +2190,9 @@ ToggleLootMasterMode = function()
     else
         MuklaOfficerSuiteDB.lootMasterWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.lootMasterHeight = dashboard:GetHeight()
         dashboard:SetAlpha(1)
-        dashboard:SetMinResize(810, 500); dashboard:SetMaxResize(1100, 760)
-        dashboard:SetWidth(math.max(810, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840))
-        dashboard:SetHeight(math.max(500, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540))
+        dashboard:SetMinResize(760, 420); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(math.max(760, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840))
+        dashboard:SetHeight(math.max(420, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540))
         sidebar:Show(); titleBar:Show(); closeButton:Show(); versionText:Show(); raidTitle:Show()
         contentPanel:ClearAllPoints()
         contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 204, -68)
@@ -2569,8 +2607,8 @@ MOS:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
         EnsureDatabase()
         dashboard:SetScale(1)
-        dashboard:SetWidth(math.max(810, math.min(1100, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840)))
-        dashboard:SetHeight(math.max(500, math.min(760, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540)))
+        dashboard:SetWidth(math.max(760, math.min(1100, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840)))
+        dashboard:SetHeight(math.max(420, math.min(760, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540)))
         MuklaOfficerSuiteDB.uiScale = nil
         PositionMinimapButton()
         if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() end
