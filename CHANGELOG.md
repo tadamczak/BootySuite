@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.1
+
+- Replaced proportional UI scaling with native independent width and height resizing.
+- Kept the resize corner attached to the cursor and persisted normal and Loot Master window sizes separately.
+- Made Loot Master Mode open in a compact layout at 50% opacity.
+- Restored full opacity while hovering over Loot Master Mode and returned to 50% when leaving it.
+- Kept the resize grip available in Loot Master Mode and adjusted visible raid rows to its compact height.
+- Moved and reduced the top-right close button so it fits cleanly inside the dashboard frame.
+
 ## 0.14.0
 
 - Added explicit success feedback after Refresh Data finishes loading guild data.

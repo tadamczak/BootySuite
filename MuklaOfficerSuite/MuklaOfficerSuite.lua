@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.14.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.14.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -308,6 +308,9 @@ dashboard:SetHeight(540)
 dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
 dashboard:SetFrameStrata("DIALOG")
 dashboard:SetMovable(true)
+dashboard:SetResizable(true)
+dashboard:SetMinResize(840, 540)
+dashboard:SetMaxResize(1100, 760)
 dashboard:EnableMouse(true)
 dashboard:RegisterForDrag("LeftButton")
 dashboard:SetScript("OnDragStart", function() this:StartMoving() end)
@@ -332,18 +335,22 @@ resizeGrip.texture = resizeGrip:CreateTexture(nil, "OVERLAY")
 resizeGrip.texture:SetAllPoints(resizeGrip)
 resizeGrip.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
 resizeGrip:SetScript("OnMouseDown", function()
-    local cursorX, cursorY = GetCursorPosition()
-    this.startCursorX = cursorX; this.startCursorY = cursorY; this.startScale = dashboard:GetScale()
-    this:SetScript("OnUpdate", function()
-        local currentX, currentY = GetCursorPosition()
-        local delta = ((currentX - this.startCursorX) + (this.startCursorY - currentY)) / 900
-        local newScale = math.max(0.75, math.min(1.35, this.startScale + delta))
-        dashboard:SetScale(newScale)
-        if MuklaOfficerSuiteDB then MuklaOfficerSuiteDB.uiScale = newScale end
-    end)
+    dashboard:StartSizing("BOTTOMRIGHT")
 end)
-resizeGrip:SetScript("OnMouseUp", function() this:SetScript("OnUpdate", nil) end)
-resizeGrip:SetScript("OnHide", function() this:SetScript("OnUpdate", nil) end)
+resizeGrip:SetScript("OnMouseUp", function()
+    dashboard:StopMovingOrSizing()
+    if MuklaOfficerSuiteDB then
+        if MOS.lootMasterMode then
+            MuklaOfficerSuiteDB.lootMasterWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.lootMasterHeight = dashboard:GetHeight()
+        else
+            MuklaOfficerSuiteDB.windowWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.windowHeight = dashboard:GetHeight()
+        end
+    end
+end)
+resizeGrip:SetScript("OnHide", function() dashboard:StopMovingOrSizing() end)
+
+dashboard:SetScript("OnEnter", function() if MOS.lootMasterMode then dashboard:SetAlpha(1) end end)
+dashboard:SetScript("OnLeave", function() if MOS.lootMasterMode then dashboard:SetAlpha(0.5) end end)
 
 local titleBar = CreateFrame("Frame", nil, dashboard)
 titleBar:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 18, -14)
@@ -365,7 +372,8 @@ title:SetPoint("CENTER", titleBar, "CENTER", 0, 2)
 title:SetText("Mukla Officer Suite")
 
 local closeButton = CreateFrame("Button", nil, dashboard, "UIPanelCloseButton")
-closeButton:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -5, -5)
+closeButton:SetWidth(24); closeButton:SetHeight(24)
+closeButton:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -10, -10)
 
 local versionText = dashboard:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 versionText:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -22, 17)
@@ -2014,7 +2022,8 @@ RefreshRaidPage = function()
         if raidSortKey == header.sortKey then header.label:SetText(header.baseText .. (raidSortAscending and " ^" or " v")) else header.label:SetText(header.baseText .. " <>") end
     end
     raidScrollFrame:Show()
-    local raidVisibleRowCount = selectedRaidMemberName and (table.getn(raidRows) - 5) or table.getn(raidRows)
+    local availableRaidRows = math.max(3, math.min(table.getn(raidRows), math.floor((raidPage:GetHeight() - 150) / 21)))
+    local raidVisibleRowCount = selectedRaidMemberName and math.max(1, availableRaidRows - 5) or availableRaidRows
     FauxScrollFrame_Update(raidScrollFrame, table.getn(visibleRaidMembers), raidVisibleRowCount, 21)
     local raidOffset = FauxScrollFrame_GetOffset(raidScrollFrame)
     local raidRowY = -132
@@ -2084,12 +2093,22 @@ end
 ToggleLootMasterMode = function()
     MOS.lootMasterMode = not MOS.lootMasterMode
     if MOS.lootMasterMode then
+        MuklaOfficerSuiteDB.windowWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.windowHeight = dashboard:GetHeight()
+        dashboard:SetMinResize(620, 300); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(tonumber(MuklaOfficerSuiteDB.lootMasterWidth) or 650)
+        dashboard:SetHeight(tonumber(MuklaOfficerSuiteDB.lootMasterHeight) or 340)
+        dashboard:SetAlpha(0.5)
         sidebar:Hide(); titleBar:Hide(); closeButton:Hide(); versionText:Hide(); raidTitle:Hide()
         contentPanel:ClearAllPoints()
         contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 14, -14)
         contentPanel:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -14, 14)
         raidModeButton:SetText("Turn Off LM Mode")
     else
+        MuklaOfficerSuiteDB.lootMasterWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.lootMasterHeight = dashboard:GetHeight()
+        dashboard:SetAlpha(1)
+        dashboard:SetMinResize(840, 540); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(math.max(840, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840))
+        dashboard:SetHeight(math.max(540, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540))
         sidebar:Show(); titleBar:Show(); closeButton:Show(); versionText:Show(); raidTitle:Show()
         contentPanel:ClearAllPoints()
         contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 204, -68)
@@ -2502,7 +2521,10 @@ end
 MOS:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
         EnsureDatabase()
-        dashboard:SetScale(math.max(0.75, math.min(1.35, tonumber(MuklaOfficerSuiteDB.uiScale) or 1)))
+        dashboard:SetScale(1)
+        dashboard:SetWidth(math.max(840, math.min(1100, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840)))
+        dashboard:SetHeight(math.max(540, math.min(760, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540)))
+        MuklaOfficerSuiteDB.uiScale = nil
         PositionMinimapButton()
         if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() end
     elseif event == "GUILD_ROSTER_UPDATE" then
