@@ -18,6 +18,8 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 
 The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.
 
+New snapshots are stored under `MuklaOfficerSuiteDB["rosterData"]` and `MuklaOfficerSuiteDB["raidAttendance"]`.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:

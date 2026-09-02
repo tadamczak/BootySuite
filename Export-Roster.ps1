@@ -98,6 +98,8 @@ if (-not $InputPath) {
 $InputPath = (Resolve-Path -LiteralPath $InputPath -ErrorAction Stop).Path
 $lines = Get-Content -LiteralPath $InputPath
 $records = New-Object System.Collections.Generic.List[object]
+$inRosterData = $false
+$rosterIndent = -1
 $inMembers = $false
 $membersIndent = -1
 $memberIndent = -1
@@ -107,19 +109,26 @@ $currentMember = $null
 for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex++) {
     $line = $lines[$lineIndex]
 
+    if (-not $inRosterData -and $line -match '^(\s*)\["rosterData"\]\s*=\s*\{$') {
+        $inRosterData = $true
+        $rosterIndent = $matches[1].Length
+        $currentGuild = ""
+        continue
+    }
+    if (-not $inRosterData) { continue }
+    if (-not $inMembers -and $line -match '^\s*\["guildName"\]\s*=\s*(.*),$') {
+        $currentGuild = ConvertFrom-LuaValue $matches[1]
+        continue
+    }
+    if (-not $inMembers -and $line -match '^(\s*)\},?\s*$' -and $matches[1].Length -eq $rosterIndent) {
+        $inRosterData = $false
+        $rosterIndent = -1
+        continue
+    }
+
     if (-not $inMembers -and $line -match '^(\s*)\["members"\]\s*=\s*\{$') {
         $inMembers = $true
         $membersIndent = $matches[1].Length
-        $currentGuild = ""
-
-        for ($searchIndex = $lineIndex - 1; $searchIndex -ge 0; $searchIndex--) {
-            if ($lines[$searchIndex] -match '^(\s*)\["((?:\\.|[^"])*)"\]\s*=\s*\{$') {
-                if ($matches[1].Length -lt $membersIndent -and $matches[2] -ne "guilds") {
-                    $currentGuild = ConvertFrom-LuaString ('"' + $matches[2] + '"')
-                    break
-                }
-            }
-        }
         continue
     }
 
@@ -159,7 +168,6 @@ for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex++) {
         } elseif (-not $currentMember -and $closingIndent -eq $membersIndent) {
             $inMembers = $false
             $membersIndent = -1
-            $currentGuild = ""
         }
     }
 }

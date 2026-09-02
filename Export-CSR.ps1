@@ -49,13 +49,26 @@ if (-not $InputPath) {
 
 $InputPath = (Resolve-Path -LiteralPath $InputPath -ErrorAction Stop).Path
 $records = New-Object System.Collections.Generic.List[object]
+$inAttendance = $false
+$attendanceIndent = -1
 $inRaidMembers = $false
 $arrayIndent = -1
 $recordIndent = -1
 $current = $null
 
 foreach ($line in (Get-Content -LiteralPath $InputPath)) {
-    if (-not $inRaidMembers -and $line -match '^(\s*)\["raidMembers"\]\s*=\s*\{$') {
+    if (-not $inAttendance -and $line -match '^(\s*)\["raidAttendance"\]\s*=\s*\{$') {
+        $inAttendance = $true
+        $attendanceIndent = $matches[1].Length
+        continue
+    }
+    if (-not $inAttendance) { continue }
+    if (-not $inRaidMembers -and $line -match '^(\s*)\},?\s*$' -and $matches[1].Length -eq $attendanceIndent) {
+        $inAttendance = $false
+        $attendanceIndent = -1
+        continue
+    }
+    if (-not $inRaidMembers -and $line -match '^(\s*)\["members"\]\s*=\s*\{$') {
         $inRaidMembers = $true
         $arrayIndent = $matches[1].Length
         continue
@@ -76,17 +89,12 @@ foreach ($line in (Get-Content -LiteralPath $InputPath)) {
             $records.Add([pscustomobject][ordered]@{
                 Name = $current.name
                 RaidGroup = $current.subgroup
-                RaidRank = $current.raidRank
-                Level = $current.level
                 Class = $current.class
                 GuildMember = $current.guildMember
                 GuildRank = $current.guildRank
-                GuildRankIndex = $current.guildRankIndex
                 PublicNote = $current.publicNote
                 OfficerNote = $current.officerNote
-                Online = $current.online
-                Dead = $current.dead
-                Zone = $current.zone
+                SR = $current.sr
             })
             $current = $null
             $recordIndent = -1
@@ -96,12 +104,12 @@ foreach ($line in (Get-Content -LiteralPath $InputPath)) {
     }
 }
 
-if ($records.Count -eq 0) { throw "No CSR raid members were found in: $InputPath" }
+if ($records.Count -eq 0) { throw "No raid attendance members were found in: $InputPath" }
 if (-not $OutputPath) {
     $exportDirectory = Join-Path $PSScriptRoot "exports"
     if (-not (Test-Path -LiteralPath $exportDirectory)) { New-Item -ItemType Directory -Path $exportDirectory | Out-Null }
-    $OutputPath = Join-Path $exportDirectory ("MuklaOfficerSuiteCSR-{0}.csv" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
+    $OutputPath = Join-Path $exportDirectory ("MuklaOfficerSuiteAttendance-{0}.csv" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
 }
 $records | Export-Csv -LiteralPath $OutputPath -NoTypeInformation -Encoding UTF8
-Write-Host "Exported $($records.Count) CSR raid members to:"
+Write-Host "Exported $($records.Count) raid attendance members to:"
 Write-Host $OutputPath

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.12.0
+
+- Added a shared progress bar for guild, roster export, raid, and quiet refresh scans.
+- Moved new SavedVariables snapshots to `rosterData` and `raidAttendance`.
+- Reduced raid attendance exports to attendance-relevant fields only.
+- Added expandable, scrollable member details to class and rank statistics.
+- Added SR and an Import SR placeholder to Raid Management.
+- Added Raid Management search, Class/Rank filters, and sortable table columns.
+- Added three-state sorting: ascending, descending, and default.
+- Unified primary content margins across dashboard sections.
+
 ## 0.11.1
 
 - Reworked guild roster loading around a shared completion check used by both events and the retry timer.
