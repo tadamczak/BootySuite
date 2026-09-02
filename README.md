@@ -66,7 +66,9 @@ Run `Deploy-Addon.ps1` to copy only the required addon files to:
 
 ## CSV export
 
-Run `Export-Roster.ps1` after using `Scan & Save` in game. The script automatically locates the newest `MuklaOfficerSuite.lua` under the game's `WTF/Account` directory and writes a UTF-8 CSV file to `exports/`.
+After saving and reloading in game, double-click `Export-Roster.cmd` or `Export-Attendance.cmd`. The launcher keeps its window open, reports any error, and writes the UTF-8 CSV file to `exports/`.
+
+The matching `.ps1` files can still be run directly from PowerShell. They automatically locate the newest `MuklaOfficerSuite.lua` under the game's `WTF/Account` directory.
 
 For a CSR export, join a raid, use `Scan & Save` on the CSR page, confirm the reload, and run `Export-CSR.ps1`.
 

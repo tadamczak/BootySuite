@@ -5,6 +5,7 @@
 - Expanded Guild Statistics and Raid Management row pools so resized windows use the available table height.
 - Hidden statistics and raid scrollbars whenever every visible record fits in the table.
 - Reduced safe bottom spacing in Raid Management and kept the scan summary on one line.
+- Added double-click CSV export launchers that keep the result or error visible.
 
 ## 0.19.3
 
