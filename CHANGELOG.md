@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Added expandable member actions directly below the selected roster row.
+- Added click-again deselection behavior.
+- Replaced prominent action buttons with compact contextual controls.
+- Added current-version fallback for rosters saved before version metadata existed.
+- Simplified the outer window border to better match the reference layout.
+
 ## 0.4.1
 
 - Fixed roster row clicks on WoW 1.12 by using button widgets instead of generic frames.
