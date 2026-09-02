@@ -28,6 +28,8 @@ Its compact toolbar keeps filters, the mode toggle, scan, and search on one line
 
 Use Minimize to collapse Loot Master Mode to an exit/restore bar. Full Raid Management also provides Reset loot, with confirmation, to clear every recorded item from the current attendance snapshot.
 
+Full Raid Management exposes LM opacity and Out of focus opacity percentage fields. Values are clamped to 0-100; 100 keeps the window fully opaque.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:

@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.17.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.18.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -111,6 +111,8 @@ local function EnsureDatabase()
     if type(MuklaOfficerSuiteDB.minimap) ~= "table" then
         MuklaOfficerSuiteDB.minimap = { angle = 220, hidden = false }
     end
+    if tonumber(MuklaOfficerSuiteDB.lootMasterOpacity) == nil then MuklaOfficerSuiteDB.lootMasterOpacity = 100 end
+    if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 30 end
     MuklaOfficerSuiteDB.addonVersion = VERSION
 end
 
@@ -352,7 +354,7 @@ resizeGrip:SetScript("OnHide", function() dashboard:StopMovingOrSizing() end)
 local lootMasterAlphaWatcher = CreateFrame("Frame", nil, dashboard)
 lootMasterAlphaWatcher.elapsed = 0
 lootMasterAlphaWatcher:SetScript("OnUpdate", function()
-    if not MOS.lootMasterMode then return end
+    if not dashboard:IsVisible() then return end
     this.elapsed = this.elapsed + arg1
     if this.elapsed < 0.08 then return end
     this.elapsed = 0
@@ -360,7 +362,10 @@ lootMasterAlphaWatcher:SetScript("OnUpdate", function()
     local uiScale = UIParent:GetEffectiveScale()
     cursorX = cursorX / uiScale; cursorY = cursorY / uiScale
     local inside = dashboard:GetLeft() and cursorX >= dashboard:GetLeft() and cursorX <= dashboard:GetRight() and cursorY >= dashboard:GetBottom() and cursorY <= dashboard:GetTop()
-    dashboard:SetAlpha(inside and 1 or 0.3)
+    local opacity
+    if inside then opacity = MOS.lootMasterMode and (tonumber(MuklaOfficerSuiteDB.lootMasterOpacity) or 100) or 100
+    else opacity = tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) or 30 end
+    dashboard:SetAlpha(math.max(0, math.min(100, opacity)) / 100)
 end)
 
 local titleBar = CreateFrame("Frame", nil, dashboard)
@@ -386,6 +391,7 @@ local closeButton = CreateFrame("Button", nil, dashboard, "UIPanelCloseButton")
 closeButton:SetWidth(24); closeButton:SetHeight(24)
 closeButton:SetParent(titleBar)
 closeButton:SetPoint("TOPRIGHT", titleBar, "TOPRIGHT", -4, -4)
+closeButton:SetScript("OnClick", function() dashboard:Hide() end)
 
 local versionText = dashboard:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 versionText:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -22, 17)
@@ -1224,6 +1230,25 @@ StyleCompactButton(raidResetLootButton, "Reset loot")
 raidResetLootButton:Hide()
 raidResetLootButton:SetScript("OnClick", function() StaticPopup_Show("MUKLA_OFFICER_SUITE_RESET_LOOT") end)
 
+local function CreateOpacityField(name, labelText, x)
+    local label = raidPage:CreateFontString(name .. "Label", "OVERLAY", "GameFontDisableSmall")
+    label:SetPoint("TOPLEFT", raidPage, "TOPLEFT", x, -14); label:SetText(labelText)
+    local field = CreateFrame("EditBox", name, raidPage, "InputBoxTemplate")
+    field:SetWidth(34); field:SetHeight(18); field:SetPoint("LEFT", label, "RIGHT", 8, 0); field:SetAutoFocus(false); field:SetMaxLetters(3)
+    field:SetScript("OnEnterPressed", function() this:ClearFocus() end)
+    field:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+    return label, field
+end
+local raidLmOpacityLabel, raidLmOpacityField = CreateOpacityField("MuklaOfficerSuiteLmOpacity", "LM opacity %", 180)
+local raidFocusOpacityLabel, raidFocusOpacityField = CreateOpacityField("MuklaOfficerSuiteFocusOpacity", "Out of focus %", 330)
+raidLmOpacityLabel:Hide(); raidLmOpacityField:Hide(); raidFocusOpacityLabel:Hide(); raidFocusOpacityField:Hide()
+local function SaveOpacityField(field, key, fallback)
+    local value = math.max(0, math.min(100, tonumber(field:GetText()) or fallback))
+    MuklaOfficerSuiteDB[key] = value; field:SetText(value)
+end
+raidLmOpacityField:SetScript("OnEditFocusLost", function() SaveOpacityField(this, "lootMasterOpacity", 100) end)
+raidFocusOpacityField:SetScript("OnEditFocusLost", function() SaveOpacityField(this, "outOfFocusOpacity", 30) end)
+
 local raidStatus = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 raidStatus:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -48)
 raidStatus:SetWidth(245)
@@ -1682,7 +1707,8 @@ RefreshRosterPage = function(resetScroll)
     end
     -- The expanded action area consumes the space of two regular rows. Reduce
     -- the visible capacity so the final records stay inside the table frame.
-    local visibleRowCount = selectedMemberName and (rowCount - 2) or rowCount
+    local heightBasedRowCount = math.max(3, math.min(rowCount, math.floor((rosterPage:GetHeight() - 180) / rowHeight)))
+    local visibleRowCount = selectedMemberName and math.max(1, heightBasedRowCount - 2) or heightBasedRowCount
     FauxScrollFrame_Update(rosterScrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
     local offset = FauxScrollFrame_GetOffset(rosterScrollFrame)
 
@@ -2007,12 +2033,13 @@ RefreshRaidPage = function()
     local inRaid = (GetNumRaidMembers() or 0) > 0
     if MOS.lootMasterMode and MOS.lootMasterMinimized then
         raidUnavailable:Hide(); raidStatus:Hide(); raidScanButton:Hide(); raidExportButton:Hide(); raidImportButton:Hide(); MuklaOfficerSuiteRaidResetLootButton:Hide()
+        MuklaOfficerSuiteLmOpacityLabel:Hide(); MuklaOfficerSuiteLmOpacity:Hide(); MuklaOfficerSuiteFocusOpacityLabel:Hide(); MuklaOfficerSuiteFocusOpacity:Hide()
         raidSearchLabel:Hide(); raidSearchBox:Hide(); raidFilterLabel:Hide(); raidClassFilterButton:Hide(); raidRankFilterButton:Hide(); raidClassFilterPanel:Hide(); raidRankFilterPanel:Hide()
         raidHeaders:Hide(); raidGroupHeader:Hide(); raidClassHeader:Hide(); raidRankHeader:Hide(); raidSRHeader:Hide(); raidScrollFrame:Hide()
         for i = 1, table.getn(raidHeaderButtons) do raidHeaderButtons[i]:Hide() end
         for i = 1, table.getn(raidRows) do raidRows[i]:Hide(); raidRows[i].name:Hide(); raidRows[i].group:Hide(); raidRows[i].class:Hide(); raidRows[i].rank:Hide(); raidRows[i].sr:Hide(); raidRows[i].lootPanel:Hide() end
-        MuklaOfficerSuiteRaidModeButton:ClearAllPoints(); MuklaOfficerSuiteRaidModeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 8, -4); MuklaOfficerSuiteRaidModeButton:SetWidth(105); MuklaOfficerSuiteRaidModeButton:Show()
-        MuklaOfficerSuiteRaidMinimizeButton:ClearAllPoints(); MuklaOfficerSuiteRaidMinimizeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 119, -4); MuklaOfficerSuiteRaidMinimizeButton:SetWidth(90); MuklaOfficerSuiteRaidMinimizeButton:SetText("Restore"); MuklaOfficerSuiteRaidMinimizeButton:Show()
+        MuklaOfficerSuiteRaidModeButton:ClearAllPoints(); MuklaOfficerSuiteRaidModeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 6, -4); MuklaOfficerSuiteRaidModeButton:SetWidth(84); MuklaOfficerSuiteRaidModeButton:SetText("Exit LM Mode"); MuklaOfficerSuiteRaidModeButton:Show()
+        MuklaOfficerSuiteRaidMinimizeButton:ClearAllPoints(); MuklaOfficerSuiteRaidMinimizeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 96, -4); MuklaOfficerSuiteRaidMinimizeButton:SetWidth(68); MuklaOfficerSuiteRaidMinimizeButton:SetText("Restore"); MuklaOfficerSuiteRaidMinimizeButton:Show()
         return
     end
     if not inRaid then
@@ -2021,6 +2048,7 @@ RefreshRaidPage = function()
         raidScanButton:Hide()
         raidExportButton:Hide()
         raidImportButton:Hide(); MuklaOfficerSuiteRaidResetLootButton:Hide(); MuklaOfficerSuiteRaidMinimizeButton:Hide()
+        MuklaOfficerSuiteLmOpacityLabel:Hide(); MuklaOfficerSuiteLmOpacity:Hide(); MuklaOfficerSuiteFocusOpacityLabel:Hide(); MuklaOfficerSuiteFocusOpacity:Hide()
         raidSearchLabel:Hide(); raidSearchBox:Hide(); raidFilterLabel:Hide(); raidClassFilterButton:Hide(); raidRankFilterButton:Hide(); raidClassFilterPanel:Hide(); raidRankFilterPanel:Hide()
         raidHeaders:Hide()
         raidGroupHeader:Hide(); raidClassHeader:Hide(); raidRankHeader:Hide(); raidSRHeader:Hide()
@@ -2040,6 +2068,7 @@ RefreshRaidPage = function()
         raidScanButton:Show()
         raidExportButton:Hide()
         raidImportButton:Hide(); MuklaOfficerSuiteRaidResetLootButton:Hide(); MuklaOfficerSuiteRaidMinimizeButton:Hide()
+        MuklaOfficerSuiteLmOpacityLabel:Hide(); MuklaOfficerSuiteLmOpacity:Hide(); MuklaOfficerSuiteFocusOpacityLabel:Hide(); MuklaOfficerSuiteFocusOpacity:Hide()
         raidSearchLabel:Hide(); raidSearchBox:Hide(); raidFilterLabel:Hide(); raidClassFilterButton:Hide(); raidRankFilterButton:Hide()
         raidHeaders:Hide()
         raidGroupHeader:Hide(); raidClassHeader:Hide(); raidRankHeader:Hide(); raidSRHeader:Hide()
@@ -2055,9 +2084,11 @@ RefreshRaidPage = function()
     raidScanButton:SetHeight(22)
     raidScanButton:SetText("Scan again")
     if MOS.lootMasterMode then
-        raidExportButton:Hide(); raidImportButton:Hide(); MuklaOfficerSuiteRaidResetLootButton:Hide(); MuklaOfficerSuiteRaidMinimizeButton:Show(); MuklaOfficerSuiteRaidMinimizeButton:SetText("Minimize")
+        raidExportButton:Hide(); raidImportButton:Hide(); raidScanButton:Hide(); MuklaOfficerSuiteRaidResetLootButton:Hide(); MuklaOfficerSuiteRaidMinimizeButton:Show(); MuklaOfficerSuiteRaidMinimizeButton:SetText("Minimize")
+        MuklaOfficerSuiteLmOpacityLabel:Hide(); MuklaOfficerSuiteLmOpacity:Hide(); MuklaOfficerSuiteFocusOpacityLabel:Hide(); MuklaOfficerSuiteFocusOpacity:Hide()
     else
         raidExportButton:Show(); raidImportButton:Show(); MuklaOfficerSuiteRaidResetLootButton:Show(); MuklaOfficerSuiteRaidMinimizeButton:Hide()
+        MuklaOfficerSuiteLmOpacityLabel:Show(); MuklaOfficerSuiteLmOpacity:Show(); MuklaOfficerSuiteFocusOpacityLabel:Show(); MuklaOfficerSuiteFocusOpacity:Show()
     end
     local data = MuklaOfficerSuiteDB.raidAttendance
     local members = data and data.members or {}
@@ -2086,11 +2117,10 @@ RefreshRaidPage = function()
         raidFilterLabel:Hide()
         raidClassFilterButton:ClearAllPoints(); raidClassFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 6, -8); raidClassFilterButton:SetWidth(56)
         raidRankFilterButton:ClearAllPoints(); raidRankFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 66, -8); raidRankFilterButton:SetWidth(56)
-        MuklaOfficerSuiteRaidModeButton:ClearAllPoints(); MuklaOfficerSuiteRaidModeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 126, -8); MuklaOfficerSuiteRaidModeButton:SetWidth(100)
-        MuklaOfficerSuiteRaidMinimizeButton:ClearAllPoints(); MuklaOfficerSuiteRaidMinimizeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 230, -8); MuklaOfficerSuiteRaidMinimizeButton:SetWidth(62)
-        raidScanButton:ClearAllPoints(); raidScanButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 296, -8); raidScanButton:SetWidth(58)
+        MuklaOfficerSuiteRaidModeButton:ClearAllPoints(); MuklaOfficerSuiteRaidModeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 126, -8); MuklaOfficerSuiteRaidModeButton:SetWidth(110); MuklaOfficerSuiteRaidModeButton:SetText("Turn Off LM Mode")
+        MuklaOfficerSuiteRaidMinimizeButton:ClearAllPoints(); MuklaOfficerSuiteRaidMinimizeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 240, -8); MuklaOfficerSuiteRaidMinimizeButton:SetWidth(62)
         raidSearchLabel:Hide()
-        raidSearchBox:ClearAllPoints(); raidSearchBox:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 358, -8); raidSearchBox:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -6, -8); raidSearchBox:SetWidth(58)
+        raidSearchBox:ClearAllPoints(); raidSearchBox:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 306, -8); raidSearchBox:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -6, -8); raidSearchBox:SetWidth(58)
     else
         raidFilterLabel:ClearAllPoints(); raidFilterLabel:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -82)
         raidClassFilterButton:ClearAllPoints(); raidClassFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 58, -76); raidClassFilterButton:SetWidth(84)
@@ -2104,8 +2134,8 @@ RefreshRaidPage = function()
     raidSearchBox:Show(); raidClassFilterButton:Show(); raidRankFilterButton:Show()
     local raidHeaderY = MOS.lootMasterMode and -42 or -110
     local raidRowStartY = MOS.lootMasterMode and -64 or -132
-    local headerPositions = MOS.lootMasterMode and { 8, 0, 120, 195, 330 } or { 12, 172, 252, 347, 500 }
-    local headerWidths = MOS.lootMasterMode and { 104, 0, 65, 125, 40 } or { 155, 70, 85, 138, 55 }
+    local headerPositions = MOS.lootMasterMode and { 8, 0, 105, 170, 295 } or { 12, 172, 252, 347, 500 }
+    local headerWidths = MOS.lootMasterMode and { 90, 0, 55, 110, 35 } or { 155, 70, 85, 138, 55 }
     local headerLabels = { raidHeaders, raidGroupHeader, raidClassHeader, raidRankHeader, raidSRHeader }
     for headerIndex = 1, 5 do
         headerLabels[headerIndex]:ClearAllPoints(); headerLabels[headerIndex]:SetPoint("TOPLEFT", raidPage, "TOPLEFT", headerPositions[headerIndex], raidHeaderY); headerLabels[headerIndex]:SetWidth(headerWidths[headerIndex])
@@ -2119,7 +2149,7 @@ RefreshRaidPage = function()
         if MOS.lootMasterMode and header.sortKey == "subgroup" then header:Hide() else header:Show() end
         if raidSortKey == header.sortKey then header.label:SetText(header.baseText .. (raidSortAscending and " ^" or " v")) else header.label:SetText(header.baseText .. " <>") end
     end
-    raidScrollFrame:ClearAllPoints(); raidScrollFrame:SetPoint("TOPLEFT", raidPage, "TOPLEFT", -4, raidRowStartY + 11); raidScrollFrame:SetPoint("BOTTOMRIGHT", raidPage, "BOTTOMRIGHT", -12, 18); raidScrollFrame:Show()
+    raidScrollFrame:ClearAllPoints(); raidScrollFrame:SetPoint("TOPLEFT", raidPage, "TOPLEFT", -4, raidRowStartY + 11); raidScrollFrame:SetPoint("BOTTOMRIGHT", raidPage, "BOTTOMRIGHT", -28, 18); raidScrollFrame:Show()
     local reservedHeight = MOS.lootMasterMode and 78 or 150
     local availableRaidRows = math.max(3, math.min(table.getn(raidRows), math.floor((raidPage:GetHeight() - reservedHeight) / 21)))
     local raidVisibleRowCount = selectedRaidMemberName and math.max(1, availableRaidRows - 5) or availableRaidRows
@@ -2130,7 +2160,7 @@ RefreshRaidPage = function()
         local member = visibleRaidMembers[raidOffset + i]
         local row = raidRows[i]
         local groupX, classX, rankX, srX = 172, 252, 347, 500
-        if MOS.lootMasterMode then groupX, classX, rankX, srX = 0, 120, 195, 330 end
+        if MOS.lootMasterMode then groupX, classX, rankX, srX = 0, 105, 170, 295 end
         row:ClearAllPoints(); row:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, raidRowY)
         row.group:ClearAllPoints(); row.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", groupX, raidRowY)
         row.class:ClearAllPoints(); row.class:SetPoint("TOPLEFT", raidPage, "TOPLEFT", classX, raidRowY)
@@ -2138,14 +2168,14 @@ RefreshRaidPage = function()
         row.sr:ClearAllPoints(); row.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", srX, raidRowY)
         if member and i <= raidVisibleRowCount then
             row.displayedMember = member
-            row:SetWidth(MOS.lootMasterMode and 370 or 543)
-            row.name:SetWidth(MOS.lootMasterMode and 104 or 148)
+            row:SetWidth(MOS.lootMasterMode and 330 or 543)
+            row.name:SetWidth(MOS.lootMasterMode and 90 or 148)
             row.group:SetWidth(MOS.lootMasterMode and 0 or 70)
-            row.class:SetWidth(MOS.lootMasterMode and 65 or 85)
-            row.rank:SetWidth(MOS.lootMasterMode and 125 or 135)
-            row.sr:SetWidth(MOS.lootMasterMode and 40 or 55)
-            row.lootPanel:SetWidth(MOS.lootMasterMode and 362 or 535)
-            for lootLayoutIndex = 1, table.getn(row.lootRows) do row.lootRows[lootLayoutIndex].name:SetWidth(MOS.lootMasterMode and 282 or 455) end
+            row.class:SetWidth(MOS.lootMasterMode and 55 or 85)
+            row.rank:SetWidth(MOS.lootMasterMode and 110 or 135)
+            row.sr:SetWidth(MOS.lootMasterMode and 35 or 55)
+            row.lootPanel:SetWidth(MOS.lootMasterMode and 322 or 535)
+            for lootLayoutIndex = 1, table.getn(row.lootRows) do row.lootRows[lootLayoutIndex].name:SetWidth(MOS.lootMasterMode and 242 or 455) end
             row.name:SetText(Short(member.name, 22))
             raidRows[i].group:SetText(tostring(member.subgroup or ""))
             raidRows[i].class:SetText(Short(member.class, 12))
@@ -2208,8 +2238,8 @@ ToggleLootMasterMode = function()
     if MOS.lootMasterMode then
         MuklaOfficerSuiteDB.windowWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.windowHeight = dashboard:GetHeight()
         MOS.lootMasterMinimized = false
-        dashboard:SetMinResize(400, 170); dashboard:SetMaxResize(460, 760)
-        dashboard:SetWidth(math.max(400, math.min(460, tonumber(MuklaOfficerSuiteDB.lootMasterWidth) or 430)))
+        dashboard:SetMinResize(380, 170); dashboard:SetMaxResize(420, 760)
+        dashboard:SetWidth(math.max(380, math.min(420, tonumber(MuklaOfficerSuiteDB.lootMasterWidth) or 400)))
         dashboard:SetHeight(math.max(170, math.min(240, tonumber(MuklaOfficerSuiteDB.lootMasterHeight) or 210)))
         dashboard:SetAlpha(0.3)
         sidebar:Hide(); titleBar:Hide(); closeButton:Hide(); versionText:Hide(); raidTitle:Hide()
@@ -2243,14 +2273,14 @@ ToggleLootMasterMinimize = function()
     if not MOS.lootMasterMode then return end
     if MOS.lootMasterMinimized then
         MOS.lootMasterMinimized = false
-        dashboard:SetMinResize(400, 170); dashboard:SetMaxResize(460, 760)
-        dashboard:SetWidth(math.max(400, math.min(460, MOS.lootMasterWidthBeforeMinimize or 430)))
+        dashboard:SetMinResize(380, 170); dashboard:SetMaxResize(420, 760)
+        dashboard:SetWidth(math.max(380, math.min(420, MOS.lootMasterWidthBeforeMinimize or 400)))
         dashboard:SetHeight(math.max(170, MOS.lootMasterHeightBeforeMinimize or 210))
     else
         MOS.lootMasterWidthBeforeMinimize = dashboard:GetWidth(); MOS.lootMasterHeightBeforeMinimize = dashboard:GetHeight()
         MOS.lootMasterMinimized = true
-        dashboard:SetMinResize(220, 50); dashboard:SetMaxResize(460, 760)
-        dashboard:SetWidth(220); dashboard:SetHeight(50)
+        dashboard:SetMinResize(200, 50); dashboard:SetMaxResize(420, 760)
+        dashboard:SetWidth(200); dashboard:SetHeight(50)
     end
     RefreshRaidPage()
 end
@@ -2676,6 +2706,8 @@ end
 MOS:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
         EnsureDatabase()
+        MuklaOfficerSuiteLmOpacity:SetText(MuklaOfficerSuiteDB.lootMasterOpacity)
+        MuklaOfficerSuiteFocusOpacity:SetText(MuklaOfficerSuiteDB.outOfFocusOpacity)
         dashboard:SetScale(1)
         dashboard:SetWidth(math.max(760, math.min(1100, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840)))
         dashboard:SetHeight(math.max(420, math.min(760, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540)))

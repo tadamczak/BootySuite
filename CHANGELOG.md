@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.0
+
+- Fixed the title-bar close button so it closes the complete addon dashboard.
+- Made Roster Management calculate visible records from the current window height.
+- Tightened the minimized Loot Master bar so Exit LM Mode and Restore fit inside it.
+- Removed Scan again from Loot Master Mode and reduced its width to 380-420 pixels.
+- Moved the raid scrollbar inward and narrowed expanded loot content to stay inside the frame.
+- Added editable LM opacity and Out of focus opacity percentage settings to full Raid Management.
+- Applied out-of-focus opacity to the complete addon and treated 100% as no transparency change.
+
 ## 0.17.0
 
 - Added Loot Master minimize and restore controls.
