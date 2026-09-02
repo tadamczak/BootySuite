@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -356,6 +356,10 @@ local lootMasterAlphaWatcher = CreateFrame("Frame", nil, dashboard)
 lootMasterAlphaWatcher.elapsed = 0
 lootMasterAlphaWatcher:SetScript("OnUpdate", function()
     if not dashboard:IsVisible() then return end
+    if not MOS.lootMasterMode then
+        if dashboard:GetAlpha() ~= 1 then dashboard:SetAlpha(1) end
+        return
+    end
     this.elapsed = this.elapsed + arg1
     if this.elapsed < 0.08 then return end
     this.elapsed = 0
@@ -364,7 +368,7 @@ lootMasterAlphaWatcher:SetScript("OnUpdate", function()
     cursorX = cursorX / uiScale; cursorY = cursorY / uiScale
     local inside = dashboard:GetLeft() and cursorX >= dashboard:GetLeft() and cursorX <= dashboard:GetRight() and cursorY >= dashboard:GetBottom() and cursorY <= dashboard:GetTop()
     local opacity
-    if inside then opacity = MOS.lootMasterMode and (tonumber(MuklaOfficerSuiteDB.lootMasterOpacity) or 100) or 100
+    if inside then opacity = tonumber(MuklaOfficerSuiteDB.lootMasterOpacity) or 100
     else opacity = tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) or 30 end
     dashboard:SetAlpha(math.max(0, math.min(100, opacity)) / 100)
 end)
@@ -1138,6 +1142,7 @@ raidModeButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -8)
 raidModeButton:SetWidth(118); raidModeButton:SetHeight(22)
 StyleCompactButton(raidModeButton, "Loot Master Mode")
 raidModeButton:SetScript("OnClick", function() ToggleLootMasterMode() end)
+raidModeButton:Hide()
 
 local raidMinimizeButton = CreateFrame("Button", "MuklaOfficerSuiteRaidMinimizeButton", raidPage)
 raidMinimizeButton:SetWidth(66); raidMinimizeButton:SetHeight(22)
@@ -2080,6 +2085,7 @@ RefreshRaidPage = function()
     end
     if not inRaid then
         MOS.raidScanReady = false
+        MuklaOfficerSuiteRaidModeButton:Hide()
         raidUnavailable:Show()
         raidScanButton:Hide()
         raidExportButton:Hide()
@@ -2096,6 +2102,7 @@ RefreshRaidPage = function()
     end
     raidUnavailable:Hide()
     if not MOS.raidScanReady then
+        MuklaOfficerSuiteRaidModeButton:Hide()
         raidScanButton:ClearAllPoints()
         raidScanButton:SetPoint("CENTER", raidPage, "CENTER", 0, 12)
         raidScanButton:SetWidth(140)
@@ -2113,6 +2120,7 @@ RefreshRaidPage = function()
         raidStatus:SetText("")
         return
     end
+    MuklaOfficerSuiteRaidModeButton:Show()
     raidScanButton:Show()
     raidScanButton:ClearAllPoints()
     raidScanButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -42)
@@ -2189,6 +2197,19 @@ RefreshRaidPage = function()
     local reservedHeight = MOS.lootMasterMode and 78 or 150
     local availableRaidRows = math.max(3, math.min(table.getn(raidRows), math.floor((raidPage:GetHeight() - reservedHeight) / 21)))
     local raidVisibleRowCount = selectedRaidMemberName and math.max(1, availableRaidRows - 5) or availableRaidRows
+    if selectedRaidMemberName then
+        local selectedIndex = nil
+        for memberIndex = 1, table.getn(visibleRaidMembers) do
+            if visibleRaidMembers[memberIndex].name == selectedRaidMemberName then selectedIndex = memberIndex; break end
+        end
+        if selectedIndex then
+            local currentOffset = raidScrollFrame.offset or 0
+            if selectedIndex <= currentOffset then currentOffset = selectedIndex - 1
+            elseif selectedIndex > currentOffset + raidVisibleRowCount then currentOffset = selectedIndex - raidVisibleRowCount end
+            currentOffset = math.max(0, currentOffset)
+            raidScrollFrame.offset = currentOffset; raidScrollFrame:SetVerticalScroll(currentOffset * 21)
+        end
+    end
     FauxScrollFrame_Update(raidScrollFrame, table.getn(visibleRaidMembers), raidVisibleRowCount, 21)
     local raidOffset = FauxScrollFrame_GetOffset(raidScrollFrame)
     local raidRowY = raidRowStartY

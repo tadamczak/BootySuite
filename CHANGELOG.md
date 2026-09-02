@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.1
+
+- Limited LM opacity and out-of-focus opacity behavior strictly to Loot Master Mode.
+- Kept the Loot Master Mode button hidden until a raid scan has completed.
+- Automatically adjusted the raid scroll offset so a clicked member remains visible when expansion reduces the table to one row.
+
 ## 0.19.0
 
 - Centered the full dashboard whenever Loot Master Mode is turned off.
