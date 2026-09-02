@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Fixed roster row clicks on WoW 1.12 by using button widgets instead of generic frames.
+
 ## 0.4.0
 
 - Added selectable roster rows with persistent visual highlighting.

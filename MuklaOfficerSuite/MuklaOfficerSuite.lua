@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -340,7 +340,7 @@ notesHeader:SetText("Public / Officer note")
 
 local i
 for i = 1, rowCount do
-    local row = CreateFrame("Frame", nil, rosterPage)
+    local row = CreateFrame("Button", nil, rosterPage)
     row:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -78 - (i * rowHeight))
     row:SetWidth(560)
     row:SetHeight(rowHeight)
