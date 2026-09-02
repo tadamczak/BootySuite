@@ -10,8 +10,8 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - sortable roster columns and full-field search,
 - expandable roster member actions with confirmed promote and demote controls,
 - collapsible roster filters for class and guild rank,
-- guild class, rank, level, and activity statistics,
-- CSR snapshots of the current raid enriched with guild roster data,
+- manually scanned guild class and rank statistics with a level 60 filter,
+- Raid Management snapshots enriched with guild roster data,
 - an `Export Roster` page with `Scan & Save` and last-scan information,
 
 The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.

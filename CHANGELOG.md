@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0
+
+- Added manual Guild Statistics scanning with a visible percentage progress bar.
+- Added a default-enabled level 60 statistics filter and class icons.
+- Ordered rank statistics from highest to lowest guild rank.
+- Added Raid Management with raid availability detection and a scrollable result table.
+- Moved raid scanning out of CSR and left CSR as a placeholder for future tools.
+- Increased spacing around expanded roster member actions.
+
 ## 0.6.0
 
 - Moved the guild artwork to the navigation sidebar and added a dark content background.
