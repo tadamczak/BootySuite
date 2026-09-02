@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.0
+
+- Sorted expanded Guild Statistics members by guild rank and then by name.
+- Increased space for rank names in statistics detail rows.
+- Added alternating row colors to statistics summaries, expanded members, and Raid Management.
+- Highlighted expanded statistics summaries consistently with selected roster members.
+- Reduced the minimum normal and Loot Master window sizes.
+- Tightened Loot Master margins and column widths while keeping labels on one line.
+- Hid attendance export and scan metadata in Loot Master Mode.
+- Changed inactive Loot Master opacity to 30% and detect hover against the complete addon bounds.
+
 ## 0.14.1
 
 - Replaced proportional UI scaling with native independent width and height resizing.

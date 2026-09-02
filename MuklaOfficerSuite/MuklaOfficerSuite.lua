@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.14.1"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.15.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -309,7 +309,7 @@ dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
 dashboard:SetFrameStrata("DIALOG")
 dashboard:SetMovable(true)
 dashboard:SetResizable(true)
-dashboard:SetMinResize(840, 540)
+dashboard:SetMinResize(810, 500)
 dashboard:SetMaxResize(1100, 760)
 dashboard:EnableMouse(true)
 dashboard:RegisterForDrag("LeftButton")
@@ -349,8 +349,19 @@ resizeGrip:SetScript("OnMouseUp", function()
 end)
 resizeGrip:SetScript("OnHide", function() dashboard:StopMovingOrSizing() end)
 
-dashboard:SetScript("OnEnter", function() if MOS.lootMasterMode then dashboard:SetAlpha(1) end end)
-dashboard:SetScript("OnLeave", function() if MOS.lootMasterMode then dashboard:SetAlpha(0.5) end end)
+local lootMasterAlphaWatcher = CreateFrame("Frame", nil, dashboard)
+lootMasterAlphaWatcher.elapsed = 0
+lootMasterAlphaWatcher:SetScript("OnUpdate", function()
+    if not MOS.lootMasterMode then return end
+    this.elapsed = this.elapsed + arg1
+    if this.elapsed < 0.08 then return end
+    this.elapsed = 0
+    local cursorX, cursorY = GetCursorPosition()
+    local uiScale = UIParent:GetEffectiveScale()
+    cursorX = cursorX / uiScale; cursorY = cursorY / uiScale
+    local inside = dashboard:GetLeft() and cursorX >= dashboard:GetLeft() and cursorX <= dashboard:GetRight() and cursorY >= dashboard:GetBottom() and cursorY <= dashboard:GetTop()
+    dashboard:SetAlpha(inside and 1 or 0.3)
+end)
 
 local titleBar = CreateFrame("Frame", nil, dashboard)
 titleBar:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 18, -14)
@@ -1016,12 +1027,14 @@ local function CreateStatisticsTable(name, x, width)
         local row = CreateFrame("Button", nil, statisticsPage)
         row:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x, -194 - ((rowIndex - 1) * 24))
         row:SetWidth(width - 16); row:SetHeight(23)
+        row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+        row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetPoint("LEFT", row, "LEFT", 0, 0); row.icon:SetWidth(20); row.icon:SetHeight(20)
         row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         row.name:SetPoint("LEFT", row, "LEFT", 28, 0); row.name:SetWidth(132); row.name:SetJustifyH("LEFT")
         row.rank = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.rank:SetPoint("LEFT", row, "LEFT", 116, 0); row.rank:SetWidth(94); row.rank:SetJustifyH("LEFT")
+        row.rank:SetPoint("LEFT", row, "LEFT", 100, 0); row.rank:SetWidth(116); row.rank:SetJustifyH("LEFT")
         row.level = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         row.level:SetPoint("RIGHT", row, "RIGHT", -2, 0); row.level:SetWidth(25); row.level:SetJustifyH("RIGHT")
         row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -1057,7 +1070,11 @@ local function PopulateStatisticsTable(statsTable, summaries, statsType, data, o
                 local matches = (statsType == "class" and member.class == summary.name) or (statsType == "rank" and member.rank == summary.name)
                 if matches and (not onlyLevel60 or tonumber(member.level) == 60) then table.insert(members, member) end
             end
-            table.sort(members, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
+            table.sort(members, function(a, b)
+                local aRank, bRank = tonumber(a.rankIndex) or 999, tonumber(b.rankIndex) or 999
+                if aRank == bRank then return string.lower(a.name or "") < string.lower(b.name or "") end
+                return aRank < bRank
+            end)
             for memberIndex = 1, table.getn(members) do table.insert(entries, { kind = "member", member = members[memberIndex] }) end
         end
     end
@@ -1069,6 +1086,14 @@ local function PopulateStatisticsTable(statsTable, summaries, statsType, data, o
         local entry = entries[offset + rowIndex]
         row.entry = entry
         if entry then
+            local isExpandedSummary = entry.kind == "summary" and MOS.statisticsExpandedType == statsType and MOS.statisticsExpandedValue == entry.value
+            if isExpandedSummary then
+                row:SetBackdropColor(0.16, 0.20, 0.17, 0.82); row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
+            elseif math.mod(offset + rowIndex, 2) == 0 then
+                row:SetBackdropColor(1, 0.78, 0.25, 0.075); row:SetBackdropBorderColor(0, 0, 0, 0)
+            else
+                row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0)
+            end
             if entry.kind == "summary" then
                 row.icon:SetTexture(statsType == "class" and (CLASS_ICONS[entry.value] or "Interface\\Icons\\INV_Misc_QuestionMark") or nil)
                 if statsType == "class" then row.icon:Show() else row.icon:Hide() end
@@ -1078,8 +1103,8 @@ local function PopulateStatisticsTable(statsTable, summaries, statsType, data, o
                 row.count:SetText(entry.count); row.count:Show(); row.rank:Hide(); row.level:Hide()
             else
                 row.icon:Hide(); row.count:Hide()
-                row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", 12, 0); row.name:SetWidth(96); row.name:SetText(Short(entry.member.name, 14))
-                row.rank:SetText(Short(entry.member.rank, 13)); row.rank:Show()
+                row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", 12, 0); row.name:SetWidth(82); row.name:SetText(Short(entry.member.name, 12))
+                row.rank:SetWidth(onlyLevel60 and 116 or 96); row.rank:SetText(Short(entry.member.rank, 18)); row.rank:Show()
                 if onlyLevel60 then row.level:Hide() else row.level:SetText(entry.member.level or ""); row.level:Show() end
             end
             row:Show()
@@ -1992,7 +2017,7 @@ RefreshRaidPage = function()
     raidScanButton:SetWidth(98)
     raidScanButton:SetHeight(22)
     raidScanButton:SetText("Scan again")
-    raidExportButton:Show()
+    if MOS.lootMasterMode then raidExportButton:Hide() else raidExportButton:Show() end
     raidImportButton:Show()
     local data = MuklaOfficerSuiteDB.raidAttendance
     local members = data and data.members or {}
@@ -2013,7 +2038,15 @@ RefreshRaidPage = function()
     end
     if not selectedRaidMemberVisible then selectedRaidMemberName = nil end
     raidStatus:SetText((data and data.scannedAtText or "Unknown") .. " | showing " .. table.getn(visibleRaidMembers) .. " of " .. table.getn(members) .. " raid members")
+    if MOS.lootMasterMode then raidStatus:Hide() else raidStatus:Show() end
     raidSearchLabel:Show(); raidSearchBox:Show(); raidFilterLabel:Show(); raidClassFilterButton:Show(); raidRankFilterButton:Show()
+    local headerPositions = MOS.lootMasterMode and { 12, 142, 207, 287, 422 } or { 12, 172, 252, 347, 500 }
+    local headerWidths = MOS.lootMasterMode and { 120, 55, 70, 125, 45 } or { 155, 70, 85, 138, 55 }
+    local headerLabels = { raidHeaders, raidGroupHeader, raidClassHeader, raidRankHeader, raidSRHeader }
+    for headerIndex = 1, 5 do
+        headerLabels[headerIndex]:ClearAllPoints(); headerLabels[headerIndex]:SetPoint("TOPLEFT", raidPage, "TOPLEFT", headerPositions[headerIndex], -110); headerLabels[headerIndex]:SetWidth(headerWidths[headerIndex])
+        raidHeaderButtons[headerIndex]:ClearAllPoints(); raidHeaderButtons[headerIndex]:SetPoint("TOPLEFT", raidPage, "TOPLEFT", headerPositions[headerIndex], -106); raidHeaderButtons[headerIndex]:SetWidth(headerWidths[headerIndex])
+    end
     raidHeaders:Show()
     raidGroupHeader:Show(); raidClassHeader:Show(); raidRankHeader:Show(); raidSRHeader:Show()
     for i = 1, table.getn(raidHeaderButtons) do
@@ -2030,13 +2063,23 @@ RefreshRaidPage = function()
     for i = 1, table.getn(raidRows) do
         local member = visibleRaidMembers[raidOffset + i]
         local row = raidRows[i]
+        local groupX, classX, rankX, srX = 172, 252, 347, 500
+        if MOS.lootMasterMode then groupX, classX, rankX, srX = 142, 207, 287, 422 end
         row:ClearAllPoints(); row:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, raidRowY)
-        row.group:ClearAllPoints(); row.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 172, raidRowY)
-        row.class:ClearAllPoints(); row.class:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 252, raidRowY)
-        row.rank:ClearAllPoints(); row.rank:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 347, raidRowY)
-        row.sr:ClearAllPoints(); row.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 500, raidRowY)
+        row.group:ClearAllPoints(); row.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", groupX, raidRowY)
+        row.class:ClearAllPoints(); row.class:SetPoint("TOPLEFT", raidPage, "TOPLEFT", classX, raidRowY)
+        row.rank:ClearAllPoints(); row.rank:SetPoint("TOPLEFT", raidPage, "TOPLEFT", rankX, raidRowY)
+        row.sr:ClearAllPoints(); row.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", srX, raidRowY)
         if member and i <= raidVisibleRowCount then
             row.displayedMember = member
+            row:SetWidth(MOS.lootMasterMode and 455 or 543)
+            row.name:SetWidth(MOS.lootMasterMode and 120 or 148)
+            row.group:SetWidth(MOS.lootMasterMode and 55 or 70)
+            row.class:SetWidth(MOS.lootMasterMode and 70 or 85)
+            row.rank:SetWidth(MOS.lootMasterMode and 125 or 135)
+            row.sr:SetWidth(MOS.lootMasterMode and 45 or 55)
+            row.lootPanel:SetWidth(MOS.lootMasterMode and 447 or 535)
+            for lootLayoutIndex = 1, table.getn(row.lootRows) do row.lootRows[lootLayoutIndex].name:SetWidth(MOS.lootMasterMode and 367 or 455) end
             row.name:SetText(Short(member.name, 22))
             raidRows[i].group:SetText(tostring(member.subgroup or ""))
             raidRows[i].class:SetText(Short(member.class, 12))
@@ -2066,7 +2109,9 @@ RefreshRaidPage = function()
                 end
                 raidRowY = raidRowY - 131
             else
-                row:SetHeight(20); row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0); row.lootPanel:Hide()
+                row:SetHeight(20)
+                if math.mod(raidOffset + i, 2) == 0 then row:SetBackdropColor(1, 0.78, 0.25, 0.075) else row:SetBackdropColor(0, 0, 0, 0) end
+                row:SetBackdropBorderColor(0, 0, 0, 0); row.lootPanel:Hide()
                 raidRowY = raidRowY - 21
             end
         else
@@ -2094,25 +2139,27 @@ ToggleLootMasterMode = function()
     MOS.lootMasterMode = not MOS.lootMasterMode
     if MOS.lootMasterMode then
         MuklaOfficerSuiteDB.windowWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.windowHeight = dashboard:GetHeight()
-        dashboard:SetMinResize(620, 300); dashboard:SetMaxResize(1100, 760)
-        dashboard:SetWidth(tonumber(MuklaOfficerSuiteDB.lootMasterWidth) or 650)
-        dashboard:SetHeight(tonumber(MuklaOfficerSuiteDB.lootMasterHeight) or 340)
-        dashboard:SetAlpha(0.5)
+        dashboard:SetMinResize(560, 260); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(tonumber(MuklaOfficerSuiteDB.lootMasterWidth) or 600)
+        dashboard:SetHeight(tonumber(MuklaOfficerSuiteDB.lootMasterHeight) or 300)
+        dashboard:SetAlpha(0.3)
         sidebar:Hide(); titleBar:Hide(); closeButton:Hide(); versionText:Hide(); raidTitle:Hide()
         contentPanel:ClearAllPoints()
-        contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 14, -14)
-        contentPanel:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -14, 14)
+        contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 6, -6)
+        contentPanel:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -6, 6)
+        rosterPage:ClearAllPoints(); rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 5, -5); rosterPage:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -5, 5)
         raidModeButton:SetText("Turn Off LM Mode")
     else
         MuklaOfficerSuiteDB.lootMasterWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.lootMasterHeight = dashboard:GetHeight()
         dashboard:SetAlpha(1)
-        dashboard:SetMinResize(840, 540); dashboard:SetMaxResize(1100, 760)
-        dashboard:SetWidth(math.max(840, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840))
-        dashboard:SetHeight(math.max(540, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540))
+        dashboard:SetMinResize(810, 500); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(math.max(810, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840))
+        dashboard:SetHeight(math.max(500, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540))
         sidebar:Show(); titleBar:Show(); closeButton:Show(); versionText:Show(); raidTitle:Show()
         contentPanel:ClearAllPoints()
         contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 204, -68)
         contentPanel:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -20, 32)
+        rosterPage:ClearAllPoints(); rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 14, -14); rosterPage:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -14, 14)
         raidModeButton:SetText("Loot Master Mode")
     end
     RefreshRaidPage()
@@ -2522,8 +2569,8 @@ MOS:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
         EnsureDatabase()
         dashboard:SetScale(1)
-        dashboard:SetWidth(math.max(840, math.min(1100, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840)))
-        dashboard:SetHeight(math.max(540, math.min(760, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540)))
+        dashboard:SetWidth(math.max(810, math.min(1100, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840)))
+        dashboard:SetHeight(math.max(500, math.min(760, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540)))
         MuklaOfficerSuiteDB.uiScale = nil
         PositionMinimapButton()
         if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() end
