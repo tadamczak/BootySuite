@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Added selectable roster rows with persistent visual highlighting.
+- Added confirmed guild member promotion and demotion actions.
+- Added permanent sort indicators and sorting tooltips to sortable columns.
+- Refined the window chrome and increased background artwork visibility.
+
 ## 0.3.0
 
 - Added sidebar navigation with Roster Management, Export Roster, and About pages.

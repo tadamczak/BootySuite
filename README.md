@@ -8,6 +8,7 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - aligned roster columns with scrolling for the complete member list,
 - dashboard navigation with dedicated roster, export, and about pages,
 - sortable roster columns and full-field search,
+- selectable roster members with confirmed promote and demote actions,
 - an `Export Roster` page with `Scan & Save` and last-scan information,
 
 The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.

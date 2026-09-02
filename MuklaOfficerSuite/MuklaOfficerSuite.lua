@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -180,9 +180,17 @@ dashboard:Hide()
 local titleBar = CreateFrame("Frame", nil, dashboard)
 titleBar:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 18, -13)
 titleBar:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -18, -13)
-titleBar:SetHeight(42)
-titleBar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
-titleBar:SetBackdropColor(0.08, 0.06, 0.03, 0.92)
+titleBar:SetHeight(32)
+titleBar:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true,
+    tileSize = 16,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+})
+titleBar:SetBackdropColor(0.07, 0.06, 0.04, 0.96)
+titleBar:SetBackdropBorderColor(0.48, 0.48, 0.45, 1)
 
 local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("CENTER", titleBar, "CENTER", 0, 2)
@@ -229,11 +237,11 @@ background:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 5, -5)
 background:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -5, 5)
 background:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\DashboardBackground")
 background:SetTexCoord(0, 1, 0, 0.625)
-background:SetAlpha(0.16)
+background:SetAlpha(0.34)
 
 local backgroundShade = contentPanel:CreateTexture(nil, "BORDER")
 backgroundShade:SetAllPoints(contentPanel)
-backgroundShade:SetTexture(0, 0, 0, 0.38)
+backgroundShade:SetTexture(0, 0, 0, 0.20)
 
 local rosterPage = CreateFrame("Frame", nil, contentPanel)
 rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 14, -14)
@@ -269,13 +277,15 @@ rosterStatusText:SetWidth(565)
 rosterStatusText:SetJustifyH("LEFT")
 
 local rows = {}
-local rowCount = 16
+local rowCount = 14
 local rowHeight = 20
 local visibleMembers = {}
 local sortKey = "name"
 local sortAscending = true
+local selectedMemberName = nil
 local RefreshRosterPage
 local RefreshExportPage
+local UpdateSelectionControls
 local menuButtons = {}
 local currentPage = "roster"
 
@@ -298,12 +308,19 @@ local function CreateHeaderButton(text, x, width, alignment, key)
     local label = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetAllPoints(button)
     label:SetJustifyH(alignment or "LEFT")
-    label:SetText(text)
+    label:SetText(text .. " <>")
     button.label = label
 
     local highlight = button:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetAllPoints(button)
     highlight:SetTexture(1, 0.72, 0.12, 0.12)
+    button:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(this, "ANCHOR_TOP")
+        GameTooltip:AddLine("Sort by " .. this.baseText)
+        GameTooltip:AddLine("Click again to reverse the order", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     return button
 end
 
@@ -327,12 +344,18 @@ for i = 1, rowCount do
     row:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -78 - (i * rowHeight))
     row:SetWidth(560)
     row:SetHeight(rowHeight)
+    row:EnableMouse(true)
 
     if math.mod(i, 2) == 0 then
         local stripe = row:CreateTexture(nil, "BACKGROUND")
         stripe:SetAllPoints(row)
         stripe:SetTexture(1, 0.78, 0.25, 0.035)
     end
+
+    row.selection = row:CreateTexture(nil, "BACKGROUND")
+    row.selection:SetAllPoints(row)
+    row.selection:SetTexture(1, 0.72, 0.08, 0.22)
+    row.selection:Hide()
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.name:SetPoint("LEFT", row, "LEFT", 0, 0)
@@ -363,12 +386,39 @@ for i = 1, rowCount do
     row.notes:SetWidth(173)
     row.notes:SetHeight(18)
     row.notes:SetJustifyH("LEFT")
+    row:SetScript("OnClick", function()
+        if this.displayedMember then
+            selectedMemberName = this.displayedMember.name
+            RefreshRosterPage(false)
+            UpdateSelectionControls()
+        end
+    end)
     rows[i] = row
 end
 
 local rosterScrollFrame = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRosterScrollFrame", rosterPage, "FauxScrollFrameTemplate")
 rosterScrollFrame:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", -4, -89)
-rosterScrollFrame:SetPoint("BOTTOMRIGHT", rosterPage, "BOTTOMRIGHT", -12, 13)
+rosterScrollFrame:SetPoint("BOTTOMRIGHT", rosterPage, "BOTTOMRIGHT", -12, 57)
+
+local selectedMemberText = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+selectedMemberText:SetPoint("BOTTOMLEFT", rosterPage, "BOTTOMLEFT", 4, 10)
+selectedMemberText:SetWidth(275)
+selectedMemberText:SetJustifyH("LEFT")
+selectedMemberText:SetText("Select a guild member")
+
+local promoteButton = CreateFrame("Button", nil, rosterPage, "UIPanelButtonTemplate")
+promoteButton:SetWidth(105)
+promoteButton:SetHeight(24)
+promoteButton:SetPoint("BOTTOMRIGHT", rosterPage, "BOTTOMRIGHT", -116, 4)
+promoteButton:SetText("Promote")
+promoteButton:Hide()
+
+local demoteButton = CreateFrame("Button", nil, rosterPage, "UIPanelButtonTemplate")
+demoteButton:SetWidth(105)
+demoteButton:SetHeight(24)
+demoteButton:SetPoint("BOTTOMRIGHT", rosterPage, "BOTTOMRIGHT", -4, 4)
+demoteButton:SetText("Demote")
+demoteButton:Hide()
 
 local exportTitle = exportPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 exportTitle:SetPoint("TOPLEFT", exportPage, "TOPLEFT", 12, -10)
@@ -426,6 +476,76 @@ local function GetCurrentGuildData()
     EnsureDatabase()
     local key, guildName = GuildKey()
     return key and MuklaOfficerSuiteDB.guilds[key], guildName
+end
+
+local function GetSelectedMember()
+    if not selectedMemberName then
+        return nil
+    end
+    local data = GetCurrentGuildData()
+    if not data or not data.members then
+        return nil
+    end
+    for i = 1, table.getn(data.members) do
+        if data.members[i].name == selectedMemberName then
+            return data.members[i]
+        end
+    end
+    return nil
+end
+
+local function GetRankNameByIndex(rankIndex)
+    local data = GetCurrentGuildData()
+    if not data or not data.members then
+        return nil
+    end
+    for i = 1, table.getn(data.members) do
+        if data.members[i].rankIndex == rankIndex then
+            return data.members[i].rank
+        end
+    end
+    return nil
+end
+
+local function GetLowestRankIndex()
+    local data = GetCurrentGuildData()
+    local lowest = 0
+    if data and data.members then
+        for i = 1, table.getn(data.members) do
+            local rankIndex = tonumber(data.members[i].rankIndex) or 0
+            if rankIndex > lowest then
+                lowest = rankIndex
+            end
+        end
+    end
+    return lowest
+end
+
+UpdateSelectionControls = function()
+    local member = GetSelectedMember()
+    if not member then
+        selectedMemberName = nil
+        selectedMemberText:SetText("Select a guild member")
+        promoteButton:Hide()
+        demoteButton:Hide()
+        return
+    end
+
+    selectedMemberText:SetText("Selected: " .. member.name .. " (" .. (member.rank or "Unknown rank") .. ")")
+    promoteButton:Show()
+    demoteButton:Show()
+
+    if (tonumber(member.rankIndex) or 0) <= 0 then
+        promoteButton:Disable()
+    else
+        promoteButton:Enable()
+    end
+
+    if (tonumber(member.rankIndex) or 0) >= GetLowestRankIndex() then
+        demoteButton:Disable()
+    else
+        demoteButton:Enable()
+    end
 end
 
 local function MemberMatchesSearch(member, query)
@@ -515,8 +635,16 @@ RefreshRosterPage = function(resetScroll)
             rows[i].class:SetText(Short(member.class, 11))
             rows[i].rank:SetText(Short(member.rank, 14))
             rows[i].notes:SetText(Short(notes, 25))
+            rows[i].displayedMember = member
+            if member.name == selectedMemberName then
+                rows[i].selection:Show()
+            else
+                rows[i].selection:Hide()
+            end
             rows[i]:Show()
         else
+            rows[i].displayedMember = nil
+            rows[i].selection:Hide()
             rows[i]:Hide()
         end
     end
@@ -526,9 +654,10 @@ RefreshRosterPage = function(resetScroll)
         if button.sortKey == sortKey then
             button.label:SetText(button.baseText .. (sortAscending and " ^" or " v"))
         else
-            button.label:SetText(button.baseText)
+            button.label:SetText(button.baseText .. " <>")
         end
     end
+    UpdateSelectionControls()
 end
 
 RefreshExportPage = function()
@@ -632,6 +761,68 @@ local function RequestRosterScan(scanMode)
         Print("Requesting guild roster...")
     end
 end
+
+local function QueueRosterRefresh()
+    MOS.pendingScan = "quiet"
+    MOS.scanStartedAt = GetTime()
+    MOS.scanAttempts = 1
+    rosterRequestFrame.delay = 0.75
+    rosterRequestFrame:Show()
+end
+
+StaticPopupDialogs["MUKLA_OFFICER_SUITE_PROMOTE"] = {
+    text = "%s",
+    button1 = "Promote",
+    button2 = "Cancel",
+    OnAccept = function()
+        if MOS.pendingGuildAction and type(GuildPromoteByName) == "function" then
+            local memberName = MOS.pendingGuildAction.name
+            GuildPromoteByName(memberName)
+            Print("Promotion requested for " .. memberName .. ".")
+            QueueRosterRefresh()
+        end
+        MOS.pendingGuildAction = nil
+    end,
+    OnCancel = function() MOS.pendingGuildAction = nil end,
+    timeout = 0,
+    whileDead = 1,
+    hideOnEscape = 1,
+}
+
+StaticPopupDialogs["MUKLA_OFFICER_SUITE_DEMOTE"] = {
+    text = "%s",
+    button1 = "Demote",
+    button2 = "Cancel",
+    OnAccept = function()
+        if MOS.pendingGuildAction and type(GuildDemoteByName) == "function" then
+            local memberName = MOS.pendingGuildAction.name
+            GuildDemoteByName(memberName)
+            Print("Demotion requested for " .. memberName .. ".")
+            QueueRosterRefresh()
+        end
+        MOS.pendingGuildAction = nil
+    end,
+    OnCancel = function() MOS.pendingGuildAction = nil end,
+    timeout = 0,
+    whileDead = 1,
+    hideOnEscape = 1,
+}
+
+promoteButton:SetScript("OnClick", function()
+    local member = GetSelectedMember()
+    if not member then return end
+    local targetRank = GetRankNameByIndex((tonumber(member.rankIndex) or 0) - 1) or "the next rank"
+    MOS.pendingGuildAction = { name = member.name, action = "promote" }
+    StaticPopup_Show("MUKLA_OFFICER_SUITE_PROMOTE", "Promote " .. member.name .. "?\n" .. (member.rank or "Unknown") .. " -> " .. targetRank)
+end)
+
+demoteButton:SetScript("OnClick", function()
+    local member = GetSelectedMember()
+    if not member then return end
+    local targetRank = GetRankNameByIndex((tonumber(member.rankIndex) or 0) + 1) or "the next rank"
+    MOS.pendingGuildAction = { name = member.name, action = "demote" }
+    StaticPopup_Show("MUKLA_OFFICER_SUITE_DEMOTE", "Demote " .. member.name .. "?\n" .. (member.rank or "Unknown") .. " -> " .. targetRank)
+end)
 
 scanSaveButton:SetScript("OnClick", function() RequestRosterScan("reload") end)
 
