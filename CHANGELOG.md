@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.4
+
+- Expanded Guild Statistics and Raid Management row pools so resized windows use the available table height.
+- Hidden statistics and raid scrollbars whenever every visible record fits in the table.
+- Reduced safe bottom spacing in Raid Management and kept the scan summary on one line.
+
 ## 0.19.3
 
 - Increased the Roster Management row pool from 13 to 25 records.

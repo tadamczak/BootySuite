@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.3"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.4"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -1050,7 +1050,7 @@ local function CreateStatisticsTable(name, x, width)
     statsTable.scroll = CreateFrame("ScrollFrame", name, statisticsPage, "FauxScrollFrameTemplate")
     statsTable.scroll:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x - 4, -148)
     statsTable.scroll:SetWidth(width); statsTable.scroll:SetHeight(224)
-    for rowIndex = 1, 9 do
+    for rowIndex = 1, 25 do
         local row = CreateFrame("Button", nil, statisticsPage)
         row:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x, -152 - ((rowIndex - 1) * 24))
         row:SetWidth(width - 16); row:SetHeight(23)
@@ -1138,7 +1138,7 @@ local function PopulateStatisticsTable(statsTable, summaries, statsType, data, o
             row:Show()
         else row:Hide() end
     end
-    statsTable.scroll:Show()
+    if table.getn(entries) > visibleStatsRows then statsTable.scroll:Show() else statsTable.scroll:Hide() end
 end
 
 local raidTitle = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -1335,7 +1335,7 @@ AddRaidHeaderButton(raidRankHeader, "Guild rank", "guildRank", 347, 138)
 AddRaidHeaderButton(raidSRHeader, "SR", "sr", 500, 55)
 
 local raidRows = {}
-for i = 1, 15 do
+for i = 1, 25 do
     local raidRow = CreateFrame("Button", nil, raidPage)
     raidRow:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -132 - ((i - 1) * 21))
     raidRow:SetWidth(543)
@@ -1936,7 +1936,7 @@ RefreshStatisticsPage = function()
     local statisticsPanelHeight = math.max(120, statisticsPage:GetHeight() - 130)
     statisticsClassPanel:SetHeight(statisticsPanelHeight); statisticsRankPanel:SetHeight(statisticsPanelHeight)
     statisticsClassTable.scroll:SetHeight(statisticsPanelHeight - 36); statisticsRankTable.scroll:SetHeight(statisticsPanelHeight - 36)
-    local visibleStatisticsRows = math.max(3, math.min(9, math.floor((statisticsPanelHeight - 40) / 24)))
+    local visibleStatisticsRows = math.max(3, math.min(table.getn(statisticsClassTable.rows), math.floor((statisticsPanelHeight - 44) / 24)))
     statisticsClassTable.visibleRows = visibleStatisticsRows; statisticsRankTable.visibleRows = visibleStatisticsRows
     PopulateStatisticsTable(statisticsClassTable, classSummaries, "class", data, onlyLevel60)
     PopulateStatisticsTable(statisticsRankTable, rankList, "rank", data, onlyLevel60)
@@ -2177,7 +2177,7 @@ RefreshRaidPage = function()
         selectedRaidMemberName = nil
         if MOS.raidHeightBeforeExpansion then MuklaOfficerSuiteDashboard:SetHeight(MOS.raidHeightBeforeExpansion); MOS.raidHeightBeforeExpansion = nil end
     end
-    raidStatus:SetText((data and data.scannedAtText or "Unknown") .. " | showing " .. table.getn(visibleRaidMembers) .. " of " .. table.getn(members) .. " raid members")
+    raidStatus:SetText((data and data.scannedAtText or "Unknown") .. " | " .. table.getn(visibleRaidMembers) .. " / " .. table.getn(members) .. " members")
     if MOS.lootMasterMode then raidStatus:Hide() else raidStatus:Show() end
     if MOS.lootMasterMode then
         raidFilterLabel:Hide()
@@ -2215,10 +2215,10 @@ RefreshRaidPage = function()
         if MOS.lootMasterMode and header.sortKey == "subgroup" then header:Hide() else header:Show() end
         if raidSortKey == header.sortKey then header.label:SetText(header.baseText .. (raidSortAscending and " ^" or " v")) else header.label:SetText(header.baseText .. " <>") end
     end
-    raidScrollFrame:ClearAllPoints(); raidScrollFrame:SetPoint("TOPLEFT", raidPage, "TOPLEFT", -4, raidRowStartY + 11); raidScrollFrame:SetPoint("BOTTOMRIGHT", raidPage, "BOTTOMRIGHT", -28, 18); raidScrollFrame:Show()
-    local reservedHeight = MOS.lootMasterMode and 78 or 150
+    raidScrollFrame:ClearAllPoints(); raidScrollFrame:SetPoint("TOPLEFT", raidPage, "TOPLEFT", -4, raidRowStartY + 11); raidScrollFrame:SetPoint("BOTTOMRIGHT", raidPage, "BOTTOMRIGHT", -28, 10)
+    local reservedHeight = MOS.lootMasterMode and 72 or 142
     local availableRaidRows = math.max(3, math.min(table.getn(raidRows), math.floor((raidPage:GetHeight() - reservedHeight) / 21)))
-    local raidVisibleRowCount = selectedRaidMemberName and math.max(1, availableRaidRows - 5) or availableRaidRows
+    local raidVisibleRowCount = selectedRaidMemberName and math.max(1, availableRaidRows - 6) or availableRaidRows
     if selectedRaidMemberName then
         local selectedIndex = nil
         for memberIndex = 1, table.getn(visibleRaidMembers) do
@@ -2233,6 +2233,7 @@ RefreshRaidPage = function()
         end
     end
     FauxScrollFrame_Update(raidScrollFrame, table.getn(visibleRaidMembers), raidVisibleRowCount, 21)
+    if table.getn(visibleRaidMembers) > raidVisibleRowCount then raidScrollFrame:Show() else raidScrollFrame:Hide() end
     local raidOffset = FauxScrollFrame_GetOffset(raidScrollFrame)
     local raidRowY = raidRowStartY
     for i = 1, table.getn(raidRows) do
