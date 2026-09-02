@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1
+
+- Reworked guild roster loading around a shared completion check used by both events and the retry timer.
+- Increased the roster loading window to 15 seconds with six throttled requests.
+- Validate that every reported guild member has loaded before accepting a snapshot.
+- Restore the relevant scan controls cleanly after a timeout.
+
 ## 0.11.0
 
 - Show only Scan Guild Data before the first roster scan and reveal Export Roster afterward.

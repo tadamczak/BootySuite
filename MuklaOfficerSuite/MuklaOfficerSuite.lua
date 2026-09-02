@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.11.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.11.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -11,6 +11,10 @@ MOS.pendingScan = nil
 MOS.lastRosterEvent = 0
 MOS.scanStartedAt = nil
 MOS.scanAttempts = 0
+MOS.scanDeadline = nil
+
+local CompletePendingGuildScan
+local HandleGuildScanFailure
 
 local rosterRequestFrame = CreateFrame("Frame", "MuklaOfficerSuiteRosterRequestFrame", UIParent)
 rosterRequestFrame.delay = nil
@@ -27,20 +31,30 @@ rosterRequestFrame:SetScript("OnUpdate", function()
         return
     end
 
-    if MOS.scanAttempts < 3 then
-        MOS.scanAttempts = MOS.scanAttempts + 1
-        rosterRequestFrame.delay = 1
-        Print("Guild roster is not ready. Retrying scan (" .. MOS.scanAttempts .. "/3)...")
-        GuildRoster()
+    if CompletePendingGuildScan and CompletePendingGuildScan() then
         return
     end
 
-    rosterRequestFrame.delay = nil
-    rosterRequestFrame:Hide()
-    MOS.pendingScan = nil
-    MOS.scanStartedAt = nil
-    MOS.scanAttempts = 0
-    Print("Guild roster could not be loaded. Please try again.")
+    if MOS.scanDeadline and GetTime() >= MOS.scanDeadline then
+        rosterRequestFrame.delay = nil
+        rosterRequestFrame:Hide()
+        MOS.pendingScan = nil
+        MOS.scanStartedAt = nil
+        MOS.scanAttempts = 0
+        MOS.scanDeadline = nil
+        Print("Guild roster could not be loaded after 15 seconds. Please try again.")
+        if HandleGuildScanFailure then HandleGuildScanFailure() end
+        return
+    end
+
+    if MOS.scanAttempts < 6 then
+        MOS.scanAttempts = MOS.scanAttempts + 1
+        rosterRequestFrame.delay = 2.5
+        Print("Guild roster is still loading. Request " .. MOS.scanAttempts .. "/6...")
+        GuildRoster()
+        return
+    end
+    rosterRequestFrame.delay = 0.5
 end)
 
 StaticPopupDialogs["MUKLA_OFFICER_SUITE_RELOAD"] = {
@@ -151,6 +165,10 @@ local function SaveGuildRoster()
         end
     end
 
+    if table.getn(members) < total then
+        return false
+    end
+
     table.sort(members, function(a, b)
         return string.lower(a.name) < string.lower(b.name)
     end)
@@ -177,6 +195,7 @@ local function SaveGuildRoster()
     MOS.pendingScan = nil
     MOS.scanStartedAt = nil
     MOS.scanAttempts = 0
+    MOS.scanDeadline = nil
     rosterRequestFrame.delay = nil
     rosterRequestFrame:Hide()
     return true
@@ -1560,6 +1579,7 @@ local function RequestRosterScan(scanMode)
     MOS.pendingScan = scanMode or "manual"
     MOS.scanStartedAt = GetTime()
     MOS.scanAttempts = 1
+    MOS.scanDeadline = GetTime() + 15
     rosterRequestFrame.delay = 1
     rosterRequestFrame:Show()
     GuildRoster()
@@ -1602,6 +1622,7 @@ local function QueueRosterRefresh()
     MOS.pendingScan = "quiet"
     MOS.scanStartedAt = GetTime()
     MOS.scanAttempts = 1
+    MOS.scanDeadline = GetTime() + 15
     rosterRequestFrame.delay = 0.75
     rosterRequestFrame:Show()
 end
@@ -1821,40 +1842,61 @@ end
 
 MOS:RegisterEvent("VARIABLES_LOADED")
 MOS:RegisterEvent("GUILD_ROSTER_UPDATE")
+
+HandleGuildScanFailure = function()
+    if MOS.sharedScanOrigin == "roster" then
+        RefreshRosterPage(false)
+    elseif MOS.sharedScanOrigin == "statistics" then
+        statisticsProgress:Hide()
+        statisticsScanButton:Show()
+        MOS.statisticsProgressStartedAt = nil
+        MOS.statisticsProgressCompleteAt = nil
+    elseif currentPage == "raid" then
+        RefreshRaidPage()
+    end
+    MOS.sharedScanOrigin = nil
+end
+
+CompletePendingGuildScan = function()
+    if not MOS.pendingScan then return false end
+    local scanMode = MOS.pendingScan
+    if not SaveGuildRoster() then return false end
+
+    RefreshRosterPage(scanMode ~= "quiet")
+    RefreshExportPage()
+    if scanMode == "shared" then
+        rosterReady = true
+        statisticsReady = true
+        RefreshRosterPage(true)
+        if MOS.sharedScanOrigin == "statistics" then
+            statisticsProgress:SetValue(100)
+            statisticsProgress.text:SetText("Scanning... 100%")
+            MOS.statisticsProgressCompleteAt = GetTime()
+        else
+            RefreshStatisticsPage()
+        end
+        MOS.sharedScanOrigin = nil
+    elseif scanMode == "raid" then
+        local raidCount = SaveRaidRoster()
+        MOS.raidScanReady = true
+        RefreshRaidPage()
+        Print("Raid scanned. Members: " .. raidCount)
+    elseif scanMode == "reload" then
+        Print("Roster scanned. Confirm the reload to save it to disk.")
+        StaticPopup_Show("MUKLA_OFFICER_SUITE_RELOAD")
+    elseif scanMode ~= "quiet" then
+        Print("Roster scanned. Members: " .. CountSavedMembers())
+    end
+    return true
+end
+
 MOS:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
         EnsureDatabase()
         PositionMinimapButton()
         if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() end
     elseif event == "GUILD_ROSTER_UPDATE" then
-        local scanMode = MOS.pendingScan
-        if MOS.pendingScan and SaveGuildRoster() then
-            RefreshRosterPage(scanMode ~= "quiet")
-            RefreshExportPage()
-            if scanMode == "shared" then
-                rosterReady = true
-                statisticsReady = true
-                RefreshRosterPage(true)
-                if MOS.sharedScanOrigin == "statistics" then
-                    statisticsProgress:SetValue(100)
-                    statisticsProgress.text:SetText("Scanning... 100%")
-                    MOS.statisticsProgressCompleteAt = GetTime()
-                else
-                    RefreshStatisticsPage()
-                end
-                MOS.sharedScanOrigin = nil
-            elseif scanMode == "raid" then
-                local raidCount = SaveRaidRoster()
-                MOS.raidScanReady = true
-                RefreshRaidPage()
-                Print("Raid scanned. Members: " .. raidCount)
-            elseif scanMode == "reload" then
-                Print("Roster scanned. Confirm the reload to save it to disk.")
-                StaticPopup_Show("MUKLA_OFFICER_SUITE_RELOAD")
-            elseif scanMode ~= "quiet" then
-                Print("Roster scanned. Members: " .. CountSavedMembers())
-            end
-        end
+        CompletePendingGuildScan()
     end
 end)
 
