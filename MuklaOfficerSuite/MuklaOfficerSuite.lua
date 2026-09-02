@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.5"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.6"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -456,8 +456,8 @@ contentShade:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -5, 5)
 contentShade:SetTexture(0.025, 0.022, 0.018, 0.96)
 
 local rosterPage = CreateFrame("Frame", nil, contentPanel)
-rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 14, -14)
-rosterPage:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -14, 14)
+rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 3, -3)
+rosterPage:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -3, 3)
 
 local exportPage = CreateFrame("Frame", nil, contentPanel)
 exportPage:SetAllPoints(rosterPage)
@@ -501,7 +501,7 @@ scanProgress:SetScript("OnUpdate", function()
 end)
 
 local rosterTitle = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-rosterTitle:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12, -10)
+rosterTitle:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -5)
 rosterTitle:SetText("Roster Management")
 
 local searchLabel = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -517,12 +517,12 @@ searchBox:SetScript("OnEscapePressed", function() this:ClearFocus() end)
 searchBox:SetScript("OnEnterPressed", function() this:ClearFocus() end)
 
 local rosterStatusText = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-rosterStatusText:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12, -40)
+rosterStatusText:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -40)
 rosterStatusText:SetWidth(565)
 rosterStatusText:SetJustifyH("LEFT")
 
 local rosterLastScan = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-rosterLastScan:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12, -58)
+rosterLastScan:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -58)
 rosterLastScan:SetWidth(330)
 rosterLastScan:SetJustifyH("LEFT")
 
@@ -553,7 +553,7 @@ StyleCompactButton(rosterRefreshButton, "Refresh Data")
 rosterRefreshButton:Hide()
 
 local rosterSortHint = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-rosterSortHint:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12, -114)
+rosterSortHint:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -114)
 rosterSortHint:SetText("Click a column header to sort")
 rosterSortHint:Hide()
 
@@ -583,7 +583,7 @@ local rosterReady = false
 local statisticsReady = false
 
 local filtersLabel = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-filtersLabel:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12, -88)
+filtersLabel:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -88)
 filtersLabel:SetText("Filters")
 
 local function CreateFilterToggle(text, x)
@@ -606,8 +606,8 @@ local function CreateFilterToggle(text, x)
     return button
 end
 
-local classFilterToggle = CreateFilterToggle("Class", 58)
-local rankFilterToggle = CreateFilterToggle("Rank", 150)
+local classFilterToggle = CreateFilterToggle("Class", 50)
+local rankFilterToggle = CreateFilterToggle("Rank", 142)
 
 local function CreateFilterPanel(toggle)
     local panel = CreateFrame("Frame", nil, rosterPage)
@@ -1730,7 +1730,7 @@ RefreshRosterPage = function(resetScroll)
         rosterStatusText:SetText(guildName .. " - " .. table.getn(data.members) .. " members")
     end
 
-    local rosterTableWidth = math.max(400, rosterPage:GetWidth() - 30)
+    local rosterTableWidth = math.max(400, rosterPage:GetWidth() - 22)
     local nameWidth = math.floor(rosterTableWidth * 0.22)
     local levelWidth = math.floor(rosterTableWidth * 0.08)
     local classWidth = math.floor(rosterTableWidth * 0.14)
@@ -1739,9 +1739,9 @@ RefreshRosterPage = function(resetScroll)
     local columnStarts = { 0, nameWidth, nameWidth + levelWidth, nameWidth + levelWidth + classWidth }
     local columnWidths = { nameWidth, levelWidth, classWidth, rankWidth }
     for headerIndex = 1, table.getn(headerButtons) do
-        headerButtons[headerIndex]:ClearAllPoints(); headerButtons[headerIndex]:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12 + columnStarts[headerIndex], -130); headerButtons[headerIndex]:SetWidth(columnWidths[headerIndex])
+        headerButtons[headerIndex]:ClearAllPoints(); headerButtons[headerIndex]:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4 + columnStarts[headerIndex], -130); headerButtons[headerIndex]:SetWidth(columnWidths[headerIndex])
     end
-    notesHeader:ClearAllPoints(); notesHeader:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12 + nameWidth + levelWidth + classWidth + rankWidth, -130); notesHeader:SetWidth(notesWidth)
+    notesHeader:ClearAllPoints(); notesHeader:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4 + nameWidth + levelWidth + classWidth + rankWidth, -130); notesHeader:SetWidth(notesWidth)
     for layoutIndex = 1, table.getn(rows) do
         local layoutRow = rows[layoutIndex]
         layoutRow:SetWidth(rosterTableWidth)
@@ -1773,7 +1773,7 @@ RefreshRosterPage = function(resetScroll)
     for i = 1, rowCount do
         local member = visibleMembers[offset + i]
         rows[i]:ClearAllPoints()
-        rows[i]:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12, rowY)
+        rows[i]:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, rowY)
         if member and i <= visibleRowCount then
             local notes = member.publicNote or ""
             if member.officerNote and member.officerNote ~= "" then
@@ -2349,7 +2349,7 @@ ToggleLootMasterMode = function()
         contentPanel:ClearAllPoints()
         contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 204, -68)
         contentPanel:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -20, 32)
-        rosterPage:ClearAllPoints(); rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 14, -14); rosterPage:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -14, 14)
+        rosterPage:ClearAllPoints(); rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 3, -3); rosterPage:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -3, 3)
         raidModeButton:SetText("Loot Master Mode")
     end
     RefreshRaidPage()
@@ -2663,6 +2663,20 @@ searchBox:SetScript("OnTextChanged", function() RefreshRosterPage(true) end)
 raidSearchBox:SetScript("OnTextChanged", function() RefreshRaidPage() end)
 rosterScrollFrame:SetScript("OnVerticalScroll", function()
     FauxScrollFrame_OnVerticalScroll(rowHeight, RefreshRosterPage)
+end)
+
+rosterPage.layoutElapsed = 0
+rosterPage.layoutWidth = 0
+rosterPage.layoutHeight = 0
+rosterPage:SetScript("OnUpdate", function()
+    this.layoutElapsed = this.layoutElapsed + arg1
+    if this.layoutElapsed < 0.20 then return end
+    this.layoutElapsed = 0
+    local currentWidth, currentHeight = this:GetWidth(), this:GetHeight()
+    if math.abs(currentWidth - this.layoutWidth) > 0.5 or math.abs(currentHeight - this.layoutHeight) > 0.5 then
+        this.layoutWidth = currentWidth; this.layoutHeight = currentHeight
+        RefreshRosterPage(false)
+    end
 end)
 
 dashboard:SetScript("OnShow", function() ShowPage(currentPage) end)

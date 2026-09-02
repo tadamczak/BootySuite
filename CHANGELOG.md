@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.6
+
+- Reduced and unified the Roster Management content margins.
+- Recalculate the roster after its anchored page reaches the final resized dimensions.
+- Extended roster stripes and columns farther toward the right edge.
+
 ## 0.19.5
 
 - Extended roster rows closer to the right and bottom edges of the data panel.
