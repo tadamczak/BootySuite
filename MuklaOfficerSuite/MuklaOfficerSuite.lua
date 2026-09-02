@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = "0.1.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.2.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -9,6 +9,7 @@ end
 local MOS = CreateFrame("Frame", "MuklaOfficerSuiteEventFrame")
 MOS.pendingScan = nil
 MOS.lastRosterEvent = 0
+MOS.scanStartedAt = nil
 
 local reloadFrame = CreateFrame("Frame", "MuklaOfficerSuiteReloadFrame", UIParent)
 reloadFrame.delay = nil
@@ -51,6 +52,7 @@ local function EnsureDatabase()
     if type(MuklaOfficerSuiteDB.minimap) ~= "table" then
         MuklaOfficerSuiteDB.minimap = { angle = 220, hidden = false }
     end
+    MuklaOfficerSuiteDB.addonVersion = VERSION
 end
 
 local function GuildKey()
@@ -107,14 +109,27 @@ local function SaveGuildRoster()
         return string.lower(a.name) < string.lower(b.name)
     end)
 
+    local scanTimestamp = time()
+    local scanDuration = 0
+    if MOS.scanStartedAt then
+        scanDuration = GetTime() - MOS.scanStartedAt
+    end
     MuklaOfficerSuiteDB.guilds[key] = {
         guildName = guildName,
         realmName = realmName,
-        updatedAt = time(),
+        addonVersion = VERSION,
+        scannedAt = scanTimestamp,
+        scannedAtText = date("%Y-%m-%d %H:%M:%S", scanTimestamp),
+        scanDurationSeconds = scanDuration,
+        updatedAt = scanTimestamp,
         updatedBy = UnitName("player"),
         members = members,
     }
+    MuklaOfficerSuiteDB.lastScanAt = scanTimestamp
+    MuklaOfficerSuiteDB.lastScanAtText = date("%Y-%m-%d %H:%M:%S", scanTimestamp)
+    MuklaOfficerSuiteDB.lastScanDurationSeconds = scanDuration
     MOS.pendingScan = nil
+    MOS.scanStartedAt = nil
     return true
 end
 
@@ -144,7 +159,7 @@ title:SetText("Mukla Officer Suite")
 
 local subtitle = dashboard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 subtitle:SetPoint("TOP", title, "BOTTOM", 0, -5)
-subtitle:SetText("Guild dashboard")
+subtitle:SetText("Guild dashboard - v" .. VERSION)
 
 local closeButton = CreateFrame("Button", nil, dashboard, "UIPanelCloseButton")
 closeButton:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -5, -5)
@@ -234,7 +249,8 @@ local function RefreshDashboard()
     elseif not data then
         statusText:SetText(guildName .. " - no saved roster. Click Scan or Scan & Reload.")
     else
-        statusText:SetText(guildName .. " - saved members: " .. table.getn(data.members) .. " | last scan: " .. date("%Y-%m-%d %H:%M", data.updatedAt))
+        local scanTime = data.scannedAtText or date("%Y-%m-%d %H:%M:%S", data.scannedAt or data.updatedAt)
+        statusText:SetText(guildName .. " - saved members: " .. table.getn(data.members) .. " | last scan: " .. scanTime)
     end
 
     local memberCount = data and table.getn(data.members) or 0
@@ -272,6 +288,7 @@ local function RequestRosterScan(scanMode)
         return
     end
     MOS.pendingScan = scanMode or "manual"
+    MOS.scanStartedAt = GetTime()
     GuildRoster()
     if MOS.pendingScan == "reload" then
         Print("Requesting guild roster. The UI will reload after the scan completes...")

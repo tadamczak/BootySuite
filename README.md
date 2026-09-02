@@ -9,6 +9,8 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - an in-memory roster scan with `Scan`,
 - a `Scan & Reload` action that scans the roster and reloads the UI to write SavedVariables to disk.
 
+The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:
