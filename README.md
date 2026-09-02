@@ -10,7 +10,8 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - sortable roster columns and full-field search,
 - expandable roster member actions with confirmed promote and demote controls,
 - collapsible roster filters for class and guild rank,
-- manually scanned guild class and rank statistics with a level 60 filter,
+- manually refreshed shared guild data for roster and statistics views,
+- guild class and rank statistics with a level 60 filter,
 - Raid Management snapshots enriched with guild roster data,
 - an `Export Roster` page with `Scan & Save` and last-scan information,
 

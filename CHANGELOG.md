@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0
+
+- Unified Roster Management and Guild Statistics around one manually refreshed guild snapshot.
+- Added shared Scan Guild Data and Refresh Data controls with last-scan timestamps.
+- Added graphical filter arrows and click-outside dismissal for filter panels.
+- Preserved roster scroll position after promotion and demotion refreshes.
+- Refined expanded member spacing and strengthened alternating roster rows.
+- Reworked statistics spacing, class icons, typography, and level 60 filter placement.
+- Rebuilt raid results with independently aligned table columns.
+- Refined the Export Roster layout and scan hierarchy.
+
 ## 0.7.0
 
 - Added manual Guild Statistics scanning with a visible percentage progress bar.
