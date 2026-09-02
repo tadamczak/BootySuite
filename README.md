@@ -14,7 +14,7 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - guild class and rank statistics with a level 60 filter,
 - Raid Management snapshots enriched with guild roster data,
 - attendance snapshots exported with `Export-Attendance.ps1`,
-- an `Export Roster` page with `Scan & Save` and last-scan information,
+- roster export controls integrated directly into Roster Management,
 
 The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.
 
@@ -24,7 +24,7 @@ Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`,
 
 `Interface/AddOns/MuklaOfficerSuite/MuklaOfficerSuite.toc`
 
-After logging in, open the dashboard with `/mos`. Open `Export Roster`, click `Scan & Save`, then confirm `Reload now` to write the roster to disk. The addon does not scan automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
+After logging in, open the dashboard with `/mos`. In `Roster Management`, click `Export Roster`, then confirm `Reload now` to write the roster to disk. The addon does not scan automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
 
 `WTF/Account/<ACCOUNT>/SavedVariables/MuklaOfficerSuite.lua`
 

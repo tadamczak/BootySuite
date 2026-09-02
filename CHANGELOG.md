@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.0
+
+- Removed the separate Export Roster navigation page and moved export into Roster Management.
+- Preserved the original aspect ratio of the About artwork and removed the description row.
+- Reworked Select all and action controls with a compact custom button style.
+- Aligned Search with roster filters and moved the sorting hint to the left above the table.
+- Reduced spacing between roster headers and the first member row.
+- Removed the Raid Management enrichment subtitle and refined raid action buttons.
+- Added class distribution bars and cleaned up Guild Statistics controls.
+
 ## 0.9.0
 
 - Added full-height About artwork and expanded the sidebar artwork to its full height.

@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.9.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.10.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -358,13 +358,13 @@ rosterTitle:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -2)
 rosterTitle:SetText("Roster Management")
 
 local searchLabel = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-searchLabel:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -192, -7)
+searchLabel:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -192, -79)
 searchLabel:SetText("Search")
 
 local searchBox = CreateFrame("EditBox", "MuklaOfficerSuiteRosterSearch", rosterPage, "InputBoxTemplate")
 searchBox:SetWidth(178)
 searchBox:SetHeight(20)
-searchBox:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -4, -1)
+searchBox:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -4, -73)
 searchBox:SetAutoFocus(false)
 searchBox:SetScript("OnEscapePressed", function() this:ClearFocus() end)
 searchBox:SetScript("OnEnterPressed", function() this:ClearFocus() end)
@@ -382,7 +382,7 @@ rosterLastScan:SetJustifyH("LEFT")
 local rosterScanButton = CreateFrame("Button", nil, rosterPage, "UIPanelButtonTemplate")
 rosterScanButton:SetWidth(180)
 rosterScanButton:SetHeight(32)
-rosterScanButton:SetPoint("CENTER", rosterPage, "CENTER", 0, 12)
+rosterScanButton:SetPoint("CENTER", rosterPage, "CENTER", -96, 12)
 rosterScanButton:SetText("Scan Guild Data")
 
 local rosterRefreshButton = CreateFrame("Button", nil, rosterPage, "UIPanelButtonTemplate")
@@ -393,7 +393,7 @@ rosterRefreshButton:SetText("Refresh Data")
 rosterRefreshButton:Hide()
 
 local rosterSortHint = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-rosterSortHint:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -4, -101)
+rosterSortHint:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -94)
 rosterSortHint:SetText("Click a column header to sort")
 rosterSortHint:Hide()
 
@@ -422,6 +422,19 @@ local statisticsReady = false
 local filtersLabel = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 filtersLabel:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -80)
 filtersLabel:SetText("Filters")
+
+local function StyleCompactButton(button, text)
+    button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 9, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+    button:SetBackdropColor(0.08, 0.07, 0.05, 0.96)
+    button:SetBackdropBorderColor(0.48, 0.38, 0.20, 1)
+    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    button.label:SetAllPoints(button)
+    button.label:SetText(text)
+    button.SetText = function(self, value) self.label:SetText(value) end
+    local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetAllPoints(button)
+    highlight:SetTexture(1, 0.72, 0.12, 0.10)
+end
 
 local function CreateFilterToggle(text, x)
     local button = CreateFrame("Button", nil, rosterPage)
@@ -549,7 +562,7 @@ notesHeader:SetText("Public / Officer note")
 local i
 for i = 1, rowCount do
     local row = CreateFrame("Button", nil, rosterPage)
-    row:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -128 - (i * rowHeight))
+    row:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -114 - (i * rowHeight))
     row:SetWidth(560)
     row:SetHeight(rowHeight)
     row:EnableMouse(true)
@@ -660,7 +673,7 @@ for i = 1, rowCount do
 end
 
 local rosterScrollFrame = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRosterScrollFrame", rosterPage, "FauxScrollFrameTemplate")
-rosterScrollFrame:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", -4, -139)
+rosterScrollFrame:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", -4, -125)
 rosterScrollFrame:SetPoint("BOTTOMRIGHT", rosterPage, "BOTTOMRIGHT", -12, 18)
 
 local exportTitle = exportPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -693,6 +706,11 @@ exportHint:SetPoint("LEFT", scanSaveButton, "RIGHT", 14, 0)
 exportHint:SetWidth(350)
 exportHint:SetJustifyH("LEFT")
 exportHint:SetText("A confirmation dialog will reload the UI and write the roster to disk.")
+exportHint:Hide()
+scanSaveButton:SetParent(rosterPage)
+scanSaveButton:ClearAllPoints()
+scanSaveButton:SetPoint("CENTER", rosterPage, "CENTER", 96, 12)
+scanSaveButton:SetText("Export Roster")
 
 local statisticsTitle = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 statisticsTitle:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 12, -10)
@@ -714,11 +732,11 @@ statisticsLastScan:SetWidth(360)
 statisticsLastScan:SetJustifyH("LEFT")
 statisticsLastScan:Hide()
 
-local statisticsRefreshButton = CreateFrame("Button", nil, statisticsPage, "UIPanelButtonTemplate")
+local statisticsRefreshButton = CreateFrame("Button", nil, statisticsPage)
 statisticsRefreshButton:SetWidth(108)
 statisticsRefreshButton:SetHeight(22)
 statisticsRefreshButton:SetPoint("TOPRIGHT", statisticsPage, "TOPRIGHT", -12, -42)
-statisticsRefreshButton:SetText("Refresh Data")
+StyleCompactButton(statisticsRefreshButton, "Refresh Data")
 statisticsRefreshButton:Hide()
 
 local statisticsScanButton = CreateFrame("Button", nil, statisticsPage, "UIPanelButtonTemplate")
@@ -762,6 +780,22 @@ statisticsRankPanel:SetHeight(245)
 statisticsRankPanel:SetTexture(0.07, 0.065, 0.055, 0.82)
 statisticsRankPanel:Hide()
 
+local statisticsClassBars = {}
+for i = 1, 9 do
+    local barBackground = statisticsPage:CreateTexture(nil, "BORDER")
+    barBackground:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 205, -190 - ((i - 1) * 24))
+    barBackground:SetWidth(62)
+    barBackground:SetHeight(7)
+    barBackground:SetTexture(0.18, 0.16, 0.12, 0.95)
+    local barFill = statisticsPage:CreateTexture(nil, "ARTWORK")
+    barFill:SetPoint("LEFT", barBackground, "LEFT", 0, 0)
+    barFill:SetHeight(7)
+    barFill:SetTexture(0.82, 0.56, 0.10, 0.95)
+    barBackground:Hide()
+    barFill:Hide()
+    statisticsClassBars[i] = { background = barBackground, fill = barFill }
+end
+
 local statisticsClasses = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 statisticsClasses:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 24, -165)
 statisticsClasses:SetWidth(260)
@@ -784,24 +818,25 @@ raidTitle:SetText("Raid Management")
 
 local raidInfo = raidPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 raidInfo:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -12, -15)
-raidInfo:SetText("Current raid roster enriched with guild data")
+raidInfo:SetText("")
+raidInfo:Hide()
 
 local raidUnavailable = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 raidUnavailable:SetPoint("CENTER", raidPage, "CENTER", 0, 12)
 raidUnavailable:SetText("You must be in a raid to scan the raid roster.")
 
-local raidScanButton = CreateFrame("Button", nil, raidPage, "UIPanelButtonTemplate")
+local raidScanButton = CreateFrame("Button", nil, raidPage)
 raidScanButton:SetWidth(160)
 raidScanButton:SetHeight(32)
 raidScanButton:SetPoint("CENTER", raidPage, "CENTER", 0, 12)
-raidScanButton:SetText("Scan Raid")
+StyleCompactButton(raidScanButton, "Scan Raid")
 raidScanButton:Hide()
 
-local raidExportButton = CreateFrame("Button", nil, raidPage, "UIPanelButtonTemplate")
+local raidExportButton = CreateFrame("Button", nil, raidPage)
 raidExportButton:SetWidth(142)
 raidExportButton:SetHeight(24)
 raidExportButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -142, -42)
-raidExportButton:SetText("Export Attendance")
+StyleCompactButton(raidExportButton, "Export Attendance")
 raidExportButton:Hide()
 
 local raidStatus = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -910,9 +945,9 @@ aboutTitle:SetText("About")
 local aboutArtwork = aboutPage:CreateTexture(nil, "ARTWORK")
 aboutArtwork:SetPoint("TOPRIGHT", aboutPage, "TOPRIGHT", -4, -4)
 aboutArtwork:SetPoint("BOTTOMRIGHT", aboutPage, "BOTTOMRIGHT", -4, 4)
-aboutArtwork:SetWidth(365)
+aboutArtwork:SetWidth(382)
 aboutArtwork:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\AboutArtwork")
-aboutArtwork:SetTexCoord(0, 1, 0, 1)
+aboutArtwork:SetTexCoord(0.066, 0.934, 0, 1)
 aboutArtwork:SetAlpha(0.88)
 
 local aboutName = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -931,7 +966,8 @@ local aboutDescription = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontHig
 aboutDescription:SetPoint("TOPLEFT", aboutAuthor, "BOTTOMLEFT", 0, -34)
 aboutDescription:SetWidth(220)
 aboutDescription:SetJustifyH("LEFT")
-aboutDescription:SetText("Guild management tools for World of Warcraft 1.12.1")
+aboutDescription:SetText("")
+aboutDescription:Hide()
 
 local function GetCurrentGuildData()
     EnsureDatabase()
@@ -958,10 +994,10 @@ end
 
 local function RefreshFilterPanel(panel, values, selected, filterType)
     if not panel.selectAll then
-        panel.selectAll = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-        panel.selectAll:SetWidth(88)
-        panel.selectAll:SetHeight(17)
-        panel.selectAll:SetText("Select all")
+        panel.selectAll = CreateFrame("Button", nil, panel)
+        panel.selectAll:SetWidth(82)
+        panel.selectAll:SetHeight(18)
+        StyleCompactButton(panel.selectAll, "Select all")
         panel.selectAll.filterType = filterType
         panel.selectAll:SetScript("OnClick", function()
             local target = this.filterType == "class" and selectedClasses or selectedRanks
@@ -974,7 +1010,7 @@ local function RefreshFilterPanel(panel, values, selected, filterType)
     end
     panel.values = values
     panel.selectAll:ClearAllPoints()
-    panel.selectAll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 9)
+    panel.selectAll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 9)
     panel:SetHeight(38 + table.getn(values) * 20)
 
     local optionIndex
@@ -1120,6 +1156,8 @@ end
 local function SetRosterDataVisible(visible)
     local method = visible and "Show" or "Hide"
     filtersLabel[method](filtersLabel)
+    searchLabel[method](searchLabel)
+    searchBox[method](searchBox)
     classFilterToggle[method](classFilterToggle)
     rankFilterToggle[method](rankFilterToggle)
     notesHeader[method](notesHeader)
@@ -1128,9 +1166,17 @@ local function SetRosterDataVisible(visible)
     rosterRefreshButton[method](rosterRefreshButton)
     for i = 1, table.getn(headerButtons) do headerButtons[i][method](headerButtons[i]) end
     if not visible then
+        scanSaveButton:ClearAllPoints()
+        scanSaveButton:SetPoint("CENTER", rosterPage, "CENTER", 96, 12)
+        scanSaveButton:SetWidth(150)
         HideFilterPanels()
         for i = 1, table.getn(rows) do rows[i]:Hide() end
+    else
+        scanSaveButton:ClearAllPoints()
+        scanSaveButton:SetPoint("TOPRIGHT", rosterPage, "TOPRIGHT", -120, -48)
+        scanSaveButton:SetWidth(112)
     end
+    scanSaveButton:Show()
 end
 
 RefreshRosterPage = function(resetScroll)
@@ -1176,7 +1222,7 @@ RefreshRosterPage = function(resetScroll)
     FauxScrollFrame_Update(rosterScrollFrame, table.getn(visibleMembers), rowCount, rowHeight)
     local offset = FauxScrollFrame_GetOffset(rosterScrollFrame)
 
-    local rowY = -148
+    local rowY = -134
     for i = 1, rowCount do
         local member = visibleMembers[offset + i]
         rows[i]:ClearAllPoints()
@@ -1329,6 +1375,25 @@ RefreshStatisticsPage = function()
     )
     statisticsClasses:SetText(SortedClassLines(classes))
     statisticsRanks:SetText(SortedRankLines(ranks))
+    local classNames = {}
+    local className, classCount
+    local maximumClassCount = 1
+    for className, classCount in pairs(classes) do
+        table.insert(classNames, className)
+        if classCount > maximumClassCount then maximumClassCount = classCount end
+    end
+    table.sort(classNames, function(a, b) return string.lower(a) < string.lower(b) end)
+    for i = 1, table.getn(statisticsClassBars) do
+        local bar = statisticsClassBars[i]
+        if classNames[i] then
+            bar.fill:SetWidth(math.max(2, math.floor(62 * classes[classNames[i]] / maximumClassCount)))
+            bar.background:Show()
+            bar.fill:Show()
+        else
+            bar.background:Hide()
+            bar.fill:Hide()
+        end
+    end
     statisticsSummary:Show()
     statisticsClasses:Show()
     statisticsRanks:Show()
@@ -1431,9 +1496,6 @@ local function ShowPage(pageName)
     if pageName == "roster" then
         rosterPage:Show()
         RefreshRosterPage(false)
-    elseif pageName == "export" then
-        exportPage:Show()
-        RefreshExportPage()
     elseif pageName == "statistics" then
         statisticsPage:Show()
     elseif pageName == "raid" then
@@ -1485,10 +1547,9 @@ end
 
 CreateMenuButton("roster", "Roster Management", -12, "Interface\\Icons\\INV_Misc_Book_09")
 CreateMenuButton("raid", "Raid Management", -66, "Interface\\Icons\\INV_Banner_03")
-CreateMenuButton("export", "Export Roster", -120, "Interface\\Icons\\INV_Misc_Note_01")
-CreateMenuButton("statistics", "Guild Statistics", -174, "Interface\\Icons\\INV_Misc_Book_11")
-CreateMenuButton("csr", "CSR", -228, "Interface\\Icons\\INV_Misc_Note_04")
-CreateMenuButton("about", "About", -282, "Interface\\Icons\\INV_Misc_QuestionMark")
+CreateMenuButton("statistics", "Guild Statistics", -120, "Interface\\Icons\\INV_Misc_Book_11")
+CreateMenuButton("csr", "CSR", -174, "Interface\\Icons\\INV_Misc_Note_04")
+CreateMenuButton("about", "About", -228, "Interface\\Icons\\INV_Misc_QuestionMark")
 
 local function RequestRosterScan(scanMode)
     EnsureDatabase()
@@ -1524,6 +1585,7 @@ local function StartSharedGuildScan(origin)
         statisticsRanks:Hide()
         statisticsClassPanel:Hide()
         statisticsRankPanel:Hide()
+        for i = 1, table.getn(statisticsClassBars) do statisticsClassBars[i].background:Hide(); statisticsClassBars[i].fill:Hide() end
         statisticsOnlyLevel60:Hide()
         statisticsLastScan:Hide()
         statisticsRefreshButton:Hide()
@@ -1744,8 +1806,8 @@ SlashCmdList["MUKLAOFFICERSUITE"] = function(message)
     command = string.gsub(command, "^%s*(.-)%s*$", "%1")
     if command == "scan" then
         if not dashboard:IsVisible() then dashboard:Show() end
-        ShowPage("export")
-        Print("Click 'Scan & Save' on the Export Roster page.")
+        ShowPage("roster")
+        Print("Use Scan Guild Data or Export Roster in Roster Management.")
     elseif command == "show" or command == "open" or command == "" then
         ToggleDashboard()
     elseif command == "hide" then
