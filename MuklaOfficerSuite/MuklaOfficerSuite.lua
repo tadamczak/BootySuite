@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.18.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -311,6 +311,7 @@ dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
 dashboard:SetFrameStrata("DIALOG")
 dashboard:SetMovable(true)
 dashboard:SetResizable(true)
+if dashboard.SetClampedToScreen then dashboard:SetClampedToScreen(true) end
 dashboard:SetMinResize(760, 420)
 dashboard:SetMaxResize(1100, 760)
 dashboard:EnableMouse(true)
@@ -854,6 +855,8 @@ statisticsTitle:SetText("Guild Statistics")
 
 local statisticsOnlyLevel60 = CreateFrame("CheckButton", nil, statisticsPage, "UICheckButtonTemplate")
 statisticsOnlyLevel60:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 8, -118)
+statisticsOnlyLevel60:ClearAllPoints()
+statisticsOnlyLevel60:SetPoint("TOPRIGHT", statisticsPage, "TOPRIGHT", -225, -42)
 statisticsOnlyLevel60:SetWidth(22)
 statisticsOnlyLevel60:SetHeight(22)
 statisticsOnlyLevel60:SetChecked(true)
@@ -904,6 +907,7 @@ statisticsSummary:Hide()
 
 local statisticsClassPanel = statisticsPage:CreateTexture(nil, "BACKGROUND")
 statisticsClassPanel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 12, -154)
+statisticsClassPanel:ClearAllPoints(); statisticsClassPanel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 12, -112)
 statisticsClassPanel:SetWidth(272)
 statisticsClassPanel:SetHeight(270)
 statisticsClassPanel:SetTexture(0.07, 0.065, 0.055, 0.82)
@@ -911,6 +915,7 @@ statisticsClassPanel:Hide()
 
 local statisticsRankPanel = statisticsPage:CreateTexture(nil, "BACKGROUND")
 statisticsRankPanel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 300, -154)
+statisticsRankPanel:ClearAllPoints(); statisticsRankPanel:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 300, -112)
 statisticsRankPanel:SetWidth(262)
 statisticsRankPanel:SetHeight(270)
 statisticsRankPanel:SetTexture(0.07, 0.065, 0.055, 0.82)
@@ -918,6 +923,7 @@ statisticsRankPanel:Hide()
 
 local statisticsClasses = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 statisticsClasses:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 24, -170)
+statisticsClasses:ClearAllPoints(); statisticsClasses:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 24, -128)
 statisticsClasses:SetWidth(260)
 statisticsClasses:SetJustifyH("LEFT")
 statisticsClasses:SetJustifyV("TOP")
@@ -926,6 +932,7 @@ statisticsClasses:Hide()
 
 local statisticsRanks = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 statisticsRanks:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 316, -170)
+statisticsRanks:ClearAllPoints(); statisticsRanks:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 316, -128)
 statisticsRanks:SetWidth(255)
 statisticsRanks:SetJustifyH("LEFT")
 statisticsRanks:SetJustifyV("TOP")
@@ -1029,11 +1036,11 @@ local CLASS_ICONS
 local function CreateStatisticsTable(name, x, width)
     local statsTable = { entries = {}, rows = {} }
     statsTable.scroll = CreateFrame("ScrollFrame", name, statisticsPage, "FauxScrollFrameTemplate")
-    statsTable.scroll:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x - 4, -190)
+    statsTable.scroll:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x - 4, -148)
     statsTable.scroll:SetWidth(width); statsTable.scroll:SetHeight(224)
     for rowIndex = 1, 9 do
         local row = CreateFrame("Button", nil, statisticsPage)
-        row:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x, -194 - ((rowIndex - 1) * 24))
+        row:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x, -152 - ((rowIndex - 1) * 24))
         row:SetWidth(width - 16); row:SetHeight(23)
         row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
         row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0)
@@ -1087,13 +1094,14 @@ local function PopulateStatisticsTable(statsTable, summaries, statsType, data, o
         end
     end
     statsTable.entries = entries
-    FauxScrollFrame_Update(statsTable.scroll, table.getn(entries), table.getn(statsTable.rows), 24)
+    local visibleStatsRows = statsTable.visibleRows or table.getn(statsTable.rows)
+    FauxScrollFrame_Update(statsTable.scroll, table.getn(entries), visibleStatsRows, 24)
     local offset = FauxScrollFrame_GetOffset(statsTable.scroll)
     for rowIndex = 1, table.getn(statsTable.rows) do
         local row = statsTable.rows[rowIndex]
         local entry = entries[offset + rowIndex]
         row.entry = entry
-        if entry then
+        if entry and rowIndex <= visibleStatsRows then
             local isExpandedSummary = entry.kind == "summary" and MOS.statisticsExpandedType == statsType and MOS.statisticsExpandedValue == entry.value
             if isExpandedSummary then
                 row:SetBackdropColor(0.16, 0.20, 0.17, 0.82); row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
@@ -1701,6 +1709,29 @@ RefreshRosterPage = function(resetScroll)
         rosterStatusText:SetText(guildName .. " - " .. table.getn(data.members) .. " members")
     end
 
+    local rosterTableWidth = math.max(400, rosterPage:GetWidth() - 42)
+    local nameWidth = math.floor(rosterTableWidth * 0.22)
+    local levelWidth = math.floor(rosterTableWidth * 0.08)
+    local classWidth = math.floor(rosterTableWidth * 0.14)
+    local rankWidth = math.floor(rosterTableWidth * 0.18)
+    local notesWidth = rosterTableWidth - nameWidth - levelWidth - classWidth - rankWidth
+    local columnStarts = { 0, nameWidth, nameWidth + levelWidth, nameWidth + levelWidth + classWidth }
+    local columnWidths = { nameWidth, levelWidth, classWidth, rankWidth }
+    for headerIndex = 1, table.getn(headerButtons) do
+        headerButtons[headerIndex]:ClearAllPoints(); headerButtons[headerIndex]:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12 + columnStarts[headerIndex], -130); headerButtons[headerIndex]:SetWidth(columnWidths[headerIndex])
+    end
+    notesHeader:ClearAllPoints(); notesHeader:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 12 + nameWidth + levelWidth + classWidth + rankWidth, -130); notesHeader:SetWidth(notesWidth)
+    for layoutIndex = 1, table.getn(rows) do
+        local layoutRow = rows[layoutIndex]
+        layoutRow:SetWidth(rosterTableWidth)
+        layoutRow.name:ClearAllPoints(); layoutRow.name:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", 7, -1); layoutRow.name:SetWidth(nameWidth - 10)
+        layoutRow.level:ClearAllPoints(); layoutRow.level:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", nameWidth, -1); layoutRow.level:SetWidth(levelWidth - 5)
+        layoutRow.class:ClearAllPoints(); layoutRow.class:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", nameWidth + levelWidth + 5, -1); layoutRow.class:SetWidth(classWidth - 8)
+        layoutRow.rank:ClearAllPoints(); layoutRow.rank:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", nameWidth + levelWidth + classWidth + 5, -1); layoutRow.rank:SetWidth(rankWidth - 8)
+        layoutRow.notes:ClearAllPoints(); layoutRow.notes:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", nameWidth + levelWidth + classWidth + rankWidth + 5, -1); layoutRow.notes:SetWidth(notesWidth - 8)
+        layoutRow.actionPanel:SetWidth(rosterTableWidth - 8)
+    end
+
     if resetScroll then
         rosterScrollFrame.offset = 0
         rosterScrollFrame:SetVerticalScroll(0)
@@ -1722,11 +1753,11 @@ RefreshRosterPage = function(resetScroll)
             if member.officerNote and member.officerNote ~= "" then
                 notes = notes .. " / " .. member.officerNote
             end
-            rows[i].name:SetText(Short(member.name, 18))
+            rows[i].name:SetText(Short(member.name, math.max(10, math.floor(nameWidth / 7))))
             rows[i].level:SetText(member.level or "")
-            rows[i].class:SetText(Short(member.class, 11))
-            rows[i].rank:SetText(Short(member.rank, 14))
-            rows[i].notes:SetText(Short(notes, 25))
+            rows[i].class:SetText(Short(member.class, math.max(8, math.floor(classWidth / 7))))
+            rows[i].rank:SetText(Short(member.rank, math.max(10, math.floor(rankWidth / 7))))
+            rows[i].notes:SetText(Short(notes, math.max(16, math.floor(notesWidth / 7))))
             rows[i].displayedMember = member
             if member.name == selectedMemberName then
                 rows[i].selection:Show()
@@ -1881,6 +1912,11 @@ RefreshStatisticsPage = function()
     end
     local classSummaries = {}
     for i = 1, table.getn(classNames) do table.insert(classSummaries, { name = classNames[i], count = classes[classNames[i]] }) end
+    local statisticsPanelHeight = math.max(120, statisticsPage:GetHeight() - 130)
+    statisticsClassPanel:SetHeight(statisticsPanelHeight); statisticsRankPanel:SetHeight(statisticsPanelHeight)
+    statisticsClassTable.scroll:SetHeight(statisticsPanelHeight - 36); statisticsRankTable.scroll:SetHeight(statisticsPanelHeight - 36)
+    local visibleStatisticsRows = math.max(3, math.min(9, math.floor((statisticsPanelHeight - 40) / 24)))
+    statisticsClassTable.visibleRows = visibleStatisticsRows; statisticsRankTable.visibleRows = visibleStatisticsRows
     PopulateStatisticsTable(statisticsClassTable, classSummaries, "class", data, onlyLevel60)
     PopulateStatisticsTable(statisticsRankTable, rankList, "rank", data, onlyLevel60)
     for i = 1, table.getn(statisticsClassRows) do
@@ -2259,6 +2295,7 @@ ToggleLootMasterMode = function()
         dashboard:SetMinResize(760, 420); dashboard:SetMaxResize(1100, 760)
         dashboard:SetWidth(math.max(760, tonumber(MuklaOfficerSuiteDB.windowWidth) or 840))
         dashboard:SetHeight(math.max(420, tonumber(MuklaOfficerSuiteDB.windowHeight) or 540))
+        dashboard:ClearAllPoints(); dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
         sidebar:Show(); titleBar:Show(); closeButton:Show(); versionText:Show(); raidTitle:Show()
         contentPanel:ClearAllPoints()
         contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 204, -68)

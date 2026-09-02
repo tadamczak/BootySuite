@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.0
+
+- Centered the full dashboard whenever Loot Master Mode is turned off.
+- Clamped the dashboard to the screen where supported by the WoW 1.12 client.
+- Made Roster Management column widths, row widths, action panels, and text truncation follow the current window width.
+- Kept the roster scrollbar aligned with the expanded table rather than detached from fixed-width rows.
+- Moved Only level 60 beside Refresh Data in Guild Statistics.
+- Shifted statistics panels upward and made their height and visible row capacity follow the window height.
+
 ## 0.18.0
 
 - Fixed the title-bar close button so it closes the complete addon dashboard.

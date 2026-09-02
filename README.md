@@ -30,6 +30,8 @@ Use Minimize to collapse Loot Master Mode to an exit/restore bar. Full Raid Mana
 
 Full Raid Management exposes LM opacity and Out of focus opacity percentage fields. Values are clamped to 0-100; 100 keeps the window fully opaque.
 
+Turning off Loot Master Mode restores the full dashboard at the center of the screen. Roster and statistics tables adapt their visible layout to the resized dashboard.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:
