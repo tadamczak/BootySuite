@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0
+
+- Show only Scan Guild Data before the first roster scan and reveal Export Roster afterward.
+- Standardized dashboard action buttons around the compact Raid Management style.
+- Increased spacing around roster search, filters, sorting guidance, and table headers.
+- Narrowed filter dropdowns to match their option content.
+- Removed statistics charts and rebuilt class and rank results as aligned table rows.
+- Separated statistics section headings from their values and increased row spacing.
+- Removed the About heading and vertically centered its text block beside the artwork.
+
 ## 0.10.0
 
 - Removed the separate Export Roster navigation page and moved export into Roster Management.
