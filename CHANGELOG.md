@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.0
+
+- Added Loot Master minimize and restore controls.
+- Collapsed minimized Loot Master Mode to a compact bar containing only exit and restore actions.
+- Reduced Loot Master Mode to a constrained 400-460 pixel width.
+- Removed the Filters label and tightened filter, mode, scan, search, and table columns.
+- Reduced the automatic loot-detail expansion height to remove excess bottom space.
+- Added a confirmation-protected Reset loot action to full Raid Management.
+
 ## 0.16.1
 
 - Fixed the WoW 1.12 Lua 5.0 `too many upvalues` load error in Raid Management.
