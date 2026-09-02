@@ -9,6 +9,9 @@ $addonFiles = @(
     "MuklaOfficerSuite.toc",
     "MuklaOfficerSuite.lua"
 )
+$textureFiles = @(
+    "DashboardBackground.tga"
+)
 
 if (-not (Test-Path -LiteralPath $gameDirectory -PathType Container)) {
     throw "Game directory not found: $gameDirectory"
@@ -29,6 +32,21 @@ foreach ($file in $addonFiles) {
     }
 
     Copy-Item -LiteralPath $sourcePath -Destination $targetDirectory -Force
+}
+
+$sourceTextureDirectory = Join-Path $sourceDirectory "Textures"
+$targetTextureDirectory = Join-Path $targetDirectory "Textures"
+if (-not (Test-Path -LiteralPath $targetTextureDirectory)) {
+    New-Item -ItemType Directory -Path $targetTextureDirectory | Out-Null
+}
+
+foreach ($file in $textureFiles) {
+    $sourcePath = Join-Path $sourceTextureDirectory $file
+    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+        throw "Required addon texture not found: $sourcePath"
+    }
+
+    Copy-Item -LiteralPath $sourcePath -Destination $targetTextureDirectory -Force
 }
 
 Write-Host "Mukla Officer Suite deployed to:"

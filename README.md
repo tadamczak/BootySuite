@@ -6,8 +6,9 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - `/mos`, `/mos status`, `/mos minimap`, and `/mos hide` commands,
 - a main window displaying the last saved guild roster,
 - aligned roster columns with scrolling for the complete member list,
-- an in-memory roster scan with `Scan`,
-- a `Scan & Reload` action that scans the roster and reloads the UI to write SavedVariables to disk.
+- dashboard navigation with dedicated roster, export, and about pages,
+- sortable roster columns and full-field search,
+- an `Export Roster` page with `Scan & Save` and last-scan information,
 
 The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.
 
@@ -17,7 +18,7 @@ Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`,
 
 `Interface/AddOns/MuklaOfficerSuite/MuklaOfficerSuite.toc`
 
-After logging in, open the dashboard with `/mos`. Click `Scan` to refresh the roster in memory and display it without reloading the UI. Click `Scan & Reload`, then confirm `Reload now`, when the roster should also be written to disk. The addon does not scan automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
+After logging in, open the dashboard with `/mos`. Open `Export Roster`, click `Scan & Save`, then confirm `Reload now` to write the roster to disk. The addon does not scan automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
 
 `WTF/Account/<ACCOUNT>/SavedVariables/MuklaOfficerSuite.lua`
 
@@ -29,8 +30,10 @@ The repository layout keeps game files separate from project configuration and t
 MuklaOfficerSuite/          # IntelliJ project root
 |-- MuklaOfficerSuite/      # Directory copied to Interface/AddOns
 |   |-- MuklaOfficerSuite.toc
-|   `-- MuklaOfficerSuite.lua
+|   |-- MuklaOfficerSuite.lua
+|   `-- Textures/
 |-- Deploy-Addon.ps1
+|-- Tools/
 |-- README.md
 `-- .idea/
 ```
@@ -43,7 +46,7 @@ Run `Deploy-Addon.ps1` to copy only the required addon files to:
 
 ## CSV export
 
-Run `Export-Roster.ps1` after using `Scan & Reload` in game. The script automatically locates the newest `MuklaOfficerSuite.lua` under the game's `WTF/Account` directory and writes a UTF-8 CSV file to `exports/`.
+Run `Export-Roster.ps1` after using `Scan & Save` in game. The script automatically locates the newest `MuklaOfficerSuite.lua` under the game's `WTF/Account` directory and writes a UTF-8 CSV file to `exports/`.
 
 An explicit input or output path can be supplied when needed:
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Added sidebar navigation with Roster Management, Export Roster, and About pages.
+- Added roster sorting by name, level, class, and rank.
+- Added full-field roster search.
+- Added a dedicated Scan & Save workflow with last-scan information.
+- Added a custom translucent dashboard background and refreshed visual styling.
+
 ## 0.2.2
 
 - Added automatic guild roster retries when the WoW 1.12 roster cache is not ready after the first request.
