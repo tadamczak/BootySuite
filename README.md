@@ -22,6 +22,8 @@ New snapshots are stored under `MuklaOfficerSuiteDB["rosterData"]` and `MuklaOff
 
 Raid Management records loot received after the raid roster has been scanned. Click a raid member to expand or collapse their aggregated item list.
 
+Loot Master Mode hides the dashboard navigation and title chrome while keeping the raid controls and table visible. Drag the bottom-right grip to scale the complete addon window; the selected scale is saved between sessions.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:

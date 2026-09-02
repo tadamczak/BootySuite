@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.0
+
+- Added explicit success feedback after Refresh Data finishes loading guild data.
+- Added a toggleable minimalist Loot Master Mode to Raid Management.
+- Added a bottom-right resize grip that scales the complete dashboard between safe minimum and maximum sizes.
+- Persisted the selected dashboard scale in SavedVariables.
+- Fixed raid row left padding and item icon retrieval for the WoW 1.12 `GetItemInfo` result layout.
+- Added deferred icon refresh when item information becomes available after the loot message.
+
 ## 0.13.1
 
 - Rebuilt Guild Statistics drill-downs as rows in the main class and rank tables.

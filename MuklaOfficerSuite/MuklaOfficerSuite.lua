@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.13.1"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.14.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -289,7 +289,7 @@ local function RecordRaidLoot(message)
     local itemName = parsedItemName or "Unknown item"
     local itemId = parsedItemId or itemName
     local quantity = tonumber(parsedQuantity) or 1
-    local _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
+    local _, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
     member.loot = member.loot or {}
     for lootIndex = 1, table.getn(member.loot) do
         if tostring(member.loot[lootIndex].itemId or member.loot[lootIndex].name) == tostring(itemId) then
@@ -323,6 +323,27 @@ dashboard:SetBackdrop({
 dashboard:SetBackdropColor(0.035, 0.03, 0.02, 0.98)
 dashboard:SetBackdropBorderColor(1, 1, 1, 1)
 dashboard:Hide()
+
+local resizeGrip = CreateFrame("Button", nil, dashboard)
+resizeGrip:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -7, 7)
+resizeGrip:SetWidth(18); resizeGrip:SetHeight(18)
+resizeGrip:SetFrameLevel(dashboard:GetFrameLevel() + 100)
+resizeGrip.texture = resizeGrip:CreateTexture(nil, "OVERLAY")
+resizeGrip.texture:SetAllPoints(resizeGrip)
+resizeGrip.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+resizeGrip:SetScript("OnMouseDown", function()
+    local cursorX, cursorY = GetCursorPosition()
+    this.startCursorX = cursorX; this.startCursorY = cursorY; this.startScale = dashboard:GetScale()
+    this:SetScript("OnUpdate", function()
+        local currentX, currentY = GetCursorPosition()
+        local delta = ((currentX - this.startCursorX) + (this.startCursorY - currentY)) / 900
+        local newScale = math.max(0.75, math.min(1.35, this.startScale + delta))
+        dashboard:SetScale(newScale)
+        if MuklaOfficerSuiteDB then MuklaOfficerSuiteDB.uiScale = newScale end
+    end)
+end)
+resizeGrip:SetScript("OnMouseUp", function() this:SetScript("OnUpdate", nil) end)
+resizeGrip:SetScript("OnHide", function() this:SetScript("OnUpdate", nil) end)
 
 local titleBar = CreateFrame("Frame", nil, dashboard)
 titleBar:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 18, -14)
@@ -515,6 +536,7 @@ local RefreshStatisticsDetails
 local RefreshCSRPage
 local RefreshRaidPage
 local RequestGuildAction
+local ToggleLootMasterMode
 local menuButtons = {}
 local currentPage = "roster"
 local rosterReady = false
@@ -1062,6 +1084,12 @@ local raidTitle = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge
 raidTitle:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -10)
 raidTitle:SetText("Raid Management")
 
+local raidModeButton = CreateFrame("Button", nil, raidPage)
+raidModeButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -8)
+raidModeButton:SetWidth(118); raidModeButton:SetHeight(22)
+StyleCompactButton(raidModeButton, "Loot Master Mode")
+raidModeButton:SetScript("OnClick", function() ToggleLootMasterMode() end)
+
 local raidInfo = raidPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 raidInfo:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -12, -15)
 raidInfo:SetText("")
@@ -1207,8 +1235,8 @@ for i = 1, 15 do
     raidRow:SetWidth(543)
     raidRow:SetHeight(20)
     raidRow.name = raidRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    raidRow.name:SetPoint("TOPLEFT", raidRow, "TOPLEFT", 0, 0)
-    raidRow.name:SetWidth(155); raidRow.name:SetHeight(20); raidRow.name:SetJustifyH("LEFT")
+    raidRow.name:SetPoint("TOPLEFT", raidRow, "TOPLEFT", 7, 0)
+    raidRow.name:SetWidth(148); raidRow.name:SetHeight(20); raidRow.name:SetJustifyH("LEFT")
     raidRow.group = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     raidRow.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 172, -132 - ((i - 1) * 21))
     raidRow.group:SetWidth(70)
@@ -2018,6 +2046,10 @@ RefreshRaidPage = function()
                     local item = loot[lootOffset + lootIndex]
                     local lootRow = row.lootRows[lootIndex]
                     if item then
+                        if not item.icon and item.link then
+                            local _, _, _, _, _, _, _, _, _, refreshedTexture = GetItemInfo(item.link)
+                            if refreshedTexture then item.icon = refreshedTexture end
+                        end
                         lootRow.icon:SetTexture(item.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
                         lootRow.name:SetText((item.name or "Unknown item") .. ((tonumber(item.count) or 1) > 1 and (" x " .. item.count) or ""))
                         lootRow.icon:Show(); lootRow.name:Show()
@@ -2047,6 +2079,24 @@ local function SetActiveMenuButton(activeName)
             button.label:SetTextColor(0.95, 0.72, 0.18)
         end
     end
+end
+
+ToggleLootMasterMode = function()
+    MOS.lootMasterMode = not MOS.lootMasterMode
+    if MOS.lootMasterMode then
+        sidebar:Hide(); titleBar:Hide(); closeButton:Hide(); versionText:Hide(); raidTitle:Hide()
+        contentPanel:ClearAllPoints()
+        contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 14, -14)
+        contentPanel:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -14, 14)
+        raidModeButton:SetText("Turn Off LM Mode")
+    else
+        sidebar:Show(); titleBar:Show(); closeButton:Show(); versionText:Show(); raidTitle:Show()
+        contentPanel:ClearAllPoints()
+        contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 204, -68)
+        contentPanel:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -20, 32)
+        raidModeButton:SetText("Loot Master Mode")
+    end
+    RefreshRaidPage()
 end
 
 local function ShowPage(pageName)
@@ -2434,6 +2484,7 @@ CompletePendingGuildScan = function()
             RefreshStatisticsPage()
         end
         MOS.sharedScanOrigin = nil
+        Print("Guild data loaded successfully. Members: " .. CountSavedMembers() .. ".")
     elseif scanMode == "raid" then
         local raidCount = SaveRaidRoster()
         MOS.raidScanReady = true
@@ -2451,6 +2502,7 @@ end
 MOS:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
         EnsureDatabase()
+        dashboard:SetScale(math.max(0.75, math.min(1.35, tonumber(MuklaOfficerSuiteDB.uiScale) or 1)))
         PositionMinimapButton()
         if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() end
     elseif event == "GUILD_ROSTER_UPDATE" then
