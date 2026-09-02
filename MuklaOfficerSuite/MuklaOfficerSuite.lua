@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.2"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.3"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -558,7 +558,7 @@ rosterSortHint:SetText("Click a column header to sort")
 rosterSortHint:Hide()
 
 local rows = {}
-local rowCount = 13
+local rowCount = 25
 local rowHeight = 20
 local visibleMembers = {}
 local sortKey = nil
@@ -1759,8 +1759,8 @@ RefreshRosterPage = function(resetScroll)
     end
     -- The expanded action area consumes the space of two regular rows. Reduce
     -- the visible capacity so the final records stay inside the table frame.
-    local heightBasedRowCount = math.max(3, math.min(rowCount, math.floor((rosterPage:GetHeight() - 180) / rowHeight)))
-    local visibleRowCount = selectedMemberName and math.max(1, heightBasedRowCount - 2) or heightBasedRowCount
+    local bottomSafeArea = selectedMemberName and 202 or 172
+    local visibleRowCount = math.max(3, math.min(rowCount, math.floor((rosterPage:GetHeight() - bottomSafeArea) / rowHeight)))
     FauxScrollFrame_Update(rosterScrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
     local offset = FauxScrollFrame_GetOffset(rosterScrollFrame)
 

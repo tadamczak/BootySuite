@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.3
+
+- Increased the Roster Management row pool from 13 to 25 records.
+- Filled available vertical table space while preserving a consistent safe bottom margin.
+- Calculated expanded-row capacity separately so member actions never push records outside the frame.
+
 ## 0.19.2
 
 - Refreshed the active page continuously while resizing and once more when resize ends.
