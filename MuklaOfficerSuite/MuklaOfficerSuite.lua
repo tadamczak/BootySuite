@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.13.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.13.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -975,6 +975,89 @@ end
 local statisticsClassDetail = CreateStatisticsDetailPanel(12)
 local statisticsRankDetail = CreateStatisticsDetailPanel(300)
 
+local CLASS_ICONS
+
+local function CreateStatisticsTable(name, x, width)
+    local statsTable = { entries = {}, rows = {} }
+    statsTable.scroll = CreateFrame("ScrollFrame", name, statisticsPage, "FauxScrollFrameTemplate")
+    statsTable.scroll:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x - 4, -190)
+    statsTable.scroll:SetWidth(width); statsTable.scroll:SetHeight(224)
+    for rowIndex = 1, 9 do
+        local row = CreateFrame("Button", nil, statisticsPage)
+        row:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", x, -194 - ((rowIndex - 1) * 24))
+        row:SetWidth(width - 16); row:SetHeight(23)
+        row.icon = row:CreateTexture(nil, "ARTWORK")
+        row.icon:SetPoint("LEFT", row, "LEFT", 0, 0); row.icon:SetWidth(20); row.icon:SetHeight(20)
+        row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.name:SetPoint("LEFT", row, "LEFT", 28, 0); row.name:SetWidth(132); row.name:SetJustifyH("LEFT")
+        row.rank = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.rank:SetPoint("LEFT", row, "LEFT", 116, 0); row.rank:SetWidth(94); row.rank:SetJustifyH("LEFT")
+        row.level = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.level:SetPoint("RIGHT", row, "RIGHT", -2, 0); row.level:SetWidth(25); row.level:SetJustifyH("RIGHT")
+        row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.count:SetPoint("RIGHT", row, "RIGHT", -2, 0); row.count:SetWidth(35); row.count:SetJustifyH("RIGHT")
+        row:SetScript("OnClick", function()
+            if not this.entry or this.entry.kind ~= "summary" then return end
+            if MOS.statisticsExpandedType == this.entry.statsType and MOS.statisticsExpandedValue == this.entry.value then
+                MOS.statisticsExpandedType = nil; MOS.statisticsExpandedValue = nil
+            else
+                MOS.statisticsExpandedType = this.entry.statsType; MOS.statisticsExpandedValue = this.entry.value
+            end
+            RefreshStatisticsPage()
+        end)
+        row:Hide(); statsTable.rows[rowIndex] = row
+    end
+    statsTable.scroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, RefreshStatisticsPage) end)
+    statsTable.scroll:Hide()
+    return statsTable
+end
+
+local statisticsClassTable = CreateStatisticsTable("MuklaOfficerSuiteStatisticsClassTableScroll", 24, 252)
+local statisticsRankTable = CreateStatisticsTable("MuklaOfficerSuiteStatisticsRankTableScroll", 316, 238)
+
+local function PopulateStatisticsTable(statsTable, summaries, statsType, data, onlyLevel60)
+    local entries = {}
+    for summaryIndex = 1, table.getn(summaries) do
+        local summary = summaries[summaryIndex]
+        table.insert(entries, { kind = "summary", statsType = statsType, value = summary.name, count = summary.count })
+        if MOS.statisticsExpandedType == statsType and MOS.statisticsExpandedValue == summary.name then
+            local members = {}
+            for memberIndex = 1, table.getn(data.members) do
+                local member = data.members[memberIndex]
+                local matches = (statsType == "class" and member.class == summary.name) or (statsType == "rank" and member.rank == summary.name)
+                if matches and (not onlyLevel60 or tonumber(member.level) == 60) then table.insert(members, member) end
+            end
+            table.sort(members, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
+            for memberIndex = 1, table.getn(members) do table.insert(entries, { kind = "member", member = members[memberIndex] }) end
+        end
+    end
+    statsTable.entries = entries
+    FauxScrollFrame_Update(statsTable.scroll, table.getn(entries), table.getn(statsTable.rows), 24)
+    local offset = FauxScrollFrame_GetOffset(statsTable.scroll)
+    for rowIndex = 1, table.getn(statsTable.rows) do
+        local row = statsTable.rows[rowIndex]
+        local entry = entries[offset + rowIndex]
+        row.entry = entry
+        if entry then
+            if entry.kind == "summary" then
+                row.icon:SetTexture(statsType == "class" and (CLASS_ICONS[entry.value] or "Interface\\Icons\\INV_Misc_QuestionMark") or nil)
+                if statsType == "class" then row.icon:Show() else row.icon:Hide() end
+                row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", statsType == "class" and 28 or 0, 0)
+                row.name:SetWidth(statsType == "class" and 132 or 180)
+                row.name:SetText(entry.value .. ((MOS.statisticsExpandedType == statsType and MOS.statisticsExpandedValue == entry.value) and "  ^" or ""))
+                row.count:SetText(entry.count); row.count:Show(); row.rank:Hide(); row.level:Hide()
+            else
+                row.icon:Hide(); row.count:Hide()
+                row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", 12, 0); row.name:SetWidth(96); row.name:SetText(Short(entry.member.name, 14))
+                row.rank:SetText(Short(entry.member.rank, 13)); row.rank:Show()
+                if onlyLevel60 then row.level:Hide() else row.level:SetText(entry.member.level or ""); row.level:Show() end
+            end
+            row:Show()
+        else row:Hide() end
+    end
+    statsTable.scroll:Show()
+end
+
 local raidTitle = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 raidTitle:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -10)
 raidTitle:SetText("Raid Management")
@@ -1164,7 +1247,7 @@ for i = 1, 15 do
         lootRow.name:SetPoint("LEFT", lootRow.icon, "RIGHT", 7, 0); lootRow.name:SetWidth(455); lootRow.name:SetJustifyH("LEFT")
         raidRow.lootRows[lootIndex] = lootRow
     end
-    raidRow.lootScroll = CreateFrame("ScrollFrame", nil, raidRow.lootPanel, "FauxScrollFrameTemplate")
+    raidRow.lootScroll = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRaidLootScroll" .. i, raidRow.lootPanel, "FauxScrollFrameTemplate")
     raidRow.lootScroll:SetPoint("TOPLEFT", raidRow.lootPanel, "TOPLEFT", -3, -24); raidRow.lootScroll:SetPoint("BOTTOMRIGHT", raidRow.lootPanel, "BOTTOMRIGHT", -12, 8)
     raidRow.lootScroll.ownerRow = raidRow
     raidRow.lootScroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, RefreshRaidPage) end)
@@ -1589,7 +1672,7 @@ RefreshExportPage = function()
     end
 end
 
-local CLASS_ICONS = {
+CLASS_ICONS = {
     Druid = "Interface\\Icons\\Spell_Nature_ForceOfNature",
     Hunter = "Interface\\Icons\\INV_Weapon_Bow_07",
     Mage = "Interface\\Icons\\INV_Staff_13",
@@ -1682,6 +1765,14 @@ RefreshStatisticsPage = function()
             row.name:Hide(); row.count:Hide(); row.button:Hide()
         end
     end
+    local classSummaries = {}
+    for i = 1, table.getn(classNames) do table.insert(classSummaries, { name = classNames[i], count = classes[classNames[i]] }) end
+    PopulateStatisticsTable(statisticsClassTable, classSummaries, "class", data, onlyLevel60)
+    PopulateStatisticsTable(statisticsRankTable, rankList, "rank", data, onlyLevel60)
+    for i = 1, table.getn(statisticsClassRows) do
+        statisticsClassRows[i].icon:Hide(); statisticsClassRows[i].name:Hide(); statisticsClassRows[i].count:Hide(); statisticsClassRows[i].button:Hide()
+        statisticsRankRows[i].name:Hide(); statisticsRankRows[i].count:Hide(); statisticsRankRows[i].button:Hide()
+    end
     statisticsSummary:Show()
     statisticsClasses:Show()
     statisticsRanks:Show()
@@ -1692,7 +1783,7 @@ RefreshStatisticsPage = function()
     statisticsLastScan:SetText("Last scan: " .. (data.scannedAtText or "Unknown"))
     statisticsLastScan:Show()
     statisticsRefreshButton:Show()
-    RefreshStatisticsDetails()
+    statisticsClassDetail:Hide(); statisticsRankDetail:Hide()
 end
 
 RefreshStatisticsDetails = function()
@@ -2066,6 +2157,8 @@ local function StartSharedGuildScan(origin)
         statisticsRanks:Hide()
         statisticsClassPanel:Hide()
         statisticsRankPanel:Hide()
+        statisticsClassTable.scroll:Hide(); statisticsRankTable.scroll:Hide()
+        for i = 1, table.getn(statisticsClassTable.rows) do statisticsClassTable.rows[i]:Hide(); statisticsRankTable.rows[i]:Hide() end
         for i = 1, table.getn(statisticsClassRows) do statisticsClassRows[i].icon:Hide(); statisticsClassRows[i].name:Hide(); statisticsClassRows[i].count:Hide() end
         for i = 1, table.getn(statisticsRankRows) do statisticsRankRows[i].name:Hide(); statisticsRankRows[i].count:Hide() end
         statisticsOnlyLevel60:Hide()

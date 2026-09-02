@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1
+
+- Rebuilt Guild Statistics drill-downs as rows in the main class and rank tables.
+- Made each statistics table scroll as one bounded list without overlay panels.
+- Fixed the WoW 1.12 FauxScrollFrame error when expanding Raid Management loot.
+
 ## 0.13.0
 
 - Added expandable Raid Management rows with each member's recorded loot.
