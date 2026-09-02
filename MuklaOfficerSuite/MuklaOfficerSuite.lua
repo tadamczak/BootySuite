@@ -2,13 +2,43 @@ local ADDON_NAME = "MuklaOfficerSuite"
 local VERSION = "0.1.0"
 local PREFIX = "|cff33ff99MOS|r"
 
+local function Print(message)
+    DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. ": " .. tostring(message))
+end
+
 local MOS = CreateFrame("Frame", "MuklaOfficerSuiteEventFrame")
 MOS.pendingScan = nil
 MOS.lastRosterEvent = 0
-MOS.reloadDelay = nil
 
-local function Print(message)
-    DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. ": " .. tostring(message))
+local reloadFrame = CreateFrame("Frame", "MuklaOfficerSuiteReloadFrame", UIParent)
+reloadFrame.delay = nil
+reloadFrame:Hide()
+reloadFrame:SetScript("OnUpdate", function()
+    if not reloadFrame.delay then
+        reloadFrame:Hide()
+        return
+    end
+
+    reloadFrame.delay = reloadFrame.delay - arg1
+    if reloadFrame.delay > 0 then
+        return
+    end
+
+    reloadFrame.delay = nil
+    reloadFrame:Hide()
+    Print("Reloading the UI now...")
+
+    if type(ReloadUI) == "function" then
+        ReloadUI()
+    end
+    if type(ConsoleExec) == "function" then
+        ConsoleExec("reloadui")
+    end
+end)
+
+local function ScheduleReload()
+    reloadFrame.delay = 0.5
+    reloadFrame:Show()
 end
 
 local function EnsureDatabase()
@@ -355,24 +385,6 @@ end
 
 MOS:RegisterEvent("VARIABLES_LOADED")
 MOS:RegisterEvent("GUILD_ROSTER_UPDATE")
-MOS:SetScript("OnUpdate", function()
-    if not MOS.reloadDelay then
-        return
-    end
-
-    MOS.reloadDelay = MOS.reloadDelay - arg1
-    if MOS.reloadDelay > 0 then
-        return
-    end
-
-    MOS.reloadDelay = nil
-    if type(ReloadUI) == "function" then
-        ReloadUI()
-    end
-    if type(ConsoleExec) == "function" then
-        ConsoleExec("reloadui")
-    end
-end)
 MOS:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
         EnsureDatabase()
@@ -384,7 +396,7 @@ MOS:SetScript("OnEvent", function()
             RefreshDashboard()
             if scanMode == "reload" then
                 Print("Roster scanned. Reloading UI to save it to disk...")
-                MOS.reloadDelay = 0.25
+                ScheduleReload()
             elseif scanMode ~= "quiet" then
                 Print("Roster scanned. Members: " .. CountSavedMembers())
             end
