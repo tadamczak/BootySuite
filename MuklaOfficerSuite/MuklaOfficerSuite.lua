@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.2.1"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.2.2"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -10,6 +10,38 @@ local MOS = CreateFrame("Frame", "MuklaOfficerSuiteEventFrame")
 MOS.pendingScan = nil
 MOS.lastRosterEvent = 0
 MOS.scanStartedAt = nil
+MOS.scanAttempts = 0
+
+local rosterRequestFrame = CreateFrame("Frame", "MuklaOfficerSuiteRosterRequestFrame", UIParent)
+rosterRequestFrame.delay = nil
+rosterRequestFrame:Hide()
+rosterRequestFrame:SetScript("OnUpdate", function()
+    if not MOS.pendingScan then
+        rosterRequestFrame.delay = nil
+        rosterRequestFrame:Hide()
+        return
+    end
+
+    rosterRequestFrame.delay = rosterRequestFrame.delay - arg1
+    if rosterRequestFrame.delay > 0 then
+        return
+    end
+
+    if MOS.scanAttempts < 3 then
+        MOS.scanAttempts = MOS.scanAttempts + 1
+        rosterRequestFrame.delay = 1
+        Print("Guild roster is not ready. Retrying scan (" .. MOS.scanAttempts .. "/3)...")
+        GuildRoster()
+        return
+    end
+
+    rosterRequestFrame.delay = nil
+    rosterRequestFrame:Hide()
+    MOS.pendingScan = nil
+    MOS.scanStartedAt = nil
+    MOS.scanAttempts = 0
+    Print("Guild roster could not be loaded. Please try again.")
+end)
 
 StaticPopupDialogs["MUKLA_OFFICER_SUITE_RELOAD"] = {
     text = "The guild roster scan is complete. Reload the UI now to write it to disk?",
@@ -118,6 +150,9 @@ local function SaveGuildRoster()
     MuklaOfficerSuiteDB.lastScanDurationSeconds = scanDuration
     MOS.pendingScan = nil
     MOS.scanStartedAt = nil
+    MOS.scanAttempts = 0
+    rosterRequestFrame.delay = nil
+    rosterRequestFrame:Hide()
     return true
 end
 
@@ -277,6 +312,9 @@ local function RequestRosterScan(scanMode)
     end
     MOS.pendingScan = scanMode or "manual"
     MOS.scanStartedAt = GetTime()
+    MOS.scanAttempts = 1
+    rosterRequestFrame.delay = 1
+    rosterRequestFrame:Show()
     GuildRoster()
     if MOS.pendingScan == "reload" then
         Print("Requesting guild roster. The UI will reload after the scan completes...")

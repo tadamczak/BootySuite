@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Added automatic guild roster retries when the WoW 1.12 roster cache is not ready after the first request.
+
 ## 0.2.1
 
 - Replaced the asynchronous reload timer with a user-confirmed reload dialog for WoW 1.12 compatibility.
