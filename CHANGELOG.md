@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- Rebuilt the main window chrome with the original WoW dialog border texture.
+- Restored the thick metallic edges and corner ornaments used by the reference UI.
+- Removed border tinting that made the original artwork appear flat and dark.
+- Unified the sidebar and content outlines with the neutral reference-frame palette.
+
 ## 0.5.0
 
 - Added expandable member actions directly below the selected roster row.

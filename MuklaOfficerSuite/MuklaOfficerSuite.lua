@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -168,19 +168,19 @@ dashboard:SetScript("OnDragStart", function() this:StartMoving() end)
 dashboard:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
 dashboard:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
     tile = true,
-    tileSize = 16,
-    edgeSize = 18,
-    insets = { left = 5, right = 5, top = 5, bottom = 5 },
+    tileSize = 32,
+    edgeSize = 32,
+    insets = { left = 11, right = 12, top = 12, bottom = 11 },
 })
-dashboard:SetBackdropColor(0.04, 0.04, 0.04, 0.98)
-dashboard:SetBackdropBorderColor(0.55, 0.55, 0.52, 1)
+dashboard:SetBackdropColor(0.035, 0.03, 0.02, 0.98)
+dashboard:SetBackdropBorderColor(1, 1, 1, 1)
 dashboard:Hide()
 
 local titleBar = CreateFrame("Frame", nil, dashboard)
-titleBar:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 18, -13)
-titleBar:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -18, -13)
+titleBar:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 18, -14)
+titleBar:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -18, -14)
 titleBar:SetHeight(32)
 titleBar:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -190,8 +190,8 @@ titleBar:SetBackdrop({
     edgeSize = 12,
     insets = { left = 3, right = 3, top = 3, bottom = 3 },
 })
-titleBar:SetBackdropColor(0.07, 0.06, 0.04, 0.96)
-titleBar:SetBackdropBorderColor(0.48, 0.48, 0.45, 1)
+titleBar:SetBackdropColor(0.025, 0.022, 0.018, 0.98)
+titleBar:SetBackdropBorderColor(0.42, 0.42, 0.40, 1)
 
 local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("CENTER", titleBar, "CENTER", 0, 2)
@@ -217,7 +217,7 @@ sidebar:SetBackdrop({
     insets = { left = 4, right = 4, top = 4, bottom = 4 },
 })
 sidebar:SetBackdropColor(0.05, 0.04, 0.02, 0.92)
-sidebar:SetBackdropBorderColor(0.55, 0.38, 0.08, 1)
+sidebar:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
 
 local contentPanel = CreateFrame("Frame", nil, dashboard)
 contentPanel:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 204, -68)
@@ -231,7 +231,7 @@ contentPanel:SetBackdrop({
     insets = { left = 4, right = 4, top = 4, bottom = 4 },
 })
 contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90)
-contentPanel:SetBackdropBorderColor(0.48, 0.35, 0.12, 1)
+contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
 
 local background = contentPanel:CreateTexture(nil, "BACKGROUND")
 background:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 5, -5)
