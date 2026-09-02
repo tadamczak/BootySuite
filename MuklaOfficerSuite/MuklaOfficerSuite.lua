@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.16.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.16.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -1118,7 +1118,7 @@ local raidTitle = raidPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge
 raidTitle:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -10)
 raidTitle:SetText("Raid Management")
 
-local raidModeButton = CreateFrame("Button", nil, raidPage)
+local raidModeButton = CreateFrame("Button", "MuklaOfficerSuiteRaidModeButton", raidPage)
 raidModeButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -8)
 raidModeButton:SetWidth(118); raidModeButton:SetHeight(22)
 StyleCompactButton(raidModeButton, "Loot Master Mode")
@@ -2050,7 +2050,7 @@ RefreshRaidPage = function()
     end
     if not selectedRaidMemberVisible then
         selectedRaidMemberName = nil
-        if MOS.raidHeightBeforeExpansion then dashboard:SetHeight(MOS.raidHeightBeforeExpansion); MOS.raidHeightBeforeExpansion = nil end
+        if MOS.raidHeightBeforeExpansion then MuklaOfficerSuiteDashboard:SetHeight(MOS.raidHeightBeforeExpansion); MOS.raidHeightBeforeExpansion = nil end
     end
     raidStatus:SetText((data and data.scannedAtText or "Unknown") .. " | showing " .. table.getn(visibleRaidMembers) .. " of " .. table.getn(members) .. " raid members")
     if MOS.lootMasterMode then raidStatus:Hide() else raidStatus:Show() end
@@ -2058,7 +2058,7 @@ RefreshRaidPage = function()
         raidFilterLabel:ClearAllPoints(); raidFilterLabel:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 8, -14)
         raidClassFilterButton:ClearAllPoints(); raidClassFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 50, -8); raidClassFilterButton:SetWidth(76)
         raidRankFilterButton:ClearAllPoints(); raidRankFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 132, -8); raidRankFilterButton:SetWidth(76)
-        raidModeButton:ClearAllPoints(); raidModeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 214, -8); raidModeButton:SetWidth(112)
+        MuklaOfficerSuiteRaidModeButton:ClearAllPoints(); MuklaOfficerSuiteRaidModeButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 214, -8); MuklaOfficerSuiteRaidModeButton:SetWidth(112)
         raidScanButton:ClearAllPoints(); raidScanButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 332, -8); raidScanButton:SetWidth(88)
         raidSearchLabel:ClearAllPoints(); raidSearchLabel:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 428, -14)
         raidSearchBox:ClearAllPoints(); raidSearchBox:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 478, -8); raidSearchBox:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -8, -8); raidSearchBox:SetWidth(140)
@@ -2066,7 +2066,7 @@ RefreshRaidPage = function()
         raidFilterLabel:ClearAllPoints(); raidFilterLabel:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -82)
         raidClassFilterButton:ClearAllPoints(); raidClassFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 58, -76); raidClassFilterButton:SetWidth(84)
         raidRankFilterButton:ClearAllPoints(); raidRankFilterButton:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 150, -76); raidRankFilterButton:SetWidth(84)
-        raidModeButton:ClearAllPoints(); raidModeButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -8); raidModeButton:SetWidth(118)
+        MuklaOfficerSuiteRaidModeButton:ClearAllPoints(); MuklaOfficerSuiteRaidModeButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -8); MuklaOfficerSuiteRaidModeButton:SetWidth(118)
         raidScanButton:ClearAllPoints(); raidScanButton:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -42); raidScanButton:SetWidth(98)
         raidSearchLabel:ClearAllPoints(); raidSearchLabel:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -192, -82)
         raidSearchBox:ClearAllPoints(); raidSearchBox:SetPoint("TOPRIGHT", raidPage, "TOPRIGHT", -4, -76); raidSearchBox:SetWidth(178)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.1
+
+- Fixed the WoW 1.12 Lua 5.0 `too many upvalues` load error in Raid Management.
+- Moved newly referenced dashboard controls to named global frames to stay below the 32-upvalue function limit.
+
 ## 0.16.0
 
 - Kept expanded Raid Management row text fully highlighted like Roster Management.
