@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.4"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.5"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -1730,7 +1730,7 @@ RefreshRosterPage = function(resetScroll)
         rosterStatusText:SetText(guildName .. " - " .. table.getn(data.members) .. " members")
     end
 
-    local rosterTableWidth = math.max(400, rosterPage:GetWidth() - 42)
+    local rosterTableWidth = math.max(400, rosterPage:GetWidth() - 30)
     local nameWidth = math.floor(rosterTableWidth * 0.22)
     local levelWidth = math.floor(rosterTableWidth * 0.08)
     local classWidth = math.floor(rosterTableWidth * 0.14)
@@ -1745,7 +1745,7 @@ RefreshRosterPage = function(resetScroll)
     for layoutIndex = 1, table.getn(rows) do
         local layoutRow = rows[layoutIndex]
         layoutRow:SetWidth(rosterTableWidth)
-        layoutRow.name:ClearAllPoints(); layoutRow.name:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", 7, -1); layoutRow.name:SetWidth(nameWidth - 10)
+        layoutRow.name:ClearAllPoints(); layoutRow.name:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", 0, -1); layoutRow.name:SetWidth(nameWidth - 3)
         layoutRow.level:ClearAllPoints(); layoutRow.level:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", nameWidth, -1); layoutRow.level:SetWidth(levelWidth - 5)
         layoutRow.class:ClearAllPoints(); layoutRow.class:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", nameWidth + levelWidth + 5, -1); layoutRow.class:SetWidth(classWidth - 8)
         layoutRow.rank:ClearAllPoints(); layoutRow.rank:SetPoint("TOPLEFT", layoutRow, "TOPLEFT", nameWidth + levelWidth + classWidth + 5, -1); layoutRow.rank:SetWidth(rankWidth - 8)
@@ -1759,9 +1759,14 @@ RefreshRosterPage = function(resetScroll)
     end
     -- The expanded action area consumes the space of two regular rows. Reduce
     -- the visible capacity so the final records stay inside the table frame.
-    local bottomSafeArea = selectedMemberName and 202 or 172
+    local bottomSafeArea = selectedMemberName and 188 or 158
     local visibleRowCount = math.max(3, math.min(rowCount, math.floor((rosterPage:GetHeight() - bottomSafeArea) / rowHeight)))
+    rosterScrollFrame:ClearAllPoints()
+    rosterScrollFrame:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", -4, -145)
+    rosterScrollFrame:SetWidth(rosterPage:GetWidth() - 8)
+    rosterScrollFrame:SetHeight((visibleRowCount * rowHeight) + 8)
     FauxScrollFrame_Update(rosterScrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
+    if table.getn(visibleMembers) > visibleRowCount then rosterScrollFrame:Show() else rosterScrollFrame:Hide() end
     local offset = FauxScrollFrame_GetOffset(rosterScrollFrame)
 
     local rowY = -154

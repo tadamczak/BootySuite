@@ -64,6 +64,14 @@ Run `Deploy-Addon.ps1` to copy only the required addon files to:
 
 `C:\Gry\OctoWoWPvP\Interface\AddOns\MuklaOfficerSuite`
 
+## Screen capture shortcut
+
+`Tools/Capture-LatestScreen.ps1` captures the monitor containing the mouse pointer to `Screenshots/latest-screen.png`. A desktop shortcut can run it globally with `Ctrl+Alt+F12`; move the pointer onto the WoW monitor before pressing the shortcut.
+
+`Tools/Toggle-DiagnosticCapture.ps1` starts or stops a temporary diagnostic recording of the rightmost monitor used for WoW. It stores a short sequence of JPEG frames under `Screenshots/recording-frames`; the frames are removed after analysis.
+
+`Tools/DiagnosticCaptureService.ps1` can remain running in the background and accepts local start/stop flags, allowing repeated voice-controlled recordings without repeated Windows process approvals.
+
 ## CSV export
 
 After saving and reloading in game, double-click `Export-Roster.cmd` or `Export-Attendance.cmd`. The launcher keeps its window open, reports any error, and writes the UTF-8 CSV file to `exports/`.

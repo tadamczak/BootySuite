@@ -1,3 +1,5 @@
 /.idea/
 /dist/
 /exports/
+Screenshots/*
+!Screenshots/.gitkeep

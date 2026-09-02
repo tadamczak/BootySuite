@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.5
+
+- Extended roster rows closer to the right and bottom edges of the data panel.
+- Matched the roster scrollbar height to the visible record area.
+- Aligned player names with the Name column header.
+- Added local voice-controlled diagnostic screen capture helpers.
+
 ## 0.19.4
 
 - Expanded Guild Statistics and Raid Management row pools so resized windows use the available table height.
