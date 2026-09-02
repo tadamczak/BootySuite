@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.2
+
+- Refreshed the active page continuously while resizing and once more when resize ends.
+- Made responsive roster rows, columns, action panels, and text widths update immediately with the window.
+- Kept the roster scrollbar visually attached to the resized table edge.
+- Added click-outside dismissal to Raid Management Class and Rank dropdowns.
+
 ## 0.19.1
 
 - Limited LM opacity and out-of-focus opacity behavior strictly to Loot Master Mode.

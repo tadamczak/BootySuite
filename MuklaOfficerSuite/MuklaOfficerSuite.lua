@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.1"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.19.2"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -16,6 +16,7 @@ MOS.scanDeadline = nil
 local CompletePendingGuildScan
 local HandleGuildScanFailure
 local scanProgress
+local RefreshCurrentPageLayout
 
 local rosterRequestFrame = CreateFrame("Frame", "MuklaOfficerSuiteRosterRequestFrame", UIParent)
 rosterRequestFrame.delay = nil
@@ -339,9 +340,15 @@ resizeGrip.texture:SetAllPoints(resizeGrip)
 resizeGrip.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
 resizeGrip:SetScript("OnMouseDown", function()
     dashboard:StartSizing("BOTTOMRIGHT")
+    this.layoutElapsed = 0
+    this:SetScript("OnUpdate", function()
+        this.layoutElapsed = this.layoutElapsed + arg1
+        if this.layoutElapsed >= 0.08 then this.layoutElapsed = 0; if RefreshCurrentPageLayout then RefreshCurrentPageLayout() end end
+    end)
 end)
 resizeGrip:SetScript("OnMouseUp", function()
     dashboard:StopMovingOrSizing()
+    this:SetScript("OnUpdate", nil)
     if MuklaOfficerSuiteDB then
         if MOS.lootMasterMode then
             MuklaOfficerSuiteDB.lootMasterWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.lootMasterHeight = dashboard:GetHeight()
@@ -349,8 +356,9 @@ resizeGrip:SetScript("OnMouseUp", function()
             MuklaOfficerSuiteDB.windowWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.windowHeight = dashboard:GetHeight()
         end
     end
+    if RefreshCurrentPageLayout then RefreshCurrentPageLayout() end
 end)
-resizeGrip:SetScript("OnHide", function() dashboard:StopMovingOrSizing() end)
+resizeGrip:SetScript("OnHide", function() dashboard:StopMovingOrSizing(); this:SetScript("OnUpdate", nil) end)
 
 local lootMasterAlphaWatcher = CreateFrame("Frame", nil, dashboard)
 lootMasterAlphaWatcher.elapsed = 0
@@ -1205,6 +1213,14 @@ local function CreateRaidFilterPanel(button)
 end
 local raidClassFilterPanel = CreateRaidFilterPanel(raidClassFilterButton)
 local raidRankFilterPanel = CreateRaidFilterPanel(raidRankFilterButton)
+local raidFilterDismiss = CreateFrame("Button", "MuklaOfficerSuiteRaidFilterDismiss", raidPage)
+raidFilterDismiss:SetAllPoints(raidPage); raidFilterDismiss:SetFrameLevel(raidPage:GetFrameLevel() + 20); raidFilterDismiss:Hide()
+raidClassFilterPanel:SetFrameLevel(raidPage:GetFrameLevel() + 30); raidRankFilterPanel:SetFrameLevel(raidPage:GetFrameLevel() + 30)
+raidClassFilterButton:SetFrameLevel(raidPage:GetFrameLevel() + 31); raidRankFilterButton:SetFrameLevel(raidPage:GetFrameLevel() + 31)
+local function HideRaidFilterPanels()
+    raidClassFilterPanel:Hide(); raidRankFilterPanel:Hide(); raidFilterDismiss:Hide()
+end
+raidFilterDismiss:SetScript("OnClick", function() HideRaidFilterPanels() end)
 local selectedRaidClasses, selectedRaidRanks = {}, {}
 local raidFiltersInitialized = false
 local raidSortKey, raidSortAscending = nil, true
@@ -2055,8 +2071,14 @@ local function BuildRaidFilters(members)
     RefreshRaidFilterOptions(raidRankFilterPanel, ranks, selectedRaidRanks)
 end
 
-raidClassFilterButton:SetScript("OnClick", function() raidRankFilterPanel:Hide(); if raidClassFilterPanel:IsVisible() then raidClassFilterPanel:Hide() else raidClassFilterPanel:Show() end end)
-raidRankFilterButton:SetScript("OnClick", function() raidClassFilterPanel:Hide(); if raidRankFilterPanel:IsVisible() then raidRankFilterPanel:Hide() else raidRankFilterPanel:Show() end end)
+raidClassFilterButton:SetScript("OnClick", function()
+    local show = not raidClassFilterPanel:IsVisible(); HideRaidFilterPanels()
+    if show then raidClassFilterPanel:Show(); raidFilterDismiss:Show() end
+end)
+raidRankFilterButton:SetScript("OnClick", function()
+    local show = not raidRankFilterPanel:IsVisible(); HideRaidFilterPanels()
+    if show then raidRankFilterPanel:Show(); raidFilterDismiss:Show() end
+end)
 
 local function SortRaidMembers(a, b)
     if not raidSortKey then
@@ -2352,6 +2374,7 @@ local function ShowPage(pageName)
     csrPage:Hide()
     aboutPage:Hide()
     HideFilterPanels()
+    MuklaOfficerSuiteRaidFilterDismiss:Hide(); raidClassFilterPanel:Hide(); raidRankFilterPanel:Hide()
     if pageName == "roster" then
         rosterPage:Show()
         RefreshRosterPage(false)
@@ -2367,6 +2390,12 @@ local function ShowPage(pageName)
         aboutPage:Show()
     end
     SetActiveMenuButton(pageName)
+end
+
+RefreshCurrentPageLayout = function()
+    if currentPage == "roster" then RefreshRosterPage(false)
+    elseif currentPage == "statistics" and statisticsReady then RefreshStatisticsPage()
+    elseif currentPage == "raid" then RefreshRaidPage() end
 end
 
 local function CreateMenuButton(name, text, y, iconPath)
