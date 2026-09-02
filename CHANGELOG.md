@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Moved the guild artwork to the navigation sidebar and added a dark content background.
+- Added collapsible Class and Rank checkbox filters with Select all controls.
+- Refined selected roster rows and compact member action panels.
+- Added the Guild Statistics dashboard with class, rank, level, activity, and average-level metrics.
+- Added CSR raid scanning enriched with guild data and a dedicated CSV exporter.
+
 ## 0.5.1
 
 - Rebuilt the main window chrome with the original WoW dialog border texture.

@@ -9,6 +9,9 @@ An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 - dashboard navigation with dedicated roster, export, and about pages,
 - sortable roster columns and full-field search,
 - expandable roster member actions with confirmed promote and demote controls,
+- collapsible roster filters for class and guild rank,
+- guild class, rank, level, and activity statistics,
+- CSR snapshots of the current raid enriched with guild roster data,
 - an `Export Roster` page with `Scan & Save` and last-scan information,
 
 The addon follows semantic versioning. The installed version is defined in `MuklaOfficerSuite.toc`, displayed in the dashboard, and stored with every guild roster scan.
@@ -48,6 +51,8 @@ Run `Deploy-Addon.ps1` to copy only the required addon files to:
 ## CSV export
 
 Run `Export-Roster.ps1` after using `Scan & Save` in game. The script automatically locates the newest `MuklaOfficerSuite.lua` under the game's `WTF/Account` directory and writes a UTF-8 CSV file to `exports/`.
+
+For a CSR export, join a raid, use `Scan & Save` on the CSR page, confirm the reload, and run `Export-CSR.ps1`.
 
 An explicit input or output path can be supplied when needed:
 

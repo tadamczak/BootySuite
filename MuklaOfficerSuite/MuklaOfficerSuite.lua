@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.1"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.6.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -57,6 +57,19 @@ StaticPopupDialogs["MUKLA_OFFICER_SUITE_RELOAD"] = {
     OnCancel = function()
         Print("Roster remains in memory. Use /reload before closing the game to save it.")
     end,
+    timeout = 0,
+    whileDead = 1,
+    hideOnEscape = 1,
+}
+
+StaticPopupDialogs["MUKLA_OFFICER_SUITE_CSR_RELOAD"] = {
+    text = "The raid and guild data scan is complete. Reload the UI now to write the CSR snapshot to disk?",
+    button1 = "Reload now",
+    button2 = "Later",
+    OnAccept = function()
+        if type(ReloadUI) == "function" then ReloadUI() elseif type(ConsoleExec) == "function" then ConsoleExec("reloadui") end
+    end,
+    OnCancel = function() Print("CSR remains in memory. Use /reload before closing the game to save it.") end,
     timeout = 0,
     whileDead = 1,
     hideOnEscape = 1,
@@ -156,6 +169,60 @@ local function SaveGuildRoster()
     return true
 end
 
+local function SaveRaidRoster()
+    EnsureDatabase()
+    local guildData = nil
+    local guildKey = GuildKey()
+    if guildKey then
+        guildData = MuklaOfficerSuiteDB.guilds[guildKey]
+    end
+
+    local guildMembers = {}
+    if guildData and guildData.members then
+        local guildIndex
+        for guildIndex = 1, table.getn(guildData.members) do
+            guildMembers[string.lower(guildData.members[guildIndex].name or "")] = guildData.members[guildIndex]
+        end
+    end
+
+    local members = {}
+    local total = GetNumRaidMembers() or 0
+    local raidIndex
+    for raidIndex = 1, total do
+        local name, raidRank, subgroup, level, class, classFile, zone, online, dead = GetRaidRosterInfo(raidIndex)
+        if name then
+            local guildMember = guildMembers[string.lower(name)]
+            table.insert(members, {
+                name = name,
+                raidRank = raidRank or 0,
+                subgroup = subgroup or 0,
+                level = level or (guildMember and guildMember.level) or 0,
+                class = class or (guildMember and guildMember.class) or "",
+                classFile = classFile or "",
+                zone = zone or "",
+                online = online and true or false,
+                dead = dead and true or false,
+                guildRank = guildMember and guildMember.rank or "",
+                guildRankIndex = guildMember and guildMember.rankIndex or nil,
+                publicNote = guildMember and guildMember.publicNote or "",
+                officerNote = guildMember and guildMember.officerNote or "",
+                guildMember = guildMember and true or false,
+            })
+        end
+    end
+
+    local scanTimestamp = time()
+    MuklaOfficerSuiteDB.csr = {
+        addonVersion = VERSION,
+        scannedAt = scanTimestamp,
+        scannedAtText = date("%Y-%m-%d %H:%M:%S", scanTimestamp),
+        raidName = GetRealZoneText() or "",
+        updatedBy = UnitName("player"),
+        raidMembers = members,
+    }
+    return table.getn(members)
+end
+
 local dashboard = CreateFrame("Frame", "MuklaOfficerSuiteDashboard", UIParent)
 dashboard:SetWidth(840)
 dashboard:SetHeight(540)
@@ -233,16 +300,21 @@ contentPanel:SetBackdrop({
 contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90)
 contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
 
-local background = contentPanel:CreateTexture(nil, "BACKGROUND")
-background:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 5, -5)
-background:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -5, 5)
+local background = sidebar:CreateTexture(nil, "BACKGROUND")
+background:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 5, -5)
+background:SetPoint("BOTTOMRIGHT", sidebar, "BOTTOMRIGHT", -5, 5)
 background:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\DashboardBackground")
-background:SetTexCoord(0, 1, 0, 0.625)
-background:SetAlpha(0.34)
+background:SetTexCoord(0.22, 0.58, 0, 1)
+background:SetAlpha(0.58)
 
-local backgroundShade = contentPanel:CreateTexture(nil, "BORDER")
-backgroundShade:SetAllPoints(contentPanel)
-backgroundShade:SetTexture(0, 0, 0, 0.20)
+local backgroundShade = sidebar:CreateTexture(nil, "BORDER")
+backgroundShade:SetAllPoints(sidebar)
+backgroundShade:SetTexture(0, 0, 0, 0.40)
+
+local contentShade = contentPanel:CreateTexture(nil, "BACKGROUND")
+contentShade:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 5, -5)
+contentShade:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -5, 5)
+contentShade:SetTexture(0.025, 0.022, 0.018, 0.96)
 
 local rosterPage = CreateFrame("Frame", nil, contentPanel)
 rosterPage:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 14, -14)
@@ -251,6 +323,14 @@ rosterPage:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -14, 14)
 local exportPage = CreateFrame("Frame", nil, contentPanel)
 exportPage:SetAllPoints(rosterPage)
 exportPage:Hide()
+
+local statisticsPage = CreateFrame("Frame", nil, contentPanel)
+statisticsPage:SetAllPoints(rosterPage)
+statisticsPage:Hide()
+
+local csrPage = CreateFrame("Frame", nil, contentPanel)
+csrPage:SetAllPoints(rosterPage)
+csrPage:Hide()
 
 local aboutPage = CreateFrame("Frame", nil, contentPanel)
 aboutPage:SetAllPoints(rosterPage)
@@ -284,11 +364,72 @@ local visibleMembers = {}
 local sortKey = "name"
 local sortAscending = true
 local selectedMemberName = nil
+local selectedClasses = {}
+local selectedRanks = {}
+local classFilterInitialized = false
+local rankFilterInitialized = false
 local RefreshRosterPage
 local RefreshExportPage
+local RefreshStatisticsPage
+local RefreshCSRPage
 local RequestGuildAction
 local menuButtons = {}
 local currentPage = "roster"
+
+local filtersLabel = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+filtersLabel:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -58)
+filtersLabel:SetText("Filters")
+
+local function CreateFilterToggle(text, x)
+    local button = CreateFrame("Button", nil, rosterPage, "UIPanelButtonTemplate")
+    button:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", x, -52)
+    button:SetWidth(92)
+    button:SetHeight(22)
+    button:SetText(text .. " v")
+    return button
+end
+
+local classFilterToggle = CreateFilterToggle("Class", 52)
+local rankFilterToggle = CreateFilterToggle("Rank", 150)
+
+local function CreateFilterPanel(toggle)
+    local panel = CreateFrame("Frame", nil, rosterPage)
+    panel:SetPoint("TOPLEFT", toggle, "BOTTOMLEFT", 0, -2)
+    panel:SetWidth(180)
+    panel:SetHeight(230)
+    panel:SetFrameLevel(rosterPage:GetFrameLevel() + 20)
+    panel:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 16,
+        insets = { left = 5, right = 5, top = 5, bottom = 5 },
+    })
+    panel:SetBackdropColor(0.04, 0.03, 0.02, 0.98)
+    panel.options = {}
+    panel:Hide()
+    return panel
+end
+
+local classFilterPanel = CreateFilterPanel(classFilterToggle)
+local rankFilterPanel = CreateFilterPanel(rankFilterToggle)
+
+local function HideFilterPanels(except)
+    if except ~= classFilterPanel then classFilterPanel:Hide() end
+    if except ~= rankFilterPanel then rankFilterPanel:Hide() end
+end
+
+classFilterToggle:SetScript("OnClick", function()
+    local show = not classFilterPanel:IsVisible()
+    HideFilterPanels()
+    if show then classFilterPanel:Show() end
+end)
+rankFilterToggle:SetScript("OnClick", function()
+    local show = not rankFilterPanel:IsVisible()
+    HideFilterPanels()
+    if show then rankFilterPanel:Show() end
+end)
 
 local function Short(text, length)
     text = tostring(text or "")
@@ -300,7 +441,7 @@ end
 
 local function CreateHeaderButton(text, x, width, alignment, key)
     local button = CreateFrame("Button", nil, rosterPage)
-    button:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", x, -58)
+    button:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", x, -86)
     button:SetWidth(width)
     button:SetHeight(22)
     button.baseText = text
@@ -333,7 +474,7 @@ local headerButtons = {
 }
 
 local notesHeader = rosterPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-notesHeader:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 391, -58)
+notesHeader:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 391, -86)
 notesHeader:SetWidth(174)
 notesHeader:SetHeight(22)
 notesHeader:SetJustifyH("LEFT")
@@ -342,10 +483,20 @@ notesHeader:SetText("Public / Officer note")
 local i
 for i = 1, rowCount do
     local row = CreateFrame("Button", nil, rosterPage)
-    row:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -78 - (i * rowHeight))
+    row:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", 4, -106 - (i * rowHeight))
     row:SetWidth(560)
     row:SetHeight(rowHeight)
     row:EnableMouse(true)
+    row:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = 8,
+        edgeSize = 8,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    })
+    row:SetBackdropColor(0, 0, 0, 0)
+    row:SetBackdropBorderColor(0, 0, 0, 0)
 
     if math.mod(i, 2) == 0 then
         local stripe = row:CreateTexture(nil, "BACKGROUND")
@@ -355,12 +506,12 @@ for i = 1, rowCount do
 
     row.selection = row:CreateTexture(nil, "BACKGROUND")
     row.selection:SetAllPoints(row)
-    row.selection:SetTexture(1, 0.72, 0.08, 0.22)
+    row.selection:SetTexture(0, 0, 0, 0)
     row.selection:Hide()
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -1)
-    row.name:SetWidth(132)
+    row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 7, -1)
+    row.name:SetWidth(125)
     row.name:SetHeight(18)
     row.name:SetJustifyH("LEFT")
 
@@ -388,17 +539,20 @@ for i = 1, rowCount do
     row.notes:SetHeight(18)
     row.notes:SetJustifyH("LEFT")
     row.actionPanel = CreateFrame("Frame", nil, row)
-    row.actionPanel:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -20)
-    row.actionPanel:SetWidth(560)
+    row.actionPanel:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -20)
+    row.actionPanel:SetWidth(552)
     row.actionPanel:SetHeight(26)
-    row.actionPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
-    row.actionPanel:SetBackdropColor(0.20, 0.12, 0.02, 0.72)
+    row.actionPanel:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = 8,
+        edgeSize = 8,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    })
+    row.actionPanel:SetBackdropColor(0.07, 0.08, 0.07, 0.92)
+    row.actionPanel:SetBackdropBorderColor(0.30, 0.34, 0.30, 1)
     row.actionPanel:Hide()
-
-    row.actionLabel = row.actionPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.actionLabel:SetPoint("LEFT", row.actionPanel, "LEFT", 12, 0)
-    row.actionLabel:SetWidth(280)
-    row.actionLabel:SetJustifyH("LEFT")
 
     local function CreateRowActionButton(text, action, x)
         local button = CreateFrame("Button", nil, row.actionPanel)
@@ -440,7 +594,7 @@ for i = 1, rowCount do
 end
 
 local rosterScrollFrame = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRosterScrollFrame", rosterPage, "FauxScrollFrameTemplate")
-rosterScrollFrame:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", -4, -89)
+rosterScrollFrame:SetPoint("TOPLEFT", rosterPage, "TOPLEFT", -4, -117)
 rosterScrollFrame:SetPoint("BOTTOMRIGHT", rosterPage, "BOTTOMRIGHT", -12, 18)
 
 local exportTitle = exportPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -474,6 +628,59 @@ exportHint:SetWidth(365)
 exportHint:SetJustifyH("LEFT")
 exportHint:SetText("A confirmation dialog will reload the UI and write the roster to disk.")
 
+local statisticsTitle = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+statisticsTitle:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 12, -10)
+statisticsTitle:SetText("Guild Statistics")
+
+local statisticsSummary = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+statisticsSummary:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 12, -52)
+statisticsSummary:SetWidth(545)
+statisticsSummary:SetJustifyH("LEFT")
+statisticsSummary:SetJustifyV("TOP")
+
+local statisticsClasses = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+statisticsClasses:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 12, -130)
+statisticsClasses:SetWidth(260)
+statisticsClasses:SetJustifyH("LEFT")
+statisticsClasses:SetJustifyV("TOP")
+
+local statisticsRanks = statisticsPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+statisticsRanks:SetPoint("TOPLEFT", statisticsPage, "TOPLEFT", 300, -130)
+statisticsRanks:SetWidth(255)
+statisticsRanks:SetJustifyH("LEFT")
+statisticsRanks:SetJustifyV("TOP")
+
+local csrTitle = csrPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+csrTitle:SetPoint("TOPLEFT", csrPage, "TOPLEFT", 12, -10)
+csrTitle:SetText("CSR")
+
+local csrDescription = csrPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+csrDescription:SetPoint("TOPLEFT", csrPage, "TOPLEFT", 12, -58)
+csrDescription:SetWidth(545)
+csrDescription:SetJustifyH("LEFT")
+csrDescription:SetText("Export the current raid roster enriched with guild rank and note data. After the UI reloads, run Export-CSR.ps1 to create the CSV file.")
+
+local csrLastScanLabel = csrPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+csrLastScanLabel:SetPoint("TOPLEFT", csrPage, "TOPLEFT", 12, -135)
+csrLastScanLabel:SetText("Last saved CSR scan")
+
+local csrLastScanValue = csrPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+csrLastScanValue:SetPoint("TOPLEFT", csrLastScanLabel, "BOTTOMLEFT", 0, -10)
+csrLastScanValue:SetWidth(545)
+csrLastScanValue:SetJustifyH("LEFT")
+
+local csrScanSaveButton = CreateFrame("Button", nil, csrPage, "UIPanelButtonTemplate")
+csrScanSaveButton:SetWidth(150)
+csrScanSaveButton:SetHeight(28)
+csrScanSaveButton:SetPoint("TOPLEFT", csrPage, "TOPLEFT", 12, -205)
+csrScanSaveButton:SetText("Scan & Save")
+
+local csrHint = csrPage:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+csrHint:SetPoint("LEFT", csrScanSaveButton, "RIGHT", 14, 0)
+csrHint:SetWidth(365)
+csrHint:SetJustifyH("LEFT")
+csrHint:SetText("You must be in a raid. The UI reload writes the snapshot to disk.")
+
 local aboutTitle = aboutPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 aboutTitle:SetPoint("TOPLEFT", aboutPage, "TOPLEFT", 12, -10)
 aboutTitle:SetText("About")
@@ -499,6 +706,97 @@ local function GetCurrentGuildData()
     EnsureDatabase()
     local key, guildName = GuildKey()
     return key and MuklaOfficerSuiteDB.guilds[key], guildName
+end
+
+local function GetUniqueMemberValues(data, field)
+    local values = {}
+    local found = {}
+    if data and data.members then
+        for i = 1, table.getn(data.members) do
+            local value = tostring(data.members[i][field] or "Unknown")
+            if value == "" then value = "Unknown" end
+            if not found[value] then
+                found[value] = true
+                table.insert(values, value)
+            end
+        end
+    end
+    table.sort(values, function(a, b) return string.lower(a) < string.lower(b) end)
+    return values
+end
+
+local function RefreshFilterPanel(panel, values, selected, filterType)
+    if not panel.selectAll then
+        panel.selectAll = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+        panel.selectAll:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10)
+        panel.selectAll:SetWidth(158)
+        panel.selectAll:SetHeight(20)
+        panel.selectAll:SetText("Select all")
+        panel.selectAll.filterType = filterType
+        panel.selectAll:SetScript("OnClick", function()
+            local target = this.filterType == "class" and selectedClasses or selectedRanks
+            local optionIndex
+            for optionIndex = 1, table.getn(this:GetParent().values or {}) do
+                target[this:GetParent().values[optionIndex]] = true
+            end
+            RefreshRosterPage(true)
+        end)
+    end
+    panel.values = values
+    panel:SetHeight(40 + table.getn(values) * 20)
+
+    local optionIndex
+    for optionIndex = 1, table.getn(values) do
+        local checkbox = panel.options[optionIndex]
+        if not checkbox then
+            checkbox = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+            checkbox:SetWidth(20)
+            checkbox:SetHeight(20)
+            checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -31 - ((optionIndex - 1) * 20))
+            checkbox.label = checkbox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 2, 0)
+            checkbox.label:SetWidth(132)
+            checkbox.label:SetJustifyH("LEFT")
+            checkbox.filterType = filterType
+            checkbox:SetScript("OnClick", function()
+                local target = this.filterType == "class" and selectedClasses or selectedRanks
+                target[this.value] = this:GetChecked() and true or false
+                RefreshRosterPage(true)
+            end)
+            panel.options[optionIndex] = checkbox
+        end
+        checkbox.value = values[optionIndex]
+        checkbox.label:SetText(values[optionIndex])
+        checkbox:SetChecked(selected[values[optionIndex]] and true or false)
+        checkbox:Show()
+    end
+    for optionIndex = table.getn(values) + 1, table.getn(panel.options) do
+        panel.options[optionIndex]:Hide()
+    end
+end
+
+local function InitializeAndRefreshFilters(data)
+    local classes = GetUniqueMemberValues(data, "class")
+    local ranks = GetUniqueMemberValues(data, "rank")
+    local filterIndex
+    if not classFilterInitialized then
+        for filterIndex = 1, table.getn(classes) do selectedClasses[classes[filterIndex]] = true end
+        classFilterInitialized = true
+    end
+    if not rankFilterInitialized then
+        for filterIndex = 1, table.getn(ranks) do selectedRanks[ranks[filterIndex]] = true end
+        rankFilterInitialized = true
+    end
+    RefreshFilterPanel(classFilterPanel, classes, selectedClasses, "class")
+    RefreshFilterPanel(rankFilterPanel, ranks, selectedRanks, "rank")
+end
+
+local function MemberMatchesFilters(member)
+    local className = tostring(member.class or "Unknown")
+    local rankName = tostring(member.rank or "Unknown")
+    if className == "" then className = "Unknown" end
+    if rankName == "" then rankName = "Unknown" end
+    return selectedClasses[className] and selectedRanks[rankName]
 end
 
 local function GetSelectedMember()
@@ -592,10 +890,11 @@ RefreshRosterPage = function(resetScroll)
     local query = string.lower(searchBox:GetText() or "")
     query = string.gsub(query, "^%s*(.-)%s*$", "%1")
 
+    InitializeAndRefreshFilters(data)
     visibleMembers = {}
     if data and data.members then
         for i = 1, table.getn(data.members) do
-            if MemberMatchesSearch(data.members[i], query) then
+            if MemberMatchesSearch(data.members[i], query) and MemberMatchesFilters(data.members[i]) then
                 table.insert(visibleMembers, data.members[i])
             end
         end
@@ -606,7 +905,7 @@ RefreshRosterPage = function(resetScroll)
         rosterStatusText:SetText("No guild found.")
     elseif not data then
         rosterStatusText:SetText(guildName .. " - no saved roster. Use Export Roster to scan.")
-    elseif query ~= "" then
+    elseif query ~= "" or table.getn(visibleMembers) ~= table.getn(data.members) then
         rosterStatusText:SetText(guildName .. " - showing " .. table.getn(visibleMembers) .. " of " .. table.getn(data.members) .. " members")
     else
         rosterStatusText:SetText(guildName .. " - " .. table.getn(data.members) .. " members")
@@ -619,7 +918,7 @@ RefreshRosterPage = function(resetScroll)
     FauxScrollFrame_Update(rosterScrollFrame, table.getn(visibleMembers), rowCount, rowHeight)
     local offset = FauxScrollFrame_GetOffset(rosterScrollFrame)
 
-    local rowY = -98
+    local rowY = -126
     for i = 1, rowCount do
         local member = visibleMembers[offset + i]
         rows[i]:ClearAllPoints()
@@ -637,8 +936,9 @@ RefreshRosterPage = function(resetScroll)
             rows[i].displayedMember = member
             if member.name == selectedMemberName then
                 rows[i].selection:Show()
+                rows[i]:SetBackdropColor(0.16, 0.20, 0.17, 0.82)
+                rows[i]:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
                 rows[i].actionPanel:Show()
-                rows[i].actionLabel:SetText(member.name .. " - " .. (member.rank or "Unknown rank"))
                 rows[i]:SetHeight(46)
                 if (tonumber(member.rankIndex) or 0) <= 0 then
                     rows[i].promoteButton:Disable()
@@ -653,6 +953,8 @@ RefreshRosterPage = function(resetScroll)
                 rowY = rowY - 46
             else
                 rows[i].selection:Hide()
+                rows[i]:SetBackdropColor(0, 0, 0, 0)
+                rows[i]:SetBackdropBorderColor(0, 0, 0, 0)
                 rows[i].actionPanel:Hide()
                 rows[i]:SetHeight(rowHeight)
                 rowY = rowY - rowHeight
@@ -661,6 +963,8 @@ RefreshRosterPage = function(resetScroll)
         else
             rows[i].displayedMember = nil
             rows[i].selection:Hide()
+            rows[i]:SetBackdropColor(0, 0, 0, 0)
+            rows[i]:SetBackdropBorderColor(0, 0, 0, 0)
             rows[i].actionPanel:Hide()
             rows[i]:Hide()
         end
@@ -688,6 +992,65 @@ RefreshExportPage = function()
     end
 end
 
+local function SortedCountLines(titleText, counts)
+    local names = {}
+    local name
+    for name in pairs(counts) do table.insert(names, name) end
+    table.sort(names, function(a, b) return string.lower(a) < string.lower(b) end)
+    local lines = { "|cffffd200" .. titleText .. "|r" }
+    local lineIndex
+    for lineIndex = 1, table.getn(names) do
+        table.insert(lines, names[lineIndex] .. ": " .. counts[names[lineIndex]])
+    end
+    return table.concat(lines, "\n")
+end
+
+RefreshStatisticsPage = function()
+    local data, guildName = GetCurrentGuildData()
+    if not data or not data.members then
+        statisticsSummary:SetText((guildName or "Guild") .. " has no saved roster. Use Export Roster first.")
+        statisticsClasses:SetText("")
+        statisticsRanks:SetText("")
+        return
+    end
+    local classes = {}
+    local ranks = {}
+    local levelSixty = 0
+    local online = 0
+    local totalLevels = 0
+    local memberIndex
+    for memberIndex = 1, table.getn(data.members) do
+        local member = data.members[memberIndex]
+        local className = member.class ~= "" and member.class or "Unknown"
+        local rankName = member.rank ~= "" and member.rank or "Unknown"
+        classes[className] = (classes[className] or 0) + 1
+        ranks[rankName] = (ranks[rankName] or 0) + 1
+        local level = tonumber(member.level) or 0
+        totalLevels = totalLevels + level
+        if level == 60 then levelSixty = levelSixty + 1 end
+        if member.online then online = online + 1 end
+    end
+    local total = table.getn(data.members)
+    local averageLevel = total > 0 and (totalLevels / total) or 0
+    statisticsSummary:SetText(
+        "|cffffd200" .. (guildName or "Guild") .. "|r\n" ..
+        "Members: " .. total .. "   Level 60: " .. levelSixty .. "   Online at scan: " .. online .. "\n" ..
+        "Average level: " .. string.format("%.1f", averageLevel) .. "   Last scan: " .. (data.scannedAtText or "Unknown")
+    )
+    statisticsClasses:SetText(SortedCountLines("Members by class", classes))
+    statisticsRanks:SetText(SortedCountLines("Members by rank", ranks))
+end
+
+RefreshCSRPage = function()
+    EnsureDatabase()
+    local data = MuklaOfficerSuiteDB.csr
+    if not data then
+        csrLastScanValue:SetText("No saved CSR scan.")
+    else
+        csrLastScanValue:SetText((data.scannedAtText or "Unknown") .. " | " .. table.getn(data.raidMembers or {}) .. " raid members | addon v" .. (data.addonVersion or VERSION))
+    end
+end
+
 local function SetActiveMenuButton(activeName)
     local name, button
     for name, button in pairs(menuButtons) do
@@ -707,13 +1070,22 @@ local function ShowPage(pageName)
     currentPage = pageName
     rosterPage:Hide()
     exportPage:Hide()
+    statisticsPage:Hide()
+    csrPage:Hide()
     aboutPage:Hide()
+    HideFilterPanels()
     if pageName == "roster" then
         rosterPage:Show()
         RefreshRosterPage(false)
     elseif pageName == "export" then
         exportPage:Show()
         RefreshExportPage()
+    elseif pageName == "statistics" then
+        statisticsPage:Show()
+        RefreshStatisticsPage()
+    elseif pageName == "csr" then
+        csrPage:Show()
+        RefreshCSRPage()
     else
         aboutPage:Show()
     end
@@ -757,7 +1129,9 @@ end
 
 CreateMenuButton("roster", "Roster Management", -12, "Interface\\Icons\\INV_Misc_Book_09")
 CreateMenuButton("export", "Export Roster", -66, "Interface\\Icons\\INV_Misc_Note_01")
-CreateMenuButton("about", "About", -120, "Interface\\Icons\\INV_Misc_QuestionMark")
+CreateMenuButton("statistics", "Guild Statistics", -120, "Interface\\Icons\\INV_Misc_Book_11")
+CreateMenuButton("csr", "CSR", -174, "Interface\\Icons\\INV_Misc_GroupLooking")
+CreateMenuButton("about", "About", -228, "Interface\\Icons\\INV_Misc_QuestionMark")
 
 local function RequestRosterScan(scanMode)
     EnsureDatabase()
@@ -771,7 +1145,7 @@ local function RequestRosterScan(scanMode)
     rosterRequestFrame.delay = 1
     rosterRequestFrame:Show()
     GuildRoster()
-    if MOS.pendingScan == "reload" then
+    if MOS.pendingScan == "reload" or MOS.pendingScan == "csr_reload" then
         Print("Requesting guild roster. Save confirmation will appear when the scan completes...")
     else
         Print("Requesting guild roster...")
@@ -839,6 +1213,13 @@ RequestGuildAction = function(action)
 end
 
 scanSaveButton:SetScript("OnClick", function() RequestRosterScan("reload") end)
+csrScanSaveButton:SetScript("OnClick", function()
+    if (GetNumRaidMembers() or 0) < 1 then
+        Print("You must be in a raid to create a CSR export.")
+        return
+    end
+    RequestRosterScan("csr_reload")
+end)
 
 for i = 1, table.getn(headerButtons) do
     headerButtons[i]:SetScript("OnClick", function()
@@ -953,7 +1334,13 @@ MOS:SetScript("OnEvent", function()
         if MOS.pendingScan and SaveGuildRoster() then
             RefreshRosterPage(true)
             RefreshExportPage()
-            if scanMode == "reload" then
+            RefreshStatisticsPage()
+            if scanMode == "csr_reload" then
+                local raidCount = SaveRaidRoster()
+                RefreshCSRPage()
+                Print("CSR scanned. Raid members: " .. raidCount .. ". Confirm the reload to save it to disk.")
+                StaticPopup_Show("MUKLA_OFFICER_SUITE_CSR_RELOAD")
+            elseif scanMode == "reload" then
                 Print("Roster scanned. Confirm the reload to save it to disk.")
                 StaticPopup_Show("MUKLA_OFFICER_SUITE_RELOAD")
             elseif scanMode ~= "quiet" then
