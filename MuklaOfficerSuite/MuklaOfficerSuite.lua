@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.2.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.2.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -11,36 +11,24 @@ MOS.pendingScan = nil
 MOS.lastRosterEvent = 0
 MOS.scanStartedAt = nil
 
-local reloadFrame = CreateFrame("Frame", "MuklaOfficerSuiteReloadFrame", UIParent)
-reloadFrame.delay = nil
-reloadFrame:Hide()
-reloadFrame:SetScript("OnUpdate", function()
-    if not reloadFrame.delay then
-        reloadFrame:Hide()
-        return
-    end
-
-    reloadFrame.delay = reloadFrame.delay - arg1
-    if reloadFrame.delay > 0 then
-        return
-    end
-
-    reloadFrame.delay = nil
-    reloadFrame:Hide()
-    Print("Reloading the UI now...")
-
-    if type(ReloadUI) == "function" then
-        ReloadUI()
-    end
-    if type(ConsoleExec) == "function" then
-        ConsoleExec("reloadui")
-    end
-end)
-
-local function ScheduleReload()
-    reloadFrame.delay = 0.5
-    reloadFrame:Show()
-end
+StaticPopupDialogs["MUKLA_OFFICER_SUITE_RELOAD"] = {
+    text = "The guild roster scan is complete. Reload the UI now to write it to disk?",
+    button1 = "Reload now",
+    button2 = "Later",
+    OnAccept = function()
+        if type(ReloadUI) == "function" then
+            ReloadUI()
+        elseif type(ConsoleExec) == "function" then
+            ConsoleExec("reloadui")
+        end
+    end,
+    OnCancel = function()
+        Print("Roster remains in memory. Use /reload before closing the game to save it.")
+    end,
+    timeout = 0,
+    whileDead = 1,
+    hideOnEscape = 1,
+}
 
 local function EnsureDatabase()
     if type(MuklaOfficerSuiteDB) ~= "table" then
@@ -412,8 +400,8 @@ MOS:SetScript("OnEvent", function()
         if MOS.pendingScan and SaveGuildRoster() then
             RefreshDashboard()
             if scanMode == "reload" then
-                Print("Roster scanned. Reloading UI to save it to disk...")
-                ScheduleReload()
+                Print("Roster scanned. Confirm the reload to save it to disk.")
+                StaticPopup_Show("MUKLA_OFFICER_SUITE_RELOAD")
             elseif scanMode ~= "quiet" then
                 Print("Roster scanned. Members: " .. CountSavedMembers())
             end

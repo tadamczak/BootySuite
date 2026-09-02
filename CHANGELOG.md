@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Replaced the asynchronous reload timer with a user-confirmed reload dialog for WoW 1.12 compatibility.
+
 ## 0.2.0
 
 - Added aligned, scrollable guild roster columns.

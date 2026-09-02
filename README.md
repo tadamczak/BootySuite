@@ -17,7 +17,7 @@ Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`,
 
 `Interface/AddOns/MuklaOfficerSuite/MuklaOfficerSuite.toc`
 
-After logging in, open the dashboard with `/mos`. Click `Scan` to refresh the roster in memory and display it without reloading the UI. Click `Scan & Reload` when the roster should also be written to disk. The addon does not scan automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
+After logging in, open the dashboard with `/mos`. Click `Scan` to refresh the roster in memory and display it without reloading the UI. Click `Scan & Reload`, then confirm `Reload now`, when the roster should also be written to disk. The addon does not scan automatically on login or when the guild changes. The client writes the data to disk during `/reload` or logout in:
 
 `WTF/Account/<ACCOUNT>/SavedVariables/MuklaOfficerSuite.lua`
 
