@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0
+
+- Added expandable Raid Management rows with each member's recorded loot.
+- Added automatic raid loot tracking from loot chat messages.
+- Displayed loot with item icons, names, and aggregated quantities.
+- Preserved recorded loot when rescanning the same raid instance.
+- Kept expanded raid records within the full-height scrollable table area.
+
 ## 0.12.1
 
 - Changed Guild Statistics details from floating overlays to toggleable inline expansions.

@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.12.1"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.13.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -215,6 +215,16 @@ local function SaveRaidRoster()
         end
     end
 
+    local previousLoot = {}
+    local currentRaidName = GetRealZoneText() or ""
+    local previousAttendance = MuklaOfficerSuiteDB.raidAttendance
+    if previousAttendance and previousAttendance.raidName == currentRaidName and previousAttendance.members then
+        for previousIndex = 1, table.getn(previousAttendance.members) do
+            local previousMember = previousAttendance.members[previousIndex]
+            previousLoot[string.lower(previousMember.name or "")] = previousMember.loot or {}
+        end
+    end
+
     local members = {}
     local total = GetNumRaidMembers() or 0
     local raidIndex
@@ -232,6 +242,7 @@ local function SaveRaidRoster()
                 officerNote = guildMember and guildMember.officerNote or "",
                 guildMember = guildMember and true or false,
                 sr = "",
+                loot = previousLoot[string.lower(name)] or {},
             })
         end
     end
@@ -241,12 +252,54 @@ local function SaveRaidRoster()
         addonVersion = VERSION,
         scannedAt = scanTimestamp,
         scannedAtText = date("%Y-%m-%d %H:%M:%S", scanTimestamp),
-        raidName = GetRealZoneText() or "",
+        raidName = currentRaidName,
         updatedBy = UnitName("player"),
         members = members,
     }
     MuklaOfficerSuiteDB.csr = nil
     return table.getn(members)
+end
+
+local function RecordRaidLoot(message)
+    local attendance = MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.raidAttendance
+    if not attendance or not attendance.members or not message then return false end
+
+    local _, _, itemLink = string.find(message, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
+    if not itemLink then _, _, itemLink = string.find(message, "(|Hitem:.-|h%[.-%]|h)") end
+    if not itemLink then return false end
+    local recipient = nil
+    if string.find(message, "You receive loot", 1, true) or string.find(message, "You receive item", 1, true) then
+        recipient = UnitName("player")
+    else
+        local _, _, lootRecipient = string.find(message, "^([^%s]+) receives loot")
+        if not lootRecipient then _, _, lootRecipient = string.find(message, "^([^%s]+) receives item") end
+        recipient = lootRecipient
+    end
+    if not recipient then return false end
+
+    local member = nil
+    for memberIndex = 1, table.getn(attendance.members) do
+        if string.lower(attendance.members[memberIndex].name or "") == string.lower(recipient) then member = attendance.members[memberIndex]; break end
+    end
+    if not member then return false end
+
+    local _, _, parsedItemName = string.find(itemLink, "%[([^%]]+)%]")
+    local _, _, parsedItemId = string.find(itemLink, "item:(%d+)")
+    local _, _, parsedQuantity = string.find(message, "x(%d+)")
+    local itemName = parsedItemName or "Unknown item"
+    local itemId = parsedItemId or itemName
+    local quantity = tonumber(parsedQuantity) or 1
+    local _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
+    member.loot = member.loot or {}
+    for lootIndex = 1, table.getn(member.loot) do
+        if tostring(member.loot[lootIndex].itemId or member.loot[lootIndex].name) == tostring(itemId) then
+            member.loot[lootIndex].count = (tonumber(member.loot[lootIndex].count) or 1) + quantity
+            if itemTexture then member.loot[lootIndex].icon = itemTexture end
+            return true
+        end
+    end
+    table.insert(member.loot, { itemId = itemId, name = itemName, link = itemLink, icon = itemTexture, count = quantity })
+    return true
 end
 
 local dashboard = CreateFrame("Frame", "MuklaOfficerSuiteDashboard", UIParent)
@@ -981,6 +1034,7 @@ local selectedRaidClasses, selectedRaidRanks = {}, {}
 local raidFiltersInitialized = false
 local raidSortKey, raidSortAscending = nil, true
 local visibleRaidMembers = {}
+local selectedRaidMemberName = nil
 
 local raidUnavailable = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 raidUnavailable:SetPoint("CENTER", raidPage, "CENTER", 0, 12)
@@ -1065,11 +1119,13 @@ AddRaidHeaderButton(raidSRHeader, "SR", "sr", 500, 55)
 
 local raidRows = {}
 for i = 1, 15 do
-    local raidRow = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local raidRow = CreateFrame("Button", nil, raidPage)
     raidRow:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, -132 - ((i - 1) * 21))
-    raidRow:SetWidth(155)
+    raidRow:SetWidth(543)
     raidRow:SetHeight(20)
-    raidRow:SetJustifyH("LEFT")
+    raidRow.name = raidRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    raidRow.name:SetPoint("TOPLEFT", raidRow, "TOPLEFT", 0, 0)
+    raidRow.name:SetWidth(155); raidRow.name:SetHeight(20); raidRow.name:SetJustifyH("LEFT")
     raidRow.group = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     raidRow.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 172, -132 - ((i - 1) * 21))
     raidRow.group:SetWidth(70)
@@ -1088,7 +1144,38 @@ for i = 1, 15 do
     raidRow.sr = raidPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     raidRow.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 500, -132 - ((i - 1) * 21))
     raidRow.sr:SetWidth(55); raidRow.sr:SetHeight(20); raidRow.sr:SetJustifyH("LEFT")
+    raidRow:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+    raidRow:SetBackdropColor(0, 0, 0, 0); raidRow:SetBackdropBorderColor(0, 0, 0, 0)
+    raidRow.lootPanel = CreateFrame("Frame", nil, raidRow)
+    raidRow.lootPanel:SetPoint("TOPLEFT", raidRow, "TOPLEFT", 4, -21)
+    raidRow.lootPanel:SetWidth(535); raidRow.lootPanel:SetHeight(106)
+    raidRow.lootPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+    raidRow.lootPanel:SetBackdropColor(0.07, 0.08, 0.07, 0.94); raidRow.lootPanel:SetBackdropBorderColor(0.30, 0.34, 0.30, 1)
+    raidRow.lootTitle = raidRow.lootPanel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    raidRow.lootTitle:SetPoint("TOPLEFT", raidRow.lootPanel, "TOPLEFT", 10, -8); raidRow.lootTitle:SetText("Loot received")
+    raidRow.lootEmpty = raidRow.lootPanel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    raidRow.lootEmpty:SetPoint("TOPLEFT", raidRow.lootPanel, "TOPLEFT", 10, -34); raidRow.lootEmpty:SetText("No recorded items.")
+    raidRow.lootRows = {}
+    for lootIndex = 1, 3 do
+        local lootRow = {}
+        lootRow.icon = raidRow.lootPanel:CreateTexture(nil, "ARTWORK")
+        lootRow.icon:SetPoint("TOPLEFT", raidRow.lootPanel, "TOPLEFT", 10, -28 - ((lootIndex - 1) * 24)); lootRow.icon:SetWidth(20); lootRow.icon:SetHeight(20)
+        lootRow.name = raidRow.lootPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        lootRow.name:SetPoint("LEFT", lootRow.icon, "RIGHT", 7, 0); lootRow.name:SetWidth(455); lootRow.name:SetJustifyH("LEFT")
+        raidRow.lootRows[lootIndex] = lootRow
+    end
+    raidRow.lootScroll = CreateFrame("ScrollFrame", nil, raidRow.lootPanel, "FauxScrollFrameTemplate")
+    raidRow.lootScroll:SetPoint("TOPLEFT", raidRow.lootPanel, "TOPLEFT", -3, -24); raidRow.lootScroll:SetPoint("BOTTOMRIGHT", raidRow.lootPanel, "BOTTOMRIGHT", -12, 8)
+    raidRow.lootScroll.ownerRow = raidRow
+    raidRow.lootScroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, RefreshRaidPage) end)
+    raidRow.lootPanel:Hide()
+    raidRow:SetScript("OnClick", function()
+        if not this.displayedMember then return end
+        if selectedRaidMemberName == this.displayedMember.name then selectedRaidMemberName = nil else selectedRaidMemberName = this.displayedMember.name end
+        RefreshRaidPage()
+    end)
     raidRow:Hide()
+    raidRow.name:Hide()
     raidRow.group:Hide()
     raidRow.class:Hide()
     raidRow.rank:Hide(); raidRow.sr:Hide()
@@ -1751,7 +1838,7 @@ RefreshRaidPage = function()
         for i = 1, table.getn(raidHeaderButtons) do raidHeaderButtons[i]:Hide() end
         raidScrollFrame:Hide()
         raidStatus:SetText("")
-        for i = 1, table.getn(raidRows) do raidRows[i]:Hide(); raidRows[i].group:Hide(); raidRows[i].class:Hide(); raidRows[i].rank:Hide(); raidRows[i].sr:Hide() end
+        for i = 1, table.getn(raidRows) do raidRows[i]:Hide(); raidRows[i].name:Hide(); raidRows[i].group:Hide(); raidRows[i].class:Hide(); raidRows[i].rank:Hide(); raidRows[i].sr:Hide(); raidRows[i].lootPanel:Hide() end
         return
     end
     raidUnavailable:Hide()
@@ -1793,6 +1880,11 @@ RefreshRaidPage = function()
         if selectedRaidClasses[className] and selectedRaidRanks[rankName] and (query == "" or string.find(searchable, query, 1, true)) then table.insert(visibleRaidMembers, member) end
     end
     table.sort(visibleRaidMembers, SortRaidMembers)
+    local selectedRaidMemberVisible = false
+    for i = 1, table.getn(visibleRaidMembers) do
+        if visibleRaidMembers[i].name == selectedRaidMemberName then selectedRaidMemberVisible = true; break end
+    end
+    if not selectedRaidMemberVisible then selectedRaidMemberName = nil end
     raidStatus:SetText((data and data.scannedAtText or "Unknown") .. " | showing " .. table.getn(visibleRaidMembers) .. " of " .. table.getn(members) .. " raid members")
     raidSearchLabel:Show(); raidSearchBox:Show(); raidFilterLabel:Show(); raidClassFilterButton:Show(); raidRankFilterButton:Show()
     raidHeaders:Show()
@@ -1803,21 +1895,50 @@ RefreshRaidPage = function()
         if raidSortKey == header.sortKey then header.label:SetText(header.baseText .. (raidSortAscending and " ^" or " v")) else header.label:SetText(header.baseText .. " <>") end
     end
     raidScrollFrame:Show()
-    FauxScrollFrame_Update(raidScrollFrame, table.getn(visibleRaidMembers), table.getn(raidRows), 21)
+    local raidVisibleRowCount = selectedRaidMemberName and (table.getn(raidRows) - 5) or table.getn(raidRows)
+    FauxScrollFrame_Update(raidScrollFrame, table.getn(visibleRaidMembers), raidVisibleRowCount, 21)
     local raidOffset = FauxScrollFrame_GetOffset(raidScrollFrame)
+    local raidRowY = -132
     for i = 1, table.getn(raidRows) do
         local member = visibleRaidMembers[raidOffset + i]
-        if member then
-            raidRows[i]:SetText(Short(member.name, 22))
+        local row = raidRows[i]
+        row:ClearAllPoints(); row:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 12, raidRowY)
+        row.group:ClearAllPoints(); row.group:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 172, raidRowY)
+        row.class:ClearAllPoints(); row.class:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 252, raidRowY)
+        row.rank:ClearAllPoints(); row.rank:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 347, raidRowY)
+        row.sr:ClearAllPoints(); row.sr:SetPoint("TOPLEFT", raidPage, "TOPLEFT", 500, raidRowY)
+        if member and i <= raidVisibleRowCount then
+            row.displayedMember = member
+            row.name:SetText(Short(member.name, 22))
             raidRows[i].group:SetText(tostring(member.subgroup or ""))
             raidRows[i].class:SetText(Short(member.class, 12))
             raidRows[i].rank:SetText(Short(member.guildRank ~= "" and member.guildRank or "Not in guild", 18))
             raidRows[i].sr:SetText(member.sr or "")
-            raidRows[i]:Show()
-            raidRows[i].group:Show(); raidRows[i].class:Show(); raidRows[i].rank:Show(); raidRows[i].sr:Show()
+            row:Show(); row.name:Show(); row.group:Show(); row.class:Show(); row.rank:Show(); row.sr:Show()
+            if member.name == selectedRaidMemberName then
+                row:SetHeight(131); row:SetBackdropColor(0.16, 0.20, 0.17, 0.82); row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
+                row.lootPanel:Show()
+                local loot = member.loot or {}
+                table.sort(loot, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
+                FauxScrollFrame_Update(row.lootScroll, table.getn(loot), table.getn(row.lootRows), 24)
+                local lootOffset = FauxScrollFrame_GetOffset(row.lootScroll)
+                if table.getn(loot) == 0 then row.lootEmpty:Show() else row.lootEmpty:Hide() end
+                for lootIndex = 1, table.getn(row.lootRows) do
+                    local item = loot[lootOffset + lootIndex]
+                    local lootRow = row.lootRows[lootIndex]
+                    if item then
+                        lootRow.icon:SetTexture(item.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+                        lootRow.name:SetText((item.name or "Unknown item") .. ((tonumber(item.count) or 1) > 1 and (" x " .. item.count) or ""))
+                        lootRow.icon:Show(); lootRow.name:Show()
+                    else lootRow.icon:Hide(); lootRow.name:Hide() end
+                end
+                raidRowY = raidRowY - 131
+            else
+                row:SetHeight(20); row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0); row.lootPanel:Hide()
+                raidRowY = raidRowY - 21
+            end
         else
-            raidRows[i]:Hide()
-            raidRows[i].group:Hide(); raidRows[i].class:Hide(); raidRows[i].rank:Hide(); raidRows[i].sr:Hide()
+            row.displayedMember = nil; row:Hide(); row.name:Hide(); row.group:Hide(); row.class:Hide(); row.rank:Hide(); row.sr:Hide(); row.lootPanel:Hide()
         end
     end
 end
@@ -2190,6 +2311,7 @@ end
 
 MOS:RegisterEvent("VARIABLES_LOADED")
 MOS:RegisterEvent("GUILD_ROSTER_UPDATE")
+MOS:RegisterEvent("CHAT_MSG_LOOT")
 
 HandleGuildScanFailure = function()
     if MOS.sharedScanOrigin == "roster" then
@@ -2240,6 +2362,8 @@ MOS:SetScript("OnEvent", function()
         if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() end
     elseif event == "GUILD_ROSTER_UPDATE" then
         CompletePendingGuildScan()
+    elseif event == "CHAT_MSG_LOOT" then
+        if RecordRaidLoot(arg1) and currentPage == "raid" then RefreshRaidPage() end
     end
 end)
 

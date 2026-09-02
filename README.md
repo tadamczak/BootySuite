@@ -20,6 +20,8 @@ The addon follows semantic versioning. The installed version is defined in `Mukl
 
 New snapshots are stored under `MuklaOfficerSuiteDB["rosterData"]` and `MuklaOfficerSuiteDB["raidAttendance"]`.
 
+Raid Management records loot received after the raid roster has been scanned. Click a raid member to expand or collapse their aggregated item list.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:
