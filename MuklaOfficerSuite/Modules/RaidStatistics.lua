@@ -6,7 +6,8 @@ MOS.Modules.RaidStatistics = RaidStatistics
 
 local function OnRaidSelect()
     local controller = this.statisticsController
-    controller.selectedId = this.raidId
+    if controller.selectedId == this.raidId then controller.selectedId = nil
+    else controller.selectedId = this.raidId end
     controller:Refresh()
 end
 

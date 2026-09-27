@@ -139,7 +139,14 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
         row:SetScript("OnClick", function()
             if not this.player then return end
             local key = string.lower(this.player.name or "") .. ":" .. tostring(this.player.itemId or "")
-            controller.expandedKey = controller.expandedKey == key and nil or key
+            local collapsing = controller.expandedKey == key
+            if collapsing then
+                controller.expandedKey = nil
+                local detailIndex
+                for detailIndex = 1, table.getn(this.detailRows) do this.detailRows[detailIndex]:Hide() end
+            else
+                controller.expandedKey = key
+            end
             controller:Refresh()
         end)
         row:Hide(); controller.rows[index] = row
