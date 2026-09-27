@@ -5,14 +5,6 @@ $sourceDirectory = Join-Path $PSScriptRoot "MuklaOfficerSuite"
 $gameDirectory = "C:\Gry\OctoWoWPvP"
 $addonRoot = Join-Path $gameDirectory "Interface\AddOns"
 $targetDirectory = Join-Path $addonRoot "MuklaOfficerSuite"
-$addonFiles = @(
-    "MuklaOfficerSuite.toc",
-    "MuklaOfficerSuite.lua"
-)
-$textureFiles = @(
-    "DashboardBackground.tga",
-    "AboutArtwork.tga"
-)
 
 if (-not (Test-Path -LiteralPath $gameDirectory -PathType Container)) {
     throw "Game directory not found: $gameDirectory"
@@ -26,28 +18,14 @@ if (-not (Test-Path -LiteralPath $targetDirectory)) {
     New-Item -ItemType Directory -Path $targetDirectory | Out-Null
 }
 
-foreach ($file in $addonFiles) {
-    $sourcePath = Join-Path $sourceDirectory $file
-    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
-        throw "Required addon file not found: $sourcePath"
+foreach ($sourceFile in Get-ChildItem -LiteralPath $sourceDirectory -Recurse -File) {
+    $relativePath = $sourceFile.FullName.Substring($sourceDirectory.Length).TrimStart('\')
+    $targetPath = Join-Path $targetDirectory $relativePath
+    $targetParent = Split-Path -Parent $targetPath
+    if (-not (Test-Path -LiteralPath $targetParent)) {
+        New-Item -ItemType Directory -Path $targetParent | Out-Null
     }
-
-    Copy-Item -LiteralPath $sourcePath -Destination $targetDirectory -Force
-}
-
-$sourceTextureDirectory = Join-Path $sourceDirectory "Textures"
-$targetTextureDirectory = Join-Path $targetDirectory "Textures"
-if (-not (Test-Path -LiteralPath $targetTextureDirectory)) {
-    New-Item -ItemType Directory -Path $targetTextureDirectory | Out-Null
-}
-
-foreach ($file in $textureFiles) {
-    $sourcePath = Join-Path $sourceTextureDirectory $file
-    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
-        throw "Required addon texture not found: $sourcePath"
-    }
-
-    Copy-Item -LiteralPath $sourcePath -Destination $targetTextureDirectory -Force
+    Copy-Item -LiteralPath $sourceFile.FullName -Destination $targetPath -Force
 }
 
 Write-Host "Mukla Officer Suite deployed to:"

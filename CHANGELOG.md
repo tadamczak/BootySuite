@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.21.1 - 2026-09-27
+
+- Added the branch, Conventional Commits, and GitHub release workflow.
+
+## 0.21.0 - 2026-09-27
+
+- Added a single documentation entry point and permanent structured backlog.
+- Made SemVer, backlog, and changelog updates mandatory for every change.
+
+## 0.20.0
+
+- Introduced a shared addon namespace and an extensible module registry with consistent lifecycle methods.
+- Extracted database access and roster, raid, and loot persistence into dedicated core and service files.
+- Added reusable theme, button, dropdown, search box, and scroll-table components.
+- Migrated Roster Management, Raid Management, and Guild Statistics to shared UI calculations without changing saved-data formats.
+- Added a lightweight Performance module with memory growth, session peak, FPS, frame time, latency, MOS event and UI refresh rates, scan timing, and saved-data counters.
+- Added concise help tooltips to every metric and the baseline control, removed the redundant manual refresh, and fixed early addon-memory detection and sub-kilobyte rounding.
+- Split Performance into addon and global sections, added expandable per-addon memory details, a movable live monitor, and full main-window minimization.
+- Added responsive Performance columns, scoped MOS allocation counters, calls-per-second reporting, and richer diagnosis results.
+- Added collapsible navigation, a shared bottom status/progress bar, compact window controls, and a Configuration page with opt-in chat logging.
+- Expanded Roster Management with offline filtering, muted offline rows, zone and last-online data, Guild-style column modes, guild information actions, and MOTD/information editors.
+- Expanded Raid Management with responsive columns, online status, leader/assistant markers, resettable filters, and inline leader, assistant, removal, report, and ignore actions.
+- Replaced periodic raid table rebuilding with event-driven live tracking to reduce CPU use and transient allocations.
+- Completed the architecture refactor: the root file now only composes modules and performs legacy migration, while dashboard chrome, dialogs, commands, events, roster UI, raid UI, settings, and domain services live in their owning layers.
+- Reused Performance operation rows and metric buffers and removed per-drag handler allocation from dashboard resizing and the minimap button.
+
 ## 0.19.6
 
 - Reduced and unified the Roster Management content margins.

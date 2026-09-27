@@ -1,5 +1,7 @@
 # Mukla Officer Suite
 
+Project documentation starts at [`DOCUMENTATION.md`](DOCUMENTATION.md). Planned and deferred work is tracked only in [`BACKLOG.md`](BACKLOG.md).
+
 An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 
 - a minimap button that opens the dashboard,
@@ -32,6 +34,14 @@ Full Raid Management exposes LM opacity and Out of focus opacity percentage fiel
 
 Turning off Loot Master Mode restores the full dashboard at the center of the screen. Roster and statistics tables adapt their visible layout to the resized dashboard.
 
+The Performance page reports scoped MOS allocations and calls, total Lua UI memory, garbage-collection behavior, FPS and frame time, latency, event and UI refresh rates, scan timing, and compact saved-data counters. Its responsive layout uses the available panel width. Sampling runs only while Performance, Live Monitor, or an active diagnosis needs it.
+
+Click Total UI memory to open a sortable memory breakdown for all addons supported by the client. Open Live Monitor creates a small movable FPS, frame-time, latency, and memory window that can be minimized independently. The main dashboard title bar also provides full-window minimization.
+
+The left navigation can be collapsed or replaced with top tabs. A shared bottom status bar contains scan progress and the current Roster/Raid Live Tracking states. Settings persist layout, raid-view, color, and opt-in chat logging preferences.
+
+Roster Management can switch between notes and Guild-style player-status columns. It supports zone and last-online data, filtering offline members, muted offline rows, guild invitations, Guild Information, and Message of the Day editing. Raid Management provides configurable list and draggable group views, online state, leader/assistant/Loot Master markers, resettable filters, and player actions. Its event-driven tracking runs only while the page is active.
+
 ## Installation
 
 Copy the top-level `MuklaOfficerSuite` addon directory into `Interface/AddOns/`, so the TOC file is located at:
@@ -44,6 +54,8 @@ After logging in, open the dashboard with `/mos`. In `Roster Management`, click 
 
 Officer notes are saved only when the logged-in character has permission to read them.
 
+The addon uses a load-ordered modular architecture compatible with the WoW 1.12 Lua runtime. `Core` owns the namespace, database defaults, and module lifecycle; `Services` owns roster, raid, and loot data; `UI` owns reusable presentation components. Feature pages register a consistent `Show`, `Hide`, `Refresh`, and optional `OnResize` lifecycle. No runtime `require` implementation is needed because the TOC defines module load order.
+
 The repository layout keeps game files separate from project configuration and tools:
 
 ```text
@@ -51,6 +63,10 @@ MuklaOfficerSuite/          # IntelliJ project root
 |-- MuklaOfficerSuite/      # Directory copied to Interface/AddOns
 |   |-- MuklaOfficerSuite.toc
 |   |-- MuklaOfficerSuite.lua
+|   |-- Core/
+|   |-- Services/
+|   |-- UI/
+|   |-- Modules/
 |   `-- Textures/
 |-- Deploy-Addon.ps1
 |-- Tools/
