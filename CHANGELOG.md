@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.2 - 2026-09-27
+
+- Limited the GitHub release contents to the addon, README, and changelog.
+
 ## 0.21.1 - 2026-09-27
 
 - Added the branch, Conventional Commits, and GitHub release workflow.
