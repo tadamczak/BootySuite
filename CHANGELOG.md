@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added critical-journey E2E coverage for raid persistence, recalculation, failures, migration, and scale limits.
 - Added automated statement-line coverage reporting for the complete Lua test suite.
 - Completed automated E2E coverage for Performance, About, and addon manifest composition.
 - Added E2E coverage for native raid actions and session behavior across raid-context changes.
