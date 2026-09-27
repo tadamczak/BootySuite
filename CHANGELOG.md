@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added focused unit coverage for core lifecycle, persistence, roster, raid statistics, CSR calculations, and reusable UI helpers.
 - Added the modular raid, loot, statistics, CSR, UI, and diagnostics workflows.
 - Added the develop/production release process and limited repository contents to release files.
 - Added the production quality gate and refreshed the user-facing README.
