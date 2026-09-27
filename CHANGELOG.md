@@ -9,6 +9,7 @@
 - Expanded the README with module usage and a complete raid-session guide.
 - Added linked README navigation and mandatory README review for future changes.
 - Defined mandatory unit, E2E, regression, and production test responsibilities.
+- Defined full regression as every automated and required in-game test without scope-based shortcuts.
 
 ## 0.20.0
 
