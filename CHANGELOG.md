@@ -8,6 +8,7 @@
 - Fixed distorted proportions in the README visual header.
 - Expanded the README with module usage and a complete raid-session guide.
 - Added linked README navigation and mandatory README review for future changes.
+- Defined mandatory unit, E2E, regression, and production test responsibilities.
 
 ## 0.20.0
 
