@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added unit coverage for pure feature-module logic and established a maintained public API coverage matrix.
 - Expanded unit coverage for RaidRes persistence, test tools, commands, and guild scan state transitions.
 - Added focused unit coverage for core lifecycle, persistence, roster, raid statistics, CSR calculations, and reusable UI helpers.
 - Added the modular raid, loot, statistics, CSR, UI, and diagnostics workflows.
