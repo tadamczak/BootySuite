@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-09-27
+
+- Added a regression-integrated static-analysis gate for Lua compatibility, architecture boundaries, and performance-sensitive patterns.
 - Added critical-journey E2E coverage for raid persistence, recalculation, failures, migration, and scale limits.
 - Added automated statement-line coverage reporting for the complete Lua test suite.
 - Completed automated E2E coverage for Performance, About, and addon manifest composition.
