@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added integration coverage for dropdown primitives, text-input focus, and date selection.
 - Added integration coverage for reusable prompts, item lists, editors, and read-only dialogs.
 - Added a reusable WoW frame double and integration coverage for shared UI controls.
 - Added unit coverage for pure feature-module logic and established a maintained public API coverage matrix.
