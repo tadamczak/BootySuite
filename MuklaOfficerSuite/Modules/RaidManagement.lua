@@ -2237,6 +2237,38 @@ local function OnRosterDebounceUpdate()
     lifecycle:FlushRosterUpdate()
 end
 
+function RaidManagement.HandleWorldContext(options)
+    local attendance = options.getAttendance()
+    local zone = options.getZone() or ""
+    local inInstance, instanceType = options.getInstanceState()
+    local inRaidInstance = inInstance and instanceType == "raid"
+    local hasSession = options.hasSession(attendance) and options.isSessionDraft()
+    if not options.isTestRaid() and inRaidInstance and not hasSession then
+        local reminderKey = zone ~= "" and zone or "raid-instance"
+        if options.getReminderContext() ~= reminderKey and options.getReminderShownContext() ~= reminderKey then
+            options.setReminderShownContext(reminderKey)
+            options.showRaidStartReminder(reminderKey)
+        end
+    else
+        if not inRaidInstance then
+            options.setReminderContext(nil)
+            options.setReminderShownContext(nil)
+        end
+        options.hideRaidStartReminder()
+    end
+    if options.isTestRaid() or not hasSession then return end
+    local inRaid = options.isInRaid()
+    local leftRaidContext = not inRaid or (attendance.raidName and attendance.raidName ~= "" and attendance.raidName ~= zone)
+    if not leftRaidContext then
+        options.setContinuedContext(nil)
+        options.hideSessionTransitionPrompt()
+        return
+    end
+    local contextKey = zone .. "|" .. (inRaid and "raid" or "solo")
+    if options.getContinuedContext() == contextKey then return end
+    options.showSessionTransitionPrompt(contextKey)
+end
+
 function RaidManagement.CreateLifecycle(options)
     local lifecycle = {}
     local rosterDebounce = CreateFrame("Frame", nil, options.page)

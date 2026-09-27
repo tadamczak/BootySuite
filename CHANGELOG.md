@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added E2E coverage for native raid actions and session behavior across raid-context changes.
 - Added E2E coverage for Settings, Navigation, and Dashboard state, layout, minimization, and resize cleanup.
 - Added E2E coverage for Roster Management and Guild Statistics scanning, filters, refreshes, and lifecycle cleanup.
 - Added E2E coverage for Raid Management session actions, history, save options, tracking, and cleanup.

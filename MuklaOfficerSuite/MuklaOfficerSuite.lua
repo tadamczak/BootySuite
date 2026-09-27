@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.0-dev.17"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.0-dev.18"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -406,32 +406,25 @@ MOS.ModuleRegistry.Register("raid", MOS.Modules.RaidManagement.CreateLifecycle({
     setScanReady = function(value) MOS.raidScanReady = value end,
     refresh = function() RefreshRaidPage() end,
     onWorldContextChanged = function()
-        local attendance = MOS.Database.GetRaidAttendance()
-        local zone = GetRealZoneText() or ""
-        local inInstance, instanceType = IsInInstance()
-        local inRaidInstance = inInstance and instanceType == "raid"
-        local hasSession = MOS.Services.RaidRes.HasSession(attendance) and MOS.raidSessionDraft
-        if not IsTestRaid() and inRaidInstance and not hasSession then
-            local reminderKey = zone ~= "" and zone or "raid-instance"
-            if MOS.raidStartReminderContext ~= reminderKey and MOS.raidStartReminderShownContext ~= reminderKey and raidPage.ShowRaidStartReminder then
-                MOS.raidStartReminderShownContext = reminderKey
-                raidPage.ShowRaidStartReminder(reminderKey)
-            end
-        else
-            if not inRaidInstance then MOS.raidStartReminderContext = nil; MOS.raidStartReminderShownContext = nil end
-            if raidPage.HideRaidStartReminder then raidPage.HideRaidStartReminder() end
-        end
-        if IsTestRaid() or not hasSession then return end
-        local inRaid = MOS.Services.Raid.IsInRaid()
-        local leftRaidContext = not inRaid or (attendance.raidName and attendance.raidName ~= "" and attendance.raidName ~= zone)
-        if not leftRaidContext then
-            MOS.raidSessionContinuedContext = nil
-            if raidPage.HideSessionTransitionPrompt then raidPage.HideSessionTransitionPrompt() end
-            return
-        end
-        local contextKey = zone .. "|" .. (inRaid and "raid" or "solo")
-        if MOS.raidSessionContinuedContext == contextKey then return end
-        if raidPage.ShowSessionTransitionPrompt then raidPage.ShowSessionTransitionPrompt(contextKey) end
+        MOS.Modules.RaidManagement.HandleWorldContext({
+            getAttendance = MOS.Database.GetRaidAttendance,
+            getZone = function() return GetRealZoneText() or "" end,
+            getInstanceState = IsInInstance,
+            hasSession = MOS.Services.RaidRes.HasSession,
+            isSessionDraft = function() return MOS.raidSessionDraft end,
+            isTestRaid = IsTestRaid,
+            isInRaid = MOS.Services.Raid.IsInRaid,
+            getReminderContext = function() return MOS.raidStartReminderContext end,
+            setReminderContext = function(value) MOS.raidStartReminderContext = value end,
+            getReminderShownContext = function() return MOS.raidStartReminderShownContext end,
+            setReminderShownContext = function(value) MOS.raidStartReminderShownContext = value end,
+            getContinuedContext = function() return MOS.raidSessionContinuedContext end,
+            setContinuedContext = function(value) MOS.raidSessionContinuedContext = value end,
+            showRaidStartReminder = function(value) if raidPage.ShowRaidStartReminder then raidPage.ShowRaidStartReminder(value) end end,
+            hideRaidStartReminder = function() if raidPage.HideRaidStartReminder then raidPage.HideRaidStartReminder() end end,
+            showSessionTransitionPrompt = function(value) if raidPage.ShowSessionTransitionPrompt then raidPage.ShowSessionTransitionPrompt(value) end end,
+            hideSessionTransitionPrompt = function() if raidPage.HideSessionTransitionPrompt then raidPage.HideSessionTransitionPrompt() end end,
+        })
     end,
 }))
 MOS.ModuleRegistry.Register("about", MOS.Modules.About.Create(aboutPage, VERSION))
