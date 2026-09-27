@@ -6,6 +6,7 @@
 - Added the develop/production release process and limited repository contents to release files.
 - Added the production quality gate and refreshed the user-facing README.
 - Fixed distorted proportions in the README visual header.
+- Expanded the README with module usage and a complete raid-session guide.
 
 ## 0.20.0
 

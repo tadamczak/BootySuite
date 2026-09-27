@@ -4,17 +4,7 @@
 
 # Mukla Officer Suite
 
-Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and raid leaders. It combines roster tools, raid-session management, loot distribution, Soft Reserve, Raycoin, raid statistics, attendance, and CSR in one interface.
-
-## Main features
-
-- Guild roster browsing, filtering, notes, ranks, and member actions.
-- Raid creation, attendance tracking, saved sessions, and raid history.
-- Loot Master workflow with SR, Highly Contested Items, Raycoin, MS, OS, and Transmog rolls.
-- Manual item rolls with `/mos roll [item link]`.
-- Loot history, raid statistics, attendance, and CSR tracking.
-- Configurable loot rights by guild rank.
-- Compact Loot Master mode and reusable raid warnings.
+Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and raid leaders. It combines guild management, raid sessions, loot distribution, Soft Reserve, Raycoin, attendance, raid statistics, and CSR in one interface.
 
 ## Installation
 
@@ -22,13 +12,166 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 2. Confirm that `MuklaOfficerSuite.toc` is directly inside that directory.
 3. Start the game or use `/reload` after updating the addon.
 
-## Basic usage
+## Basic Usage
 
-- `/mos` - open or close Mukla Officer Suite.
-- `/mos roll [item link]` - start a manual roll for an item.
-- Use **Roster Management** for guild members and roster actions.
-- Use **Raid Management** to start, continue, save, or load a raid session.
-- Enable **Loot Master Mode** during loot distribution.
-- Use **Raid Statistics** and **CSR** to review saved raid results.
+### Commands
 
-The minimap button also opens the addon. Most raid and loot actions require the appropriate group role or guild permissions.
+- **Open or close -** Use `/mos`, `/mukla`, `/mos show`, or `/mos open`.
+- **Hide -** Use `/mos hide` to close the main window.
+- **Manual item roll -** Use `/mos roll [linked item]` to start Loot Master rolling for an item from chat or a bag.
+- **Roster shortcut -** Use `/mos scan` to open Roster Management and access its scan controls.
+- **Saved roster status -** Use `/mos status` to print the number of saved guild members.
+- **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
+- **Layout diagnostics -** Use `/mos layout` when diagnosing window-layout problems.
+
+### Roster Management
+
+- **Guild roster -** Browse saved guild members with class, rank, level, zone, notes, online status, and last-online information.
+- **Search and filters -** Narrow the roster by text, class, rank, level, and online state.
+- **Member details -** Expand a player to review additional information and available officer actions.
+- **Guild actions -** Invite, promote, demote, remove, ignore, report, or manage eligible members according to your permissions.
+- **Guild information -** Review or edit Guild Information and Message of the Day.
+- **Roster scan -** Refresh and save current guild data when you explicitly request it.
+
+### Guild Statistics
+
+- **Class overview -** Review the saved roster grouped by class.
+- **Rank overview -** Review the saved roster grouped by guild rank.
+- **Level 60 filter -** Limit statistics to max-level characters.
+
+### Raid Management
+
+- **Raid sessions -** Start a new raid, continue an active session, save it, or load a saved session.
+- **Raid type -** Assign Blackwing Lair, Molten Core, Onyxia's Lair, Karazhan10, Zul'Gurub, or Other.
+- **Attendance -** Track the raid roster and optionally include attendance when saving statistics.
+- **Raid views -** Switch between the member list and draggable group layout.
+- **Player actions -** Manage raid leader, assistants, removal, reporting, and ignore state.
+- **Soft Reserve warnings -** Review missing SR, imported SR outside the raid, and SR without loot rights.
+- **Loot rules -** Configure SR, Highly Contested Items, Raycoin, and CSR rights by guild rank.
+- **Raycoin list -** Review used Raycoins and pending item trades.
+- **Saved raids -** Select and load an earlier raid session.
+
+### Loot Master Mode
+
+- **Compact workspace -** Keep raid members and loot tools visible in a smaller, resizable window.
+- **Loot detection -** Open the roll window from corpse loot or start it manually with `/mos roll [linked item]`.
+- **Supported rolls -** Handle SR (102), Raycoin (101), MS (100), OS (99), and Transmog (98).
+- **Late rolls -** Accept valid rolls until the item is assigned.
+- **Manual winner -** Select any valid roll row before assigning the item.
+- **Automatic SR -** Select the only eligible in-raid reserver when no competing SR roll is required.
+- **Trade tracking -** Track pending SR or Raycoin delivery when a Transmog winner temporarily receives the item.
+- **Roll history -** Review rounds, winners, trades, and prior rolls for the item.
+
+### Raid Statistics
+
+- **Saved raid list -** Browse and select recorded raid sessions.
+- **Filters -** Filter by raid, date range, session name, or player.
+- **Raid details -** Review attendance, Soft Reserves, received loot, and stored roll information.
+- **Edit -** Change whether a saved raid contributes to attendance or CSR.
+- **Remove -** Delete a saved raid and recalculate affected statistics.
+
+### CSR
+
+- **CSR overview -** Review unsuccessful Soft Reserves accumulated per player and item.
+- **Raid filter -** Include one or more raid types in the calculation.
+- **Search -** Find a player or item.
+- **Raid history -** Expand a CSR record to see the contributing raids.
+- **View raid -** Open the selected contributing raid in Raid Statistics.
+- **CSR Test Lab -** Simulate players, ranks, reservations, awards, and elapsed time without changing saved raid data.
+
+### Performance
+
+- **Runtime metrics -** Review FPS, frame time, latency, Lua memory, event rate, refresh rate, and saved-data size.
+- **Live Monitor -** Open a small movable window with current runtime metrics.
+- **Performance diagnosis -** Capture scoped addon activity when investigating performance problems.
+- **Memory by Addon -** Compare addon memory usage when the client exposes the required data.
+
+### Settings
+
+- **Appearance -** Configure the addon skin, colors, navigation style, and window behavior.
+- **Raid Management -** Configure Loot Master opacity and related raid preferences.
+- **Logging -** Enable optional concise addon messages in chat.
+- **Reset options -** Restore supported settings to their defaults.
+
+### About
+
+- **Addon information -** Review the installed version and basic project information.
+
+## How to record raid session
+
+### 1. Start or resume the session
+
+1. Enter the raid instance.
+2. If no session is active, choose **Start New Raid** in the reminder.
+3. In Raid Management, enter the session name and select the raid type.
+4. Start the raid session and confirm that the current roster is visible.
+5. If the session already exists, select it under **Saved raids** and choose **Load** instead.
+
+Leaving the instance does not automatically discard the session. Choose **Continue Session** to keep working or **End & Save** to finish it. Closing that prompt with the X ends the session without saving.
+
+### 2. Import and validate Soft Reserves
+
+1. Open **Raid Leader Tools** and choose **Import SR**.
+2. Paste or import the prepared Soft Reserve data.
+3. Review the warning cards in Raid Management.
+4. Use **Info** to inspect affected players.
+5. Use **Ping** when the raid must be informed.
+6. Use **Fix SR** only for reservations that should be removed.
+
+Warnings distinguish:
+
+- players who have SR rights but no reservation;
+- imported reservations belonging to players outside the raid;
+- reservations assigned without SR or Highly Contested Item rights.
+
+### 3. Configure and announce loot rules
+
+1. Open **Set Loot Rules**.
+2. Enable SR, Highly Contested Items, Raycoin, and CSR rights for the appropriate guild ranks.
+3. Review **Set Highly Contested Items** and adjust the default item list if needed.
+4. Choose **Send Loot Rules** to announce the active rules to the raid.
+
+Highly Contested Item rights apply only when the rank also has SR rights.
+
+### 4. Run loot distribution
+
+1. Enable **Loot Master Mode**.
+2. Loot the corpse or use `/mos roll [linked item]` for an item from a bag or chat.
+3. Confirm the announced SR list and available roll types.
+4. Wait for the timer, choose **Finish** early, or use **Extend** when players need more time.
+5. Review valid and invalid rolls in **Current roll**.
+6. Click a valid row if you need to override the automatically selected winner.
+7. Assign the item to the selected recipient.
+
+Common scenarios:
+
+- **Direct winner -** Give the item directly to the selected player. Loot history and SR or Raycoin usage are recorded after receipt.
+- **Transmog carrier -** Give the item to the Transmog winner. The target SR or Raycoin player remains in an awaiting-trade state until the real trade is detected.
+- **Single eligible SR -** The only eligible reserver in the raid is selected automatically, even without a roll.
+- **Second copy -** A consumed SR is not reused for another copy in the same session; normal roll rules apply when no eligible SR remains.
+- **Late valid roll -** A late roll can still be selected until the item is assigned.
+
+### 5. Monitor the session
+
+1. Use the member list to review received loot.
+2. Open **Raycoin list** to check used Raycoins and pending trades.
+3. Review roll history when a result or trade needs confirmation.
+4. Keep the raid session active when temporarily leaving the instance or running back from the graveyard.
+
+### 6. Save the raid
+
+1. Choose **Save Session**.
+2. Enable **Save raid statistics** to add the raid to Raid Statistics.
+3. Enable **Save attendance** if attendance should contribute to player statistics.
+4. Enable **Save CSR** if this raid should contribute to CSR.
+5. Confirm **Save Session** and complete the requested reload when shown.
+
+Disabling **Save attendance** keeps the raid record but marks Attendance as Off. Attendance can only be enabled when raid statistics are saved.
+
+### 7. Load or review a saved raid
+
+1. Open **Raid Management** to load and continue an unfinished saved session.
+2. Select the raid under **Saved raids** and choose **Load**.
+3. Open **Raid Statistics** to review completed saved raids.
+4. Use **Edit** to change Attendance or CSR participation.
+5. Use **Remove** to delete a raid and recalculate dependent statistics.
