@@ -2,7 +2,44 @@
 ## Title: Mukla Officer Suite
 ## Notes: Guild officer dashboard and persistent guild roster.
 ## Author: Mukla
-## Version: 0.2.2
+## Version: 0.3.0
 ## SavedVariables: MuklaOfficerSuiteDB
 
+Core\Bootstrap.lua
+UI\Skins.lua
+Core\EventDispatcher.lua
+Core\Commands.lua
+Core\Diagnostics.lua
+Core\Database.lua
+Core\ModuleRegistry.lua
+Core\GuildScanController.lua
+UI\Theme.lua
+UI\Components.lua
+UI\Dashboard.lua
+UI\Dialogs.lua
+UI\ProgressBar.lua
+UI\Table.lua
+UI\FilterPanel.lua
+UI\SettingsComponents.lua
+Services\RosterService.lua
+Services\RaidResService.lua
+Services\RaidService.lua
+Services\TestRaidService.lua
+Services\RaidStatisticsService.lua
+Services\CSRService.lua
+Services\CSRTestService.lua
+Modules\MasterLootEvents.lua
+Modules\MasterLootWindow.lua
+Modules\RosterManagement.lua
+Modules\GuildStatistics.lua
+Modules\RaidStatistics.lua
+Modules\CSR.lua
+Modules\About.lua
+Modules\RaidRules.lua
+Modules\RaidHistory.lua
+Modules\RaidSoftReserve.lua
+Modules\RaidManagement.lua
+Modules\Settings.lua
+Modules\Navigation.lua
+Modules\Performance.lua
 MuklaOfficerSuite.lua
