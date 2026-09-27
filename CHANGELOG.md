@@ -4,6 +4,7 @@
 
 - Added the modular raid, loot, statistics, CSR, UI, and diagnostics workflows.
 - Added the develop/production release process and limited repository contents to release files.
+- Added the production quality gate and refreshed the user-facing README.
 
 ## 0.20.0
 
