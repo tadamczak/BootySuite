@@ -1,6 +1,10 @@
 # Mukla Officer Suite
 
-Project documentation starts at [`DOCUMENTATION.md`](DOCUMENTATION.md). Planned and deferred work is tracked only in [`BACKLOG.md`](BACKLOG.md).
+## Release channels
+
+- `master` and tags contain production releases.
+- `develop` contains test builds such as `0.3.0-dev.1`.
+- Development build numbers do not represent missed production releases.
 
 An addon for the World of Warcraft 1.12.1 client. The initial version provides:
 
