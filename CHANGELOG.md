@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a reusable WoW frame double and integration coverage for shared UI controls.
 - Added unit coverage for pure feature-module logic and established a maintained public API coverage matrix.
 - Expanded unit coverage for RaidRes persistence, test tools, commands, and guild scan state transitions.
 - Added focused unit coverage for core lifecycle, persistence, roster, raid statistics, CSR calculations, and reusable UI helpers.
