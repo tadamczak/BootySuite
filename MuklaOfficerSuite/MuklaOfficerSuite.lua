@@ -1,450 +1,842 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.2.2"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.0-dev.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
-    DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. ": " .. tostring(message))
+    if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.chatActionLogs then DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. ": " .. tostring(message)) end
 end
 
-local MOS = CreateFrame("Frame", "MuklaOfficerSuiteEventFrame")
-MOS.pendingScan = nil
-MOS.lastRosterEvent = 0
-MOS.scanStartedAt = nil
-MOS.scanAttempts = 0
+local MOS = MuklaOfficerSuite
+MOS.version = VERSION
+-- Transient presentation modes never survive a UI reload. Their geometry is
+-- stored separately and is restored only when the user enters the mode again.
+MOS.lootMasterMode = false
+MOS.lootMasterMinimized = false
 
-local rosterRequestFrame = CreateFrame("Frame", "MuklaOfficerSuiteRosterRequestFrame", UIParent)
-rosterRequestFrame.delay = nil
-rosterRequestFrame:Hide()
-rosterRequestFrame:SetScript("OnUpdate", function()
-    if not MOS.pendingScan then
-        rosterRequestFrame.delay = nil
-        rosterRequestFrame:Hide()
-        return
-    end
-
-    rosterRequestFrame.delay = rosterRequestFrame.delay - arg1
-    if rosterRequestFrame.delay > 0 then
-        return
-    end
-
-    if MOS.scanAttempts < 3 then
-        MOS.scanAttempts = MOS.scanAttempts + 1
-        rosterRequestFrame.delay = 1
-        Print("Guild roster is not ready. Retrying scan (" .. MOS.scanAttempts .. "/3)...")
-        GuildRoster()
-        return
-    end
-
-    rosterRequestFrame.delay = nil
-    rosterRequestFrame:Hide()
-    MOS.pendingScan = nil
-    MOS.scanStartedAt = nil
-    MOS.scanAttempts = 0
-    Print("Guild roster could not be loaded. Please try again.")
-end)
-
-StaticPopupDialogs["MUKLA_OFFICER_SUITE_RELOAD"] = {
-    text = "The guild roster scan is complete. Reload the UI now to write it to disk?",
-    button1 = "Reload now",
-    button2 = "Later",
-    OnAccept = function()
-        if type(ReloadUI) == "function" then
-            ReloadUI()
-        elseif type(ConsoleExec) == "function" then
-            ConsoleExec("reloadui")
-        end
-    end,
-    OnCancel = function()
-        Print("Roster remains in memory. Use /reload before closing the game to save it.")
-    end,
-    timeout = 0,
-    whileDead = 1,
-    hideOnEscape = 1,
-}
-
-local function EnsureDatabase()
-    if type(MuklaOfficerSuiteDB) ~= "table" then
-        MuklaOfficerSuiteDB = {}
-    end
-    if type(MuklaOfficerSuiteDB.guilds) ~= "table" then
-        MuklaOfficerSuiteDB.guilds = {}
-    end
-    if type(MuklaOfficerSuiteDB.minimap) ~= "table" then
-        MuklaOfficerSuiteDB.minimap = { angle = 220, hidden = false }
-    end
-    MuklaOfficerSuiteDB.addonVersion = VERSION
+local CompletePendingGuildScan
+local HandleGuildScanFailure
+local scanProgress
+local raidScanProgress
+local RefreshCurrentPageLayout
+local ApplyNavigationLayout
+local RefreshRosterPage
+local RefreshStatisticsPage
+local RefreshRaidPage
+local RequestGuildAction
+local RequestRosterScan
+local StartSharedGuildScan
+local ToggleLootMasterMode
+local ToggleLootMasterMinimize
+local ToggleSidebar
+local UIState = {}
+local function SetStatus(message, kind)
+    MOS.UI.Dashboard.SetStatus(UIState.statusBar, message, kind)
 end
 
-local function GuildKey()
-    local guildName = GetGuildInfo("player")
-    if not guildName then
-        return nil
-    end
-    local realmName = GetRealmName() or "UnknownRealm"
-    return realmName .. " - " .. guildName, guildName, realmName
-end
+MOS.UI.Dialogs.RegisterPersistencePrompts(Print)
 
-local function CountSavedMembers()
-    local key = GuildKey()
-    if not key or not MuklaOfficerSuiteDB.guilds[key] then
-        return 0
-    end
-    return table.getn(MuklaOfficerSuiteDB.guilds[key].members or {})
-end
+local EnsureDatabase = MOS.Database.Ensure
+local GuildKey = MOS.Database.GetGuildIdentity
+local CountSavedMembers = MOS.Database.CountRosterMembers
 
 local function SaveGuildRoster()
-    EnsureDatabase()
-    local key, guildName, realmName = GuildKey()
-    if not key then
+    local snapshot, failure = MOS.Services.Roster.BuildSnapshot(MOS.Core.GuildScanController.GetStartedAt(MOS.guildScanController))
+    if failure == "not-in-guild" then
         Print("This character is not in a guild.")
         return false
     end
-
-    local total = GetNumGuildMembers(true)
-    if not total or total < 1 then
-        return false
-    end
-
-    local members = {}
-    local i
-    for i = 1, total do
-        local name, rank, rankIndex, level, class, zone, publicNote, officerNote, online, status = GetGuildRosterInfo(i)
-        if name then
-            table.insert(members, {
-                name = name,
-                level = level or 0,
-                class = class or "",
-                rank = rank or "",
-                rankIndex = rankIndex,
-                publicNote = publicNote or "",
-                officerNote = officerNote or "",
-                online = online and true or false,
-                zone = zone or "",
-                status = status,
-            })
-        end
-    end
-
-    table.sort(members, function(a, b)
-        return string.lower(a.name) < string.lower(b.name)
-    end)
-
-    local scanTimestamp = time()
-    local scanDuration = 0
-    if MOS.scanStartedAt then
-        scanDuration = GetTime() - MOS.scanStartedAt
-    end
-    MuklaOfficerSuiteDB.guilds[key] = {
-        guildName = guildName,
-        realmName = realmName,
-        addonVersion = VERSION,
-        scannedAt = scanTimestamp,
-        scannedAtText = date("%Y-%m-%d %H:%M:%S", scanTimestamp),
-        scanDurationSeconds = scanDuration,
-        updatedAt = scanTimestamp,
-        updatedBy = UnitName("player"),
-        members = members,
-    }
-    MuklaOfficerSuiteDB.lastScanAt = scanTimestamp
-    MuklaOfficerSuiteDB.lastScanAtText = date("%Y-%m-%d %H:%M:%S", scanTimestamp)
-    MuklaOfficerSuiteDB.lastScanDurationSeconds = scanDuration
-    MOS.pendingScan = nil
-    MOS.scanStartedAt = nil
-    MOS.scanAttempts = 0
-    rosterRequestFrame.delay = nil
-    rosterRequestFrame:Hide()
+    if not snapshot then return false end
+    MOS.Services.Roster.StoreSnapshot(snapshot)
+    MOS.Core.GuildScanController.Finish(MOS.guildScanController)
+    MOS.UI.ProgressBar.Complete(scanProgress)
+    SetStatus("Guild roster updated", "success")
     return true
 end
 
-local dashboard = CreateFrame("Frame", "MuklaOfficerSuiteDashboard", UIParent)
-dashboard:SetWidth(620)
-dashboard:SetHeight(420)
-dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-dashboard:SetFrameStrata("DIALOG")
-dashboard:SetMovable(true)
-dashboard:EnableMouse(true)
-dashboard:RegisterForDrag("LeftButton")
-dashboard:SetScript("OnDragStart", function() this:StartMoving() end)
-dashboard:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-dashboard:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true,
-    tileSize = 32,
-    edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 },
-})
-dashboard:Hide()
+SaveGuildRoster = MOS.Diagnostics.Wrap("Guild roster scan", SaveGuildRoster)
 
-local title = dashboard:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-title:SetPoint("TOP", dashboard, "TOP", 0, -18)
-title:SetText("Mukla Officer Suite")
+local SaveRaidRoster = MOS.Diagnostics.Wrap("Raid roster scan", MOS.Services.Raid.SaveRoster)
+local RecordRaidLoot = MOS.Diagnostics.Wrap("Loot message", MOS.Services.Raid.RecordLoot)
 
-local subtitle = dashboard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-subtitle:SetPoint("TOP", title, "BOTTOM", 0, -5)
-subtitle:SetText("Guild dashboard - v" .. VERSION)
-
-local closeButton = CreateFrame("Button", nil, dashboard, "UIPanelCloseButton")
-closeButton:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -5, -5)
-
-local statusText = dashboard:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-statusText:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 28, -62)
-statusText:SetWidth(560)
-statusText:SetJustifyH("LEFT")
-
-local function CreateColumnLabel(text, x, width, alignment)
-    local label = dashboard:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    label:SetPoint("TOPLEFT", dashboard, "TOPLEFT", x, -98)
-    label:SetWidth(width)
-    label:SetHeight(18)
-    label:SetJustifyH(alignment or "LEFT")
-    label:SetText(text)
-    return label
+MOS.Database.Ensure()
+MOS.UI.SetSkin(MOS.Database.GetSetting("uiSkin"), false)
+local dashboardView = MOS.UI.Dashboard.CreateWindow(VERSION)
+local dashboard = dashboardView.frame
+local titleBar, closeButton, sidebarToggleButton = dashboardView.titleBar, dashboardView.closeButton, dashboardView.sidebarToggle
+local versionText, sidebar, contentPanel = dashboardView.versionText, dashboardView.sidebar, dashboardView.contentPanel
+local contentShade = dashboardView.contentShade
+local function SaveDashboardGeometry()
+    if not MuklaOfficerSuiteDB or MOS.lootMasterMode or dashboardView.minimized then return end
+    MuklaOfficerSuiteDB.windowWidth = dashboard:GetWidth(); MuklaOfficerSuiteDB.windowHeight = dashboard:GetHeight()
+    local left, bottom = dashboard:GetLeft(), dashboard:GetBottom()
+    if left and bottom then MuklaOfficerSuiteDB.windowLeft = left; MuklaOfficerSuiteDB.windowBottom = bottom end
 end
+sidebarToggleButton:SetScript("OnClick", function() if ToggleSidebar then ToggleSidebar() end end)
 
-CreateColumnLabel("Name", 28, 150)
-CreateColumnLabel("Lvl", 183, 35, "RIGHT")
-CreateColumnLabel("Class", 228, 90)
-CreateColumnLabel("Rank", 328, 115)
-CreateColumnLabel("Public / Officer note", 453, 130)
-
-local rows = {}
-local rowCount = 13
-local rowHeight = 19
-local i
-for i = 1, rowCount do
-    local row = CreateFrame("Frame", nil, dashboard)
-    row:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 28, -100 - (i * rowHeight))
-    row:SetWidth(555)
-    row:SetHeight(rowHeight)
-
-    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.name:SetPoint("LEFT", row, "LEFT", 0, 0)
-    row.name:SetWidth(150)
-    row.name:SetHeight(18)
-    row.name:SetJustifyH("LEFT")
-
-    row.level = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.level:SetPoint("LEFT", row, "LEFT", 155, 0)
-    row.level:SetWidth(35)
-    row.level:SetHeight(18)
-    row.level:SetJustifyH("RIGHT")
-
-    row.class = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.class:SetPoint("LEFT", row, "LEFT", 200, 0)
-    row.class:SetWidth(90)
-    row.class:SetHeight(18)
-    row.class:SetJustifyH("LEFT")
-
-    row.rank = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.rank:SetPoint("LEFT", row, "LEFT", 300, 0)
-    row.rank:SetWidth(115)
-    row.rank:SetHeight(18)
-    row.rank:SetJustifyH("LEFT")
-
-    row.notes = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.notes:SetPoint("LEFT", row, "LEFT", 425, 0)
-    row.notes:SetWidth(130)
-    row.notes:SetHeight(18)
-    row.notes:SetJustifyH("LEFT")
-
-    rows[i] = row
-end
-
-local rosterScrollFrame = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRosterScrollFrame", dashboard, "FauxScrollFrameTemplate")
-rosterScrollFrame:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 20, -115)
-rosterScrollFrame:SetPoint("BOTTOMRIGHT", dashboard, "BOTTOMRIGHT", -26, 59)
-
-local function Short(text, length)
-    text = tostring(text or "")
-    if string.len(text) > length then
-        return string.sub(text, 1, length - 1) .. "~"
-    end
-    return text
-end
-
-local function RefreshDashboard()
-    EnsureDatabase()
-    local key, guildName = GuildKey()
-    local data = key and MuklaOfficerSuiteDB.guilds[key]
-    if not key then
-        statusText:SetText("No guild found. Log in with a character who belongs to a guild.")
-    elseif not data then
-        statusText:SetText(guildName .. " - no saved roster. Click Scan or Scan & Reload.")
-    else
-        local scanTime = data.scannedAtText or date("%Y-%m-%d %H:%M:%S", data.scannedAt or data.updatedAt)
-        statusText:SetText(guildName .. " - saved members: " .. table.getn(data.members) .. " | last scan: " .. scanTime)
-    end
-
-    local memberCount = data and table.getn(data.members) or 0
-    FauxScrollFrame_Update(rosterScrollFrame, memberCount, rowCount, rowHeight)
-    local offset = FauxScrollFrame_GetOffset(rosterScrollFrame)
-
-    for i = 1, rowCount do
-        local member = data and data.members[offset + i]
-        if member then
-            local notes = member.publicNote
-            if member.officerNote ~= "" then
-                notes = notes .. " / " .. member.officerNote
-            end
-            rows[i].name:SetText(Short(member.name, 20))
-            rows[i].level:SetText(member.level)
-            rows[i].class:SetText(Short(member.class, 12))
-            rows[i].rank:SetText(Short(member.rank, 16))
-            rows[i].notes:SetText(Short(notes, 21))
-            rows[i]:Show()
-        else
-            rows[i]:Hide()
+UIState.statusBar = MOS.UI.Dashboard.CreateStatusBar(dashboard)
+SetStatus("Ready")
+MOS.UI.Dashboard.BindWindow(dashboardView, {
+    statusBar = UIState.statusBar,
+    saveGeometry = SaveDashboardGeometry,
+    saveLootGeometry = function()
+        if MuklaOfficerSuiteDB then
+            MuklaOfficerSuiteDB.lootMasterWidth = dashboard:GetWidth()
+            MuklaOfficerSuiteDB.lootMasterHeight = dashboard:GetHeight()
+            local left, bottom = dashboard:GetLeft(), dashboard:GetBottom()
+            if left and bottom then MuklaOfficerSuiteDB.lootMasterLeft = left; MuklaOfficerSuiteDB.lootMasterBottom = bottom end
         end
-    end
-end
+    end,
+    isLootMasterMode = function() return MOS.lootMasterMode end,
+    isTabLayout = function() return MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.menuStyle == "tabs" end,
+    applyLayout = function() if ApplyNavigationLayout then ApplyNavigationLayout() end end,
+    refreshLayout = function() if RefreshCurrentPageLayout then RefreshCurrentPageLayout() end end,
+    applyOrRefreshLayout = function()
+        if ApplyNavigationLayout then ApplyNavigationLayout() elseif RefreshCurrentPageLayout then RefreshCurrentPageLayout() end
+    end,
+})
 
+local dashboardPages = MOS.UI.Dashboard.CreatePages(contentPanel)
+local rosterPage, statisticsPage, raidPage = dashboardPages.roster, dashboardPages.statistics, dashboardPages.raid
+local aboutPage = dashboardPages.about
 
-rosterScrollFrame:SetScript("OnVerticalScroll", function()
-    FauxScrollFrame_OnVerticalScroll(rowHeight, RefreshDashboard)
+local settingsView = MOS.Modules.Settings.CreateShell(contentPanel, rosterPage, function()
+    if ApplyNavigationLayout then ApplyNavigationLayout() end
+end)
+local configurationViewport = settingsView.viewport
+local configurationPage = settingsView.page
+MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
+    refreshGroup = function() if MOS.RefreshRaidGroupView then MOS.RefreshRaidGroupView() end end,
+    refreshList = function() if RefreshRaidPage then RefreshRaidPage() end end,
+    trackingChanged = function()
+        if raidPage.lifecycle and raidPage.lifecycle.SyncTrackingSetting then raidPage.lifecycle:SyncTrackingSetting() end
+    end,
+})
+
+local performanceModule = MOS.Modules.Performance.Create(contentPanel)
+
+scanProgress = MOS.UI.ProgressBar.Create(UIState.statusBar, 280, 16)
+scanProgress:SetPoint("LEFT", UIState.statusBar, "LEFT", 4, 0)
+scanProgress:SetFrameLevel(UIState.statusBar:GetFrameLevel() + 2)
+raidScanProgress = MOS.UI.ProgressBar.Create(raidPage, 320, 18)
+raidScanProgress:SetPoint("CENTER", raidPage, "CENTER", 0, 0)
+raidScanProgress:SetFrameLevel(raidPage:GetFrameLevel() + 20)
+
+local rosterView = MOS.Modules.RosterManagement.CreateShell(rosterPage, contentPanel)
+local searchBox = rosterView.searchBox
+local rosterStatusText, rosterLastScan = rosterView.status, rosterView.lastScan
+
+local rosterGuildControls = MOS.Modules.RosterManagement.CreateGuildControls(rosterPage)
+local rosterScanButton, rosterRefreshButton = rosterGuildControls.scanButton, rosterGuildControls.refreshButton
+local scanSaveButton = rosterGuildControls.exportButton
+
+local rosterFilterView = MOS.Modules.RosterManagement.CreateFilterView(rosterPage)
+local rosterSortHint = rosterFilterView.sortHint
+
+local rowHeight = 20
+local visibleMembers = {}
+local sortKey = "rank"
+local sortAscending = true
+local selectedMemberName = nil
+local selectedClasses = {}
+local selectedRanks = {}
+local menuButtons = {}
+local currentPage = "roster"
+
+local rosterListController = MOS.Modules.RosterManagement.MountList(rosterPage, rosterFilterView, {
+    selectedClasses = selectedClasses,
+    selectedRanks = selectedRanks,
+    getUniqueValues = MOS.Services.Roster.GetUniqueMemberValues,
+    refreshFilters = function() RefreshRosterPage(false) end,
+    rowHeight = rowHeight,
+    onSort = function(key)
+        if sortKey ~= key then sortKey = key; sortAscending = true
+        elseif sortAscending then sortAscending = false
+        else sortKey = nil; sortAscending = true end
+        MuklaOfficerSuiteDB.rosterSortKey = sortKey or "none"
+        MuklaOfficerSuiteDB.rosterSortAscending = sortAscending
+        RefreshRosterPage(true)
+    end,
+    onAction = function(action) RequestGuildAction(action) end,
+    onSelect = function(member)
+        if selectedMemberName == member.name then selectedMemberName = nil else selectedMemberName = member.name end
+        RefreshRosterPage(false)
+    end,
+    isSelected = function(member) return selectedMemberName == member.name end,
+})
+local rows = rosterListController.rows
+local rosterScrollFrame = rosterListController.scrollFrame
+
+local statisticsView = MOS.Modules.GuildStatistics.CreateView(statisticsPage, MOS.UI.StyleButton, function() RefreshStatisticsPage() end)
+dashboardPages.raidStatistics.module = MOS.Modules.RaidStatistics.Create(dashboardPages.raidStatistics, MOS.Database.GetRaidStatistics, MOS.Database.DeleteRaidStatistic, MOS.Database.UpdateRaidStatisticFlags)
+dashboardPages.csr.module = MOS.Modules.CSR.Create(dashboardPages.csr, MOS.Database.GetRaidStatistics, MOS.Database.GetLootRules, MOS.Database.GetRosterData, function(raidId)
+    if MOS.OpenRaidStatistics then MOS.OpenRaidStatistics(raidId) end
 end)
 
-local function RequestRosterScan(scanMode)
+local raidChrome = MOS.Modules.RaidManagement.CreateChrome(raidPage, {
+    toggleLootMaster = function() ToggleLootMasterMode() end,
+    toggleMinimize = function() ToggleLootMasterMinimize() end,
+})
+local raidTitle = raidChrome.title
+local raidModeButton = raidChrome.modeButton
+local raidSearchBox = raidChrome.searchBox
+local selectedRaidClasses, selectedRaidRanks = {}, {}
+local raidSortKey, raidSortAscending = nil, true
+local visibleRaidMembers = {}
+local selectedRaidMemberName = nil
+local raidHistoricalLoaded = false
+local raidActions = MOS.Modules.RaidManagement.CreateActionControls(raidPage)
+
+local function IsTestRaid() return MOS.Services.TestRaid.IsActive() end
+local function GetRaidAttendance() return IsTestRaid() and MOS.Services.TestRaid.GetAttendance() or MOS.Database.GetRaidAttendance() end
+local function IsActiveRaid() return IsTestRaid() or MOS.Services.Raid.IsInRaid() end
+local function SaveActiveRaidRoster()
+    if IsTestRaid() then return MOS.Services.TestRaid.GetRaidMemberCount() end
+    local previousAttendance = MOS.Database.GetRaidAttendance()
+    local count = SaveRaidRoster()
+    local attendance = MOS.Database.GetRaidAttendance()
+    MOS.Services.RaidRes.Reconcile(previousAttendance, attendance)
+    if attendance and MOS.raidSessionDraft then attendance._sessionDraft = true end
+    return count
+end
+local function RunActiveRaidAction(member, action) return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).RunMemberAction(member, action) end
+local function GetActiveGroupCounts() return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).GetGroupCounts() end
+local function MoveActiveMember(member, group) return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).MoveMemberToGroup(member, group) end
+local function MoveActiveMemberToSlot(member, target, group) return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).MoveMemberToSlot(member, target, group) end
+local function GetActiveLootMasterInfo() return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).GetLootMasterInfo() end
+local function GetActiveRaidMemberCount() return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).GetRaidMemberCount() end
+local function GetActiveRaidMemberInfo(index) return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).GetRaidMemberInfo(index) end
+local function IsActivePlayerIgnored(name) return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).IsPlayerIgnored(name) end
+
+configurationPage.raidAccordionControls.opacityLabel, configurationPage.raidAccordionControls.opacityField = MOS.Modules.Settings.CreatePercentageField(configurationPage, "MuklaOfficerSuiteLmOpacity", "LM Opacity %", 40, -612, "lootMasterOpacity", 100)
+configurationPage.raidAccordionControls.focusLabel, configurationPage.raidAccordionControls.focusField = MOS.Modules.Settings.CreatePercentageField(configurationPage, "MuklaOfficerSuiteFocusOpacity", "Out of Focus Opacity %", 210, -612, "outOfFocusOpacity", 30)
+if configurationPage.ApplyRaidLayoutAccordion then configurationPage.ApplyRaidLayoutAccordion() end
+
+local raidListView = MOS.Modules.RaidManagement.MountList(raidPage, raidChrome, {
+    selectedClasses = selectedRaidClasses,
+    selectedRanks = selectedRaidRanks,
+    getData = GetRaidAttendance,
+    getFilterValues = MOS.Services.Raid.GetFilterValues,
+    runMemberAction = RunActiveRaidAction,
+    isSelected = function(member) return selectedRaidMemberName == member.name end,
+    refresh = function() RefreshRaidPage() end,
+    onReset = function()
+        raidSortKey = nil; raidSortAscending = true; selectedRaidMemberName = nil
+        RefreshRaidPage()
+    end,
+    onSort = function(key, defaultAscending)
+        if raidSortKey ~= key then raidSortKey = key; raidSortAscending = defaultAscending
+        elseif raidSortAscending then raidSortAscending = false
+        else raidSortKey = nil; raidSortAscending = true end
+        RefreshRaidPage()
+    end,
+    onSelect = function(row)
+        if selectedRaidMemberName == row.displayedMember.name then
+            selectedRaidMemberName = nil
+        else
+            selectedRaidMemberName = row.displayedMember.name
+        end
+        RefreshRaidPage()
+    end,
+    applySoftReserveAssignments = MOS.Services.RaidRes.ApplyAssignments,
+    clearUnmatchedSoftReserves = MOS.Services.RaidRes.ClearUnmatched,
+    removeSoftReserve = function(memberName) return MOS.Services.RaidRes.RemoveMemberReservation(GetRaidAttendance(), memberName) end,
+    rowCount = 25,
+})
+local raidRows, raidScrollFrame = raidListView.rows, raidListView.scrollFrame
+MOS.Modules.RaidManagement.MountGroupView(raidPage, {
+    getGroupCounts = GetActiveGroupCounts,
+    moveMemberToGroup = MoveActiveMember,
+    moveMemberToSlot = MoveActiveMemberToSlot,
+    isTestRaid = IsTestRaid,
+    isPlayerIgnored = IsActivePlayerIgnored,
+    runMemberAction = RunActiveRaidAction,
+    ensureDatabase = EnsureDatabase,
+    getLootMasterInfo = GetActiveLootMasterInfo,
+    getRaidMemberCount = GetActiveRaidMemberCount,
+    getRaidMemberInfo = GetActiveRaidMemberInfo,
+    refresh = function() RefreshRaidPage() end,
+    onViewChanged = function()
+        selectedRaidMemberName = nil
+        RefreshRaidPage()
+    end,
+})
+MOS.OpenRaidGroupSelector = raidPage.openGroupSelector
+MOS.UpdateRaidDragGhost = raidPage.updateDragGhost
+MOS.ShowRaidMemberMenu = raidPage.showMemberMenu
+MOS.RefreshRaidGroupView = raidPage.refreshGroupView
+
+MOS.Modules.RaidManagement.MountChrome(raidPage, raidChrome, raidActions)
+MOS.Modules.RaidManagement.SetListRenderer(raidPage, {
+    updateScrollFrame = MOS.UI.UpdateScrollFrame,
+    getLootMasterInfo = GetActiveLootMasterInfo,
+    getData = GetRaidAttendance,
+    shorten = MOS.UI.ShortenText,
+    sortMembers = function(a, b)
+        return MOS.Modules.RaidManagement.CompareMembers(a, b, raidSortKey, raidSortAscending)
+    end,
+    onSelectionMissing = function()
+        selectedRaidMemberName = nil
+    end,
+})
+local raidRenderer = MOS.Modules.RaidManagement.CreateRenderer({
+    page = raidPage,
+    isTestRaid = IsTestRaid,
+    rows = raidRows,
+    unavailable = raidChrome.unavailable,
+    searchBox = raidSearchBox,
+    visibleMembers = visibleRaidMembers,
+    selectedClasses = selectedRaidClasses,
+    selectedRanks = selectedRaidRanks,
+    countRefresh = function() MOS.Diagnostics.Count("uiRefreshes") end,
+    isLootMasterMode = function() return MOS.lootMasterMode end,
+    isLootMasterMinimized = function() return MOS.lootMasterMinimized end,
+    isInRaid = IsActiveRaid,
+    isHistoricalLoaded = function() return raidHistoricalLoaded end,
+    isScanReady = function() return MOS.raidScanReady end,
+    setScanReady = function(value) MOS.raidScanReady = value end,
+    getData = GetRaidAttendance,
+    getSelectedName = function() return selectedRaidMemberName end,
+    getSortKey = function() return raidSortKey end,
+    getSettings = function() return MuklaOfficerSuiteDB end,
+})
+local function GetCurrentGuildData()
     EnsureDatabase()
-    if not IsInGuild() then
-        Print("This character is not in a guild.")
-        return
+    local key, guildName = GuildKey()
+    if not MuklaOfficerSuiteDB.rosterData and key and type(MuklaOfficerSuiteDB.guilds) == "table" then
+        MuklaOfficerSuiteDB.rosterData = MuklaOfficerSuiteDB.guilds[key]
     end
-    MOS.pendingScan = scanMode or "manual"
-    MOS.scanStartedAt = GetTime()
-    MOS.scanAttempts = 1
-    rosterRequestFrame.delay = 1
-    rosterRequestFrame:Show()
-    GuildRoster()
-    if MOS.pendingScan == "reload" then
-        Print("Requesting guild roster. The UI will reload after the scan completes...")
-    else
-        Print("Requesting guild roster...")
-    end
+    MuklaOfficerSuiteDB.guilds = nil
+    return MuklaOfficerSuiteDB.rosterData, guildName
 end
 
-local scanButton = CreateFrame("Button", nil, dashboard, "UIPanelButtonTemplate")
-scanButton:SetWidth(85)
-scanButton:SetHeight(24)
-scanButton:SetPoint("BOTTOMLEFT", dashboard, "BOTTOMLEFT", 28, 24)
-scanButton:SetText("Scan")
-scanButton:SetScript("OnClick", function() RequestRosterScan("manual") end)
+local function SortMembers(a, b)
+    return MOS.Modules.RosterManagement.CompareMembers(a, b, sortKey, sortAscending)
+end
 
-local scanReloadButton = CreateFrame("Button", nil, dashboard, "UIPanelButtonTemplate")
-scanReloadButton:SetWidth(125)
-scanReloadButton:SetHeight(24)
-scanReloadButton:SetPoint("LEFT", scanButton, "RIGHT", 8, 0)
-scanReloadButton:SetText("Scan & Reload")
-scanReloadButton:SetScript("OnClick", function() RequestRosterScan("reload") end)
+MOS.Modules.RosterManagement.BuildLayoutControls(rosterPage, rosterView, rosterFilterView, rosterGuildControls)
 
-local infoText = dashboard:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-infoText:SetPoint("LEFT", scanReloadButton, "RIGHT", 12, 0)
-infoText:SetWidth(315)
-infoText:SetJustifyH("LEFT")
-infoText:SetText("Use Scan & Reload to save the roster to disk.")
+MOS.Modules.RosterManagement.MountControllers(rosterPage, {
+    guildControls = rosterGuildControls,
+    contentPanel = contentPanel,
+    contentShade = contentShade,
+    sortHint = rosterSortHint,
+    startSharedScan = function(origin) StartSharedGuildScan(origin) end,
+    requestScan = function(mode) return RequestRosterScan(mode) end,
+    printMessage = Print,
+    buildSnapshot = MOS.Services.Roster.BuildSnapshot,
+    storeSnapshot = MOS.Services.Roster.StoreSnapshot,
+    refresh = function(resetScroll) RefreshRosterPage(resetScroll) end,
+})
 
-dashboard:SetScript("OnShow", RefreshDashboard)
+local rosterRenderer = MOS.Modules.RosterManagement.CreateRenderer({
+    page = rosterPage,
+    scanButton = rosterScanButton,
+    statusText = rosterStatusText,
+    summaryText = rosterLastScan,
+    searchBox = searchBox,
+    visibleMembers = visibleMembers,
+    selectedClasses = selectedClasses,
+    selectedRanks = selectedRanks,
+    sortMembers = SortMembers,
+    getLowestRankIndex = MOS.Services.Roster.GetLowestRankIndex,
+    getMotd = function() return type(GetGuildRosterMOTD) == "function" and GetGuildRosterMOTD() or "Guild Message of the Day" end,
+})
+
+RefreshRosterPage = function(resetScroll)
+    MOS.Diagnostics.Count("uiRefreshes")
+    local data, guildName = GetCurrentGuildData()
+    if not rosterPage.sortLoaded then
+        sortKey = MuklaOfficerSuiteDB.rosterSortKey or "rank"
+        if sortKey == "none" then sortKey = nil end
+        sortAscending = MuklaOfficerSuiteDB.rosterSortAscending ~= false
+        rosterPage.sortLoaded = true
+    end
+    MOS.Modules.RosterManagement.RefreshView(rosterRenderer, data, guildName, resetScroll, sortKey, selectedMemberName)
+end
+
+MOS.Modules.GuildStatistics.CreateController({
+    page = statisticsPage,
+    view = statisticsView,
+    getData = GetCurrentGuildData,
+    startScan = function(origin) StartSharedGuildScan(origin) end,
+})
+
+RefreshStatisticsPage = function()
+    MOS.Modules.GuildStatistics.Refresh(statisticsPage.statisticsController)
+end
+
+RefreshRaidPage = function()
+    MOS.Modules.RaidManagement.RefreshPage(raidRenderer)
+end
+
+RefreshRosterPage = MOS.Diagnostics.Wrap("Roster refresh", RefreshRosterPage)
+RefreshStatisticsPage = MOS.Diagnostics.Wrap("Statistics refresh", RefreshStatisticsPage)
+RefreshRaidPage = MOS.Diagnostics.Wrap("Raid refresh", RefreshRaidPage)
+
+local function ShowPage(pageName)
+    currentPage = pageName
+    MOS.ModuleRegistry.Show(pageName)
+    MOS.Modules.Navigation.SetActive(menuButtons, pageName)
+end
+
+MOS.OpenRaidStatistics = function(raidId)
+    ShowPage("raidStatistics")
+    if dashboardPages.raidStatistics.module.SelectRaid then dashboardPages.raidStatistics.module:SelectRaid(raidId) end
+end
+
+RefreshCurrentPageLayout = function()
+    MOS.ModuleRegistry.Resize(currentPage)
+end
+
+MOS.ModuleRegistry.Register("roster", MOS.Modules.RosterManagement.CreateLifecycle(rosterPage, rosterPage.dataController, RefreshRosterPage))
+MOS.ModuleRegistry.Register("statistics", MOS.Modules.GuildStatistics.CreateLifecycle(statisticsPage.statisticsController))
+MOS.ModuleRegistry.Register("raidStatistics", dashboardPages.raidStatistics.module)
+MOS.ModuleRegistry.Register("csr", dashboardPages.csr.module)
+MOS.ModuleRegistry.Register("raid", MOS.Modules.RaidManagement.CreateLifecycle({
+    page = raidPage,
+    isInRaid = IsActiveRaid,
+    getTrackingEnabled = function() return MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused end,
+    getScanReady = function() return MOS.raidScanReady end,
+    isHistoricalLoaded = function() return raidHistoricalLoaded end,
+    isPresentationActive = function()
+        return dashboard:IsVisible() and (MOS.lootMasterMode or not dashboardView.minimized)
+    end,
+    saveRaidRoster = SaveActiveRaidRoster,
+    setLiveTracking = function(value) MOS.raidLiveTracking = value end,
+    setScanReady = function(value) MOS.raidScanReady = value end,
+    refresh = function() RefreshRaidPage() end,
+    onWorldContextChanged = function()
+        local attendance = MOS.Database.GetRaidAttendance()
+        local zone = GetRealZoneText() or ""
+        local inInstance, instanceType = IsInInstance()
+        local inRaidInstance = inInstance and instanceType == "raid"
+        local hasSession = MOS.Services.RaidRes.HasSession(attendance) and MOS.raidSessionDraft
+        if not IsTestRaid() and inRaidInstance and not hasSession then
+            local reminderKey = zone ~= "" and zone or "raid-instance"
+            if MOS.raidStartReminderContext ~= reminderKey and MOS.raidStartReminderShownContext ~= reminderKey and raidPage.ShowRaidStartReminder then
+                MOS.raidStartReminderShownContext = reminderKey
+                raidPage.ShowRaidStartReminder(reminderKey)
+            end
+        else
+            if not inRaidInstance then MOS.raidStartReminderContext = nil; MOS.raidStartReminderShownContext = nil end
+            if raidPage.HideRaidStartReminder then raidPage.HideRaidStartReminder() end
+        end
+        if IsTestRaid() or not hasSession then return end
+        local inRaid = MOS.Services.Raid.IsInRaid()
+        local leftRaidContext = not inRaid or (attendance.raidName and attendance.raidName ~= "" and attendance.raidName ~= zone)
+        if not leftRaidContext then
+            MOS.raidSessionContinuedContext = nil
+            if raidPage.HideSessionTransitionPrompt then raidPage.HideSessionTransitionPrompt() end
+            return
+        end
+        local contextKey = zone .. "|" .. (inRaid and "raid" or "solo")
+        if MOS.raidSessionContinuedContext == contextKey then return end
+        if raidPage.ShowSessionTransitionPrompt then raidPage.ShowSessionTransitionPrompt(contextKey) end
+    end,
+}))
+MOS.ModuleRegistry.Register("about", MOS.Modules.About.Create(aboutPage, VERSION))
+MOS.ModuleRegistry.Register("configuration", MOS.Modules.Settings.CreateLifecycle({
+    viewport = configurationViewport,
+    page = configurationPage,
+    chatLogsCheck = configurationPage.chatLogsCheck,
+    opacityField = configurationPage.raidAccordionControls.opacityField,
+    focusField = configurationPage.raidAccordionControls.focusField,
+    bottomPadding = 960,
+}))
+MOS.ModuleRegistry.Register("performance", performanceModule)
+
+local navigation = MOS.Modules.Navigation.Create({
+    dashboard = dashboard,
+    sidebar = sidebar,
+    toggleButton = sidebarToggleButton,
+    toggleButtonClassicIcon = dashboardView.sidebarToggleClassicIcon,
+    contentPanel = contentPanel,
+    showPage = ShowPage,
+    refreshLayout = function() if RefreshCurrentPageLayout then RefreshCurrentPageLayout() end end,
+})
+menuButtons = navigation.buttons
+ToggleSidebar = function(forceState) navigation.Toggle(forceState) end
+ApplyNavigationLayout = function() navigation.Apply() end
+
+MOS.Modules.RaidManagement.CreateLootMasterController({
+    page = raidPage,
+    dashboard = dashboard,
+    sidebar = sidebar,
+    titleBar = titleBar,
+    closeButton = closeButton,
+    versionText = versionText,
+    statusBar = UIState.statusBar,
+    raidTitle = raidTitle,
+    contentPanel = contentPanel,
+    rosterPage = rosterPage,
+    modeButton = raidModeButton,
+    getSettings = function() return MuklaOfficerSuiteDB end,
+    saveDashboardGeometry = SaveDashboardGeometry,
+    applyNavigationLayout = ApplyNavigationLayout,
+    refresh = function() RefreshRaidPage() end,
+})
+ToggleLootMasterMode = raidPage.lootMasterController.toggle
+ToggleLootMasterMinimize = raidPage.lootMasterController.toggleMinimize
+
+MOS.Core.GuildScanController.Create({
+    isInGuild = IsInGuild,
+    requestRoster = GuildRoster,
+    printMessage = Print,
+    tryComplete = function() return CompletePendingGuildScan and CompletePendingGuildScan() end,
+    onStart = function(scanMode, controller)
+        if scanMode == "raid" then controller.progressLabel = "Scanning raid"
+        elseif scanMode == "reload" then controller.progressLabel = "Preparing roster export"
+        elseif scanMode == "quiet" then controller.progressLabel = "Refreshing guild data"
+        else controller.progressLabel = "Scanning guild data" end
+        if scanMode == "raid" then
+            MOS.UI.ProgressBar.Stop(scanProgress)
+            MOS.Modules.RaidManagement.ShowScanningState(raidPage, raidRows)
+            MOS.UI.ProgressBar.Start(raidScanProgress, controller.progressLabel, controller.startedAt, 7, 94)
+        else
+            MOS.UI.ProgressBar.Stop(raidScanProgress)
+            MOS.UI.ProgressBar.Start(scanProgress, controller.progressLabel, controller.startedAt, 7, 94)
+        end
+        SetStatus(controller.progressLabel)
+    end,
+    onFailure = function()
+        MOS.UI.ProgressBar.Stop(scanProgress)
+        MOS.UI.ProgressBar.Stop(raidScanProgress)
+        SetStatus("Guild roster scan failed", "error")
+        Print("Guild roster could not be loaded after 15 seconds. Please try again.")
+        if HandleGuildScanFailure then HandleGuildScanFailure() end
+    end,
+})
+
+RequestRosterScan = function(scanMode)
+    EnsureDatabase()
+    return MOS.Core.GuildScanController.Request(MOS.guildScanController, scanMode)
+end
+
+StartSharedGuildScan = function(origin)
+    EnsureDatabase()
+    if not MOS.Core.GuildScanController.RequestShared(MOS.guildScanController, origin) then return false end
+    if origin == "statistics" then
+        MOS.Modules.GuildStatistics.BeginScan(statisticsPage.statisticsController)
+    else
+        rosterScanButton:Hide()
+        MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, true)
+        rosterStatusText:SetText("Scanning guild data...")
+    end
+    return true
+end
+
+local function QueueRosterRefresh()
+    MOS.Core.GuildScanController.Queue(MOS.guildScanController)
+end
+
+MOS.Modules.RaidManagement.RegisterResetLootDialog({
+    getAttendance = GetRaidAttendance,
+    clearSelection = function() selectedRaidMemberName = nil end,
+    refresh = RefreshRaidPage,
+    printMessage = Print,
+})
+
+RequestGuildAction = MOS.Modules.RosterManagement.CreateGuildActionHandler({
+    getData = GetCurrentGuildData,
+    getSelectedName = function() return selectedMemberName end,
+    findMember = MOS.Services.Roster.FindMember,
+    findRankName = MOS.Services.Roster.FindRankName,
+    queueRefresh = QueueRosterRefresh,
+    printMessage = Print,
+})
+
+MOS.CompleteRaidSession = function(saveOptions)
+    if type(saveOptions) ~= "table" then
+        local enabled = saveOptions and true or false
+        saveOptions = { saveRaidStatistics = enabled, saveAttendance = enabled, saveCSR = enabled }
+    end
+    if IsTestRaid() then
+        MOS.Services.TestRaid.Stop()
+    else
+        if MOS.Services.Raid.IsInRaid() then SaveActiveRaidRoster() end
+        local attendance = MOS.Database.GetRaidAttendance()
+        if attendance then
+            attendance.lastSavedAt = time(); attendance._sessionDraft = nil
+            MOS.Services.RaidRes.SyncHistory(attendance)
+            if saveOptions.saveRaidStatistics or saveOptions.saveCSR then
+                local entry = MOS.Services.RaidStatistics.BuildEntry(attendance, saveOptions)
+                if entry then MOS.Database.StoreRaidStatistic(entry) end
+            end
+        end
+        -- The durable snapshot/statistics entry is complete. Do not leave the
+        -- same attendance object as the active session or VARIABLES_LOADED will
+        -- restore the raid immediately after the requested reload.
+        MOS.Database.StoreRaidAttendance(nil)
+    end
+    MOS.raidSessionDraft = false; MOS.raidSessionPaused = true; MOS.raidLiveTracking = false
+    MOS.raidScanReady = false; MOS.raidSessionContinuedContext = nil
+    raidHistoricalLoaded = false; selectedRaidMemberName = nil
+    MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD")
+end
+
+MOS.Modules.RaidManagement.AttachActionHandlers({
+    page = raidPage,
+    isTestRaid = IsTestRaid,
+    importData = function(value, srUrl) return MOS.Services.RaidRes.Import(value, GetRaidAttendance(), srUrl) end,
+    getSrUrl = function() return MOS.Services.RaidRes.GetUrl(GetRaidAttendance()) end,
+    getRollForExport = function() return MOS.Services.RaidRes.GetRollForExport(GetRaidAttendance()) end,
+    setSrUrl = function(value) return MOS.Services.RaidRes.SetUrl(GetRaidAttendance(), value) end,
+    shareSrUrl = function(value) return MOS.Services.Raid.SendRaidWarning("Please put your SR: " .. tostring(value or "")) end,
+    shareMissingSrNames = MOS.Services.Raid.SendRaidWarningList,
+    getAttendance = GetRaidAttendance,
+    getRaidHistory = MOS.Database.GetSoftReserveHistory,
+    raidIdExists = MOS.Database.HasSoftReserveSnapshot,
+    deleteRaidSnapshot = MOS.Database.DeleteSoftReserveSnapshot,
+    loadRaidSnapshot = function(snapshotId)
+        local snapshots = MOS.Database.GetSoftReserveHistory()
+        local index
+        for index = 1, table.getn(snapshots) do
+            if snapshots[index].id == snapshotId then
+                local attendance = MOS.Services.RaidRes.RestoreSnapshot(snapshots[index])
+                MOS.Services.RaidRes.Reconcile(attendance, attendance)
+                return attendance
+            end
+        end
+        return nil
+    end,
+    setHistoricalLoaded = function(value) raidHistoricalLoaded = value and true or false end,
+    getRules = function()
+        local rules = MOS.Database.GetLootRules()
+        return IsTestRaid() and MOS.Services.TestRaid.GetLootRules(rules) or rules
+    end,
+    saveRules = function(rules)
+        if IsTestRaid() then MOS.Services.TestRaid.SaveLootRules(rules) else MOS.Database.SaveLootRules(rules) end
+    end,
+    getHighlyContestedItems = function()
+        local items = MOS.Database.GetHighlyContestedItems()
+        return IsTestRaid() and MOS.Services.TestRaid.GetHighlyContestedItems(items) or items
+    end,
+    saveHighlyContestedItems = function(items)
+        if IsTestRaid() then return MOS.Services.TestRaid.SaveHighlyContestedItems(items) end
+        return MOS.Database.SaveHighlyContestedItems(items)
+    end,
+    isInRaid = IsActiveRaid,
+    requestRosterScan = RequestRosterScan,
+    saveRaidRoster = SaveActiveRaidRoster,
+    beginRaidSession = function()
+        MOS.raidSessionPaused = false; MOS.raidSessionDraft = true
+        MOS.raidSessionContinuedContext = nil
+        local attendance = GetRaidAttendance(); if attendance then attendance._sessionDraft = true end
+    end,
+    startNewRaid = function(raidId, raidName)
+        MOS.pendingRaidSessionId = raidId
+        MOS.pendingRaidName = raidName
+        MOS.Database.StoreRaidAttendance(nil)
+        raidHistoricalLoaded = false
+        MOS.raidSessionPaused = false; MOS.raidSessionDraft = true
+    end,
+    saveRaidSession = function(saveOptions) MOS.CompleteRaidSession(saveOptions) end,
+    addRaidToStatistics = function() MOS.CompleteRaidSession(true) end,
+    quitRaidSession = function()
+        local wasTestRaid = IsTestRaid()
+        MOS.Services.TestRaid.Stop()
+        if not wasTestRaid then MOS.Database.StoreRaidAttendance(nil) end
+        MOS.raidSessionPaused = true; MOS.raidSessionDraft = false; MOS.raidLiveTracking = false
+        raidHistoricalLoaded = false; MOS.raidScanReady = false; selectedRaidMemberName = nil
+        MOS.raidSessionContinuedContext = nil
+    end,
+    continueRaidSession = function(contextKey)
+        MOS.raidSessionContinuedContext = contextKey
+        MOS.raidSessionPaused = false
+    end,
+    dismissRaidStartReminder = function(contextKey) MOS.raidStartReminderContext = contextKey end,
+    openRaidManagement = function()
+        if not dashboard:IsVisible() then dashboard:Show() end
+        ShowPage("raid")
+    end,
+    startTestRaid = function() MOS.Services.TestRaid.Start(); MOS.raidLiveTracking = false; selectedRaidMemberName = nil end,
+    refresh = function() RefreshRaidPage() end,
+    printMessage = Print,
+    showPopup = MOS.UI.ShowOpaquePopup,
+    getLiveTracking = function() return MOS.raidLiveTracking end,
+    setLiveTracking = function(value) MOS.raidLiveTracking = value end,
+    setScanReady = function(value) MOS.raidScanReady = value end,
+})
+
+MOS.Modules.RaidManagement.AttachResizeHandler(raidPage, RefreshRaidPage)
+MOS.Modules.RaidManagement.AttachListScroll(raidPage, RefreshRaidPage)
+
+MOS.Modules.RosterManagement.AttachInteractions({
+    page = rosterPage,
+    exportButton = scanSaveButton,
+    searchBox = searchBox,
+    listController = rosterListController,
+    contentPanel = contentPanel,
+    contentShade = contentShade,
+    ensureDatabase = EnsureDatabase,
+    requestScan = RequestRosterScan,
+    clearSelection = function() selectedMemberName = nil end,
+    refresh = RefreshRosterPage,
+})
+
+dashboard:SetScript("OnShow", function() ShowPage(currentPage) end)
+MOS.Modules.Navigation.SetActive(menuButtons, "roster")
 
 local function ToggleDashboard()
     if dashboard:IsVisible() then
         dashboard:Hide()
     else
-        dashboard:Show()
-        RefreshDashboard()
-    end
-end
-
-local minimapButton = CreateFrame("Button", "MuklaOfficerSuiteMinimapButton", Minimap)
-minimapButton:SetWidth(32)
-minimapButton:SetHeight(32)
-minimapButton:SetFrameStrata("MEDIUM")
-minimapButton:SetFrameLevel(8)
-minimapButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-minimapButton:RegisterForDrag("LeftButton")
-
-local minimapIcon = minimapButton:CreateTexture(nil, "BACKGROUND")
-minimapIcon:SetWidth(20)
-minimapIcon:SetHeight(20)
-minimapIcon:SetPoint("CENTER", minimapButton, "CENTER", 0, 0)
-minimapIcon:SetTexture("Interface\\Icons\\INV_Misc_Note_01")
-
-local minimapBorder = minimapButton:CreateTexture(nil, "OVERLAY")
-minimapBorder:SetWidth(52)
-minimapBorder:SetHeight(52)
-minimapBorder:SetPoint("TOPLEFT", minimapButton, "TOPLEFT", 0, 0)
-minimapBorder:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-
-local function PositionMinimapButton()
-    EnsureDatabase()
-    local angle = MuklaOfficerSuiteDB.minimap.angle or 220
-    local radians = math.rad(angle)
-    minimapButton:ClearAllPoints()
-    minimapButton:SetPoint("CENTER", Minimap, "CENTER", 80 * math.cos(radians), 80 * math.sin(radians))
-end
-
-minimapButton:SetScript("OnClick", function()
-    ToggleDashboard()
-end)
-minimapButton:SetScript("OnEnter", function()
-    GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-    GameTooltip:AddLine("Mukla Officer Suite")
-    GameTooltip:AddLine("Click to open the dashboard", 1, 1, 1)
-    GameTooltip:Show()
-end)
-minimapButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
-minimapButton:SetScript("OnDragStart", function() this:SetScript("OnUpdate", function()
-    local x, y = GetCursorPosition()
-    local scale = UIParent:GetEffectiveScale()
-    local mx, my = Minimap:GetCenter()
-    x = x / scale - mx
-    y = y / scale - my
-    MuklaOfficerSuiteDB.minimap.angle = math.deg(math.atan2(y, x))
-    PositionMinimapButton()
-end) end)
-minimapButton:SetScript("OnDragStop", function() this:SetScript("OnUpdate", nil) end)
-
-SLASH_MUKLAOFFICERSUITE1 = "/mos"
-SLASH_MUKLAOFFICERSUITE2 = "/mukla"
-SlashCmdList["MUKLAOFFICERSUITE"] = function(message)
-    local command = string.lower(message or "")
-    command = string.gsub(command, "^%s*(.-)%s*$", "%1")
-    if command == "scan" then
-        if not dashboard:IsVisible() then dashboard:Show() end
-        RefreshDashboard()
-        Print("Click 'Scan' or 'Scan & Reload' on the dashboard.")
-    elseif command == "show" or command == "open" or command == "" then
-        ToggleDashboard()
-    elseif command == "hide" then
-        dashboard:Hide()
-    elseif command == "minimap" then
-        MuklaOfficerSuiteDB.minimap.hidden = not MuklaOfficerSuiteDB.minimap.hidden
-        if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() else minimapButton:Show() end
-    elseif command == "status" then
-        Print("Saved members: " .. CountSavedMembers())
-    else
-        Print("Commands: /mos, /mos status, /mos minimap, /mos hide")
-    end
-end
-
-MOS:RegisterEvent("VARIABLES_LOADED")
-MOS:RegisterEvent("GUILD_ROSTER_UPDATE")
-MOS:SetScript("OnEvent", function()
-    if event == "VARIABLES_LOADED" then
-        EnsureDatabase()
-        PositionMinimapButton()
-        if MuklaOfficerSuiteDB.minimap.hidden then minimapButton:Hide() end
-    elseif event == "GUILD_ROSTER_UPDATE" then
-        local scanMode = MOS.pendingScan
-        if MOS.pendingScan and SaveGuildRoster() then
-            RefreshDashboard()
-            if scanMode == "reload" then
-                Print("Roster scanned. Confirm the reload to save it to disk.")
-                StaticPopup_Show("MUKLA_OFFICER_SUITE_RELOAD")
-            elseif scanMode ~= "quiet" then
-                Print("Roster scanned. Members: " .. CountSavedMembers())
-            end
+        -- Reassert the normal dashboard as one coherent presentation before it
+        -- becomes visible. This also repairs stale frame geometry left by a UI
+        -- reload while Loot Master Mode was active.
+        if not MOS.lootMasterMode and not dashboardView.minimized and raidPage.lootMasterController then
+            raidPage.lootMasterController.resetOnLoad()
+            ApplyNavigationLayout()
         end
+        dashboard:Show()
     end
-end)
+end
 
+MOS.minimapButton = MOS.UI.Dashboard.CreateMinimapButton({
+    ensureDatabase = EnsureDatabase,
+    getAngle = function() return MuklaOfficerSuiteDB.minimap.angle or 220 end,
+    setAngle = function(value) MuklaOfficerSuiteDB.minimap.angle = value end,
+    onClick = ToggleDashboard,
+})
+MOS.PositionMinimapButton = MOS.minimapButton.Position
+
+MOS.Core.Commands.Attach({
+    dashboard = dashboard,
+    minimapButton = MOS.minimapButton,
+    showPage = ShowPage,
+    toggleDashboard = ToggleDashboard,
+    printMessage = Print,
+    countSavedMembers = CountSavedMembers,
+    startLinkedItemRoll = function(itemLink)
+        local window = MOS.Modules.MasterLootWindow
+        if window and window.OpenLinkedItemRoll then window.OpenLinkedItemRoll(itemLink) end
+    end,
+    printLayoutDiagnostics = function()
+        DEFAULT_CHAT_FRAME:AddMessage("MOS layout diagnostics: current=" .. tostring(currentPage) .. " raidVisible=" .. tostring(raidPage:IsVisible()))
+        MOS.Modules.RaidManagement.PrintListLayoutDiagnostics(raidPage, visibleRaidMembers, selectedRaidMemberName)
+        if currentPage == "raid" or raidPage:IsVisible() then return end
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS roster: height=%.1f row=%d capacity=%d shown=%d filtered=%d offset=%d", rosterPage.measuredHeight or 0, rowHeight, rosterPage.measuredCapacity or 0, rosterPage.measuredShown or 0, rosterPage.measuredCount or 0, rosterPage.measuredOffset or 0))
+        local lastRow = rows[rosterPage.measuredShown or 0]
+        if lastRow and lastRow:GetBottom() and rosterLastScan:GetTop() then
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS geometry: viewport=%.1f gap=%.1f", rosterPage.tableViewport:GetHeight(), lastRow:GetBottom() - rosterLastScan:GetTop()))
+        end
+    end,
+})
+
+HandleGuildScanFailure = function()
+    local origin = MOS.Core.GuildScanController.GetOrigin(MOS.guildScanController)
+    if origin == "roster" then
+        MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, false)
+        RefreshRosterPage(false)
+    elseif origin == "statistics" then
+        MOS.Modules.GuildStatistics.HandleScanFailure(statisticsPage.statisticsController)
+    elseif currentPage == "raid" then
+        RefreshRaidPage()
+    end
+    MOS.Core.GuildScanController.ClearOrigin(MOS.guildScanController)
+end
+
+CompletePendingGuildScan = function()
+    if not MOS.Core.GuildScanController.IsPending(MOS.guildScanController) then return false end
+    local scanMode = MOS.Core.GuildScanController.GetMode(MOS.guildScanController)
+    if not SaveGuildRoster() then return false end
+    MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, false)
+
+    RefreshRosterPage(scanMode ~= "quiet")
+    if scanMode == "shared" then
+        MOS.Modules.RosterManagement.SetReady(rosterPage.dataController, true)
+        MOS.Modules.GuildStatistics.SetReady(statisticsPage.statisticsController, true)
+        RefreshRosterPage(true)
+        RefreshStatisticsPage()
+        MOS.Core.GuildScanController.ClearOrigin(MOS.guildScanController)
+        SetStatus("Guild data refreshed", "success")
+        Print("Guild data loaded successfully. Members: " .. CountSavedMembers() .. ".")
+    elseif scanMode == "raid" then
+        MOS.UI.ProgressBar.Complete(raidScanProgress)
+        local raidCount = SaveRaidRoster()
+        local attendance = MOS.Database.GetRaidAttendance()
+        if attendance and MOS.pendingRaidSessionId then
+            attendance.snapshotId = MOS.pendingRaidSessionId
+            attendance.raidName = MOS.pendingRaidName or attendance.raidName
+            attendance.sessionStartedAt = time()
+            attendance.softReserveImport = { id = MOS.pendingRaidSessionId, origin = "mos", importedAt = time(), unmatchedNames = {}, unmatchedReservations = {}, missingNames = {} }
+            attendance._sessionDraft = true
+        end
+        MOS.pendingRaidSessionId = nil
+        MOS.pendingRaidName = nil
+        MOS.raidScanReady = true
+        MOS.raidLiveTracking = currentPage == "raid" and MuklaOfficerSuiteDB.raidLiveTrackingEnabled and true or false
+        RefreshRaidPage()
+        SetStatus("Raid roster updated", "success")
+        Print("Raid scanned. Members: " .. raidCount)
+    elseif scanMode == "reload" then
+        Print("Roster scanned. Confirm the reload to save it to disk.")
+        MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RELOAD")
+        SetStatus("Roster ready to export", "success")
+    elseif scanMode ~= "quiet" then
+        SetStatus("Guild roster updated", "success")
+        Print("Roster scanned. Members: " .. CountSavedMembers())
+    end
+    return true
+end
+
+MOS.Core.EventDispatcher.Attach(MOS, {
+    VARIABLES_LOADED = function()
+        EnsureDatabase()
+        local restoredAttendance = MOS.Database.GetRaidAttendance()
+        local restoredImport = restoredAttendance and restoredAttendance.softReserveImport
+        local restoredRaidId = restoredAttendance and (restoredAttendance.snapshotId or (restoredImport and restoredImport.id))
+        local hasRestorableRaid = restoredRaidId and restoredAttendance.sessionStartedAt and type(restoredAttendance.members) == "table"
+        MOS.raidScanReady = hasRestorableRaid and true or false
+        MOS.raidSessionDraft = hasRestorableRaid and restoredAttendance._sessionDraft and true or false
+        MOS.raidSessionPaused = false
+        raidHistoricalLoaded = false
+        if hasRestorableRaid then MOS.Services.RaidRes.Reconcile(restoredAttendance, restoredAttendance) end
+        MOS.Modules.Settings.SyncSavedControls(configurationPage.chatLogsCheck, configurationPage.raidAccordionControls.opacityField, configurationPage.raidAccordionControls.focusField)
+        local savedWindowWidth = tonumber(MuklaOfficerSuiteDB.windowWidth)
+        local savedWindowHeight = tonumber(MuklaOfficerSuiteDB.windowHeight)
+        local pollutedWindowGeometry = not savedWindowWidth or savedWindowWidth < 760 or not savedWindowHeight or savedWindowHeight < 420
+        if pollutedWindowGeometry then
+            savedWindowWidth = 840; savedWindowHeight = 540
+            MuklaOfficerSuiteDB.windowWidth = savedWindowWidth; MuklaOfficerSuiteDB.windowHeight = savedWindowHeight
+            MuklaOfficerSuiteDB.windowLeft = nil; MuklaOfficerSuiteDB.windowBottom = nil
+        end
+        dashboard:SetScale(1)
+        dashboard:SetMinResize(760, 420); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(math.max(760, math.min(1100, savedWindowWidth)))
+        dashboard:SetHeight(math.max(420, math.min(760, savedWindowHeight)))
+        if tonumber(MuklaOfficerSuiteDB.windowLeft) and tonumber(MuklaOfficerSuiteDB.windowBottom) then
+            dashboard:ClearAllPoints(); dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", MuklaOfficerSuiteDB.windowLeft, MuklaOfficerSuiteDB.windowBottom)
+        end
+        MuklaOfficerSuiteDB.uiScale = nil
+        MOS.PositionMinimapButton()
+        if MuklaOfficerSuiteDB.minimap.hidden then MOS.minimapButton:Hide() end
+        MOS.sidebarCollapsed = MuklaOfficerSuiteDB.sidebarCollapsed and true or false
+        raidPage.lootMasterController.resetOnLoad()
+        ApplyNavigationLayout()
+    end,
+    GUILD_ROSTER_UPDATE = function()
+        local completed = CompletePendingGuildScan()
+        MOS.Modules.RosterManagement.HandleGuildRosterUpdate(rosterPage.dataController, completed, MOS.Core.GuildScanController.IsPending(MOS.guildScanController))
+    end,
+    RAID_ROSTER_UPDATE = function()
+        raidPage.lifecycle:OnWorldContextChanged()
+        if currentPage == "raid" then
+            raidPage.lifecycle:OnRosterUpdate()
+        end
+    end,
+    PLAYER_ENTERING_WORLD = function() raidPage.lifecycle:OnWorldContextChanged() end,
+    ZONE_CHANGED_NEW_AREA = function() raidPage.lifecycle:OnWorldContextChanged() end,
+    CHAT_MSG_LOOT = function(message)
+        local attendance = MOS.Database.GetRaidAttendance()
+        local trackingLoot = MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused
+            and not IsTestRaid() and MOS.Services.Raid.IsInRaid() and MOS.Services.RaidRes.HasSession(attendance)
+        if trackingLoot and RecordRaidLoot(message) and currentPage == "raid" and raidPage:IsVisible() then RefreshRaidPage() end
+    end,
+})
+
+if type(gcinfo) == "function" and MOS.Diagnostics.memoryBeforeLoad then
+    MOS.Diagnostics.totalMemoryAfterLoad = gcinfo()
+    MOS.Diagnostics.initialMemoryEstimate = math.max(0, MOS.Diagnostics.totalMemoryAfterLoad - MOS.Diagnostics.memoryBeforeLoad)
+end
 Print("v" .. VERSION .. " loaded. Type /mos")
