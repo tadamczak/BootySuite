@@ -7,6 +7,7 @@
 - Added the production quality gate and refreshed the user-facing README.
 - Fixed distorted proportions in the README visual header.
 - Expanded the README with module usage and a complete raid-session guide.
+- Added linked README navigation and mandatory README review for future changes.
 
 ## 0.20.0
 

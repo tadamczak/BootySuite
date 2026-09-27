@@ -6,6 +6,29 @@
 
 Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and raid leaders. It combines guild management, raid sessions, loot distribution, Soft Reserve, Raycoin, attendance, raid statistics, and CSR in one interface.
 
+## Table of contents
+
+- [Installation](#installation)
+- [Basic Usage](#basic-usage)
+- [Commands](#commands)
+- [Roster Management](#roster-management)
+- [Guild Statistics](#guild-statistics)
+- [Raid Management](#raid-management)
+- [Loot Master Mode](#loot-master-mode)
+- [Raid Statistics](#raid-statistics)
+- [CSR](#csr)
+- [Performance](#performance)
+- [Settings](#settings)
+- [About](#about)
+- [How to record raid session](#how-to-record-raid-session)
+- [Start or resume the session](#1-start-or-resume-the-session)
+- [Import and validate Soft Reserves](#2-import-and-validate-soft-reserves)
+- [Configure and announce loot rules](#3-configure-and-announce-loot-rules)
+- [Run loot distribution](#4-run-loot-distribution)
+- [Monitor the session](#5-monitor-the-session)
+- [Save the raid](#6-save-the-raid)
+- [Load or review a saved raid](#7-load-or-review-a-saved-raid)
+
 ## Installation
 
 1. Copy the `MuklaOfficerSuite` directory into `World of Warcraft/Interface/AddOns/`.
