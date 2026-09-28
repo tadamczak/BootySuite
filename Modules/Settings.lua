@@ -31,20 +31,17 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         scrollBar:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -8, 24)
     end
     viewport:Hide()
-    local title = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10)
-    title:SetText("Settings")
-    MOS.UI.Settings.CreateSection(page, "UI", -48)
+    MOS.UI.Settings.CreateSection(page, "UI", -10)
     local generalHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    generalHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -68)
+    generalHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -38)
     generalHeading:SetText("General")
-    local skinControl = Settings.CreateSkinControl(page, 40, -90)
-    local loginMessageCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteDisableLoginMessage", 240, -90, "Turn off addon login message", "suppressLoginMessage")
-    local minimapCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteHideMinimapIcon", 500, -90, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
+    local skinControl = Settings.CreateSkinControl(page, 40, -66)
+    local loginMessageCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteDisableLoginMessage", 240, -66, "Turn off addon login message", "suppressLoginMessage")
+    local minimapCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteHideMinimapIcon", 500, -66, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
     local layoutHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    layoutHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -112)
+    layoutHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -94)
     layoutHeading:SetText("Layout")
-    local menuStyleControl = Settings.CreateMenuStyleControl(page, 40, -134, onNavigationLayout)
+    local menuStyleControl = Settings.CreateMenuStyleControl(page, 40, -122, onNavigationLayout)
     page.RefreshGeneralSettings = function()
         MOS.Database.Ensure()
         skinControl:SetText(MOS.UI.IsClassicSkin() and "Classic" or "Default")
@@ -77,12 +74,12 @@ end
 
 function Settings.CreatePrimarySections(page)
     local rosterHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -144)
+    rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -150)
     rosterHeading:SetText("Roster management")
-    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 10, -168, "Use class colors", "rosterClassColors")
-    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 190, -168, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
+    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 40, -178, "Use class colors", "rosterClassColors")
+    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 220, -178, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
     local raidHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -204)
+    raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -206)
     raidHeading:SetText("Raid management")
     local debugHeading = MOS.UI.Settings.CreateSection(page, "Debug", -645)
     return { rosterHeading = rosterHeading, raidHeading = raidHeading, debugHeading = debugHeading }
@@ -417,6 +414,7 @@ function Settings.UpdateScroll(viewport, page, pageHeight)
         scrollBar:SetValue(math.max(0, math.min(maximum, viewport:GetVerticalScroll())))
         if maximum > 0 then scrollBar:Show() else scrollBar:Hide() end
     end
+    if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
 end
 
 function Settings.RefreshRaidViewControls(controls)
@@ -594,6 +592,8 @@ function Settings.AttachShell(view, parent, anchor, detached)
         view.scrollBar:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -8, 24)
     end
     view.viewport.settingsDetached = detached and true or false
+    view.viewport:SetScrollChild(view.page)
+    if view.viewport.SetClipsChildren then view.viewport:SetClipsChildren(true) end
     Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)
 end
 
@@ -630,12 +630,7 @@ function Settings.CreateDetachedWindow(view, embeddedParent, embeddedAnchor)
     resize:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
     resize:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end)
 
-    local function CloseWindow()
-        local restoreVisible = window.restoreEmbeddedVisibility
-        Settings.AttachShell(view, embeddedParent, embeddedAnchor, false)
-        window:Hide()
-        if restoreVisible then view.viewport:Show() else view.viewport:Hide() end
-    end
+    local function CloseWindow() window:Hide() end
     close:SetScript("OnClick", CloseWindow)
     minimize:SetScript("OnClick", function()
         if window.minimized then
@@ -646,14 +641,15 @@ function Settings.CreateDetachedWindow(view, embeddedParent, embeddedAnchor)
     end)
     window.Open = function()
         if window:IsVisible() then return end
-        window.restoreEmbeddedVisibility = view.viewport:IsVisible()
         window.minimized = false; content:Show(); resize:Show(); minimize:SetText("_")
-        Settings.AttachShell(view, content, content, true)
+        window:Show(); view.viewport:Show()
         view.viewport:SetFrameLevel(window:GetFrameLevel() + 2)
         if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end
-        view.viewport:Show(); window:Show()
+        Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)
     end
     window.Toggle = function() if window:IsVisible() then CloseWindow() else window.Open() end end
+    Settings.AttachShell(view, content, content, true)
+    view.viewport:Hide()
     window:Hide()
     return window
 end
