@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.1-dev.2"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.1-dev.3"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -63,6 +63,7 @@ MOS.Database.Ensure()
 MOS.UI.Components.SetSkinPersistence(function(value) MOS.Database.SetSetting("uiSkin", value) end)
 MOS.UI.Components.SetSkin(MOS.Database.GetSetting("uiSkin"), false)
 local dashboardView = MOS.UI.Components.Dashboard.CreateWindow(VERSION)
+MOS.UI.Components.KeepTooltipAboveWindows(ItemRefTooltip)
 local dashboard = dashboardView.frame
 local titleBar, closeButton, sidebarToggleButton = dashboardView.titleBar, dashboardView.closeButton, dashboardView.sidebarToggle
 local versionText, sidebar, contentPanel = dashboardView.versionText, dashboardView.sidebar, dashboardView.contentPanel

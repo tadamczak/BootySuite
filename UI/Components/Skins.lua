@@ -181,6 +181,12 @@ local function ApplyControl(entry)
         if button.mosHighlight then button.mosHighlight:Show(); button.mosHighlight:SetAlpha(1); button.mosHighlight:SetTexture(unpack(entry.highlight)); button.mosHighlight:SetVertexColor(1, 1, 1, 1) end
     end
     if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosTextColor)) end
+    if button.label and button.mosLabelInsets then
+        button.label:ClearAllPoints()
+        button.label:SetPoint("LEFT", button, "LEFT", button.mosLabelInsets[1], 0)
+        button.label:SetPoint("RIGHT", button, "RIGHT", -button.mosLabelInsets[2], 0)
+        button.label:SetJustifyH("LEFT")
+    end
     if button.label and button.mosClassicCompactControl and button.mosClassicLabelYOffset then
         button.label:ClearAllPoints()
         button.label:SetPoint("TOPLEFT", button, "TOPLEFT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)

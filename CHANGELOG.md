@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1-dev.3 - 2026-09-29
+
+- Halved saved raid row width, preserved text padding and restored Load hover feedback.
+- Kept chat item tooltips above the dashboard and restored all controls when exiting minimized LM Mode.
+
 ## 0.4.1-dev.2 - 2026-09-29
 
 - Centralized UI construction in isolated component factories with explicit dependencies, preserving existing workflows and appearance.

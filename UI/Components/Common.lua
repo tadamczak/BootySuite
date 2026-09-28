@@ -276,15 +276,27 @@ function UI.CreateIconButton(parent, name, texturePath, size, iconInset)
     return button
 end
 
-function UI.AttachTooltip(frame, title, description)
+function UI.AttachTooltip(frame, title, description, highlight)
     frame:SetScript("OnEnter", function()
+        if highlight then this:LockHighlight() end
         UI.AnchorTooltipRightOfCursor(this)
         GameTooltip:AddLine(type(title) == "function" and title() or title, 1, 0.82, 0)
         GameTooltip:AddLine(type(description) == "function" and description() or description, 1, 1, 1, 1)
         GameTooltip:Show()
     end)
-    frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    frame:SetScript("OnLeave", function() if highlight then this:UnlockHighlight() end; GameTooltip:Hide() end)
     return frame
+end
+
+function UI.KeepTooltipAboveWindows(tooltip)
+    if not tooltip or tooltip.mosLayerHook then return end
+    tooltip.mosLayerHook = true
+    local previous = tooltip:GetScript("OnShow")
+    tooltip:SetScript("OnShow", function()
+        if previous then previous() end
+        tooltip:SetFrameStrata("TOOLTIP")
+    end)
+    tooltip:SetFrameStrata("TOOLTIP")
 end
 
 function UI.CreateItemListDialog(name)
