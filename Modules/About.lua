@@ -10,12 +10,17 @@ function About.Create(page, version, options)
     title:SetText("About")
     title:Hide()
     local artwork = page:CreateTexture(nil, "ARTWORK")
-    artwork:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -4)
-    artwork:SetWidth(382)
-    artwork:SetHeight(382)
+    artwork:SetPoint("RIGHT", page, "RIGHT", -4, 0)
     artwork:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\AboutArtwork")
     artwork:SetTexCoord(0.066, 0.934, 0, 1)
     artwork:SetAlpha(0.88)
+    local function ResizeArtwork()
+        local pageWidth, pageHeight = page:GetWidth() or 840, page:GetHeight() or 400
+        local height = math.max(1, math.min(382, pageHeight - 12, pageWidth * 0.46))
+        artwork:SetHeight(height); artwork:SetWidth(height * 0.868)
+    end
+    page:SetScript("OnSizeChanged", ResizeArtwork)
+    ResizeArtwork()
     local name = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     name:SetPoint("CENTER", page, "LEFT", 105, 34)
     name:SetText("Mukla Officer Suite")
@@ -49,6 +54,7 @@ function About.Create(page, version, options)
         Hide = function(self) page:Hide() end,
         Show = function(self)
             if options and options.getVersionStatus then self:SetUpdateStatus(options.getVersionStatus(), options.getLastSuccessfulCheck and options.getLastSuccessfulCheck()) end
+            ResizeArtwork()
             page:Show()
         end,
         SetUpdateStatus = function(self, value, timestamp)

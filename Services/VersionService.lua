@@ -6,8 +6,11 @@ local Version = MOS.Services.Version
 function Version.Parse(value)
     if type(value) ~= "string" then return nil end
     local major, minor, patch = string.match(value, "^(%d+)%.(%d+)%.(%d+)$")
+    if major then return { tonumber(major), tonumber(minor), tonumber(patch), nil } end
+    local dev
+    major, minor, patch, dev = string.match(value, "^(%d+)%.(%d+)%.(%d+)%-dev%.(%d+)$")
     if not major then return nil end
-    return { tonumber(major), tonumber(minor), tonumber(patch) }
+    return { tonumber(major), tonumber(minor), tonumber(patch), tonumber(dev) }
 end
 
 function Version.Compare(left, right)
@@ -17,6 +20,13 @@ function Version.Compare(left, right)
     for index = 1, 3 do
         if leftParts[index] < rightParts[index] then return -1 end
         if leftParts[index] > rightParts[index] then return 1 end
+    end
+    local leftDev, rightDev = leftParts[4], rightParts[4]
+    if leftDev == nil and rightDev ~= nil then return 1 end
+    if leftDev ~= nil and rightDev == nil then return -1 end
+    if leftDev and rightDev then
+        if leftDev < rightDev then return -1 end
+        if leftDev > rightDev then return 1 end
     end
     return 0
 end
