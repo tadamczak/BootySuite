@@ -1334,6 +1334,22 @@ function RaidManagement.CalculateGroupGeometry(width, height, columns, preferred
     }
 end
 
+function RaidManagement.CalculateGroupSlotColumns(slotWidth, reserveRoleIcon, reserveLootIcon, showLevel, showClass, offline)
+    local width = math.max(80, tonumber(slotWidth) or 80)
+    local nameInset = 6 + (reserveRoleIcon and 15 or 0) + (reserveLootIcon and 14 or 0)
+    local offlineWidth = offline and 42 or 0
+    local classWidth = showClass and math.max(36, math.min(64, math.floor(width * 0.25))) or 0
+    local levelWidth = showLevel and 24 or 0
+    local rightSpace = 6 + offlineWidth + (offlineWidth > 0 and 4 or 0) + classWidth + (showClass and 5 or 0) + levelWidth + (showLevel and 5 or 0)
+    return {
+        nameInset = nameInset,
+        nameWidth = math.max(16, width - nameInset - rightSpace),
+        levelWidth = levelWidth,
+        classWidth = classWidth,
+        offlineWidth = offlineWidth,
+    }
+end
+
 function RaidManagement.FilterMembers(target, members, query, selectedClasses, selectedRanks)
     local targetIndex
     for targetIndex = table.getn(target), 1, -1 do target[targetIndex] = nil end
@@ -1870,13 +1886,9 @@ function RaidManagement.RefreshGroupView(page)
             local showLevel = online and MuklaOfficerSuiteDB.raidGroupShowLevel
             local showClass = MuklaOfficerSuiteDB.raidGroupShowClass
             local slotWidth = columnWidth - 8
-            local nameInset = 6 + (showRoleIcon and 15 or 0) + (showLootMasterIcon and 14 or 0)
-            local nameWidth = math.max(24, math.ceil(slot.name:GetStringWidth() or 0) + 2)
-            local classWidth = showClass and math.min(math.ceil(slot.class:GetStringWidth() or 0) + 2, math.max(20, math.floor(slotWidth * 0.26))) or 0
-            local levelWidth = showLevel and 18 or 0
-            local offlineWidth = online and 0 or 42
-            local rightSpace = 6 + offlineWidth + (offlineWidth > 0 and 4 or 0) + classWidth + (showClass and 5 or 0) + levelWidth + (showLevel and 5 or 0)
-            nameWidth = math.min(nameWidth, math.max(16, slotWidth - nameInset - rightSpace))
+            local columns = RaidManagement.CalculateGroupSlotColumns(slotWidth, MuklaOfficerSuiteDB.raidGroupShowRoleIcon, MuklaOfficerSuiteDB.raidGroupShowLootMaster, showLevel, showClass, not online)
+            local nameInset, nameWidth = columns.nameInset, columns.nameWidth
+            local classWidth, levelWidth, offlineWidth = columns.classWidth, columns.levelWidth, columns.offlineWidth
             slot.name:ClearAllPoints(); slot.name:SetPoint("LEFT", slot, "LEFT", nameInset, 0); slot.name:SetWidth(nameWidth); slot.name:Show(); slot.empty:Hide()
             slot.offline:ClearAllPoints(); slot.offline:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.offline:SetWidth(offlineWidth); slot.offline:SetJustifyH("RIGHT")
             slot.class:ClearAllPoints(); slot.class:SetWidth(classWidth); slot.class:SetJustifyH("RIGHT")
@@ -2421,11 +2433,17 @@ function RaidManagement.CreateLootMasterController(options)
     alphaWatcher:SetScript("OnUpdate", OnLootMasterAlphaUpdate); alphaWatcher:Hide()
     controller.alphaWatcher = alphaWatcher
 
+    controller.closePanels = function()
+        options.page.lmConfigOpen = false
+        options.page.lmConfigPanel:Hide(); options.page.reyCoinPanel:Hide()
+        options.page.lmConfigToggle:Hide(); options.page.reyCoinToggle:Hide()
+    end
+
     controller.resetOnLoad = function()
         local settings = options.getSettings()
         MOS.lootMasterMode = false; MOS.lootMasterMinimized = false
         MOS.lootMasterWidthBeforeMinimize = nil; MOS.lootMasterHeightBeforeMinimize = nil
-        alphaWatcher:Hide(); options.dashboard:SetAlpha(1)
+        alphaWatcher:Hide(); options.dashboard:SetAlpha(1); controller.closePanels()
         options.dashboard:SetMinResize(760, 420); options.dashboard:SetMaxResize(1100, 760)
         options.dashboard:SetWidth(math.max(760, math.min(1100, tonumber(settings.windowWidth) or 840)))
         options.dashboard:SetHeight(math.max(420, math.min(760, tonumber(settings.windowHeight) or 540)))
@@ -2449,7 +2467,7 @@ function RaidManagement.CreateLootMasterController(options)
         MOS.lootMasterMode = enableLootMasterMode
         MOS.raidHeightBeforeExpansion = nil
         if MOS.lootMasterMode then
-            MOS.lootMasterMinimized = false
+            MOS.lootMasterMinimized = false; controller.closePanels()
             options.dashboard:SetMinResize(380, 170); options.dashboard:SetMaxResize(900, 760)
             options.dashboard:SetWidth(math.max(380, math.min(900, tonumber(settings.lootMasterWidth) or 400)))
             options.dashboard:SetHeight(math.max(170, math.min(240, tonumber(settings.lootMasterHeight) or 210)))

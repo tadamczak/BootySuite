@@ -208,6 +208,10 @@ local function UpdateClassColors()
         end
     end
 end
+
+function MasterLootWindow.NeedsLootSlotRebind(roll, source, currentLink)
+    return roll and roll.source == source and (not roll.slot or currentLink ~= roll.link)
+end
 local function ColoredName(name)
     local code = playerColorCodes[name]
     return code and (code .. name .. "|r") or name
@@ -1721,7 +1725,8 @@ function MasterLootWindow.Open()
     if activeRoll and activeRoll.source == currentLootSession then
         status:SetText("Rolling for " .. activeRoll.link .. " - " .. (activeRoll.lastRemaining or DEFAULT_ROLL_SECONDS) .. "s")
     else status:SetText("") end
-    if activeRoll and activeRoll.source == currentLootSession and GetLootSlotLink(activeRoll.slot) ~= activeRoll.link then
+    local activeSlotLink = activeRoll and activeRoll.slot and GetLootSlotLink(activeRoll.slot) or nil
+    if MasterLootWindow.NeedsLootSlotRebind(activeRoll, currentLootSession, activeSlotLink) then
         local slot
         for slot = 1, lootCount do
             if LootSlotIsItem(slot) and GetLootSlotLink(slot) == activeRoll.link then
