@@ -106,7 +106,10 @@ function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     local panel = CreateFrame("Frame", nil, parent)
     panel:SetPoint("TOPLEFT", toggle, "BOTTOMLEFT", 0, -2)
     panel:SetWidth(width or 130); panel:SetHeight(height or 230)
-    panel:SetFrameLevel(parent:GetFrameLevel() + (levelOffset or 20))
+    if panel.SetFrameStrata and toggle.GetFrameStrata then panel:SetFrameStrata(toggle:GetFrameStrata()) end
+    panel:SetFrameLevel(math.max(parent:GetFrameLevel(), toggle:GetFrameLevel()) + (levelOffset or 50))
+    if panel.SetToplevel then panel:SetToplevel(true) end
+    panel:EnableMouse(true)
     panel:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 5, right = 5, top = 5, bottom = 5 } })
     panel:SetBackdropColor(0.04, 0.03, 0.02, 0.98)
     UI.RegisterDialogSurface(panel, "panel", { 0.04, 0.03, 0.02, 0.98 })
