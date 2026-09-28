@@ -15,7 +15,6 @@ function VersionCheck.Create(options)
     local frame = CreateFrame("Frame", nil, UIParent)
     local channels = {}
     local lastQueryAt = -QUERY_COOLDOWN
-    local responseTimes = {}
     local shownVersions = {}
     local welcomeShown = false
     local checkDeadline = nil
@@ -88,12 +87,7 @@ function VersionCheck.Create(options)
         local topic, action, remoteVersion = MOS.Services.AddonMessage.Decode(prefix, message)
         if topic ~= TOPIC or not MOS.Services.Version.Parse(remoteVersion) then return end
         if action == QUERY and MOS.Services.Version.IsNewer(peerVersion, remoteVersion) then
-            local responseKey = tostring(channel) .. ":" .. remoteVersion
-            local now = GetTime()
-            if not responseTimes[responseKey] or now - responseTimes[responseKey] >= QUERY_COOLDOWN then
-                responseTimes[responseKey] = now
-                MOS.Services.AddonMessage.Send(TOPIC, RESPONSE, peerVersion, channel)
-            end
+            MOS.Services.AddonMessage.Send(TOPIC, RESPONSE, peerVersion, channel)
         elseif action == RESPONSE and MOS.Services.Version.IsNewer(remoteVersion, peerVersion) then
             Notify(remoteVersion)
         end

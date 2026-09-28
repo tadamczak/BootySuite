@@ -42,6 +42,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     layoutHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -94)
     layoutHeading:SetText("Layout")
     local menuStyleControl = Settings.CreateMenuStyleControl(page, 40, -122, onNavigationLayout)
+    page.skinControl = skinControl
+    page.menuStyleControl = menuStyleControl
     page.RefreshGeneralSettings = function()
         MOS.Database.Ensure()
         skinControl:SetText(MOS.UI.IsClassicSkin() and "Classic" or "Default")
@@ -58,6 +60,7 @@ function Settings.CreateSkinControl(parent, x, y)
     local dropdown = MOS.UI.CreateDropdownButton(parent, nil, "Default", 126)
     dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
     local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 44, 20)
+    dropdown.panel = panel
     panel:SetFrameLevel(parent:GetFrameLevel() + 20)
     local function AddChoice(text, value, offsetY)
         local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
@@ -317,6 +320,7 @@ function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
     local dropdown = MOS.UI.CreateDropdownButton(parent, nil, "Button view", 126)
     dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
     local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 44, 20)
+    dropdown.panel = panel
     panel:SetFrameLevel(parent:GetFrameLevel() + 20)
 
     local function AddChoice(text, value, offsetY)
@@ -652,7 +656,8 @@ function Settings.AttachShell(view, parent, anchor, detached)
     Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)
 end
 
-function Settings.CreateDetachedWindow(view, embeddedParent, embeddedAnchor)
+function Settings.CreateDetachedWindow()
+    local view
     local window = CreateFrame("Frame", "MuklaOfficerSuiteSettingsWindow", UIParent)
     window:SetWidth(780); window:SetHeight(620)
     window:SetPoint("CENTER", UIParent, "CENTER", 40, 10)
@@ -688,6 +693,7 @@ function Settings.CreateDetachedWindow(view, embeddedParent, embeddedAnchor)
     local function CloseWindow() window:Hide() end
     close:SetScript("OnClick", CloseWindow)
     minimize:SetScript("OnClick", function()
+        if not view then return end
         if window.minimized then
             window.minimized = false; window:SetHeight(window.expandedHeight or 620); content:Show(); resize:Show(); view.viewport:Show(); minimize:SetText("_")
         else
@@ -695,16 +701,20 @@ function Settings.CreateDetachedWindow(view, embeddedParent, embeddedAnchor)
         end
     end)
     window.Open = function()
-        if window:IsVisible() then return end
+        if window:IsVisible() or not view then return end
         window.minimized = false; content:Show(); resize:Show(); minimize:SetText("_")
-        window:Show(); view.viewport:Show()
-        view.viewport:SetFrameLevel(window:GetFrameLevel() + 2)
+        window:Show(); view.viewport:SetVerticalScroll(0); view.viewport:Show()
+        if view.scrollBar then view.scrollBar:SetValue(0) end
         if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end
         Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)
     end
     window.Toggle = function() if window:IsVisible() then CloseWindow() else window.Open() end end
-    Settings.AttachShell(view, content, content, true)
-    view.viewport:Hide()
+    window.AttachView = function(settingsView)
+        view = settingsView
+        Settings.AttachShell(view, content, content, true)
+        view.viewport:Hide()
+    end
+    window.content = content
     window:Hide()
     return window
 end

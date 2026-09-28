@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.9"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.10"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.3.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -106,7 +106,8 @@ local dashboardPages = MOS.UI.Dashboard.CreatePages(contentPanel)
 local rosterPage, statisticsPage, raidPage = dashboardPages.roster, dashboardPages.statistics, dashboardPages.raid
 local aboutPage = dashboardPages.about
 
-local settingsView = MOS.Modules.Settings.CreateShell(contentPanel, rosterPage, function()
+local detachedSettingsWindow = MOS.Modules.Settings.CreateDetachedWindow()
+local settingsView = MOS.Modules.Settings.CreateShell(detachedSettingsWindow.content, detachedSettingsWindow.content, function()
     if ApplyNavigationLayout then ApplyNavigationLayout() end
 end, {
     minimapVisibilityChanged = function()
@@ -124,7 +125,7 @@ MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
         if raidPage.lifecycle and raidPage.lifecycle.SyncTrackingSetting then raidPage.lifecycle:SyncTrackingSetting() end
     end,
 })
-local detachedSettingsWindow = MOS.Modules.Settings.CreateDetachedWindow(settingsView)
+detachedSettingsWindow.AttachView(settingsView)
 dashboardView.settingsButton:SetScript("OnClick", function() detachedSettingsWindow.Toggle() end)
 
 local performanceModule = MOS.Modules.Performance.Create(contentPanel)
