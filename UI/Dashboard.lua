@@ -140,7 +140,7 @@ function Dashboard.CreateWindow(version)
         if frame.mosStatusBar then
             frame.mosStatusBar:ClearAllPoints()
             frame.mosStatusBar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", margin, footerBottom)
-            frame.mosStatusBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -82, footerBottom)
+            frame.mosStatusBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -126, footerBottom)
         end
         background:SetAlpha(classic and 0 or 0.72); backgroundShade:SetAlpha(classic and 0 or 1); view.contentShade:SetAlpha(classic and 0 or 1)
         if classic then
@@ -163,7 +163,7 @@ function Dashboard.CreateStatusBar(parent)
     parent.mosStatusBar = bar
     local margin = MOS.UI.IsClassicSkin() and 8 or 18
     bar:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", margin, margin)
-    bar:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -82, margin)
+    bar:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -126, margin)
     bar:SetHeight(22)
     bar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     bar:SetBackdropColor(0.025, 0.022, 0.018, 0.94)

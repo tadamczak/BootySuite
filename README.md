@@ -68,7 +68,7 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - **Raid sessions -** Start a new raid, continue an active session, save it, or load a saved session.
 - **Raid type -** Assign Blackwing Lair, Molten Core, Onyxia's Lair, Karazhan10, Zul'Gurub, or Other.
 - **Attendance -** Track the raid roster and optionally include attendance when saving statistics.
-- **Raid views -** Switch between the member list and draggable group layout.
+- **Raid views -** Switch between the member list and a centered, configurable group layout with adjustable sizing, spacing, and typography.
 - **Player actions -** Manage raid leader, assistants, removal, reporting, and ignore state.
 - **Soft Reserve warnings -** Review missing SR, imported SR outside the raid, and SR without loot rights.
 - **Loot rules -** Configure SR, Highly Contested Items, Raycoin, and CSR rights by guild rank.

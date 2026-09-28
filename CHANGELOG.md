@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed Raid Management settings spacing and added Group View font-size controls.
 - Added peer-to-peer production version checks and `/mos version` update discovery.
 - Added configurable centered Group View sizing, header height, spacing, and organized Raid Management settings.
 - Fixed Loot Master cleanup, restored corpse rolls, and aligned Raid Management group columns.
