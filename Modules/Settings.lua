@@ -38,17 +38,17 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     viewport:Hide()
     page.uiHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "UI", -10)
     local uiContent = MOS.UI.Components.CreateContainer(nil, page)
-    uiContent:SetHeight(140); page.uiContent = uiContent
+    uiContent:SetHeight(168); page.uiContent = uiContent
     local generalHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
     generalHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -38)
     generalHeading:SetText("General")
     local skinControl = Settings.CreateSkinControl(uiContent, 40, -66)
-    local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 240, -66, "Turn off addon login message", "suppressLoginMessage")
-    local minimapCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideMinimapIcon", 500, -66, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
+    local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 240, -94, "Turn off addon login message", "suppressLoginMessage")
+    local minimapCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideMinimapIcon", 40, -94, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
     local layoutHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
-    layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -94)
+    layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -122)
     layoutHeading:SetText("Layout")
-    local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 40, -122, onNavigationLayout)
+    local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 40, -150, onNavigationLayout)
     page.skinControl = skinControl
     page.menuStyleControl = menuStyleControl
     page.RefreshGeneralSettings = function()
