@@ -71,3 +71,73 @@ function UI.SetButtonLabelInsets(button, left, right)
     button.label:SetPoint("RIGHT", button, "RIGHT", -right, 0)
     button.label:SetJustifyH("LEFT")
 end
+
+UI.TextColors = {
+    white = { 1, 1, 1 }, gold = UI.Theme.colors.goldText,
+    orange = { 1, 0.82, 0 }, gray = { 0.48, 0.48, 0.46 },
+}
+UI.HeadingSizes = { 18, 16, 14 }
+
+local function CreateTextPreset(parent, text, template, color, size)
+    local label = UI.CreateLabel(parent, nil, "OVERLAY", template)
+    if size then
+        local font, _, flags = label:GetFont()
+        label:SetFont(font, size, flags)
+    end
+    label:SetTextColor(unpack(UI.TextColors[color or "white"] or UI.TextColors.white))
+    label:SetText(text or "")
+    return label
+end
+
+function UI.CreateHeading(parent, text, level, color)
+    return CreateTextPreset(parent, text, "GameFontNormalLarge", color or "orange", UI.HeadingSizes[level or 1] or UI.HeadingSizes[1])
+end
+
+function UI.CreateComponentLabel(parent, text, color)
+    return CreateTextPreset(parent, text, "GameFontHighlight", color)
+end
+
+function UI.CreateColumnLabel(parent, text, color)
+    return CreateTextPreset(parent, text, "GameFontNormalSmall", color or "orange")
+end
+
+function UI.SetWindowButtonAction(button, action)
+    if button.mosWindowAction == action then return end
+    button.mosWindowAction = action
+    button:SetText(action == "close" and "X" or action == "minimize" and "_" or "[]")
+    UI.SetClassicButtonCompact(button, true)
+    if button.mosClassicIconKey then UI.SetClassicButtonIcon(button, nil) end
+    UI.SetButtonTextColor(button, UI.TextColors.gold)
+    UI.SetClassicButtonLabelOffset(button, action == "minimize" and 2 or 0)
+    if action == "maximize" and not button.mosSquare then
+        button.mosSquare = {}
+        local index
+        for index = 1, 4 do
+            local edge = UI.CreateTexture(button, nil, "OVERLAY")
+            edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+            edge:SetVertexColor(unpack(UI.TextColors.gold))
+            edge:SetWidth(index <= 2 and 8 or 1); edge:SetHeight(index <= 2 and 1 or 8)
+            edge:SetPoint("CENTER", button, "CENTER", index == 3 and -4 or index == 4 and 4 or 0, index == 1 and 4 or index == 2 and -4 or 0)
+            button.mosSquare[index] = edge
+        end
+    end
+    if button.mosSquare then
+        local index
+        for index = 1, 4 do
+            if action == "maximize" then button.mosSquare[index]:Show() else button.mosSquare[index]:Hide() end
+        end
+    end
+    if action == "maximize" then button.label:Hide() else button.label:Show() end
+end
+
+function UI.CreateWindowButton(parent, name, action)
+    local button = UI.CreateButton(parent, name, "", 18, 18)
+    UI.SetWindowButtonAction(button, action or "close")
+    UI.AttachGoldHoverBorder(button, 0.35, 0.35, 0.35, 1)
+    return button
+end
+
+function UI.SetButtonEnabled(button, enabled)
+    if enabled then button:Enable() else button:Disable() end
+    UI.SetButtonTextColor(button, enabled and UI.TextColors.white or UI.TextColors.gray)
+end

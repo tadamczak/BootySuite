@@ -26,7 +26,7 @@ end
 function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
     local controller = { page = page, getEntries = getEntries, deleteEntry = deleteEntry, updateEntry = updateEntry, selectedId = nil, raidButtons = {}, rows = {}, filteredEntries = {}, selectedRaids = {} }
     controller.itemDialog = MOS.UI.Components.CreateItemListDialog("MuklaOfficerSuiteRaidStatisticsItems")
-    controller.title = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); controller.title:SetText("Raid Statistics")
+    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "orange"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); controller.title:SetText("Raid Statistics")
     local raidNames = MOS.Services.RaidStatistics.GetRaidNames(); local raidNameIndex
     for raidNameIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[raidNameIndex]] = true end
     controller.filterPanel = MOS.UI.Components.CreateContainer(nil, page); controller.filterPanel:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -40); controller.filterPanel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -40); controller.filterPanel:SetHeight(66)
@@ -71,7 +71,7 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
     controller.fromDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.fromDate) end); controller.toDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.toDate) end)
     MOS.UI.Components.AttachTooltip(controller.fromDate, "From date", "Optional date in YYYY-MM-DD format."); MOS.UI.Components.AttachTooltip(controller.toDate, "To date", "Optional date in YYYY-MM-DD format.")
     MOS.UI.Components.AttachTooltip(controller.fromPicker, "Choose From date", "Open the calendar."); MOS.UI.Components.AttachTooltip(controller.toPicker, "Choose To date", "Open the calendar.")
-    controller.filterStatus = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge"); controller.filterStatus:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -120); controller.filterStatus:SetPoint("TOPRIGHT", page, "TOPRIGHT", -72, -120); controller.filterStatus:SetJustifyH("LEFT"); controller.filterStatus:SetTextColor(1, 0.82, 0.28)
+    controller.filterStatus = MOS.UI.Components.CreateHeading(page, "", 1, "orange"); controller.filterStatus:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -120); controller.filterStatus:SetPoint("TOPRIGHT", page, "TOPRIGHT", -72, -120); controller.filterStatus:SetJustifyH("LEFT"); controller.filterStatus:SetTextColor(1, 0.82, 0.28)
     controller.headerRemove = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Icons\\INV_Misc_Bag_09", 22, 2); controller.headerRemove:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -115); controller.headerRemove.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerRemove, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerRemove, "Remove raid", "Remove the selected raid from Raid Statistics and CSR history."); controller.headerRemove:Hide()
     controller.headerEdit = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Icons\\INV_Misc_Note_01", 22, 2); controller.headerEdit:SetPoint("RIGHT", controller.headerRemove, "LEFT", -5, 0); controller.headerEdit.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerEdit, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerEdit, "Edit raid", "Edit statistics options for the selected raid."); controller.headerEdit:Hide()
     controller.raidScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidStatisticsHistoryScroll", page, "FauxScrollFrameTemplate"); controller.raidScroll:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -140); controller.raidScroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", 246, 10)
@@ -93,7 +93,7 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
         dialog:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
         dialog:SetBackdropColor(0.03, 0.025, 0.02, 1)
         if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
-        dialog.title = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormalLarge"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -17); dialog.title:SetText(title)
+        dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "orange"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -17); dialog.title:SetText(title)
         dialog:Hide(); return dialog
     end
     controller.removeDialog = CreateModal("MuklaOfficerSuiteRemoveRaidStatisticDialog", "Remove raid from history?", 145)
@@ -146,10 +146,10 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
         controller.removeDialog:Show()
     end
     controller.headerEdit:SetScript("OnClick", OnEditRaid); controller.headerRemove:SetScript("OnClick", OnRemoveRaid)
-    controller.playerHeader = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall"); controller.playerHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 264, -150); controller.playerHeader:SetText("Player")
-    controller.attendanceHeader = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall"); controller.attendanceHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 386, -150); controller.attendanceHeader:SetWidth(66); controller.attendanceHeader:SetText("Attendance")
-    controller.srHeader = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall"); controller.srHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 454, -150); controller.srHeader:SetText("SR")
-    controller.lootHeader = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall"); controller.lootHeader:SetPoint("TOPRIGHT", page, "TOPRIGHT", -32, -150); controller.lootHeader:SetWidth(28); controller.lootHeader:SetJustifyH("LEFT"); controller.lootHeader:SetText("Loot")
+    controller.playerHeader = MOS.UI.Components.CreateColumnLabel(page, "", "orange"); controller.playerHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 264, -150); controller.playerHeader:SetText("Player")
+    controller.attendanceHeader = MOS.UI.Components.CreateColumnLabel(page, "", "orange"); controller.attendanceHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 386, -150); controller.attendanceHeader:SetWidth(66); controller.attendanceHeader:SetText("Attendance")
+    controller.srHeader = MOS.UI.Components.CreateColumnLabel(page, "", "orange"); controller.srHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 454, -150); controller.srHeader:SetText("SR")
+    controller.lootHeader = MOS.UI.Components.CreateColumnLabel(page, "", "orange"); controller.lootHeader:SetPoint("TOPRIGHT", page, "TOPRIGHT", -32, -150); controller.lootHeader:SetWidth(28); controller.lootHeader:SetJustifyH("LEFT"); controller.lootHeader:SetText("Loot")
     controller.scroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidStatisticsScroll", page, "FauxScrollFrameTemplate"); controller.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -166); controller.scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -28, 10)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRaidStatisticsScrollScrollBar"))
     controller.scroll.refreshCallback = function() controller:Refresh() end; controller.scroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end)

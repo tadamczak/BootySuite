@@ -72,7 +72,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
     warning.classicHeader.icon:SetPoint("LEFT", warning.classicHeader, "LEFT", 3, 1); warning.classicHeader.icon:SetVertexColor(1, 0.78, 0.24)
     warning.classicHeader.title = MOS.UI.Components.CreateLabel(warning.classicHeader, nil, "OVERLAY", "GameFontNormalSmall")
     warning.classicHeader.title:SetPoint("LEFT", warning.classicHeader.icon, "RIGHT", 6, 0); warning.classicHeader.title:SetText("Warning")
-    warning.classicHeader.close = MOS.UI.Components.CreateIconButton(warning.classicHeader, nil, MOS.UI.Components.ClassicAsset("Icons\\close.tga"), 13, 2)
+    warning.classicHeader.close = MOS.UI.Components.CreateWindowButton(warning.classicHeader, nil, "close")
     warning.classicHeader.close:SetPoint("RIGHT", warning.classicHeader, "RIGHT", -3, 1)
     warning.classicHeader.close:SetScript("OnClick", function()
         warning.userDismissed = true
@@ -168,7 +168,7 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
     dialog:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 7, right = 7, top = 7, bottom = 7 } }); dialog:SetBackdropColor(0.018, 0.018, 0.016, 1)
     MOS.UI.Components.RegisterDialogSurface(dialog, "panel", { 0.018, 0.018, 0.016, 1 })
-    dialog.title = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormalLarge"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -16); dialog.title:SetText("Fix Soft Reserve assignments")
+    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "orange"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -16); dialog.title:SetText("Fix Soft Reserve assignments")
     dialog.help = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.help:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -43); dialog.help:SetText("Drag an unassigned Soft Reserve from the right onto the correct raid member.")
     dialog.leftTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.leftTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -72); dialog.leftTitle:SetText("Raid members without SR")
     dialog.rightTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.rightTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 358, -72); dialog.rightTitle:SetText("Unassigned Soft Reserves")

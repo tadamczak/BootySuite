@@ -83,7 +83,7 @@ function UI.ApplySelectionListStyle(buttons, items, selectedId, loadButton)
         -- persistent state aligned with the current selection style.
         if buttons[index].mosNormalBorder then buttons[index].mosNormalBorder = border end
     end
-    if loadButton then if selectedAvailable then loadButton:Enable() else loadButton:Disable() end end
+    if loadButton then UI.SetButtonEnabled(loadButton, selectedAvailable) end
     return selectedAvailable
 end
 
@@ -221,7 +221,7 @@ function UI.CreateTextPrompt(name, titleText, labelText, acceptText, onAccept, m
     frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
     frame:SetBackdropColor(0.025, 0.025, 0.022, 1)
     UI.RegisterDialogSurface(frame, "panel")
-    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.title = UI.CreateHeading(frame, "", 2, "orange")
     frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -16); frame.title:SetText(titleText or "Enter value")
     frame.label = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.label:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -43); frame.label:SetText(labelText or "Value")
@@ -277,14 +277,16 @@ function UI.CreateIconButton(parent, name, texturePath, size, iconInset)
 end
 
 function UI.AttachTooltip(frame, title, description, highlight)
+    local onEnter, onLeave = frame:GetScript("OnEnter"), frame:GetScript("OnLeave")
     frame:SetScript("OnEnter", function()
+        if onEnter then onEnter() end
         if highlight then this:LockHighlight() end
         UI.AnchorTooltipRightOfCursor(this)
         GameTooltip:AddLine(type(title) == "function" and title() or title, 1, 0.82, 0)
         GameTooltip:AddLine(type(description) == "function" and description() or description, 1, 1, 1, 1)
         GameTooltip:Show()
     end)
-    frame:SetScript("OnLeave", function() if highlight then this:UnlockHighlight() end; GameTooltip:Hide() end)
+    frame:SetScript("OnLeave", function() if onLeave then onLeave() end; if highlight then this:UnlockHighlight() end; GameTooltip:Hide() end)
     return frame
 end
 
@@ -309,8 +311,8 @@ function UI.CreateItemListDialog(name)
     frame:SetBackdropColor(0.025, 0.025, 0.022, 1)
     UI.RegisterDialogSurface(frame, "panel")
     frame:SetScript("OnDragStart", function() this:StartMoving() end); frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -16); frame.title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -42, -16); frame.title:SetJustifyH("LEFT")
-    frame.close = UI.CreateButton(frame, nil, "X", 24, 22); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -10)
+    frame.title = UI.CreateHeading(frame, "", 2, "orange"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -16); frame.title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -42, -16); frame.title:SetJustifyH("LEFT")
+    frame.close = UI.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -10)
     frame.ok = UI.CreateButton(frame, nil, "OK", 74, 22); frame.ok:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 14)
     frame.scroll = CreateFrame("ScrollFrame", name .. "Scroll", frame, "FauxScrollFrameTemplate")
     frame.scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -44); frame.scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
@@ -383,7 +385,7 @@ function UI.CreateTextEditor(name, titleText, maxLetters, onSave)
     frame:SetBackdropColor(0.025, 0.025, 0.022, 1)
     UI.RegisterDialogSurface(frame, "panel")
     frame:SetScript("OnDragStart", function() this:StartMoving() end); frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -14); frame.title:SetText(titleText)
+    frame.title = UI.CreateHeading(frame, "", 2, "orange"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -14); frame.title:SetText(titleText)
     frame.scroll = CreateFrame("ScrollFrame", name .. "Scroll", frame, "UIPanelScrollFrameTemplate")
     frame.scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -42); frame.scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -32, 52)
     frame.scrollBar = getglobal(name .. "ScrollScrollBar")
@@ -447,10 +449,10 @@ function UI.CreateReadOnlyDialog(name, titleText, width, height, backgroundColor
     UI.RegisterDialogSurface(frame, "warning", { dialogBackground[1], dialogBackground[2], dialogBackground[3], 1 })
     frame:SetScript("OnDragStart", function() this:StartMoving() end)
     frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.title = UI.CreateHeading(frame, "", 2, "orange")
     frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -15); frame.title:SetText(titleText or "Details")
 
-    frame.close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    frame.close = UI.CreateWindowButton(frame, nil, "close")
     frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
     frame.ok = UI.CreateButton(frame, nil, "OK", 74, 22)
     frame.ok:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 18)

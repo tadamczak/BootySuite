@@ -13,12 +13,12 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 7, right = 7, top = 7, bottom = 7 } })
     MOS.UI.Components.RegisterDialogSurface(frame, "panel")
     frame:SetBackdropColor(0.018, 0.018, 0.016, 1)
-    frame.title = MOS.UI.Components.CreateLabel(frame, nil, "OVERLAY", "GameFontNormalLarge"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -17); frame.title:SetText("Set Loot Rules")
-    frame.close = MOS.UI.Components.CreateControl(nil, frame, "UIPanelCloseButton"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
+    frame.title = MOS.UI.Components.CreateHeading(frame, "", 1, "orange"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -17); frame.title:SetText("Set Loot Rules")
+    frame.close = MOS.UI.Components.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
     local headers = { { "Guild rank", 22, 190 }, { "SR", 224, 66 }, { "ReyCoin", 310, 92 }, { "CSR", 422, 66 }, { "Highly Contested Items", 508, 158 } }
     local index
     for index = 1, table.getn(headers) do
-        local header = MOS.UI.Components.CreateLabel(frame, nil, "OVERLAY", "GameFontNormal"); header:SetPoint("TOPLEFT", frame, "TOPLEFT", headers[index][2], -58); header:SetWidth(headers[index][3]); header:SetJustifyH(index == 1 and "LEFT" or "CENTER"); header:SetText(headers[index][1])
+        local header = MOS.UI.Components.CreateColumnLabel(frame, "", "orange"); header:SetPoint("TOPLEFT", frame, "TOPLEFT", headers[index][2], -58); header:SetWidth(headers[index][3]); header:SetJustifyH(index == 1 and "LEFT" or "CENTER"); header:SetText(headers[index][1])
     end
     frame.rows = {}; frame.working = {}
     local keys = { "sr", "reyCoin", "csr", "highlyContested" }
@@ -37,7 +37,7 @@ function RaidManagement.CreateLootRulesDialog(options)
         frame.rows[index] = row
     end
     frame.empty = MOS.UI.Components.CreateLabel(frame, nil, "OVERLAY", "GameFontDisable"); frame.empty:SetPoint("CENTER", frame, "CENTER", 0, 0); frame.empty:SetText("Refresh the guild roster before setting loot rules."); frame.empty:Hide()
-    frame.rulesTitle = MOS.UI.Components.CreateLabel(frame, nil, "OVERLAY", "GameFontNormal"); frame.rulesTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -250); frame.rulesTitle:SetText("Loot rights reference")
+    frame.rulesTitle = MOS.UI.Components.CreateColumnLabel(frame, "", "orange"); frame.rulesTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -250); frame.rulesTitle:SetText("Loot rights reference")
     frame.rulesPanel = MOS.UI.Components.CreateContainer(nil, frame); frame.rulesPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -270); frame.rulesPanel:SetWidth(656); frame.rulesPanel:SetHeight(232)
     frame.rulesPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 4, right = 4, top = 4, bottom = 4 } }); frame.rulesPanel:SetBackdropColor(0.025, 0.025, 0.022, 1)
     MOS.UI.Components.RegisterDialogSurface(frame.rulesPanel, "panel")

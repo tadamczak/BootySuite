@@ -19,14 +19,12 @@ function Window.Create(options)
     local titleBar = MOS.UI.Components.CreateContainer(nil, window)
     titleBar:SetFrameLevel(window:GetFrameLevel() + 1)
     titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 10, -10); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -10, -10); titleBar:SetHeight(30)
-    local title = MOS.UI.Components.CreateLabel(titleBar, nil, "OVERLAY", "GameFontNormalLarge")
+    local title = MOS.UI.Components.CreateHeading(titleBar, "", 1, "orange")
     title:SetPoint("LEFT", titleBar, "LEFT", 8, 0); title:SetText(options.title)
-    local close = MOS.UI.Components.CreateButton(titleBar, nil, "X", 18, 18)
-    close:SetPoint("RIGHT", titleBar, "RIGHT", -4, 0); MOS.UI.Components.SetClassicButtonCompact(close, true); MOS.UI.Components.AttachGoldHoverBorder(close, 0.35, 0.35, 0.35, 1)
-    close.label:SetTextColor(1, 0.82, 0.18)
-    local minimize = MOS.UI.Components.CreateButton(titleBar, nil, "_", 18, 18)
-    minimize:SetPoint("RIGHT", close, "LEFT", -4, 0); MOS.UI.Components.SetClassicButtonCompact(minimize, true); MOS.UI.Components.AttachGoldHoverBorder(minimize, 0.35, 0.35, 0.35, 1)
-    minimize.label:SetTextColor(1, 0.82, 0.18)
+    local close = MOS.UI.Components.CreateWindowButton(titleBar, nil, "close")
+    close:SetPoint("RIGHT", titleBar, "RIGHT", -4, 0)
+    local minimize = MOS.UI.Components.CreateWindowButton(titleBar, nil, "minimize")
+    minimize:SetPoint("RIGHT", close, "LEFT", -4, 0)
     local content = MOS.UI.Components.CreateContainer(nil, window)
     content:SetFrameLevel(window:GetFrameLevel() + 1)
     content:SetPoint("TOPLEFT", window, "TOPLEFT", 8, -42); content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -8, 8)
@@ -57,15 +55,15 @@ function Window.Create(options)
     minimize:SetScript("OnClick", function()
         if not view then return end
         if window.minimized then
-            window.minimized = false; window:SetHeight(window.expandedHeight or 620); content:Show(); resize:Show(); view.viewport:Show(); minimize:SetText("_")
+            window.minimized = false; window:SetHeight(window.expandedHeight or 620); content:Show(); resize:Show(); view.viewport:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
         else
-            window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(50); minimize:SetText("[]")
+            window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(50); MOS.UI.Components.SetWindowButtonAction(minimize, "maximize")
         end
     end)
     window.Open = function()
         if window:IsVisible() or not view then return end
         ApplyResizeBounds()
-        window.minimized = false; content:Show(); resize:Show(); minimize:SetText("_")
+        window.minimized = false; content:Show(); resize:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
         window:Show(); view.viewport:SetVerticalScroll(0); view.viewport:Show()
         if view.scrollBar then view.scrollBar:SetValue(0) end
         if options.refresh then options.refresh(view) end
