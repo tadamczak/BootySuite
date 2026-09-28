@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.2"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.3"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.3.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -428,7 +428,12 @@ MOS.ModuleRegistry.Register("raid", MOS.Modules.RaidManagement.CreateLifecycle({
         })
     end,
 }))
-MOS.ModuleRegistry.Register("about", MOS.Modules.About.Create(aboutPage, VERSION))
+local aboutModule
+aboutModule = MOS.Modules.About.Create(aboutPage, VERSION, {
+    checkVersion = function() if MOS.versionCheck then MOS.versionCheck.CheckNow() end end,
+    getVersionStatus = function() return MOS.versionCheck and MOS.versionCheck.GetStatus() or "Not checked yet." end,
+})
+MOS.ModuleRegistry.Register("about", aboutModule)
 MOS.ModuleRegistry.Register("configuration", MOS.Modules.Settings.CreateLifecycle({
     viewport = configurationViewport,
     page = configurationPage,
@@ -694,9 +699,11 @@ MOS.minimapButton = MOS.UI.Dashboard.CreateMinimapButton({
 })
 MOS.PositionMinimapButton = MOS.minimapButton.Position
 
-local versionCheck = MOS.Modules.VersionCheck.Create({
+MOS.versionCheck = MOS.Modules.VersionCheck.Create({
     releaseVersion = RELEASE_VERSION,
+    addonVersion = VERSION,
     printMessage = Print,
+    onStatusChanged = function(value) aboutModule:SetUpdateStatus(value) end,
 })
 
 MOS.Core.Commands.Attach({
@@ -706,7 +713,6 @@ MOS.Core.Commands.Attach({
     toggleDashboard = ToggleDashboard,
     printMessage = Print,
     countSavedMembers = CountSavedMembers,
-    checkVersion = versionCheck.CheckNow,
     startLinkedItemRoll = function(itemLink)
         local window = MOS.Modules.MasterLootWindow
         if window and window.OpenLinkedItemRoll then window.OpenLinkedItemRoll(itemLink) end

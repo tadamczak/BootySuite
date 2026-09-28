@@ -31,10 +31,8 @@ function Commands.Attach(options)
             if MuklaOfficerSuiteDB.minimap.hidden then options.minimapButton:Hide() else options.minimapButton:Show() end
         elseif command == "status" then
             options.printMessage("Saved members: " .. options.countSavedMembers())
-        elseif command == "version" then
-            options.checkVersion()
         else
-            options.printMessage("Commands: /mos, /mos roll [linked item], /mos version, /mos status, /mos minimap, /mos hide")
+            options.printMessage("Commands: /mos, /mos roll [linked item], /mos status, /mos minimap, /mos hide")
         end
     end
 end

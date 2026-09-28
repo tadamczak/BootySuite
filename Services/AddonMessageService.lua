@@ -6,16 +6,16 @@ local AddonMessage = MOS.Services.AddonMessage
 AddonMessage.PREFIX = "MOS"
 
 local function CleanPart(value)
-    return string.gsub(tostring(value or ""), "|", "")
+    return string.gsub(tostring(value or ""), ":", "")
 end
 
 function AddonMessage.Encode(topic, action, payload)
-    return CleanPart(topic) .. "|" .. CleanPart(action) .. "|" .. CleanPart(payload)
+    return CleanPart(topic) .. ":" .. CleanPart(action) .. ":" .. tostring(payload or "")
 end
 
 function AddonMessage.Decode(prefix, message)
     if prefix ~= AddonMessage.PREFIX or type(message) ~= "string" then return nil end
-    local topic, action, payload = string.match(message, "^([^|]+)|([^|]+)|(.*)$")
+    local topic, action, payload = string.match(message, "^([^:]+):([^:]+):(.*)$")
     if not topic or not action then return nil end
     return topic, action, payload
 end
