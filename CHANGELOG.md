@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed Settings input handling, heading opacity, slider labels, roster accordions, and dynamic section spacing.
 - Fixed Settings spacing, initial dropdown synchronization, indentation, clipping, and accordion scrolling.
 - Fixed selected-tab retention during resize, bounded About artwork, active check feedback, and development-build discovery.
 - Fixed classic tab borders, About presentation, artwork proportions, and legacy-client slider disabling.

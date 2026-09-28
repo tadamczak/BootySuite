@@ -113,6 +113,7 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 
 - **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live.
 - **Settings layout -** Consistent spacing, indentation, and scrolling keep every accordion section accessible in the standalone window.
+- **Roster preferences -** General contains live tracking, while Layout contains class-color display settings.
 - **Raid Management -** Configure Loot Master opacity and related raid preferences.
 - **Logging -** Enable optional concise addon messages in chat.
 - **Reset options -** Restore supported settings to their defaults.

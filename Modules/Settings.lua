@@ -76,13 +76,15 @@ function Settings.CreatePrimarySections(page)
     local rosterHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -150)
     rosterHeading:SetText("Roster management")
-    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 40, -178, "Use class colors", "rosterClassColors")
-    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 220, -178, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
+    local rosterGeneral = MOS.UI.Settings.CreateAccordion(page, "General", -178)
+    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 40, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
+    local rosterLayout = MOS.UI.Settings.CreateAccordion(page, "Layout", -206)
+    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 40, -234, "Use class colors", "rosterClassColors")
     local raidHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -206)
     raidHeading:SetText("Raid management")
     local debugHeading = MOS.UI.Settings.CreateSection(page, "Debug", -645)
-    return { rosterHeading = rosterHeading, raidHeading = raidHeading, debugHeading = debugHeading }
+    return { rosterHeading = rosterHeading, rosterGeneral = rosterGeneral, rosterLayout = rosterLayout, raidHeading = raidHeading, debugHeading = debugHeading }
 end
 
 function Settings.CreateRaidColumnControl(page, x, y, onChanged)
@@ -185,6 +187,7 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
         heading:SetPoint("TOPLEFT", page, "TOPLEFT", 40, y)
         heading:SetText(text)
         heading:SetTextColor(1, 0.82, 0)
+        heading:SetAlpha(1)
         return heading
     end
     local displayHeading = Heading("Display", -356)
@@ -290,6 +293,7 @@ function Settings.CreateRaidSettings(page, callbacks)
     }
     Settings.BindRaidViewControls(page, viewControls, shell.groupReset, shell.listReset, callbacks)
     Settings.BindRaidAccordions(page, { page = page, layout = layout, general = general, generalControls = { liveTracking }, leader = leader, loot = loot, debugHeading = primarySections.debugHeading, layoutControls = layoutControls, columnsPanel = groupControls.columnsPanel })
+    Settings.BindRosterAccordions(page, primarySections, page.raidAccordionControls)
     page.chatLogsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteChatLogs", 10, -675, "Chat action logs", "chatActionLogs", "Chat action logs", "Show routine Mukla Officer Suite action messages in chat. Disabled by default.")
     page.raidAccordionControls.chatLogsCheck = page.chatLogsCheck
     page.RefreshAllSettings = function()
@@ -512,17 +516,22 @@ function Settings.ApplyRaidAccordions(controls)
     end
     controls.columnsPanel:Hide()
 
-    local layoutY = (state.general or expanded) and -280 or -258
+    local offset = controls.raidOffset or 0
+    controls.general:ClearAllPoints(); controls.general:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, -230 + offset)
+    if controls.generalControls and controls.generalControls[1] then
+        controls.generalControls[1]:ClearAllPoints(); controls.generalControls[1]:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 40, -252 + offset)
+    end
+    local layoutY = ((state.general or expanded) and -280 or -258) + offset
     controls.layout:ClearAllPoints()
     controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, layoutY)
 
     local leaderY, lootY, opacityY, debugY, chatY
     if expanded then
-        leaderY, lootY = -1126, -1154
+        leaderY, lootY = -1126 + offset, -1154 + offset
         if state.loot then
-            opacityY, debugY, chatY = -1182, -1214, -1244
+            opacityY, debugY, chatY = -1182 + offset, -1214 + offset, -1244 + offset
         else
-            opacityY, debugY, chatY = -1182, -1194, -1224
+            opacityY, debugY, chatY = -1182 + offset, -1194 + offset, -1224 + offset
         end
     else
         leaderY, lootY = layoutY - 30, layoutY - 58
@@ -558,9 +567,57 @@ function Settings.ApplyRaidAccordions(controls)
         controls.chatLogsCheck:ClearAllPoints()
         controls.chatLogsCheck:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 10, chatY)
     end
-    controls.page.settingsContentHeight = expanded and 1280 or 460
+    controls.page.settingsContentHeight = (expanded and 1280 or 460) - offset
     Settings.UpdateScroll(controls.page.settingsViewport, controls.page, controls.page.settingsContentHeight)
     controls.layout.rule:Hide()
+end
+
+function Settings.OffsetRaidLayoutControls(controls, offset)
+    local index
+    for index = 1, table.getn(controls.layoutControls or {}) do
+        local control = controls.layoutControls[index]
+        if control and control.GetPoint and control.SetPoint then
+            if not control.mosSettingsBasePoint then
+                local point, relative, relativePoint, x, y = control:GetPoint(1)
+                if point and relative == controls.page then control.mosSettingsBasePoint = { point, relativePoint, x, y } end
+            end
+            local base = control.mosSettingsBasePoint
+            if base then
+                control:ClearAllPoints(); control:SetPoint(base[1], controls.page, base[2], base[3], base[4] + offset)
+            end
+        end
+    end
+end
+
+function Settings.ApplyRosterAccordions(page, sections, raidControls)
+    local state = page.rosterAccordionState
+    sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
+    sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
+    if state.general then sections.rosterGeneral:LockHighlight(); page.rosterLiveTrackingCheck:Show()
+    else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
+    local layoutY = state.general and -234 or -206
+    sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 24, layoutY)
+    if state.layout then sections.rosterLayout:LockHighlight(); page.rosterClassColorsCheck:Show()
+    else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
+    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, layoutY - 28)
+    local raidHeadingY = layoutY - (state.layout and 66 or 38)
+    sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, raidHeadingY)
+    raidControls.raidOffset = raidHeadingY - (-206)
+    Settings.OffsetRaidLayoutControls(raidControls, raidControls.raidOffset)
+    Settings.ApplyRaidAccordions(raidControls)
+end
+
+function Settings.BindRosterAccordions(page, sections, raidControls)
+    page.rosterAccordionState = { general = false, layout = false }
+    sections.rosterGeneral:SetScript("OnClick", function()
+        page.rosterAccordionState.general = not page.rosterAccordionState.general
+        Settings.ApplyRosterAccordions(page, sections, raidControls)
+    end)
+    sections.rosterLayout:SetScript("OnClick", function()
+        page.rosterAccordionState.layout = not page.rosterAccordionState.layout
+        Settings.ApplyRosterAccordions(page, sections, raidControls)
+    end)
+    Settings.ApplyRosterAccordions(page, sections, raidControls)
 end
 
 function Settings.ToggleRaidAccordion(controls, stateKey)
@@ -592,8 +649,6 @@ function Settings.AttachShell(view, parent, anchor, detached)
         view.scrollBar:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -8, 24)
     end
     view.viewport.settingsDetached = detached and true or false
-    view.viewport:SetScrollChild(view.page)
-    if view.viewport.SetClipsChildren then view.viewport:SetClipsChildren(true) end
     Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)
 end
 

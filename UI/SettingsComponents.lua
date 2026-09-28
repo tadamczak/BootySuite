@@ -108,7 +108,9 @@ function Settings.SetSliderEnabled(slider, enabled)
     local shade = enabled and 1 or 0.5
     if low then low:SetTextColor(shade, shade, shade) end
     if high then high:SetTextColor(shade, shade, shade) end
-    if text then text:SetTextColor(shade, shade, shade) end
+    if text then
+        if enabled then text:SetTextColor(1, 0.82, 0) else text:SetTextColor(shade, shade, shade) end
+    end
 end
 
 function Settings.CreateColor(parent, x, y, label, key, onChanged)
