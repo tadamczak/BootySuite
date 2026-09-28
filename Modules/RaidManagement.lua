@@ -1312,25 +1312,28 @@ function RaidManagement.PrintListLayoutDiagnostics(page, members, selectedName)
     DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS raid edges: page right=%.0f bottom=%.0f; row right=%.0f last bottom=%.0f; scroll right=%.0f bottom=%.0f", number(page:GetRight()), number(page:GetBottom()), first and number(first:GetRight()) or 0, last and number(last:GetBottom()) or 0, page.listScrollBar and number(page.listScrollBar:GetRight()) or 0, page.listScrollBar and number(page.listScrollBar:GetBottom()) or 0))
 end
 
-function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader)
+function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin)
     local columnCount = math.max(1, math.min(4, tonumber(columns) or 2))
     local groupRows = math.ceil(8 / columnCount)
-    local preferredWidth = (columnCount * (tonumber(preferredTileWidth) or 280)) + ((columnCount - 1) * 12)
-    local layoutWidth = math.min(math.max(1, tonumber(width) or 1), preferredWidth)
-    local headerHeight = showHeader and 22 or 0
+    local availableWidth = math.max(1, tonumber(width) or 1)
+    local margin = math.max(0, tonumber(groupMargin) or 8)
+    local preferredWidth = (columnCount * (tonumber(preferredTileWidth) or 280)) + ((columnCount - 1) * margin)
+    local layoutWidth = autoTileWidth and availableWidth or math.min(availableWidth, preferredWidth)
+    local headerHeight = showHeader and math.max(14, tonumber(configuredHeaderHeight) or 22) or 0
     local groupHeight = headerHeight + ((tonumber(tileHeight) or 20) * 5)
-    local contentHeight = (groupRows * groupHeight) + ((groupRows - 1) * 8)
+    local contentHeight = (groupRows * groupHeight) + ((groupRows - 1) * margin)
     return {
         columns = columnCount,
         rows = groupRows,
         layoutWidth = layoutWidth,
-        xOffset = math.max(0, math.floor(((tonumber(width) or 1) - layoutWidth) / 2)),
-        columnWidth = math.max(80, math.floor((layoutWidth - ((columnCount - 1) * 12)) / columnCount)),
+        xOffset = math.max(0, math.floor((availableWidth - layoutWidth) / 2)),
+        columnWidth = math.max(80, math.floor((layoutWidth - ((columnCount - 1) * margin)) / columnCount)),
         headerHeight = headerHeight,
         groupHeight = groupHeight,
         contentHeight = contentHeight,
         canvasHeight = math.max(tonumber(height) or 1, contentHeight),
         maximumScroll = math.max(0, contentHeight - (tonumber(height) or 1)),
+        margin = margin,
     }
 end
 
@@ -1791,11 +1794,10 @@ function RaidManagement.RefreshGroupView(page)
     local textColor = MuklaOfficerSuiteDB.raidGroupTextColor
     local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
     local slotHeight = tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20
-    local geometry = RaidManagement.CalculateGroupGeometry(width, height, MuklaOfficerSuiteDB.raidGroupColumns, MOS.UI.IsClassicSkin() and width or configuredWidth, slotHeight, MuklaOfficerSuiteDB.raidGroupShowHeader)
+    local geometry = RaidManagement.CalculateGroupGeometry(width, height, MuklaOfficerSuiteDB.raidGroupColumns, configuredWidth, slotHeight, MuklaOfficerSuiteDB.raidGroupShowHeader, MuklaOfficerSuiteDB.raidGroupAutoTileWidth, MuklaOfficerSuiteDB.raidGroupHeaderHeight, MuklaOfficerSuiteDB.raidGroupMargin)
     local columns, groupRows = geometry.columns, geometry.rows
     local layoutWidth, xOffset, columnWidth = geometry.layoutWidth, geometry.xOffset, geometry.columnWidth
     local headerHeight, groupHeight = geometry.headerHeight, geometry.groupHeight
-    local verticalGap = 8
     local contentHeight = geometry.contentHeight
     local yOffset = 0
     page.groupCanvas:SetWidth(width); page.groupCanvas:SetHeight(geometry.canvasHeight)
@@ -1810,7 +1812,7 @@ function RaidManagement.RefreshGroupView(page)
         page.groupCounts[groupIndex] = 0
         local column = math.mod(groupIndex - 1, columns)
         local row = math.floor((groupIndex - 1) / columns)
-        local x, y = xOffset + (column * (columnWidth + 12)), -yOffset - (row * (groupHeight + verticalGap))
+        local x, y = xOffset + (column * (columnWidth + geometry.margin)), -yOffset - (row * (groupHeight + geometry.margin))
         local panel = page.groupPanels[groupIndex]
         panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(columnWidth); panel:SetHeight(groupHeight)
         local header = page.groupHeaders[groupIndex]
@@ -1891,7 +1893,7 @@ function RaidManagement.RefreshGroupView(page)
             local classWidth, levelWidth, offlineWidth = columns.classWidth, columns.levelWidth, columns.offlineWidth
             slot.name:ClearAllPoints(); slot.name:SetPoint("LEFT", slot, "LEFT", nameInset, 0); slot.name:SetWidth(nameWidth); slot.name:Show(); slot.empty:Hide()
             slot.offline:ClearAllPoints(); slot.offline:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.offline:SetWidth(offlineWidth); slot.offline:SetJustifyH("RIGHT")
-            slot.class:ClearAllPoints(); slot.class:SetWidth(classWidth); slot.class:SetJustifyH("RIGHT")
+            slot.class:ClearAllPoints(); slot.class:SetWidth(classWidth); slot.class:SetJustifyH("LEFT")
             if showClass then slot.class:SetPoint("RIGHT", slot, "RIGHT", -6 - offlineWidth - (offlineWidth > 0 and 4 or 0), 0) end
             slot.level:ClearAllPoints(); slot.level:SetWidth(levelWidth)
             if showLevel then

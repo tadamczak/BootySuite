@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added configurable centered Group View sizing, header height, spacing, and organized Raid Management settings.
 - Fixed Loot Master cleanup, restored corpse rolls, and aligned Raid Management group columns.
 - Flattened the repository layout so addon files and directories are published directly at repository root.
 ## 0.3.0 - 2026-09-27

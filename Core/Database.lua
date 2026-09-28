@@ -31,8 +31,11 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.raidGroupShowRoleIcon == nil then MuklaOfficerSuiteDB.raidGroupShowRoleIcon = true end
     if MuklaOfficerSuiteDB.raidLayoutExpanded == nil then MuklaOfficerSuiteDB.raidLayoutExpanded = true end
     if MuklaOfficerSuiteDB.raidGroupClassColors == nil then MuklaOfficerSuiteDB.raidGroupClassColors = true end
+    if MuklaOfficerSuiteDB.raidGroupAutoTileWidth == nil then MuklaOfficerSuiteDB.raidGroupAutoTileWidth = true end
     MuklaOfficerSuiteDB.raidGroupTileWidth = math.max(160, math.min(340, tonumber(MuklaOfficerSuiteDB.raidGroupTileWidth) or 280))
     MuklaOfficerSuiteDB.raidGroupTileHeight = math.max(14, math.min(28, tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20))
+    MuklaOfficerSuiteDB.raidGroupHeaderHeight = math.max(14, math.min(40, tonumber(MuklaOfficerSuiteDB.raidGroupHeaderHeight) or 22))
+    MuklaOfficerSuiteDB.raidGroupMargin = math.max(0, math.min(32, tonumber(MuklaOfficerSuiteDB.raidGroupMargin) or 8))
     if type(MuklaOfficerSuiteDB.raidGroupBackgroundColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupBackgroundColor = { 0.025, 0.025, 0.025 } end
     if type(MuklaOfficerSuiteDB.raidGroupTextColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupTextColor = { 1, 1, 1 } end
     if type(MuklaOfficerSuiteDB.raidGroupHoverColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupHoverColor = { 0.12, 0.09, 0.025 } end
@@ -270,8 +273,11 @@ function Database.ResetRaidGroupView()
     MuklaOfficerSuiteDB.raidGroupClassColors = true
     MuklaOfficerSuiteDB.raidGroupShowLootMaster = true
     MuklaOfficerSuiteDB.raidGroupShowRoleIcon = true
+    MuklaOfficerSuiteDB.raidGroupAutoTileWidth = true
     MuklaOfficerSuiteDB.raidGroupTileWidth = 280
     MuklaOfficerSuiteDB.raidGroupTileHeight = 20
+    MuklaOfficerSuiteDB.raidGroupHeaderHeight = 22
+    MuklaOfficerSuiteDB.raidGroupMargin = 8
     MuklaOfficerSuiteDB.raidGroupBackgroundColor = { 0.025, 0.025, 0.025 }
     MuklaOfficerSuiteDB.raidGroupTextColor = { 1, 1, 1 }
     MuklaOfficerSuiteDB.raidGroupHoverColor = { 0.12, 0.09, 0.025 }
