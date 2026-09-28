@@ -34,10 +34,8 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
     controller.filterTitle = controller.filterPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); controller.filterTitle:SetPoint("TOPLEFT", controller.filterPanel, "TOPLEFT", 10, -8); controller.filterTitle:SetText("Filters")
     controller.raidFilter = MOS.UI.CreateDropdownButton(controller.filterPanel, nil, "Raid", 140); controller.raidFilter:SetPoint("TOPLEFT", controller.filterPanel, "TOPLEFT", 62, -6)
     controller.raidPanel = MOS.UI.CreateDropdownPanel(controller.filterPanel, controller.raidFilter, 190, 178, 20)
-    controller.raidDismiss = CreateFrame("Button", nil, UIParent); controller.raidDismiss:SetAllPoints(UIParent); controller.raidDismiss:SetFrameStrata("FULLSCREEN_DIALOG"); controller.raidDismiss:SetFrameLevel(1); controller.raidDismiss:Hide()
-    controller.raidPanel:SetFrameStrata("FULLSCREEN_DIALOG"); controller.raidPanel:SetFrameLevel(2)
-    controller.raidDismiss:SetScript("OnClick", function() controller.raidPanel:Hide(); controller.raidDismiss:Hide() end)
-    controller.raidFilter:SetScript("OnClick", function() if controller.raidPanel:IsVisible() then controller.raidPanel:Hide(); controller.raidDismiss:Hide() else controller.raidDismiss:Show(); controller.raidPanel:Show() end end)
+    controller.raidDismiss = controller.raidPanel.dismiss
+    controller.raidFilter:SetScript("OnClick", function() if controller.raidPanel:IsVisible() then controller.raidPanel:Hide() else controller.raidPanel:Show() end end)
     local allCheck = CreateFrame("CheckButton", nil, controller.raidPanel, "UICheckButtonTemplate"); allCheck:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheck:SetWidth(20); allCheck:SetHeight(20); allCheck:SetChecked(1)
     allCheck.label = controller.raidPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); allCheck.label:SetPoint("LEFT", allCheck, "RIGHT", 2, 0); allCheck.label:SetText("All")
     controller.raidChecks = {}

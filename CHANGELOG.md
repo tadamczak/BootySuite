@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0-dev.12 - 2026-09-28
+
+- Fixed Settings dropdown overlay, outside-click dismissal, compact options, and full-width separators.
+
 ## Unreleased
 
 - Fixed dropdown layering and option typography, isolated Columns styling, full-width view dividers, and screen-safe Settings resize.
