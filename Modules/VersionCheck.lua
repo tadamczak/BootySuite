@@ -102,7 +102,10 @@ function VersionCheck.Create(options)
         elseif event == "PLAYER_ENTERING_WORLD" then
             if not welcomeShown then
                 welcomeShown = true
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite " .. options.addonVersion .. " loaded.|r Type |cffffffff/mos|r to open the addon.")
+                MOS.Database.Ensure()
+                if not MuklaOfficerSuiteDB.suppressLoginMessage then
+                    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite " .. options.addonVersion .. " loaded.|r Type |cffffffff/mos|r to open the addon.")
+                end
             end
             SendQuery(false)
         end
