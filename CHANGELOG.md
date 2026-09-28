@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed About update details, Tab View behavior, and Settings window layering and initial field synchronization.
 - Added a detachable live Settings window, UI visibility options, and session-only accordion state.
 - Fixed addon-message encoding and moved manual version checks to About with visible status and a login welcome message.
 - Fixed Raid Management settings spacing and added Group View font-size controls.
