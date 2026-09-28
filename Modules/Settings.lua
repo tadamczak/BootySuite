@@ -110,31 +110,31 @@ end
 
 function Settings.CreateRaidViewShell(page)
     local panel = CreateFrame("Frame", nil, page)
-    panel:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -276)
-    panel:SetPoint("BOTTOMRIGHT", page, "TOPRIGHT", -12, -814)
+    panel:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -306)
+    panel:SetPoint("BOTTOMRIGHT", page, "TOPRIGHT", -12, -980)
     panel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     panel:SetBackdropColor(0.025, 0.025, 0.025, 0.48)
     panel:SetBackdropBorderColor(0.62, 0.62, 0.62, 0.8)
 
     local groupHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    groupHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -288)
+    groupHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -318)
     groupHeading:SetText("Group View")
     groupHeading:SetTextColor(1, 0.82, 0)
     local groupReset = MOS.UI.CreateButton(page, nil, "Reset to default", 112, 20)
     groupReset:SetPoint("LEFT", groupHeading, "RIGHT", 12, 0)
     local groupDivider = panel:CreateTexture(nil, "ARTWORK")
-    groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -306)
-    groupDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -306)
+    groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -336)
+    groupDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -336)
     groupDivider:SetHeight(1)
     groupDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
 
     local listDivider = panel:CreateTexture(nil, "ARTWORK")
-    listDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -574)
-    listDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -574)
+    listDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -740)
+    listDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -740)
     listDivider:SetHeight(1)
     listDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
     local listHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    listHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -556)
+    listHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -722)
     listHeading:SetText("List View")
     listHeading:SetTextColor(1, 0.82, 0)
     local listReset = MOS.UI.CreateButton(page, nil, "Reset to default", 112, 20)
@@ -172,49 +172,69 @@ local function AlignSliderLabel(name, slider)
 end
 
 function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsChanged)
-    local columnsLabel, columnsButton, columnsPanel = Settings.CreateRaidColumnControl(page, 40, -320, onColumnsChanged)
-    local showClass = factory.Checkbox(40, -356, "Show class", "raidGroupShowClass")
-    local showLevel = factory.Checkbox(300, -356, "Show lvl", "raidGroupShowLevel")
-    local classColors = factory.Checkbox(40, -380, "Use class colors", "raidGroupClassColors")
-    local showHeader = factory.Checkbox(300, -380, "Show group header", "raidGroupShowHeader")
-    local showLootMaster = factory.Checkbox(40, -404, "Show LM icon", "raidGroupShowLootMaster")
-    local showRole = factory.Checkbox(300, -404, "Show role icon", "raidGroupShowRoleIcon")
-    local width = factory.Slider("MuklaOfficerSuiteGroupTileWidth", 40, -456, "Member tile width (default: 280)", "raidGroupTileWidth", 160, 340)
-    local height = factory.Slider("MuklaOfficerSuiteGroupTileHeight", 300, -456, "Member tile height (default: 20)", "raidGroupTileHeight", 14, 28)
+    local columnsLabel, columnsButton, columnsPanel = Settings.CreateRaidColumnControl(page, 40, -350, onColumnsChanged)
+    local function Heading(text, y)
+        local heading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        heading:SetPoint("TOPLEFT", page, "TOPLEFT", 40, y)
+        heading:SetText(text)
+        heading:SetTextColor(1, 0.82, 0)
+        return heading
+    end
+    local displayHeading = Heading("Display", -380)
+    local showClass = factory.Checkbox(40, -398, "Show class", "raidGroupShowClass")
+    local showLevel = factory.Checkbox(300, -398, "Show lvl", "raidGroupShowLevel")
+    local showHeader = factory.Checkbox(40, -422, "Show group header", "raidGroupShowHeader")
+    local showLootMaster = factory.Checkbox(300, -422, "Show LM icon", "raidGroupShowLootMaster")
+    local showRole = factory.Checkbox(40, -446, "Show role icon", "raidGroupShowRoleIcon")
+    local sizeHeading = Heading("Size", -480)
+    local autoWidth = factory.Checkbox(40, -498, "Adjust tile width to window", "raidGroupAutoTileWidth")
+    local width = factory.Slider("MuklaOfficerSuiteGroupTileWidth", 40, -548, "Member tile width (default: 280)", "raidGroupTileWidth", 160, 340)
+    local height = factory.Slider("MuklaOfficerSuiteGroupTileHeight", 300, -548, "Member tile height (default: 20)", "raidGroupTileHeight", 14, 28)
+    local headerHeight = factory.Slider("MuklaOfficerSuiteGroupHeaderHeight", 40, -600, "Group header height (default: 22)", "raidGroupHeaderHeight", 14, 40)
+    local margin = factory.Slider("MuklaOfficerSuiteGroupMargin", 300, -600, "Margin between groups (default: 8)", "raidGroupMargin", 0, 32)
     AlignSliderLabel("MuklaOfficerSuiteGroupTileWidth", width)
     AlignSliderLabel("MuklaOfficerSuiteGroupTileHeight", height)
-    local background = factory.Color(40, -492, "Background color", "raidGroupBackgroundColor")
-    local text = factory.Color(230, -492, "Main text color", "raidGroupTextColor")
-    local hover = factory.Color(40, -518, "Hover color", "raidGroupHoverColor")
-    local pressed = factory.Color(230, -518, "On press color", "raidGroupPressedColor")
+    AlignSliderLabel("MuklaOfficerSuiteGroupHeaderHeight", headerHeight)
+    AlignSliderLabel("MuklaOfficerSuiteGroupMargin", margin)
+    local originalAutoWidthSave = autoWidth.SaveSetting
+    autoWidth.SaveSetting = function(owner)
+        originalAutoWidthSave(owner)
+        if owner:GetChecked() then width:Disable() else width:Enable() end
+    end
+    local colorHeading = Heading("Member tile color", -644)
+    local classColors = factory.Checkbox(40, -662, "Use class colors", "raidGroupClassColors")
+    local background = factory.Color(40, -690, "Background color", "raidGroupBackgroundColor")
+    local text = factory.Color(230, -690, "Main text color", "raidGroupTextColor")
+    local hover = factory.Color(40, -716, "Hover color", "raidGroupHoverColor")
+    local pressed = factory.Color(230, -716, "On press color", "raidGroupPressedColor")
     return {
         columnsLabel = columnsLabel, columnsButton = columnsButton, columnsPanel = columnsPanel,
-        checks = { showClass, showLevel, classColors, showHeader, showLootMaster, showRole },
-        width = width, height = height, colors = { background, text, hover, pressed },
-        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, columnsLabel, columnsButton, showClass, showLevel, classColors, showHeader, showLootMaster, showRole, width, height, background, text, hover, pressed },
+        checks = { showClass, showLevel, showHeader, showLootMaster, showRole, autoWidth, classColors },
+        width = width, height = height, headerHeight = headerHeight, margin = margin, autoWidth = autoWidth, colors = { background, text, hover, pressed },
+        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, columnsLabel, columnsButton, displayHeading, showClass, showLevel, showHeader, showLootMaster, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, colorHeading, classColors, background, text, hover, pressed },
     }
 end
 
 function Settings.CreateRaidListViewControls(page, shell, factory)
-    local showName = factory.Checkbox(40, -596, "Show name", "raidListShowName")
-    local showLevel = factory.Checkbox(300, -596, "Show lvl", "raidListShowLevel")
-    local showStatus = factory.Checkbox(560, -596, "Show status", "raidListShowStatus")
-    local showGroup = factory.Checkbox(40, -620, "Show group", "raidListShowGroup")
-    local showClass = factory.Checkbox(300, -620, "Show class", "raidListShowClass")
-    local showRank = factory.Checkbox(560, -620, "Show guild rank", "raidListShowGuildRank")
-    local showSoftReserve = factory.Checkbox(40, -644, "Show SR", "raidListShowSR")
-    local showLootMaster = factory.Checkbox(300, -644, "Show LM icon", "raidListShowLootMaster")
-    local showRole = factory.Checkbox(560, -644, "Show role icon", "raidListShowRoleIcon")
-    local showFilters = factory.Checkbox(40, -668, "Show filters", "raidListShowFilters")
-    local showSearch = factory.Checkbox(300, -668, "Show search", "raidListShowSearch")
-    local width = factory.Slider("MuklaOfficerSuiteListRowWidth", 40, -720, "Member row width (default: 1000)", "raidListRowWidth", 400, 1200)
-    local height = factory.Slider("MuklaOfficerSuiteListRowHeight", 300, -720, "Member row height (default: 20)", "raidListRowHeight", 16, 30)
+    local showName = factory.Checkbox(40, -762, "Show name", "raidListShowName")
+    local showLevel = factory.Checkbox(300, -762, "Show lvl", "raidListShowLevel")
+    local showStatus = factory.Checkbox(560, -762, "Show status", "raidListShowStatus")
+    local showGroup = factory.Checkbox(40, -786, "Show group", "raidListShowGroup")
+    local showClass = factory.Checkbox(300, -786, "Show class", "raidListShowClass")
+    local showRank = factory.Checkbox(560, -786, "Show guild rank", "raidListShowGuildRank")
+    local showSoftReserve = factory.Checkbox(40, -810, "Show SR", "raidListShowSR")
+    local showLootMaster = factory.Checkbox(300, -810, "Show LM icon", "raidListShowLootMaster")
+    local showRole = factory.Checkbox(560, -810, "Show role icon", "raidListShowRoleIcon")
+    local showFilters = factory.Checkbox(40, -834, "Show filters", "raidListShowFilters")
+    local showSearch = factory.Checkbox(300, -834, "Show search", "raidListShowSearch")
+    local width = factory.Slider("MuklaOfficerSuiteListRowWidth", 40, -886, "Member row width (default: 1000)", "raidListRowWidth", 400, 1200)
+    local height = factory.Slider("MuklaOfficerSuiteListRowHeight", 300, -886, "Member row height (default: 20)", "raidListRowHeight", 16, 30)
     AlignSliderLabel("MuklaOfficerSuiteListRowWidth", width)
     AlignSliderLabel("MuklaOfficerSuiteListRowHeight", height)
-    local background = factory.Color(40, -756, "Background color", "raidListBackgroundColor")
-    local text = factory.Color(230, -756, "Main text color", "raidListTextColor")
-    local hover = factory.Color(40, -782, "Hover color", "raidListHoverColor")
-    local pressed = factory.Color(230, -782, "On press color", "raidListPressedColor")
+    local background = factory.Color(40, -922, "Background color", "raidListBackgroundColor")
+    local text = factory.Color(230, -922, "Main text color", "raidListTextColor")
+    local hover = factory.Color(40, -948, "Hover color", "raidListHoverColor")
+    local pressed = factory.Color(230, -948, "On press color", "raidListPressedColor")
     return {
         checks = { showName, showLevel, showStatus, showGroup, showClass, showRank, showSoftReserve, showLootMaster, showRole, showFilters, showSearch },
         width = width, height = height, colors = { background, text, hover, pressed },
@@ -231,20 +251,23 @@ end
 function Settings.CreateRaidSettings(page, callbacks)
     local primarySections = Settings.CreatePrimarySections(page)
     local general = MOS.UI.Settings.CreateAccordion(page, "General", -230)
-    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 220, -230, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid Management is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
-    local layout = MOS.UI.Settings.CreateAccordion(page, "Layout", -250)
+    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 40, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid Management is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
+    local layout = MOS.UI.Settings.CreateAccordion(page, "Layout", -280)
     local shell = Settings.CreateRaidViewShell(page)
     local factory = Settings.CreateRaidControlFactory(page, callbacks)
     local groupControls = Settings.CreateRaidGroupViewControls(page, shell, factory, callbacks.refreshGroup)
     local listControls = Settings.CreateRaidListViewControls(page, shell, factory)
-    local leader = MOS.UI.Settings.CreateAccordion(page, "Raid Leader Mode", -814)
-    local loot = MOS.UI.Settings.CreateAccordion(page, "Loot Master Mode", -842)
+    local leader = MOS.UI.Settings.CreateAccordion(page, "Raid Leader Mode", -980)
+    local loot = MOS.UI.Settings.CreateAccordion(page, "Loot Master Mode", -1008)
     local layoutControls = Settings.MergeControls(groupControls.layoutControls, listControls.layoutControls)
     local viewControls = {
         columnsButton = groupControls.columnsButton,
         checks = Settings.MergeControls(groupControls.checks, listControls.checks),
         groupWidth = groupControls.width,
         groupHeight = groupControls.height,
+        groupHeaderHeight = groupControls.headerHeight,
+        groupMargin = groupControls.margin,
+        groupAutoWidth = groupControls.autoWidth,
         listWidth = listControls.width,
         listHeight = listControls.height,
         colors = Settings.MergeControls(groupControls.colors, listControls.colors),
@@ -380,6 +403,9 @@ function Settings.RefreshRaidViewControls(controls)
 
     controls.groupWidth:SetValue(MuklaOfficerSuiteDB.raidGroupTileWidth)
     controls.groupHeight:SetValue(MuklaOfficerSuiteDB.raidGroupTileHeight)
+    controls.groupHeaderHeight:SetValue(MuklaOfficerSuiteDB.raidGroupHeaderHeight)
+    controls.groupMargin:SetValue(MuklaOfficerSuiteDB.raidGroupMargin)
+    if MuklaOfficerSuiteDB.raidGroupAutoTileWidth then controls.groupWidth:Disable() else controls.groupWidth:Enable() end
     controls.listWidth:SetValue(MuklaOfficerSuiteDB.raidListRowWidth)
     controls.listHeight:SetValue(MuklaOfficerSuiteDB.raidListRowHeight)
 
@@ -459,11 +485,11 @@ function Settings.ApplyRaidAccordions(controls)
 
     local leaderY, lootY, opacityY, debugY, chatY
     if expanded then
-        leaderY, lootY = -822, -846
+        leaderY, lootY = -988, -1012
         if MuklaOfficerSuiteDB.raidLootExpanded then
-            opacityY, debugY, chatY = -872, -904, -934
+            opacityY, debugY, chatY = -1038, -1070, -1100
         else
-            opacityY, debugY, chatY = -872, -884, -914
+            opacityY, debugY, chatY = -1038, -1050, -1080
         end
     else
         leaderY, lootY = -272, -296
@@ -499,7 +525,7 @@ function Settings.ApplyRaidAccordions(controls)
         controls.chatLogsCheck:ClearAllPoints()
         controls.chatLogsCheck:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 10, chatY)
     end
-    controls.page.settingsContentHeight = expanded and 970 or 410
+    controls.page.settingsContentHeight = expanded and 1140 or 410
     Settings.UpdateScroll(controls.page.settingsViewport, controls.page, controls.page.settingsContentHeight)
     controls.layout.rule:Hide()
 end
