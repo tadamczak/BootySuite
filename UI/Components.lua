@@ -103,18 +103,39 @@ function UI.CreateDropdownButton(parent, name, text, width)
 end
 
 function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
-    local panel = CreateFrame("Frame", nil, parent)
+    local panel = CreateFrame("Frame", nil, UIParent)
     panel:SetPoint("TOPLEFT", toggle, "BOTTOMLEFT", 0, -2)
     panel:SetWidth(width or 130); panel:SetHeight(height or 230)
     if panel.SetFrameStrata and toggle.GetFrameStrata then panel:SetFrameStrata(toggle:GetFrameStrata()) end
-    panel:SetFrameLevel(math.max(parent:GetFrameLevel(), toggle:GetFrameLevel()) + (levelOffset or 50))
+    panel:SetFrameLevel(math.max(parent:GetFrameLevel(), toggle:GetFrameLevel()) + (levelOffset or 50) + 100)
     if panel.SetToplevel then panel:SetToplevel(true) end
     panel:EnableMouse(true)
     panel:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 5, right = 5, top = 5, bottom = 5 } })
     panel:SetBackdropColor(0.04, 0.03, 0.02, 0.98)
     UI.RegisterDialogSurface(panel, "panel", { 0.04, 0.03, 0.02, 0.98 })
-    panel.options = {}; panel:Hide()
+    local dismiss = CreateFrame("Button", nil, UIParent)
+    dismiss:SetAllPoints(UIParent)
+    if dismiss.SetFrameStrata and toggle.GetFrameStrata then dismiss:SetFrameStrata(toggle:GetFrameStrata()) end
+    dismiss:SetFrameLevel(panel:GetFrameLevel() - 1)
+    dismiss:EnableMouse(true)
+    dismiss:SetScript("OnClick", function() panel:Hide() end)
+    dismiss:Hide()
+    panel.dismiss = dismiss
+    panel.options = {}
+    panel:SetScript("OnShow", function() dismiss:Show() end)
+    panel:SetScript("OnHide", function() dismiss:Hide() end)
+    panel:Hide()
     return panel
+end
+
+function UI.StyleDropdownChoice(button)
+    if UI.SetClassicButtonCompact then UI.SetClassicButtonCompact(button, true) end
+    if UI.AttachGoldHoverBorder then UI.AttachGoldHoverBorder(button, 0.35, 0.35, 0.35, 1) end
+    if button.label and button.label.GetFont then
+        local font, _, flags = button.label:GetFont()
+        if font then button.label:SetFont(font, 9, flags) end
+    end
+    return button
 end
 
 function UI.CreateSearchBox(parent, name, width)

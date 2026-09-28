@@ -63,11 +63,12 @@ function Settings.CreateSkinControl(parent, x, y)
     dropdown.panel = panel
     local function AddChoice(text, value, offsetY)
         local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
-          button.label:SetFontObject(GameFontHighlightSmall)
-          button:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, offsetY - 5)
-          button:SetScript("OnClick", function()
-              MOS.UI.SetSkin(value, true); dropdown:SetText(text); panel:Hide()
-          end)
+        MOS.UI.StyleDropdownChoice(button)
+        button:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, offsetY - 5)
+        button:SetScript("OnClick", function()
+            MOS.UI.SetSkin(value, true); dropdown:SetText(text); panel:Hide()
+        end)
+        table.insert(panel.options, button)
     end
     AddChoice("Default", "default", -2); AddChoice("Classic", "classic", -21)
     dropdown:SetScript("OnClick", function() if panel:IsVisible() then panel:Hide() else panel:Show() end end)
@@ -103,6 +104,7 @@ function Settings.CreateRaidColumnControl(page, x, y, onChanged)
     local columnNumber
     for columnNumber = 1, 4 do
         local choice = MOS.UI.CreateButton(panel, nil, tostring(columnNumber), 38, 18)
+        MOS.UI.StyleDropdownChoice(choice)
         choice:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, -5 - ((columnNumber - 1) * 20))
         choice.columnCount = columnNumber
         choice:SetScript("OnClick", function()
@@ -112,6 +114,7 @@ function Settings.CreateRaidColumnControl(page, x, y, onChanged)
             panel:Hide()
             if onChanged then onChanged() end
         end)
+        table.insert(panel.options, choice)
     end
     button:SetScript("OnClick", function() if panel:IsVisible() then panel:Hide() else panel:Show() end end)
     button:SetScript("OnShow", function()
@@ -323,7 +326,7 @@ function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
     dropdown.panel = panel
     local function AddChoice(text, value, offsetY)
         local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
-        button.label:SetFontObject(GameFontHighlightSmall)
+        MOS.UI.StyleDropdownChoice(button)
         button:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, offsetY - 5)
         button:SetScript("OnClick", function()
             MOS.Database.Ensure()
@@ -332,6 +335,7 @@ function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
             panel:Hide()
             if onChanged then onChanged(value) end
         end)
+        table.insert(panel.options, button)
     end
 
     AddChoice("Tab view", "tabs", -2)
@@ -580,13 +584,27 @@ function Settings.OffsetRaidLayoutControls(controls, offset)
     for index = 1, table.getn(controls.layoutControls or {}) do
         local control = controls.layoutControls[index]
         if control and control.GetPoint and control.SetPoint then
-            if not control.mosSettingsBasePoint then
-                local point, relative, relativePoint, x, y = control:GetPoint(1)
-                if point and relative == controls.page then control.mosSettingsBasePoint = { point, relativePoint, x, y } end
+            if not control.mosSettingsBasePoints then
+                local points, valid = {}, true
+                local pointIndex
+                for pointIndex = 1, control:GetNumPoints() do
+                    local point, relative, relativePoint, x, y = control:GetPoint(pointIndex)
+                    if point and relative == controls.page then
+                        table.insert(points, { point, relativePoint, x, y })
+                    else
+                        valid = false
+                    end
+                end
+                if valid and table.getn(points) > 0 then control.mosSettingsBasePoints = points end
             end
-            local base = control.mosSettingsBasePoint
-            if base then
-                control:ClearAllPoints(); control:SetPoint(base[1], controls.page, base[2], base[3], base[4] + offset)
+            local points = control.mosSettingsBasePoints
+            if points then
+                control:ClearAllPoints()
+                local pointIndex
+                for pointIndex = 1, table.getn(points) do
+                    local base = points[pointIndex]
+                    control:SetPoint(base[1], controls.page, base[2], base[3], base[4] + offset)
+                end
             end
         end
     end
