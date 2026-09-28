@@ -261,14 +261,16 @@ function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKe
     field:SetMaxLetters(3)
     field.settingKey = settingKey
     field.fallback = fallback
+    field:SetScript("OnEditFocusGained", function() this.mosEditing = true end)
     field:SetScript("OnEnterPressed", function() this:ClearFocus() end)
     field:SetScript("OnEscapePressed", function() this:ClearFocus() end)
-    field:SetScript("OnEditFocusLost", function()
+    field.CommitValue = function(owner)
         binding.ensure()
-        local value = math.max(0, math.min(100, tonumber(this:GetText()) or this.fallback))
-        binding.set(this.settingKey, value)
-        this:SetText(value)
-    end)
+        local value = math.max(0, math.min(100, tonumber(owner:GetText()) or owner.fallback))
+        binding.set(owner.settingKey, value)
+        owner:SetText(value)
+    end
+    field:SetScript("OnEditFocusLost", function() this:CommitValue(); this.mosEditing = nil end)
     return label, field
 end
 

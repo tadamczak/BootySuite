@@ -8,36 +8,48 @@ function Settings.CreateProfiles(page, onLoaded)
     view.heading = C.Settings.CreateSectionAccordion(page, "Profile", -10)
     view.content = C.CreateContainer(nil, page)
     view.content:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -36)
-    view.content:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -36); view.content:SetHeight(130)
+    view.content:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -36); view.content:SetHeight(82)
     local function Label(text, y, color)
         local label = C.CreateComponentLabel(view.content, text, color or "white")
         label:SetPoint("TOPLEFT", view.content, "TOPLEFT", 24, y); return label
     end
     view.currentLabel = Label("Current profile", -4, "gold")
-    view.current = C.CreateReadOnlyInput(view.content, nil, 180)
-    view.current:SetHeight(20); view.current:SetPoint("TOPLEFT", view.content, "TOPLEFT", 142, 0)
+    view.current = C.CreateComponentLabel(view.content, "", "white")
+    view.current:SetWidth(180); view.current:SetHeight(20); view.current:SetJustifyH("LEFT"); view.current:SetPoint("TOPLEFT", view.content, "TOPLEFT", 142, 0)
     Label("Load profile", -32)
     view.select = C.CreateDropdownButton(view.content, nil, "Select profile", 180)
     view.select:SetPoint("TOPLEFT", view.content, "TOPLEFT", 142, -28)
     Label("New profile", -60)
     view.name = C.CreateFramedEditBox(view.content, nil, 180)
     view.name:SetHeight(20); view.name:SetMaxLetters(64); view.name:SetPoint("TOPLEFT", view.content, "TOPLEFT", 142, -56)
-    view.loadedLabel = Label("Loaded profile", -88, "gold")
-    view.loaded = C.CreateComponentLabel(view.content, "", "white")
-    view.loaded:SetPoint("LEFT", view.loadedLabel, "RIGHT", 8, 0)
-    view.status = C.CreateComponentLabel(view.content, "", "white")
-    view.status:SetPoint("TOPLEFT", view.content, "TOPLEFT", 24, -110)
-    view.status:SetPoint("RIGHT", view.content, "RIGHT", -12, 0); view.status:SetJustifyH("LEFT")
     local function Action(action, previous)
         local button = C.CreateButton(view.content, nil, action, 50, 18)
+        C.SizeClassicButton(button, 50, 18, 0.8)
         button:SetPoint("LEFT", previous, "RIGHT", 6, 0); view[action] = button; return button
     end
     Action("Export", Action("Delete", Action("Load", view.select)))
-    Action("Save", Action("Add", view.name))
+    Action("Add", view.name)
+    Action("Save", view.current)
+    local function Status(button)
+        local label = C.CreateColumnLabel(view.content, "", "gold")
+        label:SetPoint("LEFT", button, "RIGHT", 8, 0)
+        label:SetPoint("RIGHT", view.content, "RIGHT", -12, 0)
+        label:SetHeight(20); label:SetJustifyH("LEFT")
+        return label
+    end
+    view.saveStatus = Status(view.Save)
+    view.loadStatus = Status(view.Export)
+    view.addStatus = Status(view.Add)
+    local function CommitPending()
+        local controls = page.raidAccordionControls
+        if not controls then return end
+        if controls.opacityField and controls.opacityField.mosEditing then controls.opacityField:CommitValue(); controls.opacityField:ClearFocus() end
+        if controls.focusField and controls.focusField.mosEditing then controls.focusField:CommitValue(); controls.focusField:ClearFocus() end
+    end
     view.panel = C.CreateDropdownPanel(page, view.select, 220, 154, 20)
     local function RefreshState()
         local current = api.GetCurrent()
-        view.current:SetValueText(current); view.loaded:SetText(current)
+        view.current:SetText(current)
         if view.selected and not api.Exists(view.selected) then view.selected = nil end
         view.select.label:SetText(view.selected or "Select profile")
         C.SetButtonEnabled(view.Load, view.selected ~= nil)
@@ -71,9 +83,11 @@ function Settings.CreateProfiles(page, onLoaded)
         view.panel:Hide(); view.confirm:Open(message, yes, no)
     end
     local function Switch(action, target)
+        CommitPending()
+        local status = action == "Add" and view.addStatus or view.loadStatus
         local function Apply()
             local ok, message = api[action](target)
-            view.status:SetText(message)
+            status:SetText(message)
             if ok then
                 if action == "Add" then view.name:SetText(""); view.selected = api.GetCurrent() end
                 RefreshState(); onLoaded()
@@ -82,7 +96,7 @@ function Settings.CreateProfiles(page, onLoaded)
         if api.IsDirty() then
             Confirm("Do you want to save current profile " .. api.GetCurrent() .. "?", function()
                 local ok, message = api.SaveCurrent()
-                if ok then Apply() else view.status:SetText(message) end
+                if ok then Apply() else status:SetText(message) end
             end, Apply)
         else Apply() end
     end
@@ -90,27 +104,29 @@ function Settings.CreateProfiles(page, onLoaded)
     view.Add:SetScript("OnClick", function()
         local name = view.name:GetText()
         local ok, message = api.CanAdd(name)
-        if ok then Switch("Add", name) else view.status:SetText(message) end
+        if ok then Switch("Add", name) else view.addStatus:SetText(message) end
     end)
     view.Save:SetScript("OnClick", function()
-        local _, message = api.SaveCurrent(); view.status:SetText(message); RefreshState()
+        CommitPending()
+        local _, message = api.SaveCurrent(); view.saveStatus:SetText(message); RefreshState()
     end)
     view.Delete:SetScript("OnClick", function()
         local selected = view.selected
         if not selected then return end
         Confirm("Delete profile " .. selected .. "?", function()
             local _, message = api.Delete(selected)
-            view.status:SetText(message); view.selected = nil; RefreshState()
+            view.loadStatus:SetText(message); view.selected = nil; RefreshState()
         end)
     end)
     view.Export:SetScript("OnClick", function()
         if not view.selected then return end
         local text, message = api.Export(view.selected)
-        if not text then view.status:SetText(message); return end
+        if not text then view.loadStatus:SetText(message); return end
         if not view.export then
             view.export = C.CreateTextEditor("MuklaOfficerSuiteProfileExport", "Export profile", 16384)
             view.export.save:Hide(); view.export.cancel:SetText("Close")
         end
+        view.loadStatus:SetText("Exported profile: " .. view.selected)
         view.export:Open(text); view.export.edit:HighlightText()
         view.export:SetMessage("Copy the selected text with Ctrl+C.", false); view.panel:Hide()
     end)
@@ -127,7 +143,7 @@ end
 function Settings.ApplyTopSections(page)
     local state = page.topSectionState
     if not state then return end
-    local profileHeight = state.profile and 156 or 28
+    local profileHeight = state.profile and 108 or 28
     local uiY = -10 - profileHeight
     page.uiHeadingY = uiY
     page.profiles.heading.label:SetText((state.profile and "-  " or "+  ") .. "Profile")
@@ -140,7 +156,7 @@ function Settings.ApplyTopSections(page)
     if state.ui then page.uiContent:Show() else
         page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide()
     end
-    page.settingsTopOffset = -profileHeight
+    page.settingsTopOffset = -profileHeight - 28
     if page.primarySections and page.raidAccordionControls then
         Settings.ApplyRosterAccordions(page, page.primarySections, page.raidAccordionControls)
     end

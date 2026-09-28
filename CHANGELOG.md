@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.3 - 2026-09-29
+
+- Simplified Profile to three rows with compact action buttons and gold inline feedback; Save sits beside the current profile name.
+- Save commits focused percentage edits before taking a snapshot; UI General places Skin above the checkboxes.
+
 ## 0.5.0-dev.2 - 2026-09-29
 
 - Fixed LM Config checkbox persistence and grouped roster/raid settings under the UI accordion; all sections start collapsed after reload.

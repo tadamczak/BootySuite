@@ -113,7 +113,7 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 
 ### Settings
 
-- **Profiles -** Current profile shows the active configuration. Select a saved profile under Load profile to enable Load, Delete and Export. New profile + Add creates and activates a copy of your current settings; Save updates the current profile. Load and Add ask whether to save changed settings first. Delete requires confirmation; deleting the current snapshot leaves your live settings available to save again. Export opens saved settings for copying. Profiles exclude guild, raid and loot records.
+- **Profiles -** Current profile shows the active configuration as text, with Save beside it. Select a saved profile under Load profile to enable Load, Delete and Export. New profile + Add creates and activates a copy of your current settings; Save updates the current profile, including pending percentage edits. Gold feedback appears beside the action buttons. Load and Add ask whether to save changed settings first. Delete requires confirmation; deleting the current snapshot leaves your live settings available to save again. Export opens saved settings for copying. Profiles exclude guild, raid and loot records.
 - **Collapsible sections -** Profile, UI (including Roster and Raid Management), and Debug start collapsed after reload. Expansion is remembered while playing and when reopening Settings.
 
 - **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live.
