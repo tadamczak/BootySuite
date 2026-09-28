@@ -1,37 +1,14 @@
 # Changelog
 
-## 0.4.0-dev.15 - 2026-09-28
+## 0.4.0 - 2026-09-28
 
-- Prepared production release verification and expanded version-discovery workflow coverage.
+- Added a movable, resizable Settings window with session-only accordions and UI visibility preferences.
+- Added configurable Raid Group View sizing, spacing, columns and text sizes.
+- Added peer version discovery with update status and manual checks in About.
+- Fixed Settings scrolling, dropdown overlays, input handling, separators and label contrast.
+- Fixed tab navigation, About layout, Loot Master cleanup and restored corpse rolls.
+- Published addon files directly at repository root for installation.
 
-## 0.4.0-dev.14 - 2026-09-28
-
-- Refreshed the project handoff for continued work in a new chat.
-
-## 0.4.0-dev.13 - 2026-09-28
-
-- Fixed dropdown bottom padding and foreground rendering of Raid Management setting labels.
-
-## 0.4.0-dev.12 - 2026-09-28
-
-- Fixed Settings dropdown overlay, outside-click dismissal, compact options, and full-width separators.
-
-## Unreleased
-
-- Fixed dropdown layering and option typography, isolated Columns styling, full-width view dividers, and screen-safe Settings resize.
-- Fixed repeated update checks, Settings frame hierarchy and reopen state, and oversized header branding.
-- Fixed Settings input handling, heading opacity, slider labels, roster accordions, and dynamic section spacing.
-- Fixed Settings spacing, initial dropdown synchronization, indentation, clipping, and accordion scrolling.
-- Fixed selected-tab retention during resize, bounded About artwork, active check feedback, and development-build discovery.
-- Fixed classic tab borders, About presentation, artwork proportions, and legacy-client slider disabling.
-- Fixed About update details, Tab View behavior, and Settings window layering and initial field synchronization.
-- Added a detachable live Settings window, UI visibility options, and session-only accordion state.
-- Fixed addon-message encoding and moved manual version checks to About with visible status and a login welcome message.
-- Fixed Raid Management settings spacing and added Group View font-size controls.
-- Added peer-to-peer production version checks and `/mos version` update discovery.
-- Added configurable centered Group View sizing, header height, spacing, and organized Raid Management settings.
-- Fixed Loot Master cleanup, restored corpse rolls, and aligned Raid Management group columns.
-- Flattened the repository layout so addon files and directories are published directly at repository root.
 ## 0.3.0 - 2026-09-27
 
 - Added a regression-integrated static-analysis gate for Lua compatibility, architecture boundaries, and performance-sensitive patterns.
