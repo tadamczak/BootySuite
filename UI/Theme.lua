@@ -14,6 +14,7 @@ UI.Theme = {
         PALADIN = { r = 0.96, g = 0.55, b = 0.73 },
     },
     colors = {
+        goldText = { 0.82, 0.70, 0.43 },
         button = { 0.08, 0.07, 0.05, 0.96 },
         buttonBorder = { 0.48, 0.38, 0.20, 1 },
         highlight = { 1, 0.72, 0.12, 0.10 },
