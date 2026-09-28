@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0-dev.14 - 2026-09-28
+
+- Refreshed the project handoff for continued work in a new chat.
+
 ## 0.4.0-dev.13 - 2026-09-28
 
 - Fixed dropdown bottom padding and foreground rendering of Raid Management setting labels.
