@@ -63,3 +63,11 @@ function UI.CreateButton(parent, name, text, width, height)
     button:SetHeight(height or UI.Theme.sizes.buttonHeight)
     return UI.StyleButton(button, text)
 end
+
+function UI.SetButtonLabelInsets(button, left, right)
+    button.mosLabelInsets = { left, right }
+    button.label:ClearAllPoints()
+    button.label:SetPoint("LEFT", button, "LEFT", left, 0)
+    button.label:SetPoint("RIGHT", button, "RIGHT", -right, 0)
+    button.label:SetJustifyH("LEFT")
+end

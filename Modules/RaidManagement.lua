@@ -256,7 +256,7 @@ function RaidManagement.CreateActionControls(page)
     controls.scan:SetPoint("CENTER", page, "CENTER", 0, 12); controls.scan:Hide()
     controls.loadRaid = MOS.UI.Components.CreateButton(page, nil, "Load", 78, 24); controls.loadRaid:Hide(); controls.loadRaid:Disable()
     MOS.UI.Components.AttachTooltip(controls.scan, "Start New Raid", "Create a new raid session with a unique ID and scan the current raid roster.")
-    MOS.UI.Components.AttachTooltip(controls.loadRaid, "Load Raid", "Load the selected saved raid snapshot.")
+    MOS.UI.Components.AttachTooltip(controls.loadRaid, "Load Raid", "Load the selected saved raid snapshot.", true)
     controls.testRaid = MOS.UI.Components.CreateButton(page, nil, "Test Raid", 88, 24); controls.testRaid:Hide()
     MOS.UI.Components.AttachTooltip(controls.testRaid, "Test Raid", "Open a transient 40-player raid sandbox. Test data is never saved.")
     controls.historyTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controls.historyTitle:SetText("Saved raids"); controls.historyTitle:Hide()
@@ -266,7 +266,7 @@ function RaidManagement.CreateActionControls(page)
     for historyIndex = 1, 5 do
         local button = MOS.UI.Components.CreateButton(page, nil, "", 380, 26); button.historyIndex = historyIndex; button:Hide()
         button.mosClassicKeepNormalSurface = true
-        button.label:ClearAllPoints(); button.label:SetPoint("LEFT", button, "LEFT", 8, 0); button.label:SetPoint("RIGHT", button, "RIGHT", -126, 0); button.label:SetJustifyH("LEFT")
+        MOS.UI.Components.SetButtonLabelInsets(button, 8, 126)
         button.savedAt = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall")
         button.savedAt:SetPoint("RIGHT", button, "RIGHT", -8, 0); button.savedAt:SetWidth(112); button.savedAt:SetJustifyH("RIGHT"); button.savedAt:SetTextColor(0.78, 0.78, 0.72)
         controls.historyButtons[historyIndex] = button
@@ -2451,6 +2451,15 @@ function RaidManagement.CreateLootMasterController(options)
         options.page.lmConfigToggle:Hide(); options.page.reyCoinToggle:Hide()
     end
 
+    local function RestoreModeButton()
+        options.modeButton:SetText("LM Mode")
+        options.modeButton:ClearAllPoints()
+        options.modeButton:SetPoint("TOPRIGHT", options.page, "TOPRIGHT", -4, -8)
+        options.modeButton:SetWidth(96); options.modeButton:SetHeight(22)
+        MOS.UI.Components.SetClassicButtonCompact(options.modeButton, false)
+        MOS.UI.Components.SetClassicButtonIcon(options.modeButton, "loot_tools", 13, 7, 0)
+    end
+
     controller.resetOnLoad = function()
         local settings = options.getSettings()
         MOS.lootMasterMode = false; MOS.lootMasterMinimized = false
@@ -2469,7 +2478,7 @@ function RaidManagement.CreateLootMasterController(options)
         if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Hide() end
         options.applyNavigationLayout()
         options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 3, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -3, 3)
-        options.modeButton:SetText("LM Mode")
+        RestoreModeButton()
     end
 
     controller.toggle = function()
@@ -2505,6 +2514,7 @@ function RaidManagement.CreateLootMasterController(options)
                 settings.lootMasterWidth = options.dashboard:GetWidth(); settings.lootMasterHeight = options.dashboard:GetHeight()
             end
             MOS.lootMasterMinimized = false
+            controller.closePanels()
             alphaWatcher:Hide(); options.dashboard:SetAlpha(1); options.dashboard:SetMinResize(760, 420); options.dashboard:SetMaxResize(1100, 760)
             options.dashboard:SetWidth(math.max(760, tonumber(settings.windowWidth) or 840)); options.dashboard:SetHeight(math.max(420, tonumber(settings.windowHeight) or 540))
             options.dashboard:ClearAllPoints()
@@ -2514,7 +2524,7 @@ function RaidManagement.CreateLootMasterController(options)
             if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Hide() end
             options.applyNavigationLayout()
             options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 3, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -3, 3)
-            options.modeButton:SetText("LM Mode")
+            RestoreModeButton()
             if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Show() end
             MOS.UI.Components.SetSurfaceCompact(options.dashboard, false); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, false)
             options.applyNavigationLayout()

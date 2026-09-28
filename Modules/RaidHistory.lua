@@ -17,7 +17,7 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     controls.testRaid:ClearAllPoints(); controls.testRaid:SetPoint("LEFT", controls.loadRaid, "RIGHT", 8, 0); controls.testRaid:Show()
     controls.historyTitle:ClearAllPoints(); controls.historyTitle:SetPoint("TOP", controls.scan, "BOTTOM", 91, -18); controls.historyTitle:Show()
     local snapshots = page.getRaidHistory and page.getRaidHistory() or {}; page.raidHistorySnapshots = snapshots
-    local historyWidth = math.max(380, page:GetWidth() - 80)
+    local historyWidth = math.max(380, page:GetWidth() - 80) / 2
     local index
     for index = 1, 5 do
         local snapshot, button, deleteButton = snapshots[index], controls.historyButtons[index], controls.historyDeleteButtons[index]
