@@ -10,6 +10,9 @@ function Database.Ensure()
     if type(MuklaOfficerSuiteDB.minimap) ~= "table" then
         MuklaOfficerSuiteDB.minimap = { angle = 220, hidden = false }
     end
+    if MuklaOfficerSuiteDB.hideMinimapIcon == nil then MuklaOfficerSuiteDB.hideMinimapIcon = MuklaOfficerSuiteDB.minimap.hidden and true or false end
+    if MuklaOfficerSuiteDB.suppressLoginMessage == nil then MuklaOfficerSuiteDB.suppressLoginMessage = false end
+    MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
     if tonumber(MuklaOfficerSuiteDB.lootMasterOpacity) == nil then MuklaOfficerSuiteDB.lootMasterOpacity = 100 end
     if MuklaOfficerSuiteDB.lmAutoLoot == nil then MuklaOfficerSuiteDB.lmAutoLoot = false end
     if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 30 end
@@ -29,7 +32,6 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.raidGroupShowHeader == nil then MuklaOfficerSuiteDB.raidGroupShowHeader = true end
     if MuklaOfficerSuiteDB.raidGroupShowLootMaster == nil then MuklaOfficerSuiteDB.raidGroupShowLootMaster = true end
     if MuklaOfficerSuiteDB.raidGroupShowRoleIcon == nil then MuklaOfficerSuiteDB.raidGroupShowRoleIcon = true end
-    if MuklaOfficerSuiteDB.raidLayoutExpanded == nil then MuklaOfficerSuiteDB.raidLayoutExpanded = true end
     if MuklaOfficerSuiteDB.raidGroupClassColors == nil then MuklaOfficerSuiteDB.raidGroupClassColors = true end
     if MuklaOfficerSuiteDB.raidGroupAutoTileWidth == nil then MuklaOfficerSuiteDB.raidGroupAutoTileWidth = true end
     MuklaOfficerSuiteDB.raidGroupTileWidth = math.max(160, math.min(340, tonumber(MuklaOfficerSuiteDB.raidGroupTileWidth) or 280))
@@ -59,9 +61,6 @@ function Database.Ensure()
     if type(MuklaOfficerSuiteDB.raidListTextColor) ~= "table" then MuklaOfficerSuiteDB.raidListTextColor = { 1, 1, 1 } end
     if type(MuklaOfficerSuiteDB.raidListHoverColor) ~= "table" then MuklaOfficerSuiteDB.raidListHoverColor = { 0.12, 0.09, 0.025 } end
     if type(MuklaOfficerSuiteDB.raidListPressedColor) ~= "table" then MuklaOfficerSuiteDB.raidListPressedColor = { 0.20, 0.14, 0.03 } end
-    if MuklaOfficerSuiteDB.raidGeneralExpanded == nil then MuklaOfficerSuiteDB.raidGeneralExpanded = false end
-    if MuklaOfficerSuiteDB.raidLootExpanded == nil then MuklaOfficerSuiteDB.raidLootExpanded = false end
-    if MuklaOfficerSuiteDB.raidLeaderExpanded == nil then MuklaOfficerSuiteDB.raidLeaderExpanded = false end
     MuklaOfficerSuiteDB.addonVersion = MOS.version
 end
 

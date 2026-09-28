@@ -11,7 +11,8 @@ local function OnSettingsMouseWheel()
     if scrollBar then scrollBar:SetValue(value) else this:SetVerticalScroll(value) end
 end
 
-function Settings.CreateShell(parent, anchorPage, onNavigationLayout)
+function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
+    options = options or {}
     local viewport = CreateFrame("ScrollFrame", "MuklaOfficerSuiteSettingsScroll", parent, "UIPanelScrollFrameTemplate")
     MOS.UI.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteSettingsScrollScrollBar"))
     viewport:SetPoint("TOPLEFT", anchorPage, "TOPLEFT", 8, -8)
@@ -38,11 +39,13 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout)
     generalHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -80)
     generalHeading:SetText("General")
     Settings.CreateSkinControl(page, 92, -80)
+    Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteDisableLoginMessage", 270, -80, "Turn off addon login message", "suppressLoginMessage")
+    Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteHideMinimapIcon", 515, -80, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
     local layoutHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    layoutHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 330, -80)
+    layoutHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -110)
     layoutHeading:SetText("Layout")
-    Settings.CreateMenuStyleControl(page, 330, -110, onNavigationLayout)
-    return { viewport = viewport, page = page }
+    Settings.CreateMenuStyleControl(page, 92, -110, onNavigationLayout)
+    return { viewport = viewport, page = page, scrollBar = scrollBar }
 end
 
 function Settings.CreateSkinControl(parent, x, y)
@@ -79,10 +82,11 @@ function Settings.CreatePrimarySections(page)
 end
 
 function Settings.CreateRaidColumnControl(page, x, y, onChanged)
-    local label = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local label = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     label:SetPoint("TOPLEFT", page, "TOPLEFT", x, y - 6)
     label:SetText("Columns")
     label:SetTextColor(1, 1, 1)
+    label:SetAlpha(1)
 
     local button = MOS.UI.CreateDropdownButton(page, nil, "2", 52)
     button:SetPoint("TOPLEFT", page, "TOPLEFT", x + 52, y)
@@ -206,7 +210,7 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
         originalAutoWidthSave(owner)
         MOS.UI.Settings.SetSliderEnabled(width, not owner:GetChecked())
     end
-    local colorHeading = Heading("Member tile color", -724)
+    local colorHeading = Heading("Member tile colors", -724)
     local classColors = factory.Checkbox(40, -746, "Use class colors", "raidGroupClassColors")
     local background = factory.Color(40, -774, "Background color", "raidGroupBackgroundColor")
     local text = factory.Color(230, -774, "Main text color", "raidGroupTextColor")
@@ -460,12 +464,12 @@ end
 
 function Settings.ApplyRaidAccordions(controls)
     if not controls then return end
-    MOS.Database.Ensure()
-    local expanded = MuklaOfficerSuiteDB.raidLayoutExpanded
+    local state = controls.state
+    local expanded = state.layout
     controls.layout.label:SetText((expanded and "-  " or "+  ") .. "Layout")
-    controls.general.label:SetText((MuklaOfficerSuiteDB.raidGeneralExpanded and "-  " or "+  ") .. controls.general.baseText)
-    controls.leader.label:SetText((MuklaOfficerSuiteDB.raidLeaderExpanded and "-  " or "+  ") .. controls.leader.baseText)
-    controls.loot.label:SetText((MuklaOfficerSuiteDB.raidLootExpanded and "-  " or "+  ") .. controls.loot.baseText)
+    controls.general.label:SetText((state.general and "-  " or "+  ") .. controls.general.baseText)
+    controls.leader.label:SetText((state.leader and "-  " or "+  ") .. controls.leader.baseText)
+    controls.loot.label:SetText((state.loot and "-  " or "+  ") .. controls.loot.baseText)
     controls.layout:SetBackdropColor(0, 0, 0, 0)
     controls.layout:SetBackdropBorderColor(0, 0, 0, 0)
     controls.general:SetBackdropColor(0, 0, 0, 0)
@@ -479,33 +483,37 @@ function Settings.ApplyRaidAccordions(controls)
     controls.leader.label:SetTextColor(1, 0.82, 0)
     controls.loot.label:SetTextColor(1, 0.82, 0)
     if expanded then controls.layout:LockHighlight() else controls.layout:UnlockHighlight() end
-    if MuklaOfficerSuiteDB.raidGeneralExpanded then controls.general:LockHighlight() else controls.general:UnlockHighlight() end
-    if MuklaOfficerSuiteDB.raidLeaderExpanded then controls.leader:LockHighlight() else controls.leader:UnlockHighlight() end
-    if MuklaOfficerSuiteDB.raidLootExpanded then controls.loot:LockHighlight() else controls.loot:UnlockHighlight() end
+    if state.general then controls.general:LockHighlight() else controls.general:UnlockHighlight() end
+    if state.leader then controls.leader:LockHighlight() else controls.leader:UnlockHighlight() end
+    if state.loot then controls.loot:LockHighlight() else controls.loot:UnlockHighlight() end
 
     local controlIndex
     for controlIndex = 1, table.getn(controls.layoutControls) do
         if expanded then controls.layoutControls[controlIndex]:Show() else controls.layoutControls[controlIndex]:Hide() end
     end
     for controlIndex = 1, table.getn(controls.generalControls or {}) do
-        if MuklaOfficerSuiteDB.raidGeneralExpanded then controls.generalControls[controlIndex]:Show() else controls.generalControls[controlIndex]:Hide() end
+        if state.general then controls.generalControls[controlIndex]:Show() else controls.generalControls[controlIndex]:Hide() end
     end
     controls.columnsPanel:Hide()
+
+    local layoutY = (state.general or expanded) and -280 or -258
+    controls.layout:ClearAllPoints()
+    controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, layoutY)
 
     local leaderY, lootY, opacityY, debugY, chatY
     if expanded then
         leaderY, lootY = -1126, -1154
-        if MuklaOfficerSuiteDB.raidLootExpanded then
+        if state.loot then
             opacityY, debugY, chatY = -1182, -1214, -1244
         else
             opacityY, debugY, chatY = -1182, -1194, -1224
         end
     else
-        leaderY, lootY = -310, -338
-        if MuklaOfficerSuiteDB.raidLootExpanded then
-            opacityY, debugY, chatY = -366, -402, -432
+        leaderY, lootY = layoutY - 30, layoutY - 58
+        if state.loot then
+            opacityY, debugY, chatY = layoutY - 86, layoutY - 122, layoutY - 152
         else
-            opacityY, debugY, chatY = -366, -382, -412
+            opacityY, debugY, chatY = layoutY - 86, layoutY - 102, layoutY - 132
         end
     end
     controls.leader:ClearAllPoints()
@@ -524,7 +532,7 @@ function Settings.ApplyRaidAccordions(controls)
         controls.focusLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 210, opacityY)
         controls.focusField:ClearAllPoints()
         controls.focusField:SetPoint("LEFT", controls.focusLabel, "RIGHT", 8, 0)
-        if MuklaOfficerSuiteDB.raidLootExpanded then
+        if state.loot then
             controls.opacityLabel:Show(); controls.opacityField:Show(); controls.focusLabel:Show(); controls.focusField:Show()
         else
             controls.opacityLabel:Hide(); controls.opacityField:Hide(); controls.focusLabel:Hide(); controls.focusField:Hide()
@@ -539,22 +547,91 @@ function Settings.ApplyRaidAccordions(controls)
     controls.layout.rule:Hide()
 end
 
-function Settings.ToggleRaidAccordion(controls, settingKey)
-    MOS.Database.Ensure()
-    MOS.Database.SetSetting(settingKey, not MOS.Database.GetSetting(settingKey))
+function Settings.ToggleRaidAccordion(controls, stateKey)
+    controls.state[stateKey] = not controls.state[stateKey]
     Settings.ApplyRaidAccordions(controls)
 end
 
 function Settings.BindRaidAccordions(page, controls)
+    controls.state = { general = false, layout = false, leader = false, loot = false }
     page.raidAccordionControls = controls
     page.ApplyRaidLayoutAccordion = function()
         Settings.ApplyRaidAccordions(page.raidAccordionControls)
     end
-    controls.layout:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "raidLayoutExpanded") end)
+    controls.layout:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "layout") end)
     controls.layout:SetScript("OnShow", function() page.ApplyRaidLayoutAccordion() end)
-    controls.general:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "raidGeneralExpanded") end)
-    controls.leader:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "raidLeaderExpanded") end)
-    controls.loot:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "raidLootExpanded") end)
+    controls.general:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "general") end)
+    controls.leader:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "leader") end)
+    controls.loot:SetScript("OnClick", function() Settings.ToggleRaidAccordion(page.raidAccordionControls, "loot") end)
+end
+
+function Settings.AttachShell(view, parent, anchor, detached)
+    view.viewport:SetParent(parent)
+    view.viewport:ClearAllPoints()
+    view.viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 8, -8)
+    view.viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -36, 8)
+    if view.scrollBar then
+        view.scrollBar:ClearAllPoints()
+        view.scrollBar:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -8, -24)
+        view.scrollBar:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -8, 24)
+    end
+    view.viewport.settingsDetached = detached and true or false
+    Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)
+end
+
+function Settings.CreateDetachedWindow(view, embeddedParent, embeddedAnchor)
+    local window = CreateFrame("Frame", "MuklaOfficerSuiteSettingsWindow", UIParent)
+    window:SetWidth(780); window:SetHeight(620)
+    window:SetPoint("CENTER", UIParent, "CENTER", 40, 10)
+    window:SetFrameStrata("DIALOG"); window:SetMovable(true); window:SetResizable(true)
+    if window.SetClampedToScreen then window:SetClampedToScreen(true) end
+    window:SetMinResize(660, 420); window:SetMaxResize(1100, 760)
+    window:EnableMouse(true); window:RegisterForDrag("LeftButton")
+    window:SetScript("OnDragStart", function() this:StartMoving() end)
+    window:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+    window:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+    window:SetBackdropColor(0.015, 0.015, 0.015, 1); window:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
+
+    local titleBar = CreateFrame("Frame", nil, window)
+    titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 10, -10); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -10, -10); titleBar:SetHeight(30)
+    local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("LEFT", titleBar, "LEFT", 8, 0); title:SetText("Settings")
+    local close = MOS.UI.CreateButton(titleBar, nil, "X", 18, 18)
+    close:SetPoint("RIGHT", titleBar, "RIGHT", -4, 0); MOS.UI.SetClassicButtonCompact(close, true); MOS.UI.AttachGoldHoverBorder(close, 0.35, 0.35, 0.35, 1)
+    local minimize = MOS.UI.CreateButton(titleBar, nil, "_", 18, 18)
+    minimize:SetPoint("RIGHT", close, "LEFT", -4, 0); MOS.UI.SetClassicButtonCompact(minimize, true); MOS.UI.AttachGoldHoverBorder(minimize, 0.35, 0.35, 0.35, 1)
+    local content = CreateFrame("Frame", nil, window)
+    content:SetPoint("TOPLEFT", window, "TOPLEFT", 8, -42); content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -8, 8)
+    local resize = CreateFrame("Button", nil, window)
+    resize:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -7, 7); resize:SetWidth(18); resize:SetHeight(18)
+    local resizeTexture = resize:CreateTexture(nil, "OVERLAY"); resizeTexture:SetAllPoints(resize); resizeTexture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    resize:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
+    resize:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end)
+
+    local function CloseWindow()
+        local restoreVisible = window.restoreEmbeddedVisibility
+        Settings.AttachShell(view, embeddedParent, embeddedAnchor, false)
+        window:Hide()
+        if restoreVisible then view.viewport:Show() else view.viewport:Hide() end
+    end
+    close:SetScript("OnClick", CloseWindow)
+    minimize:SetScript("OnClick", function()
+        if window.minimized then
+            window.minimized = false; window:SetHeight(window.expandedHeight or 620); content:Show(); resize:Show(); view.viewport:Show(); minimize:SetText("_")
+        else
+            window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(50); minimize:SetText("[]")
+        end
+    end)
+    window.Open = function()
+        if window:IsVisible() then return end
+        window.restoreEmbeddedVisibility = view.viewport:IsVisible()
+        window.minimized = false; content:Show(); resize:Show(); minimize:SetText("_")
+        Settings.AttachShell(view, content, content, true)
+        view.viewport:Show(); window:Show()
+    end
+    window.Toggle = function() if window:IsVisible() then CloseWindow() else window.Open() end end
+    window:Hide()
+    return window
 end
 
 function Settings.CreateLifecycle(options)
@@ -562,7 +639,7 @@ function Settings.CreateLifecycle(options)
         Settings.UpdateScroll(options.viewport, options.page, options.page.settingsContentHeight or options.bottomPadding)
     end
     return {
-        Hide = function(self) options.viewport:Hide() end,
+        Hide = function(self) if not options.viewport.settingsDetached then options.viewport:Hide() end end,
         Show = function(self)
             Settings.SyncSavedControls(options.chatLogsCheck, options.opacityField, options.focusField)
             UpdateScroll()

@@ -121,6 +121,8 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - **Update notification -** MOS checks once when entering the game and provides **Check for updates** in About. Detection uses private addon traffic with online MOS users and shows a GitHub Releases link for newer production releases.
 
 - **Addon information -** Review the installed version and basic project information.
+- **Live Settings window -** Use the gear button to adjust the same Settings controls in a separate window while viewing another module.
+- **UI visibility -** Settings can disable the login message or hide the minimap icon.
 
 ## How to record raid session
 

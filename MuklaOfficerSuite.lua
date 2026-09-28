@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.3"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.4"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.3.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -102,7 +102,13 @@ local aboutPage = dashboardPages.about
 
 local settingsView = MOS.Modules.Settings.CreateShell(contentPanel, rosterPage, function()
     if ApplyNavigationLayout then ApplyNavigationLayout() end
-end)
+end, {
+    minimapVisibilityChanged = function()
+        if not MOS.minimapButton then return end
+        MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
+        if MuklaOfficerSuiteDB.hideMinimapIcon then MOS.minimapButton:Hide() else MOS.minimapButton:Show() end
+    end,
+})
 local configurationViewport = settingsView.viewport
 local configurationPage = settingsView.page
 MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
@@ -112,6 +118,8 @@ MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
         if raidPage.lifecycle and raidPage.lifecycle.SyncTrackingSetting then raidPage.lifecycle:SyncTrackingSetting() end
     end,
 })
+local detachedSettingsWindow = MOS.Modules.Settings.CreateDetachedWindow(settingsView, contentPanel, rosterPage)
+dashboardView.settingsButton:SetScript("OnClick", function() detachedSettingsWindow.Toggle() end)
 
 local performanceModule = MOS.Modules.Performance.Create(contentPanel)
 
@@ -816,7 +824,7 @@ MOS.Core.EventDispatcher.Attach(MOS, {
         end
         MuklaOfficerSuiteDB.uiScale = nil
         MOS.PositionMinimapButton()
-        if MuklaOfficerSuiteDB.minimap.hidden then MOS.minimapButton:Hide() end
+        if MuklaOfficerSuiteDB.hideMinimapIcon then MOS.minimapButton:Hide() end
         MOS.sidebarCollapsed = MuklaOfficerSuiteDB.sidebarCollapsed and true or false
         raidPage.lootMasterController.resetOnLoad()
         ApplyNavigationLayout()
