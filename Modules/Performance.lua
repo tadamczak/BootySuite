@@ -38,7 +38,7 @@ end
 function Performance.Create(parent)
     local page = MOS.UI.Components.CreateContainer(nil, parent)
     page:SetPoint("TOPLEFT", parent, "TOPLEFT", 3, -3); page:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -3, 3); page:Hide()
-    page.title = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
+    page.title = MOS.UI.Components.CreateHeading(page, "", 1, "orange")
     page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); page.title:SetText("Performance")
     page.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     page.description:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -48)
@@ -118,7 +118,7 @@ function Performance.Create(parent)
     detail:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } }); detail:SetBackdropColor(0.025, 0.025, 0.022, 1); MOS.UI.Components.RegisterDialogSurface(detail, "panel")
     detail.title = MOS.UI.Components.CreateLabel(detail, nil, "OVERLAY", "GameFontNormal"); detail.title:SetPoint("TOPLEFT", detail, "TOPLEFT", 14, -13); detail.title:SetText("MOS operation profiler")
     detail:SetScript("OnDragStart", function() this:StartMoving() end); detail:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    detail.close = MOS.UI.Components.CreateControl(nil, detail, "UIPanelCloseButton"); detail.close:SetWidth(22); detail.close:SetHeight(22); detail.close:SetPoint("TOPRIGHT", detail, "TOPRIGHT", -5, -5); detail.close:SetScript("OnClick", function() detail:Hide() end)
+    detail.close = MOS.UI.Components.CreateWindowButton(detail, nil, "close"); detail.close:SetPoint("TOPRIGHT", detail, "TOPRIGHT", -5, -5); detail.close:SetScript("OnClick", function() detail:Hide() end)
     detail.rows = {}
     for index = 1, 11 do
         detail.rows[index] = MOS.UI.Components.CreateLabel(detail, nil, "OVERLAY", "GameFontHighlightSmall")
@@ -144,7 +144,7 @@ function Performance.Create(parent)
     addons:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } }); addons:SetBackdropColor(0.025, 0.025, 0.022, 1); MOS.UI.Components.RegisterDialogSurface(addons, "panel")
     addons:SetScript("OnDragStart", function() this:StartMoving() end); addons:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
     addons.title = MOS.UI.Components.CreateLabel(addons, nil, "OVERLAY", "GameFontNormal"); addons.title:SetPoint("TOPLEFT", addons, "TOPLEFT", 14, -13); addons.title:SetText("Memory by addon")
-    addons.close = MOS.UI.Components.CreateControl(nil, addons, "UIPanelCloseButton"); addons.close:SetWidth(22); addons.close:SetHeight(22); addons.close:SetPoint("TOPRIGHT", addons, "TOPRIGHT", -5, -5); addons.close:SetScript("OnClick", function() addons:Hide() end)
+    addons.close = MOS.UI.Components.CreateWindowButton(addons, nil, "close"); addons.close:SetPoint("TOPRIGHT", addons, "TOPRIGHT", -5, -5); addons.close:SetScript("OnClick", function() addons:Hide() end)
     addons.rows = {}
     for index = 1, 12 do addons.rows[index] = MOS.UI.Components.CreateLabel(addons, nil, "OVERLAY", "GameFontHighlightSmall"); addons.rows[index]:SetPoint("TOPLEFT", addons, "TOPLEFT", 16, -44 - ((index - 1) * 20)); addons.rows[index]:SetWidth(350); addons.rows[index]:SetJustifyH("LEFT") end
     addons:Hide(); module.addons = addons
@@ -202,7 +202,7 @@ function Performance.Create(parent)
     report:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } }); report:SetBackdropColor(0.025, 0.025, 0.022, 1); MOS.UI.Components.RegisterDialogSurface(report, "panel")
     report.title = MOS.UI.Components.CreateLabel(report, nil, "OVERLAY", "GameFontNormal"); report.title:SetPoint("TOPLEFT", report, "TOPLEFT", 14, -14); report.title:SetText("Performance diagnosis")
     report:SetScript("OnDragStart", function() this:StartMoving() end); report:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    report.close = MOS.UI.Components.CreateControl(nil, report, "UIPanelCloseButton"); report.close:SetWidth(22); report.close:SetHeight(22); report.close:SetPoint("TOPRIGHT", report, "TOPRIGHT", -5, -5); report.close:SetScript("OnClick", function() report:Hide() end)
+    report.close = MOS.UI.Components.CreateWindowButton(report, nil, "close"); report.close:SetPoint("TOPRIGHT", report, "TOPRIGHT", -5, -5); report.close:SetScript("OnClick", function() report:Hide() end)
     report.lines = {}
     for index = 1, 9 do report.lines[index] = MOS.UI.Components.CreateLabel(report, nil, "OVERLAY", "GameFontHighlightSmall"); report.lines[index]:SetPoint("TOPLEFT", report, "TOPLEFT", 16, -44 - ((index - 1) * 22)); report.lines[index]:SetWidth(435); report.lines[index]:SetJustifyH("LEFT") end
     report:Hide(); module.report = report
@@ -213,7 +213,7 @@ function Performance.Create(parent)
     monitor:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } }); monitor:SetBackdropColor(0.02, 0.02, 0.018, 1); MOS.UI.Components.RegisterDialogSurface(monitor, "panel", { 0.02, 0.02, 0.018, 1 })
     monitor:SetScript("OnDragStart", function() this:StartMoving() end); monitor:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
     monitor.title = MOS.UI.Components.CreateLabel(monitor, nil, "OVERLAY", "GameFontNormalSmall"); monitor.title:SetPoint("TOPLEFT", monitor, "TOPLEFT", 12, -11); monitor.title:SetText("Mukla Live Monitor")
-    monitor.close = MOS.UI.Components.CreateControl(nil, monitor, "UIPanelCloseButton"); monitor.close:SetWidth(20); monitor.close:SetHeight(20); monitor.close:SetPoint("TOPRIGHT", monitor, "TOPRIGHT", -5, -5); monitor.close:SetScript("OnClick", function() monitor:Hide() end)
+    monitor.close = MOS.UI.Components.CreateWindowButton(monitor, nil, "close"); monitor.close:SetPoint("TOPRIGHT", monitor, "TOPRIGHT", -5, -5); monitor.close:SetScript("OnClick", function() monitor:Hide() end)
     monitor.minimize = UI.CreateButton(monitor, nil, "-", 22, 18); monitor.minimize:SetPoint("RIGHT", monitor.close, "LEFT", -2, 0)
     monitor.lines = {}
     for index = 1, 5 do monitor.lines[index] = MOS.UI.Components.CreateLabel(monitor, nil, "OVERLAY", "GameFontHighlightSmall"); monitor.lines[index]:SetPoint("TOPLEFT", monitor, "TOPLEFT", 12, -34 - ((index - 1) * 18)); monitor.lines[index]:SetWidth(225); monitor.lines[index]:SetJustifyH("LEFT") end

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1-dev.4 - 2026-09-29
+
+- Unified close, minimize and maximize controls across addon windows.
+- Added three heading sizes and shared component/column labels with white, gold and orange variants.
+- Load text is gray when disabled and white when enabled.
+
 ## 0.4.1-dev.3 - 2026-09-29
 
 - Halved saved raid row width, preserved text padding and restored Load hover feedback.

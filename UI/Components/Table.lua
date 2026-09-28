@@ -18,7 +18,7 @@ function Table.CreateHeader(parent, controller, text, x, y, width, key, sortable
     local button = UI.CreateControl(nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetWidth(width); button:SetHeight(22)
     button.baseText = text; button.sortKey = key; button.headerController = controller
-    button.label = UI.CreateLabel(button, nil, "OVERLAY", "GameFontNormal")
+    button.label = UI.CreateColumnLabel(button, "", "orange")
     button.label:SetAllPoints(button); button.label:SetJustifyH("LEFT"); button.label:SetText(text)
     local highlight = UI.CreateTexture(button, nil, "HIGHLIGHT")
     highlight:SetAllPoints(button); highlight:SetTexture(1, 0.72, 0.12, 0.12)

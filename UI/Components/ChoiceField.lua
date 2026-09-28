@@ -26,7 +26,8 @@ end
 
 function UI.CreateChoiceField(options)
     local parent = options.parent
-    local label = UI.CreateLabel(options.labelOwner or parent, nil, "OVERLAY", options.font or "GameFontHighlight")
+    local label = UI.CreateComponentLabel(options.labelOwner or parent, "", "white")
+    if options.font then label:SetFontObject(options.font) end
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", options.x, options.y + (options.labelOffset or 0))
     label:SetText(options.label)
     if options.color then label:SetTextColor(unpack(options.color)); label:SetAlpha(1) end
