@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.2 - 2026-09-29
+
+- Fixed LM Config checkbox persistence and grouped roster/raid settings under the UI accordion; all sections start collapsed after reload.
+- Reworked profile controls with current identity, selection-based actions, confirmed deletion and save-before-switch prompts.
+
 ## 0.5.0-dev.1 - 2026-09-29
 
 - Added named Settings profiles with Add, Save, Load and copyable Export, plus collapsible Profile, UI and Debug sections.
