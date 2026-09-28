@@ -1,5 +1,6 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.1-dev.3"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.1"
+local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.3.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -693,6 +694,11 @@ MOS.minimapButton = MOS.UI.Dashboard.CreateMinimapButton({
 })
 MOS.PositionMinimapButton = MOS.minimapButton.Position
 
+local versionCheck = MOS.Modules.VersionCheck.Create({
+    releaseVersion = RELEASE_VERSION,
+    printMessage = Print,
+})
+
 MOS.Core.Commands.Attach({
     dashboard = dashboard,
     minimapButton = MOS.minimapButton,
@@ -700,6 +706,7 @@ MOS.Core.Commands.Attach({
     toggleDashboard = ToggleDashboard,
     printMessage = Print,
     countSavedMembers = CountSavedMembers,
+    checkVersion = versionCheck.CheckNow,
     startLinkedItemRoll = function(itemLink)
         local window = MOS.Modules.MasterLootWindow
         if window and window.OpenLinkedItemRoll then window.OpenLinkedItemRoll(itemLink) end

@@ -46,6 +46,7 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - **Saved roster status -** Use `/mos status` to print the number of saved guild members.
 - **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
 - **Layout diagnostics -** Use `/mos layout` when diagnosing window-layout problems.
+- **Version check -** Use `/mos version` to ask online guild, party, and raid members whether a newer production release is available.
 
 ### Roster Management
 
@@ -117,6 +118,8 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - **Reset options -** Restore supported settings to their defaults.
 
 ### About
+
+- **Update notification -** MOS checks versions privately with other online MOS users and shows a GitHub Releases link when it detects a newer production release.
 
 - **Addon information -** Review the installed version and basic project information.
 
