@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed addon-message encoding and moved manual version checks to About with visible status and a login welcome message.
 - Fixed Raid Management settings spacing and added Group View font-size controls.
 - Added peer-to-peer production version checks and `/mos version` update discovery.
 - Added configurable centered Group View sizing, header height, spacing, and organized Raid Management settings.

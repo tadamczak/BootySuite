@@ -16,6 +16,14 @@ function VersionCheck.Create(options)
     local lastQueryAt = -QUERY_COOLDOWN
     local responseTimes = {}
     local shownVersions = {}
+    local welcomeShown = false
+    local checkDeadline = nil
+    local status = "Not checked yet."
+
+    local function SetStatus(value)
+        status = value
+        if options.onStatusChanged then options.onStatusChanged(value) end
+    end
 
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE"] = {
         text = "A newer Mukla Officer Suite version is available: %s\nInstalled production release: %s\nDownload it from GitHub Releases.",
@@ -41,6 +49,7 @@ function VersionCheck.Create(options)
         shownVersions[remoteVersion] = true
         MOS.Database.Ensure()
         MuklaOfficerSuiteDB.latestKnownVersion = MOS.Services.Version.SelectLatest(MuklaOfficerSuiteDB.latestKnownVersion, remoteVersion)
+        SetStatus("New production release available: " .. remoteVersion)
         DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite:|r New version " .. remoteVersion .. " is available. Installed production release: " .. releaseVersion .. ".")
         StaticPopup_Show("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE", remoteVersion, releaseVersion)
     end
@@ -53,6 +62,19 @@ function VersionCheck.Create(options)
         local index
         for index = 1, table.getn(channels) do
             MOS.Services.AddonMessage.Send(TOPIC, QUERY, releaseVersion, channels[index])
+        end
+        if table.getn(channels) > 0 then
+            SetStatus("Checking online MOS users for newer releases...")
+            checkDeadline = now + 5
+            frame:SetScript("OnUpdate", function()
+                if checkDeadline and GetTime() >= checkDeadline then
+                    checkDeadline = nil
+                    this:SetScript("OnUpdate", nil)
+                    if string.find(status, "Checking", 1, true) then SetStatus("No newer production release was reported by online MOS users.") end
+                end
+            end)
+        elseif force then
+            SetStatus("Version check unavailable: join a guild, party, or raid.")
         end
         return table.getn(channels)
     end
@@ -74,11 +96,16 @@ function VersionCheck.Create(options)
 
     frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    frame:RegisterEvent("RAID_ROSTER_UPDATE")
-    frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
-    frame:RegisterEvent("GUILD_ROSTER_UPDATE")
     frame:SetScript("OnEvent", function()
-        if event == "CHAT_MSG_ADDON" then HandleMessage(arg1, arg2, arg3) else SendQuery(false) end
+        if event == "CHAT_MSG_ADDON" then
+            HandleMessage(arg1, arg2, arg3)
+        elseif event == "PLAYER_ENTERING_WORLD" then
+            if not welcomeShown then
+                welcomeShown = true
+                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite " .. options.addonVersion .. " loaded.|r Type |cffffffff/mos|r to open the addon.")
+            end
+            SendQuery(false)
+        end
     end)
 
     return {
@@ -92,6 +119,7 @@ function VersionCheck.Create(options)
             return sent
         end,
         GetLatestKnownVersion = function() return MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.latestKnownVersion end,
+        GetStatus = function() return status end,
         HandleMessage = HandleMessage,
         frame = frame,
     }
