@@ -4,7 +4,7 @@
 
 # Mukla Officer Suite
 
-Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and raid leaders. It combines guild management, raid sessions, loot distribution, Soft Reserve, Raycoin, attendance, raid statistics, and CSR in one interface.
+Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and raid leaders. It combines guild management, raid sessions, loot distribution, Soft Reserve, Reycoin, attendance, raid statistics, and CSR in one interface.
 
 ## Table of contents
 
@@ -72,19 +72,19 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 - **Raid views -** Switch between the member list and a centered, configurable group layout with adjustable sizing, spacing, and typography.
 - **Player actions -** Manage raid leader, assistants, removal, reporting, and ignore state.
 - **Soft Reserve warnings -** Review missing SR, imported SR outside the raid, and SR without loot rights.
-- **Loot rules -** Configure SR, Highly Contested Items, Raycoin, and CSR rights by guild rank.
-- **Raycoin list -** Review used Raycoins and pending item trades.
+- **Loot rules -** Configure SR, Highly Contested Items, Reycoin, and CSR rights by guild rank.
+- **Reycoin list -** Review used Reycoins and pending item trades.
 - **Saved raids -** Select and load an earlier raid session.
 
 ### Loot Master Mode
 
 - **Compact workspace -** Keep raid members and loot tools visible in a smaller, resizable window.
 - **Loot detection -** Open the roll window from corpse loot or start it manually with `/mos roll [linked item]`.
-- **Supported rolls -** Handle SR (102), Raycoin (101), MS (100), OS (99), and Transmog (98).
+- **Supported rolls -** Handle SR (102), Reycoin (101), MS (100), OS (99), and Transmog (98).
 - **Late rolls -** Accept valid rolls until the item is assigned.
 - **Manual winner -** Select any valid roll row before assigning the item.
 - **Automatic SR -** Select the only eligible in-raid reserver when no competing SR roll is required.
-- **Trade tracking -** Track pending SR or Raycoin delivery when a Transmog winner temporarily receives the item.
+- **Trade tracking -** Track pending SR or Reycoin delivery when a Transmog winner temporarily receives the item.
 - **Roll history -** Review rounds, winners, trades, and prior rolls for the item.
 
 ### Raid Statistics
@@ -112,6 +112,9 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 - **Memory by Addon -** Compare addon memory usage when the client exposes the required data.
 
 ### Settings
+
+- **Profiles -** The first section, Profile, lets you name a configuration: Add creates it, Save updates it, Load applies it, and Export opens its saved settings for copying. Select saved names from Profiles (scroll to see more). Profiles contain configuration only, without guild, raid or loot records.
+- **Collapsible sections -** Click Profile, UI or Debug to expand or collapse the section.
 
 - **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live.
 - **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them.
@@ -161,7 +164,7 @@ Warnings distinguish:
 ### 3. Configure and announce loot rules
 
 1. Open **Set Loot Rules**.
-2. Enable SR, Highly Contested Items, Raycoin, and CSR rights for the appropriate guild ranks.
+2. Enable SR, Highly Contested Items, Reycoin, and CSR rights for the appropriate guild ranks.
 3. Review **Set Highly Contested Items** and adjust the default item list if needed.
 4. Choose **Send Loot Rules** to announce the active rules to the raid.
 
@@ -179,8 +182,8 @@ Highly Contested Item rights apply only when the rank also has SR rights.
 
 Common scenarios:
 
-- **Direct winner -** Give the item directly to the selected player. Loot history and SR or Raycoin usage are recorded after receipt.
-- **Transmog carrier -** Give the item to the Transmog winner. The target SR or Raycoin player remains in an awaiting-trade state until the real trade is detected.
+- **Direct winner -** Give the item directly to the selected player. Loot history and SR or Reycoin usage are recorded after receipt.
+- **Transmog carrier -** Give the item to the Transmog winner. The target SR or Reycoin player remains in an awaiting-trade state until the real trade is detected.
 - **Single eligible SR -** The only eligible reserver in the raid is selected automatically, even without a roll.
 - **Second copy -** A consumed SR is not reused for another copy in the same session; normal roll rules apply when no eligible SR remains.
 - **Late valid roll -** A late roll can still be selected until the item is assigned.
@@ -188,7 +191,7 @@ Common scenarios:
 ### 5. Monitor the session
 
 1. Use the member list to review received loot.
-2. Open **Raycoin list** to check used Raycoins and pending trades.
+2. Open **Reycoin list** to check used Reycoins and pending trades.
 3. Review roll history when a result or trade needs confirmation.
 4. Keep the raid session active when temporarily leaving the instance or running back from the graveyard.
 

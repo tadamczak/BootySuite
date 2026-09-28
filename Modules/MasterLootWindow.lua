@@ -166,7 +166,7 @@ local sessionKnown = {}
 local sessionSavedAt = {}
 local restoreCandidates = {}
 local eligible = {}
-local rollTypeNames = { [98] = "Transmog", [99] = "OS", [100] = "MS", [101] = "ReyCoin", [102] = "SR" }
+local rollTypeNames = { [98] = "Transmog", [99] = "OS", [100] = "MS", [101] = "Reycoin", [102] = "SR" }
 local pendingAward
 local events
 local reyCoinEvents
@@ -349,7 +349,7 @@ local function AwardToPlayer(roll, name)
         softReserve = roll.winnerResult and roll.winnerResult.range == 102 and roll.winner == name }
     if RaidService.debugReyCoin and DEFAULT_CHAT_FRAME then
         local lootIcon, lootName = GetLootSlotInfo(slot)
-        DEFAULT_CHAT_FRAME:AddMessage("MOS ReyCoin trace: Give loot recipient=" .. tostring(name)
+        DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: Give loot recipient=" .. tostring(name)
             .. " winner=" .. tostring(roll.winner) .. " tradeWinner=" .. tostring(roll.tradeWinner)
             .. " reyCoin=" .. tostring(roll.winnerUsesReyCoin) .. " slot=" .. tostring(slot)
             .. " slotName=" .. tostring(lootName) .. " rollItem=" .. tostring(string.match(tostring(roll.link or ""), "item:(%d+)")))

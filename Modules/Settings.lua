@@ -36,17 +36,19 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         scrollBar:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -8, 24)
     end
     viewport:Hide()
-    MOS.UI.Components.Settings.CreateSection(page, "UI", -10)
-    local generalHeading = MOS.UI.Components.CreateHeading(page, "", 3, "orange")
-    generalHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -38)
+    page.uiHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "UI", -10)
+    local uiContent = MOS.UI.Components.CreateContainer(nil, page)
+    uiContent:SetHeight(140); page.uiContent = uiContent
+    local generalHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
+    generalHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -38)
     generalHeading:SetText("General")
-    local skinControl = Settings.CreateSkinControl(page, 40, -66)
-    local loginMessageCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteDisableLoginMessage", 240, -66, "Turn off addon login message", "suppressLoginMessage")
-    local minimapCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteHideMinimapIcon", 500, -66, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
-    local layoutHeading = MOS.UI.Components.CreateHeading(page, "", 3, "orange")
-    layoutHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -94)
+    local skinControl = Settings.CreateSkinControl(uiContent, 40, -66)
+    local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 240, -66, "Turn off addon login message", "suppressLoginMessage")
+    local minimapCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideMinimapIcon", 500, -66, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
+    local layoutHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
+    layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -94)
     layoutHeading:SetText("Layout")
-    local menuStyleControl = Settings.CreateMenuStyleControl(page, 40, -122, onNavigationLayout)
+    local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 40, -122, onNavigationLayout)
     page.skinControl = skinControl
     page.menuStyleControl = menuStyleControl
     page.RefreshGeneralSettings = function()
@@ -56,6 +58,13 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
     end
+    Settings.BindTopSections(page, function()
+        MOS.UI.Components.SetSkin(MOS.Database.GetSetting("uiSkin"), false)
+        if options.minimapVisibilityChanged then options.minimapVisibilityChanged() end
+        if onNavigationLayout then onNavigationLayout() end
+        if page.RefreshAllSettings then page.RefreshAllSettings() else page.RefreshGeneralSettings() end
+        if options.profileLoaded then options.profileLoaded() end
+    end)
     return { viewport = viewport, page = page, scrollBar = scrollBar }
 end
 
@@ -81,7 +90,11 @@ function Settings.CreatePrimarySections(page)
     local raidHeading = MOS.UI.Components.CreateHeading(page, "", 2, "orange")
     raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -206)
     raidHeading:SetText("Raid management")
-    local debugHeading = MOS.UI.Components.Settings.CreateSection(page, "Debug", -645)
+    local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645)
+    debugHeading:SetScript("OnClick", function()
+        page.topSectionState.debug = not page.topSectionState.debug
+        Settings.ApplyRaidAccordions(page.raidAccordionControls)
+    end)
     return { rosterHeading = rosterHeading, rosterGeneral = rosterGeneral, rosterLayout = rosterLayout, raidHeading = raidHeading, debugHeading = debugHeading }
 end
 
@@ -245,6 +258,7 @@ end
 
 function Settings.CreateRaidSettings(page, callbacks)
     local primarySections = Settings.CreatePrimarySections(page)
+    page.primarySections = primarySections
     local general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -230)
     local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 40, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid Management is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
     page.raidLiveTrackingCheck = liveTracking
@@ -458,8 +472,16 @@ function Settings.ApplyRaidAccordions(controls)
     if controls.chatLogsCheck then
         controls.chatLogsCheck:ClearAllPoints()
         controls.chatLogsCheck:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 10, chatY)
+        if controls.page.topSectionState then
+            local debugExpanded = controls.page.topSectionState.debug
+            controls.debugHeading.label:SetText((debugExpanded and "-  " or "+  ") .. "Debug")
+            if debugExpanded then controls.chatLogsCheck:Show() else controls.chatLogsCheck:Hide() end
+        end
     end
     controls.page.settingsContentHeight = (expanded and 1280 or 460) - offset
+    if controls.page.topSectionState then
+        controls.page.settingsContentHeight = -debugY + (controls.page.topSectionState.debug and 66 or 32)
+    end
     Settings.UpdateScroll(controls.page.settingsViewport, controls.page, controls.page.settingsContentHeight)
     controls.layout.rule:Hide()
 end
@@ -497,11 +519,15 @@ end
 
 function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local state = page.rosterAccordionState
+    local topOffset = page.settingsTopOffset or 0
+    sections.rosterHeading:ClearAllPoints(); sections.rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -150 + topOffset)
+    sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -178 + topOffset)
+    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, -206 + topOffset)
     sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
     if state.general then sections.rosterGeneral:LockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
-    local layoutY = state.general and -234 or -206
+    local layoutY = (state.general and -234 or -206) + topOffset
     sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 24, layoutY)
     if state.layout then sections.rosterLayout:LockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end

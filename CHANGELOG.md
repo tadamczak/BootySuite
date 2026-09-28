@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.1 - 2026-09-29
+
+- Added named Settings profiles with Add, Save, Load and copyable Export, plus collapsible Profile, UI and Debug sections.
+- Fixed persistent saved-raid selection borders and standardized the Reycoin resize control and spelling.
+
 ## 0.4.1-dev.4 - 2026-09-29
 
 - Unified close, minimize and maximize controls across addon windows.
