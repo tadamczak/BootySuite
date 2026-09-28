@@ -95,7 +95,12 @@ end
 
 function Settings.SetSliderEnabled(slider, enabled)
     if not slider then return end
-    if enabled then slider:Enable() else slider:Disable() end
+    if slider.Enable and slider.Disable then
+        if enabled then slider:Enable() else slider:Disable() end
+    else
+        slider:EnableMouse(enabled and true or false)
+    end
+    slider.mosEnabled = enabled and true or false
     slider:SetAlpha(enabled and 1 or 0.42)
     local low = getglobal(slider:GetName() .. "Low")
     local high = getglobal(slider:GetName() .. "High")
