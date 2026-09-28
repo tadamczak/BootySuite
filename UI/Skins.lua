@@ -180,6 +180,18 @@ local function ApplyControl(entry)
         if button.label and entry.labelColor then button.label:SetTextColor(unpack(entry.labelColor)) end
         if button.mosHighlight then button.mosHighlight:Show(); button.mosHighlight:SetAlpha(1); button.mosHighlight:SetTexture(unpack(entry.highlight)); button.mosHighlight:SetVertexColor(1, 1, 1, 1) end
     end
+    if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosTextColor)) end
+    if button.label and button.mosClassicCompactControl and button.mosClassicLabelYOffset then
+        button.label:ClearAllPoints()
+        button.label:SetPoint("TOPLEFT", button, "TOPLEFT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)
+        button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)
+    end
+end
+
+function UI.SetButtonTextColor(button, color)
+    if not button then return end
+    button.mosTextColor = color
+    if button.label then button.label:SetTextColor(unpack(color)) end
 end
 
 local function GoldHoverEnter()

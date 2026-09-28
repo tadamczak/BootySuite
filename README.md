@@ -37,6 +37,8 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 
 ## Basic Usage
 
+The top-right buttons open Settings, minimize or restore the dashboard, and close it. The minimized window remembers its dragged position during the current session; restoring returns to the expanded window's previous position.
+
 ### Commands
 
 - **Open or close -** Use `/mos`, `/mukla`, `/mos show`, or `/mos open`.

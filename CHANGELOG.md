@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1-dev.1 - 2026-09-28
+
+- Centered the Settings gear, padded the minimize glyph and matched dashboard/About text to menu gold.
+- Kept the minimized dashboard at its last dragged position while preserving expanded window geometry.
+
 ## 0.4.0 - 2026-09-28
 
 - Added a movable, resizable Settings window with session-only accordions and UI visibility preferences.
