@@ -4,28 +4,28 @@ MOS.Modules.RosterManagement = MOS.Modules.RosterManagement or {}
 local RosterManagement = MOS.Modules.RosterManagement
 
 function RosterManagement.CreateShell(page, contentPanel)
-    local title = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local title = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10)
     title:SetText("Roster Management")
 
-    local searchLabel = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local searchLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
     searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -87)
     searchLabel:SetText("Search")
-    local searchBox = MOS.UI.CreateSearchBox(page, "MuklaOfficerSuiteRosterSearch", 178)
+    local searchBox = MOS.UI.Components.CreateSearchBox(page, "MuklaOfficerSuiteRosterSearch", 178)
     searchBox:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -81)
 
-    local status = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local status = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     status:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -40)
     status:SetWidth(565)
     status:SetJustifyH("LEFT")
-    local lastScan = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local lastScan = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     lastScan:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -58)
     lastScan:SetWidth(330)
     lastScan:SetJustifyH("LEFT")
 
     -- This panel follows the full content area; row capacity must not depend on
     -- the fitted visual panel height calculated during the preceding refresh.
-    page.fittedPanel = CreateFrame("Frame", nil, contentPanel)
+    page.fittedPanel = MOS.UI.Components.CreateContainer(nil, contentPanel)
     page.fittedPanel:SetFrameLevel(contentPanel:GetFrameLevel())
     page.fittedPanel:SetAllPoints(contentPanel)
     page.fittedPanel:SetBackdrop(contentPanel:GetBackdrop())
@@ -36,24 +36,24 @@ function RosterManagement.CreateShell(page, contentPanel)
 end
 
 function RosterManagement.CreateGuildControls(page)
-    local scanButton = MOS.UI.CreateButton(page, nil, "Scan Guild Data", 140, 24)
+    local scanButton = MOS.UI.Components.CreateButton(page, nil, "Scan Guild Data", 140, 24)
     scanButton:SetPoint("CENTER", page, "CENTER", 0, 12)
-    local refreshButton = MOS.UI.CreateIconButton(page, nil, "Interface\\Buttons\\UI-RotationRight-Button-Up", 24)
+    local refreshButton = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Buttons\\UI-RotationRight-Button-Up", 24)
     refreshButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -48)
-    MOS.UI.AttachTooltip(refreshButton, "Refresh guild data", "Refresh the saved guild roster. Disabled while Live tracking is active.")
+    MOS.UI.Components.AttachTooltip(refreshButton, "Refresh guild data", "Refresh the saved guild roster. Disabled while Live tracking is active.")
     refreshButton:Hide()
-    local exportButton = MOS.UI.CreateButton(page, nil, "Export Roster", 120, 22)
+    local exportButton = MOS.UI.Components.CreateButton(page, nil, "Export Roster", 120, 22)
     exportButton:SetPoint("CENTER", page, "CENTER", 96, 12)
 
-    page.guildInfoEditor = MOS.UI.CreateTextEditor("MuklaOfficerSuiteGuildInfoEditor", "Guild Information", 500, function(value)
+    page.guildInfoEditor = MOS.UI.Components.CreateTextEditor("MuklaOfficerSuiteGuildInfoEditor", "Guild Information", 500, function(value)
         if type(SetGuildInfoText) == "function" then SetGuildInfoText(value) end
     end)
-    page.guildMotdEditor = MOS.UI.CreateTextEditor("MuklaOfficerSuiteGuildMotdEditor", "Guild Message of the Day", 128, function(value)
+    page.guildMotdEditor = MOS.UI.Components.CreateTextEditor("MuklaOfficerSuiteGuildMotdEditor", "Guild Message of the Day", 128, function(value)
         if type(GuildSetMOTD) == "function" then GuildSetMOTD(value) end
     end)
-    page.guildInfoButton = MOS.UI.CreateButton(page, nil, "Guild Information", 108, 22)
-    page.guildAddButton = MOS.UI.CreateButton(page, nil, "Add Member", 84, 22)
-    page.guildControlButton = MOS.UI.CreateButton(page, nil, "Guild Control", 88, 22)
+    page.guildInfoButton = MOS.UI.Components.CreateButton(page, nil, "Guild Information", 108, 22)
+    page.guildAddButton = MOS.UI.Components.CreateButton(page, nil, "Add Member", 84, 22)
+    page.guildControlButton = MOS.UI.Components.CreateButton(page, nil, "Guild Control", 88, 22)
     page.guildInfoButton:Hide(); page.guildAddButton:Hide(); page.guildControlButton:Hide()
 
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_GUILD_INVITE"] = {
@@ -63,23 +63,23 @@ function RosterManagement.CreateGuildControls(page)
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
     page.guildInfoButton:SetScript("OnClick", function() page.guildInfoEditor:Open(type(GetGuildInfoText) == "function" and GetGuildInfoText() or "") end)
-    page.guildAddButton:SetScript("OnClick", function() MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_GUILD_INVITE") end)
+    page.guildAddButton:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_GUILD_INVITE") end)
     page.guildControlButton:SetScript("OnClick", function() if type(GuildControlPopupFrame_Toggle) == "function" then GuildControlPopupFrame_Toggle() elseif type(ToggleGuildFrame) == "function" then ToggleGuildFrame() end end)
 
-    page.footer = CreateFrame("Button", nil, page)
+    page.footer = MOS.UI.Components.CreateControl(nil, page)
     page.footer:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 4, 4); page.footer:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -4, 4); page.footer:SetHeight(38)
     page.footer:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     page.footer:SetBackdropColor(0.07, 0.07, 0.06, 0.88); page.footer:SetBackdropBorderColor(0.30, 0.30, 0.28, 1)
-    page.footer.guild = page.footer:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); page.footer.guild:SetPoint("TOPLEFT", page.footer, "TOPLEFT", 8, -7)
-    page.footer.motd = page.footer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); page.footer.motd:SetPoint("BOTTOMLEFT", page.footer, "BOTTOMLEFT", 8, 6); page.footer.motd:SetWidth(520); page.footer.motd:SetJustifyH("LEFT")
+    page.footer.guild = MOS.UI.Components.CreateLabel(page.footer, nil, "OVERLAY", "GameFontNormalSmall"); page.footer.guild:SetPoint("TOPLEFT", page.footer, "TOPLEFT", 8, -7)
+    page.footer.motd = MOS.UI.Components.CreateLabel(page.footer, nil, "OVERLAY", "GameFontHighlightSmall"); page.footer.motd:SetPoint("BOTTOMLEFT", page.footer, "BOTTOMLEFT", 8, 6); page.footer.motd:SetWidth(520); page.footer.motd:SetJustifyH("LEFT")
     page.footer:SetScript("OnClick", function() page.guildMotdEditor:Open(type(GetGuildRosterMOTD) == "function" and GetGuildRosterMOTD() or "") end)
-    MOS.UI.AttachTooltip(page.footer, "Guild Message of the Day", "Click to edit the guild message of the day.")
+    MOS.UI.Components.AttachTooltip(page.footer, "Guild Message of the Day", "Click to edit the guild message of the day.")
     page.footer:Hide()
     local font, size, flags = page.footer.guild:GetFont()
     page.footer.guild:SetFont(font, size + 1, flags)
     font, size, flags = page.footer.motd:GetFont()
     page.footer.motd:SetFont(font, size + 1, flags)
-    page.footer.rule = page:CreateTexture(nil, "ARTWORK")
+    page.footer.rule = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
     page.footer.rule:SetPoint("TOPLEFT", page.footer, "BOTTOMLEFT", 8, -8)
     page.footer.rule:SetPoint("TOPRIGHT", page.footer, "BOTTOMRIGHT", 0, -8)
     page.footer.rule:SetHeight(1); page.footer.rule:SetTexture(0.55, 0.42, 0.16, 0.75)
@@ -118,46 +118,46 @@ function RosterManagement.CreateGuildActionHandler(options)
         if action == "promote" or action == "demote" then
             pendingAction = { name = member.name, action = action }
             local label = action == "promote" and "Promote" or "Demote"
-            MOS.UI.ShowOpaquePopup(action == "promote" and "MUKLA_OFFICER_SUITE_PROMOTE" or "MUKLA_OFFICER_SUITE_DEMOTE", label .. " " .. member.name .. "?\n" .. (member.rank or "Unknown") .. " -> " .. targetRank)
+            MOS.UI.Components.ShowOpaquePopup(action == "promote" and "MUKLA_OFFICER_SUITE_PROMOTE" or "MUKLA_OFFICER_SUITE_DEMOTE", label .. " " .. member.name .. "?\n" .. (member.rank or "Unknown") .. " -> " .. targetRank)
         end
     end
 end
 
 function RosterManagement.CreateFilterView(page)
-    local sortHint = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local sortHint = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     sortHint:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -114)
     sortHint:SetText("Click a column header to sort")
     sortHint:Hide()
-    local label = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local label = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
     label:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -112)
     label:SetText("Filters")
 
-    local classToggle = MOS.UI.CreateDropdownButton(page, nil, "Class", 84)
+    local classToggle = MOS.UI.Components.CreateDropdownButton(page, nil, "Class", 84)
     classToggle:SetPoint("TOPLEFT", page, "TOPLEFT", 50, -106)
-    local rankToggle = MOS.UI.CreateDropdownButton(page, nil, "Rank", 84)
+    local rankToggle = MOS.UI.Components.CreateDropdownButton(page, nil, "Rank", 84)
     rankToggle:SetPoint("TOPLEFT", page, "TOPLEFT", 142, -106)
 
-    page.showOfflineCheck = CreateFrame("CheckButton", "MuklaOfficerSuiteShowOffline", page, "UICheckButtonTemplate")
+    page.showOfflineCheck = MOS.UI.Components.CreateCheckButton("MuklaOfficerSuiteShowOffline", page, "UICheckButtonTemplate")
     page.showOfflineCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 232, -104)
     page.showOfflineCheck:SetWidth(22); page.showOfflineCheck:SetHeight(22)
-    page.showOfflineCheck.label = page.showOfflineCheck:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    page.showOfflineCheck.label = MOS.UI.Components.CreateLabel(page.showOfflineCheck, nil, "OVERLAY", "GameFontHighlightSmall")
     page.showOfflineCheck.label:SetPoint("LEFT", page.showOfflineCheck, "RIGHT", 2, 0)
     page.showOfflineCheck.label:SetText("Show offline")
 
-    page.modeButton = CreateFrame("Button", nil, page)
+    page.modeButton = MOS.UI.Components.CreateControl(nil, page)
     page.modeButton:SetWidth(28); page.modeButton:SetHeight(28)
     page.modeButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -102)
     page.modeButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
     page.modeButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
     page.modeButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
-    page.modeButton.label = page.modeButton:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    page.modeButton.label = MOS.UI.Components.CreateLabel(page.modeButton, nil, "OVERLAY", "GameFontNormalSmall")
     page.modeButton.label:SetPoint("RIGHT", page.modeButton, "LEFT", -4, 0)
     page.modeButton.label:SetText("Show Player Status")
-    MOS.UI.AttachTooltip(page.modeButton, "Show player status", "Switch between guild notes and player status columns.")
+    MOS.UI.Components.AttachTooltip(page.modeButton, "Show player status", "Switch between guild notes and player status columns.")
 
-    local classPanel = MOS.UI.CreateDropdownPanel(page, classToggle, 130, 230, 20)
-    local rankPanel = MOS.UI.CreateDropdownPanel(page, rankToggle, 130, 230, 20)
-    local dismiss = CreateFrame("Button", nil, page)
+    local classPanel = MOS.UI.Components.CreateDropdownPanel(page, classToggle, 130, 230, 20)
+    local rankPanel = MOS.UI.Components.CreateDropdownPanel(page, rankToggle, 130, 230, 20)
+    local dismiss = MOS.UI.Components.CreateControl(nil, page)
     dismiss:SetAllPoints(page)
     dismiss:SetFrameLevel(page:GetFrameLevel() + 10)
     dismiss:Hide()
@@ -219,31 +219,8 @@ local rosterHeaderSpecs = {
     { "Rank", 289, 100, "rank" },
 }
 
-local function OnHeaderEnter()
-    MOS.UI.AnchorTooltipRightOfCursor(this)
-    GameTooltip:AddLine("Sort by " .. this.baseText)
-    GameTooltip:AddLine("Click again to reverse the order", 1, 1, 1)
-    GameTooltip:Show()
-end
-
-local function OnHeaderLeave()
-    GameTooltip:Hide()
-end
-
-local function OnHeaderClick()
-    this.headerController.onSort(this.sortKey)
-end
-
 local function CreateHeaderButton(page, controller, text, x, width, key, sortable)
-    local button = CreateFrame("Button", nil, page)
-    button:SetPoint("TOPLEFT", page, "TOPLEFT", x, -130); button:SetWidth(width); button:SetHeight(22)
-    button.baseText = text; button.sortKey = key; button.headerController = controller
-    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    button.label:SetAllPoints(button); button.label:SetJustifyH("LEFT"); button.label:SetText(text)
-    local highlight = button:CreateTexture(nil, "HIGHLIGHT"); highlight:SetAllPoints(button); highlight:SetTexture(1, 0.72, 0.12, 0.12)
-    button:SetScript("OnEnter", OnHeaderEnter); button:SetScript("OnLeave", OnHeaderLeave)
-    if sortable then button:SetScript("OnClick", OnHeaderClick) end
-    return button
+    return MOS.UI.Components.Table.CreateHeader(page, controller, text, x, -130, width, key, sortable)
 end
 
 -- Pure layout calculation. Keeping this outside the view prevents accidental
@@ -330,8 +307,8 @@ function RosterManagement.CreateFilterController(options)
             for index = 1, table.getn(ranks) do self.selectedRanks[ranks[index]] = true end
             self.rankInitialized = true
         end
-        MOS.UI.FilterPanel.Refresh(self.classPanel, classes, self.selectedClasses, self.refresh)
-        MOS.UI.FilterPanel.Refresh(self.rankPanel, ranks, self.selectedRanks, self.refresh)
+        MOS.UI.Components.FilterPanel.Refresh(self.classPanel, classes, self.selectedClasses, self.refresh)
+        MOS.UI.Components.FilterPanel.Refresh(self.rankPanel, ranks, self.selectedRanks, self.refresh)
         self.page.filterData = data
     end
 
@@ -360,10 +337,10 @@ function RosterManagement.CreateHeaders(page, onSort)
     ui.zone = CreateHeaderButton(page, ui.controller, "Zone", 149, 150, "zone", true)
     ui.lastOnline = CreateHeaderButton(page, ui.controller, "Last online", 430, 140, "lastOnlineHours", true)
     ui.zone:Hide(); ui.lastOnline:Hide()
-    ui.notes = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ui.notes = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
     ui.notes:SetPoint("TOPLEFT", page, "TOPLEFT", 399, -130); ui.notes:SetWidth(174); ui.notes:SetHeight(22); ui.notes:SetJustifyH("LEFT"); ui.notes:SetText("Public note")
     ui.officer = CreateHeaderButton(page, ui.controller, "Officer note", 399, 100, "officerNote", false); ui.officer:Hide()
-    page.tableViewport = CreateFrame("Frame", nil, page)
+    page.tableViewport = MOS.UI.Components.CreateContainer(nil, page)
     page.tableViewport:SetPoint("TOPLEFT", ui.buttons[1], "BOTTOMLEFT", 0, -2); page.tableViewport:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -30, 32)
     page.officerHeader = ui.officer
     page.guildColumns = {
@@ -435,7 +412,7 @@ local function OnRowLeave()
 end
 
 local function CreateActionButton(row, text, action, x)
-    local button = CreateFrame("Button", nil, row.actionPanel)
+    local button = MOS.UI.Components.CreateControl(nil, row.actionPanel)
     button:SetPoint("RIGHT", row.actionPanel, "RIGHT", x, 0)
     button:SetWidth(78)
     button:SetHeight(19)
@@ -444,7 +421,7 @@ local function CreateActionButton(row, text, action, x)
     button:SetBackdropBorderColor(0.58, 0.40, 0.10, 1)
     button.action = action
     button.ownerRow = row
-    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    button.label = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontNormalSmall")
     button.label:SetAllPoints(button)
     button.label:SetText(text)
     button:SetScript("OnClick", OnActionClick)
@@ -452,7 +429,7 @@ local function CreateActionButton(row, text, action, x)
 end
 
 local function AddCell(row, key, x, width)
-    row[key] = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row[key] = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
     row[key]:SetPoint("TOPLEFT", row, "TOPLEFT", x, -1)
     row[key]:SetWidth(width)
     row[key]:SetHeight(18)
@@ -460,7 +437,7 @@ local function AddCell(row, key, x, width)
 end
 
 function RosterManagement.CreateRow(parent, index, rowHeight, controller)
-    local row = CreateFrame("Button", nil, parent)
+    local row = MOS.UI.Components.CreateControl(nil, parent)
     row.controller = controller
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, -134 - (index * rowHeight))
     row:SetWidth(560)
@@ -469,13 +446,13 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
     row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     row:SetBackdropColor(0, 0, 0, 0)
     row:SetBackdropBorderColor(0, 0, 0, 0)
-    MOS.UI.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
+    MOS.UI.Components.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
     if math.mod(index, 2) == 0 then
-        local stripe = row:CreateTexture(nil, "BACKGROUND")
+        local stripe = MOS.UI.Components.CreateTexture(row, nil, "BACKGROUND")
         stripe:SetAllPoints(row)
         stripe:SetTexture(1, 0.78, 0.25, 0.075)
     end
-    row.selection = row:CreateTexture(nil, "BACKGROUND")
+    row.selection = MOS.UI.Components.CreateTexture(row, nil, "BACKGROUND")
     row.selection:SetAllPoints(row)
     row.selection:SetTexture(0, 0, 0, 0)
     row.selection:Hide()
@@ -491,7 +468,7 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
     row.zone:Hide()
     row.lastOnline:Hide()
 
-    row.actionPanel = CreateFrame("Frame", nil, row)
+    row.actionPanel = MOS.UI.Components.CreateContainer(nil, row)
     row.actionPanel:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -20)
     row.actionPanel:SetWidth(552)
     row.actionPanel:SetHeight(26)
@@ -585,7 +562,7 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
     SetRowTextColor(row, shade)
     if useClassColors then
         local classKey = string.upper(member.classFile or member.class or "")
-        local classColor = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or MOS.UI.Theme.classColors[classKey]
+        local classColor = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or MOS.UI.Components.Theme.classColors[classKey]
         if classColor then
             row.name:SetTextColor(classColor.r * shade, classColor.g * shade, classColor.b * shade)
             row.class:SetTextColor(classColor.r * shade, classColor.g * shade, classColor.b * shade)
@@ -632,12 +609,12 @@ function RosterManagement.CreateListController(page, rowHeight, rowController)
         rowHeight = rowHeight,
         rowController = rowController,
     }
-    controller.scrollFrame = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRosterScrollFrame", page, "FauxScrollFrameTemplate")
+    controller.scrollFrame = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRosterScrollFrame", page, "FauxScrollFrameTemplate")
     controller.scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", -4, -145)
     controller.scrollFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -12, 18)
     controller.scrollFrame.rowHeight = rowHeight
     controller.scrollFrame:SetScript("OnVerticalScroll", OnListScroll)
-    MOS.UI.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRosterScrollFrameScrollBar"))
+    MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRosterScrollFrameScrollBar"))
     page.listController = controller
     return controller
 end
@@ -746,7 +723,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     controller.scrollFrame:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", -8, 9)
     controller.scrollFrame:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, 9)
     controller.scrollFrame:SetHeight((visibleRowCount * rowHeight) + 8)
-    local offset = MOS.UI.UpdateScrollFrame(controller.scrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
+    local offset = MOS.UI.Components.UpdateScrollFrame(controller.scrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
     page.measuredCapacity = visibleRowCount
     page.measuredOffset = offset
     page.measuredCount = table.getn(visibleMembers)

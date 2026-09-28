@@ -4,6 +4,7 @@ MuklaOfficerSuite = MuklaOfficerSuite or CreateFrame("Frame", "MuklaOfficerSuite
 local MOS = MuklaOfficerSuite
 MOS.Core = MOS.Core or {}
 MOS.UI = MOS.UI or {}
+MOS.UI.Components = MOS.UI.Components or {}
 MOS.Modules = MOS.Modules or {}
 MOS.Services = MOS.Services or {}
 MOS.Diagnostics = MOS.Diagnostics or { startedAt = GetTime(), events = 0, uiRefreshes = 0, scans = 0 }

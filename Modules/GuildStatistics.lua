@@ -111,37 +111,27 @@ function GuildStatistics.BuildSummary(state, data, onlyLevel60)
     return state
 end
 
+local summaryColumns = {
+    { key = "icon", texture = true, side = "LEFT", x = 0, width = 20, height = 20 },
+    { key = "name", side = "LEFT", x = 28, width = 132 },
+    { key = "rank", side = "LEFT", x = 100, width = 116 },
+    { key = "level", side = "RIGHT", x = -2, width = 25 },
+    { key = "count", side = "RIGHT", x = -2, width = 35 },
+}
+
 function GuildStatistics.CreateTable(page, name, x, width, controller)
-    local statsTable = { entries = {}, entryPool = {}, memberScratch = {}, rows = {}, controller = controller }
-    statsTable.scroll = CreateFrame("ScrollFrame", name, page, "FauxScrollFrameTemplate")
-    statsTable.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", x - 4, -148)
-    statsTable.scroll:SetWidth(width); statsTable.scroll:SetHeight(224)
-    statsTable.scroll.refreshCallback = controller.refresh
-    statsTable.scroll:SetScript("OnVerticalScroll", OnTableScroll)
-    MOS.UI.RegisterSkinnedScrollBar(getglobal(name .. "ScrollBar"))
-    local rowIndex
-    for rowIndex = 1, 25 do
-        local row = CreateFrame("Button", nil, page)
-        row:SetPoint("TOPLEFT", page, "TOPLEFT", x, -152 - ((rowIndex - 1) * 24))
-        row:SetWidth(width - 16); row:SetHeight(23)
-        row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
-        row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0)
-        MOS.UI.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
-        row.icon = row:CreateTexture(nil, "ARTWORK")
-        row.icon:SetPoint("LEFT", row, "LEFT", 0, 0); row.icon:SetWidth(20); row.icon:SetHeight(20)
-        row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.name:SetPoint("LEFT", row, "LEFT", 28, 0); row.name:SetWidth(132); row.name:SetJustifyH("LEFT")
-        row.rank = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.rank:SetPoint("LEFT", row, "LEFT", 100, 0); row.rank:SetWidth(116); row.rank:SetJustifyH("LEFT")
-        row.level = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.level:SetPoint("RIGHT", row, "RIGHT", -2, 0); row.level:SetWidth(25); row.level:SetJustifyH("RIGHT")
-        row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.count:SetPoint("RIGHT", row, "RIGHT", -2, 0); row.count:SetWidth(35); row.count:SetJustifyH("RIGHT")
-        row.statisticsController = controller
-        row:SetScript("OnClick", OnSummaryClick)
-        row:Hide(); statsTable.rows[rowIndex] = row
-    end
-    statsTable.scroll:Hide()
+    local statsTable = MOS.UI.Components.Table.Create({
+        parent = page, name = name, x = x, width = width,
+        scrollTop = -148, scrollHeight = 224, rowTop = -152,
+        rowCount = 25, rowHeight = 23, rowStep = 24, columns = summaryColumns,
+        refresh = controller.refresh, onScroll = OnTableScroll,
+        bindRow = function(row)
+            row.statisticsController = controller
+            row:SetScript("OnClick", OnSummaryClick)
+        end,
+    })
+    statsTable.entries = {}; statsTable.entryPool = {}; statsTable.memberScratch = {}
+    statsTable.controller = controller
     return statsTable
 end
 
@@ -190,7 +180,7 @@ function GuildStatistics.PopulateTable(statsTable, summaries, statsType, data, o
         end
     end
     local visibleRows = statsTable.visibleRows or table.getn(statsTable.rows)
-    local offset = MOS.UI.UpdateScrollFrame(statsTable.scroll, table.getn(entries), visibleRows, 24)
+    local offset = MOS.UI.Components.UpdateScrollFrame(statsTable.scroll, table.getn(entries), visibleRows, 24)
     local rowIndex
     for rowIndex = 1, table.getn(statsTable.rows) do
         local row = statsTable.rows[rowIndex]
@@ -198,7 +188,7 @@ function GuildStatistics.PopulateTable(statsTable, summaries, statsType, data, o
         row.entry = entry
         if entry and rowIndex <= visibleRows then
             local expanded = entry.kind == "summary" and expandedType == statsType and expandedValue == entry.value
-            MOS.UI.ApplyRowBackground(row, offset + rowIndex, expanded)
+            MOS.UI.Components.ApplyRowBackground(row, offset + rowIndex, expanded)
             if entry.kind == "summary" then
                 row.icon:SetTexture(statsType == "class" and (classIcons[entry.value] or "Interface\\Icons\\INV_Misc_QuestionMark") or nil)
                 if statsType == "class" then row.icon:Show() else row.icon:Hide() end
@@ -221,32 +211,32 @@ end
 
 function GuildStatistics.CreateView(page, styleButton, refresh)
     local view = { page = page }
-    view.title = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    view.title = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10)
     view.title:SetText("Guild Statistics")
-    view.onlyLevel60 = CreateFrame("CheckButton", nil, page, "UICheckButtonTemplate")
+    view.onlyLevel60 = MOS.UI.Components.CreateCheckButton(nil, page, "UICheckButtonTemplate")
     view.onlyLevel60:SetPoint("TOPRIGHT", page, "TOPRIGHT", -225, -42)
     view.onlyLevel60:SetWidth(22); view.onlyLevel60:SetHeight(22); view.onlyLevel60:SetChecked(true)
-    view.onlyLevel60.label = view.onlyLevel60:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    view.onlyLevel60.label = MOS.UI.Components.CreateLabel(view.onlyLevel60, nil, "OVERLAY", "GameFontHighlightSmall")
     view.onlyLevel60.label:SetPoint("LEFT", view.onlyLevel60, "RIGHT", 2, 0)
     view.onlyLevel60.label:SetText("Only level 60"); view.onlyLevel60:Hide()
-    view.lastScan = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    view.lastScan = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     view.lastScan:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -48); view.lastScan:SetWidth(360); view.lastScan:SetJustifyH("LEFT"); view.lastScan:Hide()
-    view.refreshButton = CreateFrame("Button", nil, page)
+    view.refreshButton = MOS.UI.Components.CreateControl(nil, page)
     view.refreshButton:SetWidth(108); view.refreshButton:SetHeight(22); view.refreshButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -42)
     styleButton(view.refreshButton, "Refresh Data"); view.refreshButton:Hide()
-    view.scanButton = CreateFrame("Button", nil, page)
+    view.scanButton = MOS.UI.Components.CreateControl(nil, page)
     view.scanButton:SetWidth(160); view.scanButton:SetHeight(24); view.scanButton:SetPoint("CENTER", page, "CENTER", 0, 12)
     styleButton(view.scanButton, "Scan Guild Statistics")
-    view.summary = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    view.summary = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlight")
     view.summary:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -72); view.summary:SetWidth(545); view.summary:SetJustifyH("LEFT"); view.summary:SetJustifyV("TOP"); view.summary:Hide()
-    view.classPanel = page:CreateTexture(nil, "BACKGROUND")
+    view.classPanel = MOS.UI.Components.CreateTexture(page, nil, "BACKGROUND")
     view.classPanel:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -112); view.classPanel:SetWidth(272); view.classPanel:SetHeight(270); view.classPanel:SetTexture(0.07, 0.065, 0.055, 0.82); view.classPanel:Hide()
-    view.rankPanel = page:CreateTexture(nil, "BACKGROUND")
+    view.rankPanel = MOS.UI.Components.CreateTexture(page, nil, "BACKGROUND")
     view.rankPanel:SetPoint("TOPLEFT", page, "TOPLEFT", 300, -112); view.rankPanel:SetWidth(262); view.rankPanel:SetHeight(270); view.rankPanel:SetTexture(0.07, 0.065, 0.055, 0.82); view.rankPanel:Hide()
-    view.classesHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    view.classesHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
     view.classesHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -128); view.classesHeading:SetWidth(260); view.classesHeading:SetJustifyH("LEFT"); view.classesHeading:SetJustifyV("TOP"); view.classesHeading:SetText("Members by class"); view.classesHeading:Hide()
-    view.ranksHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    view.ranksHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
     view.ranksHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 316, -128); view.ranksHeading:SetWidth(255); view.ranksHeading:SetJustifyH("LEFT"); view.ranksHeading:SetJustifyV("TOP"); view.ranksHeading:SetText("Members by rank"); view.ranksHeading:Hide()
     view.tableController = {
         refresh = refresh,
@@ -350,7 +340,7 @@ function GuildStatistics.Refresh(controller)
     controller.rankPanel:SetHeight(panelHeight)
     controller.classTable.scroll:SetHeight(panelHeight - 36)
     controller.rankTable.scroll:SetHeight(panelHeight - 36)
-    local visibleRows = MOS.UI.CalculateVisibleRows(panelHeight, 44, 24, table.getn(controller.classTable.rows), 3)
+    local visibleRows = MOS.UI.Components.CalculateVisibleRows(panelHeight, 44, 24, table.getn(controller.classTable.rows), 3)
     controller.classTable.visibleRows = visibleRows
     controller.rankTable.visibleRows = visibleRows
     GuildStatistics.PopulateTable(controller.classTable, summaryState.classSummaries, "class", data, onlyLevel60, controller.classIcons)

@@ -1,7 +1,8 @@
 local MOS = MuklaOfficerSuite
 
-MOS.UI.Dialogs = MOS.UI.Dialogs or {}
-local Dialogs = MOS.UI.Dialogs
+MOS.Core = MOS.Core or {}
+MOS.Core.Dialogs = MOS.Core.Dialogs or {}
+local Dialogs = MOS.Core.Dialogs
 
 local function ReloadInterface()
     if type(ReloadUI) == "function" then ReloadUI()

@@ -12,7 +12,7 @@ local DOWNLOAD_URL = "https://github.com/tadamczak/MuklaOfficerSuite/releases/la
 function VersionCheck.Create(options)
     local releaseVersion = options.releaseVersion
     local peerVersion = options.addonVersion or releaseVersion
-    local frame = CreateFrame("Frame", nil, UIParent)
+    local frame = MOS.UI.Components.CreateContainer(nil, UIParent)
     local channels = {}
     local lastQueryAt = -QUERY_COOLDOWN
     local shownVersions = {}

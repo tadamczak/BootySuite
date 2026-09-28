@@ -1,7 +1,7 @@
 local MOS = MuklaOfficerSuite
 
-MOS.UI.Dashboard = MOS.UI.Dashboard or {}
-local Dashboard = MOS.UI.Dashboard
+MOS.UI.Components.Dashboard = MOS.UI.Components.Dashboard or {}
+local Dashboard = MOS.UI.Components.Dashboard
 
 function Dashboard.CreateWindow(version)
     local view = {}
@@ -40,31 +40,31 @@ function Dashboard.CreateWindow(version)
     view.titleBar:SetHeight(32)
     view.titleBar:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     view.titleBar:SetBackdropColor(0.025, 0.022, 0.018, 0.98); view.titleBar:SetBackdropBorderColor(0.42, 0.42, 0.40, 1)
-    MOS.UI.RegisterSkinnedSurface(view.titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
+    MOS.UI.Components.RegisterSkinnedSurface(view.titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
     view.title = view.titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     view.title:SetPoint("CENTER", view.titleBar, "CENTER", 0, 2); view.title:SetText("Mukla Officer Suite")
-    view.title:SetTextColor(unpack(MOS.UI.Theme.colors.goldText))
+    view.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
     view.classicTitle = view.titleBar:CreateTexture(nil, "ARTWORK")
-    view.classicTitle:SetTexture(MOS.UI.ClassicAsset("Decor\\title-wordmark.tga")); view.classicTitle:SetTexCoord(0.181640625, 0.818359375, 0.28125, 0.71875)
+    view.classicTitle:SetTexture(MOS.UI.Components.ClassicAsset("Decor\\title-wordmark.tga")); view.classicTitle:SetTexCoord(0.181640625, 0.818359375, 0.28125, 0.71875)
     view.classicTitle:SetWidth(220); view.classicTitle:SetHeight(19); view.classicTitle:SetPoint("CENTER", view.titleBar, "CENTER", 0, 1); view.classicTitle:Hide()
     view.classicLogo = view.titleBar:CreateTexture(nil, "ARTWORK")
-    view.classicLogo:SetTexture(MOS.UI.ClassicAsset("logo.tga")); view.classicLogo:SetTexCoord(0, 1, 0.08203125, 0.9140625)
+    view.classicLogo:SetTexture(MOS.UI.Components.ClassicAsset("logo.tga")); view.classicLogo:SetTexCoord(0, 1, 0.08203125, 0.9140625)
     view.classicLogo:SetWidth(100); view.classicLogo:SetHeight(40); view.classicLogo:SetPoint("LEFT", view.titleBar, "LEFT", 18, 0); view.classicLogo:Hide()
-    view.classicTitleLeft = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleLeft:SetTexture(MOS.UI.ClassicAsset("Decor\\title-left.tga")); view.classicTitleLeft:SetWidth(65); view.classicTitleLeft:SetHeight(8); view.classicTitleLeft:SetPoint("RIGHT", view.classicTitle, "LEFT", -12, 0); view.classicTitleLeft:Hide()
-    view.classicTitleRight = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleRight:SetTexture(MOS.UI.ClassicAsset("Decor\\title-right.tga")); view.classicTitleRight:SetWidth(65); view.classicTitleRight:SetHeight(8); view.classicTitleRight:SetPoint("LEFT", view.classicTitle, "RIGHT", 12, 0); view.classicTitleRight:Hide()
-    view.closeButton = MOS.UI.CreateButton(view.titleBar, nil, "X", 18, 18)
-    MOS.UI.SetClassicButtonCompact(view.closeButton, true)
-    MOS.UI.AttachGoldHoverBorder(view.closeButton, 0.35, 0.35, 0.35, 1)
-    MOS.UI.SetButtonTextColor(view.closeButton, MOS.UI.Theme.colors.goldText)
+    view.classicTitleLeft = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleLeft:SetTexture(MOS.UI.Components.ClassicAsset("Decor\\title-left.tga")); view.classicTitleLeft:SetWidth(65); view.classicTitleLeft:SetHeight(8); view.classicTitleLeft:SetPoint("RIGHT", view.classicTitle, "LEFT", -12, 0); view.classicTitleLeft:Hide()
+    view.classicTitleRight = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleRight:SetTexture(MOS.UI.Components.ClassicAsset("Decor\\title-right.tga")); view.classicTitleRight:SetWidth(65); view.classicTitleRight:SetHeight(8); view.classicTitleRight:SetPoint("LEFT", view.classicTitle, "RIGHT", 12, 0); view.classicTitleRight:Hide()
+    view.closeButton = MOS.UI.Components.CreateButton(view.titleBar, nil, "X", 18, 18)
+    MOS.UI.Components.SetClassicButtonCompact(view.closeButton, true)
+    MOS.UI.Components.AttachGoldHoverBorder(view.closeButton, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.SetButtonTextColor(view.closeButton, MOS.UI.Components.Theme.colors.goldText)
     view.closeButton:SetPoint("RIGHT", view.titleBar, "RIGHT", -6, 0)
     view.closeButton:SetScript("OnClick", function() frame:Hide() end)
-    view.minimizeButton = MOS.UI.CreateButton(view.titleBar, nil, "_", 18, 18)
-    MOS.UI.SetClassicButtonCompact(view.minimizeButton, true)
-    MOS.UI.SetButtonTextColor(view.minimizeButton, MOS.UI.Theme.colors.goldText)
-    MOS.UI.SetClassicButtonLabelOffset(view.minimizeButton, 2)
+    view.minimizeButton = MOS.UI.Components.CreateButton(view.titleBar, nil, "_", 18, 18)
+    MOS.UI.Components.SetClassicButtonCompact(view.minimizeButton, true)
+    MOS.UI.Components.SetButtonTextColor(view.minimizeButton, MOS.UI.Components.Theme.colors.goldText)
+    MOS.UI.Components.SetClassicButtonLabelOffset(view.minimizeButton, 2)
     view.minimizeButton:SetPoint("RIGHT", view.closeButton, "LEFT", -4, 0)
-    view.settingsButton = MOS.UI.CreateButton(view.titleBar, nil, "", 18, 18)
-    MOS.UI.SetClassicButtonCompact(view.settingsButton, true)
+    view.settingsButton = MOS.UI.Components.CreateButton(view.titleBar, nil, "", 18, 18)
+    MOS.UI.Components.SetClassicButtonCompact(view.settingsButton, true)
     view.settingsButton:SetPoint("RIGHT", view.minimizeButton, "LEFT", -4, 0)
     view.settingsButton.icon = view.settingsButton:CreateTexture(nil, "OVERLAY")
     view.settingsButton.icon:SetPoint("CENTER", view.settingsButton, "CENTER", 0, 0)
@@ -72,11 +72,11 @@ function Dashboard.CreateWindow(version)
     -- Crop the asymmetric transparent padding of the 64x64 gear asset.
     view.settingsButton.icon:SetTexCoord(8 / 64, 47 / 64, 11 / 64, 50 / 64)
     view.settingsButton.icon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\SettingsGear")
-    MOS.UI.AttachTooltip(view.settingsButton, "Settings", "Open Settings in a separate movable window.")
-    MOS.UI.AttachGoldHoverBorder(view.settingsButton, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.AttachTooltip(view.settingsButton, "Settings", "Open Settings in a separate movable window.")
+    MOS.UI.Components.AttachGoldHoverBorder(view.settingsButton, 0.35, 0.35, 0.35, 1)
     local minimizeTooltipEnter = view.minimizeButton:GetScript("OnEnter")
     local minimizeTooltipLeave = view.minimizeButton:GetScript("OnLeave")
-    MOS.UI.AttachGoldHoverBorder(view.minimizeButton, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.AttachGoldHoverBorder(view.minimizeButton, 0.35, 0.35, 0.35, 1)
     local minimizeBorderEnter = view.minimizeButton:GetScript("OnEnter")
     local minimizeBorderLeave = view.minimizeButton:GetScript("OnLeave")
     view.minimizeButton:SetScript("OnEnter", function()
@@ -87,13 +87,13 @@ function Dashboard.CreateWindow(version)
         if minimizeTooltipLeave then minimizeTooltipLeave() end
         if minimizeBorderLeave then minimizeBorderLeave() end
     end)
-    view.sidebarToggle = MOS.UI.CreateButton(view.titleBar, nil, "<<", 28, 20)
-    MOS.UI.SetClassicButtonCompact(view.sidebarToggle, true)
+    view.sidebarToggle = MOS.UI.Components.CreateButton(view.titleBar, nil, "<<", 28, 20)
+    MOS.UI.Components.SetClassicButtonCompact(view.sidebarToggle, true)
     view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 5, 0)
-    MOS.UI.AttachTooltip(view.sidebarToggle, "Navigation", "Collapse or restore the left navigation menu.")
+    MOS.UI.Components.AttachTooltip(view.sidebarToggle, "Navigation", "Collapse or restore the left navigation menu.")
     local navigationTooltipEnter = view.sidebarToggle:GetScript("OnEnter")
     local navigationTooltipLeave = view.sidebarToggle:GetScript("OnLeave")
-    MOS.UI.AttachGoldHoverBorder(view.sidebarToggle, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.AttachGoldHoverBorder(view.sidebarToggle, 0.35, 0.35, 0.35, 1)
     local navigationBorderEnter = view.sidebarToggle:GetScript("OnEnter")
     local navigationBorderLeave = view.sidebarToggle:GetScript("OnLeave")
     view.sidebarToggle:SetScript("OnEnter", function()
@@ -111,7 +111,7 @@ function Dashboard.CreateWindow(version)
     view.sidebar:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -68); view.sidebar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 42); view.sidebar:SetWidth(174)
     view.sidebar:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     view.sidebar:SetBackdropColor(0.05, 0.04, 0.02, 0.92); view.sidebar:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
-    MOS.UI.RegisterSkinnedSurface(view.sidebar, "sidebar", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.05, 0.04, 0.02, 0.92 }, { 0.36, 0.36, 0.34, 1 })
+    MOS.UI.Components.RegisterSkinnedSurface(view.sidebar, "sidebar", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.05, 0.04, 0.02, 0.92 }, { 0.36, 0.36, 0.34, 1 })
     view.sidebarToggleClassicIcon = view.sidebarToggle:CreateTexture(nil, "OVERLAY")
     view.sidebarToggleClassicIcon:SetWidth(11); view.sidebarToggleClassicIcon:SetHeight(11); view.sidebarToggleClassicIcon:SetPoint("CENTER", view.sidebarToggle, "CENTER", 0, 0); view.sidebarToggleClassicIcon:Hide()
     view.classicMenuTitle = view.sidebar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -121,7 +121,7 @@ function Dashboard.CreateWindow(version)
     view.contentPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 204, -68); view.contentPanel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 46)
     view.contentPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     view.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90); view.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
-    MOS.UI.RegisterSkinnedSurface(view.contentPanel, "content", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.02, 0.02, 0.02, 0.90 }, { 0.36, 0.36, 0.34, 1 })
+    MOS.UI.Components.RegisterSkinnedSurface(view.contentPanel, "content", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.02, 0.02, 0.02, 0.90 }, { 0.36, 0.36, 0.34, 1 })
     local background = view.sidebar:CreateTexture(nil, "BACKGROUND")
     background:SetPoint("TOPLEFT", view.sidebar, "TOPLEFT", 5, -5); background:SetPoint("BOTTOMRIGHT", view.sidebar, "BOTTOMRIGHT", -5, 5)
     background:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\DashboardBackground"); background:SetTexCoord(0.22, 0.58, 0, 1); background:SetAlpha(0.72)
@@ -130,7 +130,7 @@ function Dashboard.CreateWindow(version)
     view.contentShade = view.contentPanel:CreateTexture(nil, "BACKGROUND")
     view.contentShade:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 5, -5); view.contentShade:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", -5, 5)
     view.contentShade:SetTexture(0.025, 0.022, 0.018, 0.96)
-    MOS.UI.RegisterSkinCallback(function(skin)
+    MOS.UI.Components.RegisterSkinCallback(function(skin)
         local classic = skin == "classic"
         if classic and not view.minimized then view.title:Hide(); view.classicTitle:Show() else view.classicTitle:Hide(); view.title:Show() end
         if classic and not view.minimized then view.classicLogo:Show(); view.classicTitleLeft:Show(); view.classicTitleRight:Show(); view.classicMenuTitle:Show()
@@ -160,7 +160,7 @@ function Dashboard.CreateWindow(version)
         if classic then
             view.sidebarToggle:SetParent(view.sidebar); view.sidebarToggle:ClearAllPoints(); view.sidebarToggle:SetPoint("TOPRIGHT", view.sidebar, "TOPRIGHT", -7, -7); view.sidebarToggle:SetWidth(18); view.sidebarToggle:SetHeight(18)
             view.sidebarToggle.label:SetText(""); view.sidebarToggleClassicIcon:Show()
-            view.resizeGrip.texture:SetTexture(MOS.UI.ClassicAsset("Icons\\resize.tga")); view.resizeGrip.texture:SetVertexColor(1, 0.78, 0.24)
+            view.resizeGrip.texture:SetTexture(MOS.UI.Components.ClassicAsset("Icons\\resize.tga")); view.resizeGrip.texture:SetVertexColor(1, 0.78, 0.24)
             view.resizeGrip.texture:ClearAllPoints(); view.resizeGrip.texture:SetPoint("CENTER", view.resizeGrip, "CENTER", 0, 0); view.resizeGrip.texture:SetWidth(13); view.resizeGrip.texture:SetHeight(13)
         else
             view.sidebarToggle:SetParent(view.titleBar); view.sidebarToggle:ClearAllPoints(); view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 5, 0); view.sidebarToggle:SetWidth(28); view.sidebarToggle:SetHeight(20)
@@ -175,14 +175,14 @@ end
 function Dashboard.CreateStatusBar(parent)
     local bar = CreateFrame("Frame", nil, parent)
     parent.mosStatusBar = bar
-    local margin = MOS.UI.IsClassicSkin() and 8 or 18
+    local margin = MOS.UI.Components.IsClassicSkin() and 8 or 18
     bar:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", margin, margin)
     bar:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -126, margin)
     bar:SetHeight(22)
     bar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     bar:SetBackdropColor(0.025, 0.022, 0.018, 0.94)
     bar:SetBackdropBorderColor(0.30, 0.30, 0.28, 1)
-    MOS.UI.RegisterSkinnedSurface(bar, "status", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0.025, 0.022, 0.018, 0.94 }, { 0.30, 0.30, 0.28, 1 })
+    MOS.UI.Components.RegisterSkinnedSurface(bar, "status", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0.025, 0.022, 0.018, 0.94 }, { 0.30, 0.30, 0.28, 1 })
     bar.message = bar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     bar.message:SetPoint("LEFT", bar, "LEFT", 8, 0)
     bar.message:SetWidth(270)
@@ -198,25 +198,20 @@ function Dashboard.SetStatus(bar, message, kind)
     else bar.message:SetTextColor(0.72, 0.72, 0.68) end
 end
 
-function Dashboard.CreatePages(contentPanel)
+function Dashboard.CreatePages(contentPanel, definitions)
     local pages = {}
-    pages.roster = CreateFrame("Frame", nil, contentPanel)
-    pages.roster:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 3, -3)
-    pages.roster:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -3, 3)
-    pages.statistics = CreateFrame("Frame", nil, contentPanel)
-    pages.statistics:SetAllPoints(pages.roster); pages.statistics:Hide()
-    pages.raidStatistics = CreateFrame("Frame", nil, contentPanel)
-    pages.raidStatistics:SetAllPoints(pages.roster); pages.raidStatistics:Hide()
-    pages.csr = CreateFrame("Frame", nil, contentPanel)
-    pages.csr:SetAllPoints(pages.roster); pages.csr:Hide()
-    pages.raid = CreateFrame("Frame", nil, contentPanel)
-    -- The roster frame is moved independently when Loot Master mode changes.
-    -- Raid layout must follow the content panel itself, not that mutable frame.
-    pages.raid:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 3, -3)
-    pages.raid:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -3, 3)
-    pages.raid:Hide()
-    pages.about = CreateFrame("Frame", nil, contentPanel)
-    pages.about:SetAllPoints(pages.roster); pages.about:Hide()
+    local index
+    for index = 1, table.getn(definitions) do
+        local definition = definitions[index]
+        local page = CreateFrame("Frame", nil, contentPanel)
+        if definition.anchor then page:SetAllPoints(pages[definition.anchor])
+        else
+            page:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 3, -3)
+            page:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -3, 3)
+        end
+        if definition.hidden then page:Hide() end
+        pages[definition.key] = page
+    end
     return pages
 end
 
@@ -263,10 +258,10 @@ function Dashboard.BindWindow(view, options)
             if view.leftBeforeMinimize and view.bottomBeforeMinimize then frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.leftBeforeMinimize, view.bottomBeforeMinimize) else frame:SetPoint("CENTER", UIParent, "CENTER", 0, 10) end
             view.title:ClearAllPoints(); view.title:SetPoint("CENTER", view.titleBar, "CENTER", 0, 2)
             view.title:SetFontObject(GameFontNormalLarge)
-            view.title:SetTextColor(unpack(MOS.UI.Theme.colors.goldText))
-            view.minimizeButton:SetText("_"); MOS.UI.SetClassicButtonLabelOffset(view.minimizeButton, 2); view.title:SetText("Mukla Officer Suite")
+            view.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
+            view.minimizeButton:SetText("_"); MOS.UI.Components.SetClassicButtonLabelOffset(view.minimizeButton, 2); view.title:SetText("Mukla Officer Suite")
             view.classicTitle:ClearAllPoints(); view.classicTitle:SetPoint("CENTER", view.titleBar, "CENTER", 0, 1); view.classicTitle:SetWidth(220); view.classicTitle:SetHeight(19)
-            if MOS.UI.IsClassicSkin() then
+            if MOS.UI.Components.IsClassicSkin() then
                 view.title:Hide(); view.classicTitle:Show(); view.classicLogo:Show(); view.classicTitleLeft:Show(); view.classicTitleRight:Show()
                 view.titleBar:ClearAllPoints(); view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8); view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8); view.titleBar:SetHeight(44)
             end
@@ -284,8 +279,8 @@ function Dashboard.BindWindow(view, options)
             frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.minimizedLeft or view.leftBeforeMinimize or 0, view.minimizedBottom or ((view.bottomBeforeMinimize or 0) + view.heightBeforeMinimize - 40))
             view.titleBar:ClearAllPoints(); view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -5); view.titleBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 5)
             view.title:ClearAllPoints(); view.title:SetPoint("LEFT", view.titleBar, "LEFT", 9, 1); view.title:SetFontObject(GameFontNormal)
-            view.title:SetText("Mukla Officer Suite"); view.title:SetTextColor(unpack(MOS.UI.Theme.colors.goldText))
-            view.minimizeButton:SetText("[]"); MOS.UI.SetClassicButtonLabelOffset(view.minimizeButton, 0)
+            view.title:SetText("Mukla Officer Suite"); view.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
+            view.minimizeButton:SetText("[]"); MOS.UI.Components.SetClassicButtonLabelOffset(view.minimizeButton, 0)
             view.classicTitle:Hide(); view.classicLogo:Hide(); view.classicTitleLeft:Hide(); view.classicTitleRight:Hide(); view.title:Show()
         end
     end
@@ -319,7 +314,7 @@ function Dashboard.CreateMinimapButton(options)
     end
     button:SetScript("OnClick", options.onClick)
     button:SetScript("OnEnter", function()
-        MOS.UI.AnchorTooltipRightOfCursor(this)
+        MOS.UI.Components.AnchorTooltipRightOfCursor(this)
         GameTooltip:AddLine("Mukla Officer Suite")
         GameTooltip:AddLine("Click to open the dashboard", 1, 1, 1)
         GameTooltip:Show()

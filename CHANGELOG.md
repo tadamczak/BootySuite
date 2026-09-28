@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1-dev.2 - 2026-09-29
+
+- Centralized UI construction in isolated component factories with explicit dependencies, preserving existing workflows and appearance.
+
 ## 0.4.1-dev.1 - 2026-09-28
 
 - Centered the Settings gear, padded the minimize glyph and matched dashboard/About text to menu gold.
