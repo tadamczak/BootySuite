@@ -277,6 +277,39 @@ function UI.CreateIconButton(parent, name, texturePath, size, iconInset)
     return button
 end
 
+function UI.CreateReadOnlyInput(parent, name, width)
+    local field = UI.CreateFramedEditBox(parent, name, width)
+    field.mosReadOnlyValue = ""
+    field.SetValueText = function(self, value) self.mosReadOnlyValue = value or ""; self:SetText(self.mosReadOnlyValue) end
+    field:SetScript("OnTextChanged", function()
+        if this:GetText() ~= this.mosReadOnlyValue then this:SetText(this.mosReadOnlyValue) end
+    end)
+    return field
+end
+
+function UI.CreateConfirmation(name)
+    local frame = UI.CreateTextPrompt(name, "Confirm", "", "No", function() return true end)
+    frame:SetWidth(440); frame:SetHeight(150); frame:SetFrameLevel(600)
+    frame.edit:Hide(); frame.message:Hide()
+    frame.label:SetWidth(404); frame.label:SetHeight(56); frame.label:SetJustifyH("LEFT")
+    frame.no, frame.yes = frame.accept, frame.cancel
+    frame.no:SetFrameLevel(601); frame.yes:SetFrameLevel(601)
+    frame.yes:SetText("Yes")
+    local blocker = UI.CreateControl(nil, UIParent)
+    blocker:SetAllPoints(UIParent); blocker:SetFrameStrata("FULLSCREEN_DIALOG"); blocker:SetFrameLevel(599); blocker:EnableMouse(true); blocker:Hide()
+    frame:SetScript("OnHide", function() blocker:Hide(); frame.onYes = nil; frame.onNo = nil end)
+    frame.no:SetScript("OnClick", function() local callback = frame.onNo; frame:Hide(); if callback then callback() end end)
+    frame.yes:SetScript("OnClick", function() local callback = frame.onYes; frame:Hide(); if callback then callback() end end)
+    frame.close = UI.CreateWindowButton(frame, nil, "close")
+    frame.close:SetFrameLevel(601)
+    frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -12); frame.close:SetScript("OnClick", function() frame:Hide() end)
+    frame.Open = function(self, message, onYes, onNo)
+        self.label:SetText(message); self.onYes = onYes; self.onNo = onNo
+        blocker:Show(); self:Show()
+    end
+    return frame
+end
+
 function UI.AttachTooltip(frame, title, description, highlight)
     local onEnter, onLeave = frame:GetScript("OnEnter"), frame:GetScript("OnLeave")
     frame:SetScript("OnEnter", function()

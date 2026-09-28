@@ -51,8 +51,58 @@ local function Write(name, add)
     return true, "Saved profile: " .. name
 end
 
-function Profiles.Add(name) return Write(name, true) end
+function Profiles.CanAdd(name)
+    name = Name(name)
+    if not name then return false, "Enter a profile name (1-64 characters)." end
+    if Store()[name] then return false, "This profile already exists." end
+    return true
+end
+
+function Profiles.Add(name)
+    local ok, message = Write(name, true)
+    if ok then Profiles.Load(name) end
+    return ok, message
+end
 function Profiles.Save(name) return Write(name, false) end
+
+function Profiles.GetCurrent()
+    local profiles = Store()
+    if not MuklaOfficerSuiteDB.currentSettingsProfile then
+        local name, index = "Default", 1
+        while profiles[name] do index = index + 1; name = "Default " .. index end
+        Write(name, true)
+        MuklaOfficerSuiteDB.currentSettingsProfile = name
+    end
+    return MuklaOfficerSuiteDB.currentSettingsProfile
+end
+
+function Profiles.Exists(name) return Store()[Name(name) or ""] ~= nil end
+
+function Profiles.IsDirty()
+    local profile = Store()[Profiles.GetCurrent()]
+    if not profile then return true end
+    local index
+    for index = 1, table.getn(keys) do
+        local saved, live = profile.settings[keys[index]], MuklaOfficerSuiteDB[keys[index]]
+        if type(saved) == "table" and type(live) == "table" then
+            if saved[1] ~= live[1] or saved[2] ~= live[2] or saved[3] ~= live[3] then return true end
+        elseif saved ~= live then return true end
+    end
+    return false
+end
+
+function Profiles.SaveCurrent()
+    local name = Profiles.GetCurrent()
+    return Write(name, not Profiles.Exists(name))
+end
+
+function Profiles.Delete(name)
+    name = Name(name)
+    if not name or not Store()[name] then return false, "Profile not found." end
+    Store()[name] = nil
+    -- Keep live settings and identity; explicit Save can recreate a deleted current profile.
+    return true, "Deleted profile: " .. name
+end
 
 function Profiles.Load(name)
     local profile = Store()[Name(name) or ""]
@@ -63,6 +113,7 @@ function Profiles.Load(name)
         if profile.settings[key] ~= nil then MuklaOfficerSuiteDB[key] = Copy(profile.settings[key]) end
     end
     MOS.Database.Ensure()
+    MuklaOfficerSuiteDB.currentSettingsProfile = Name(name)
     return true, "Loaded profile: " .. Name(name)
 end
 

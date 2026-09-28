@@ -54,7 +54,10 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.lmConfigTitle = MOS.UI.Components.CreateLabel(view.lmConfigPanel, nil, "OVERLAY", "GameFontNormalSmall")
     view.lmConfigTitle:SetPoint("TOPLEFT", view.lmConfigPanel, "TOPLEFT", 8, -8)
     view.lmConfigTitle:SetText("LM config")
-    view.lmAutoLoot = MOS.UI.Components.Settings.CreateCheckbox(view.lmConfigPanel, 8, -30, "LM auto loot", "lmAutoLoot", function()
+    local settingsControls = MOS.UI.Components.Settings.CreateFactory({
+        ensure = MOS.Database.Ensure, get = MOS.Database.GetSetting, set = MOS.Database.SetSetting,
+    })
+    view.lmAutoLoot = settingsControls.CreateCheckbox(view.lmConfigPanel, 8, -30, "LM auto loot", "lmAutoLoot", function()
         if MOS.Modules.MasterLootWindow and MOS.Modules.MasterLootWindow.ApplyAutoLootSetting then MOS.Modules.MasterLootWindow.ApplyAutoLootSetting() end
     end)
     page.lmAutoLoot = view.lmAutoLoot

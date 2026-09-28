@@ -291,6 +291,7 @@ function Settings.CreateRaidSettings(page, callbacks)
     page.raidAccordionControls.chatLogsCheck = page.chatLogsCheck
     page.RefreshAllSettings = function()
         MOS.Database.Ensure()
+        if page.profiles then page.profiles.RefreshState() end
         if page.RefreshGeneralSettings then page.RefreshGeneralSettings() end
         page.rosterClassColorsCheck:SetChecked(MuklaOfficerSuiteDB.rosterClassColors and 1 or nil)
         page.rosterLiveTrackingCheck:SetChecked(MuklaOfficerSuiteDB.rosterLiveTrackingEnabled and 1 or nil)
@@ -391,7 +392,8 @@ end
 function Settings.ApplyRaidAccordions(controls)
     if not controls then return end
     local state = controls.state
-    local expanded = state.layout
+    local uiVisible = not controls.page.topSectionState or controls.page.topSectionState.ui
+    local expanded = state.layout and uiVisible
     controls.layout.label:SetText((expanded and "-  " or "+  ") .. "Layout")
     controls.general.label:SetText((state.general and "-  " or "+  ") .. controls.general.baseText)
     controls.leader.label:SetText((state.leader and "-  " or "+  ") .. controls.leader.baseText)
@@ -418,7 +420,7 @@ function Settings.ApplyRaidAccordions(controls)
         if expanded then controls.layoutControls[controlIndex]:Show() else controls.layoutControls[controlIndex]:Hide() end
     end
     for controlIndex = 1, table.getn(controls.generalControls or {}) do
-        if state.general then controls.generalControls[controlIndex]:Show() else controls.generalControls[controlIndex]:Hide() end
+        if state.general and uiVisible then controls.generalControls[controlIndex]:Show() else controls.generalControls[controlIndex]:Hide() end
     end
     controls.columnsPanel:Hide()
 
@@ -451,6 +453,10 @@ function Settings.ApplyRaidAccordions(controls)
     controls.leader:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, leaderY)
     controls.loot:ClearAllPoints()
     controls.loot:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, lootY)
+    if controls.page.topSectionState and not controls.page.topSectionState.ui then
+        debugY = (controls.page.uiHeadingY or -38) - 28
+        chatY = debugY - 30
+    end
     controls.debugHeading:ClearAllPoints()
     controls.debugHeading:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 12, debugY)
 
@@ -463,7 +469,7 @@ function Settings.ApplyRaidAccordions(controls)
         controls.focusLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 210, opacityY)
         controls.focusField:ClearAllPoints()
         controls.focusField:SetPoint("LEFT", controls.focusLabel, "RIGHT", 8, 0)
-        if state.loot then
+        if state.loot and uiVisible then
             controls.opacityLabel:Show(); controls.opacityField:Show(); controls.focusLabel:Show(); controls.focusField:Show()
         else
             controls.opacityLabel:Hide(); controls.opacityField:Hide(); controls.focusLabel:Hide(); controls.focusField:Hide()
@@ -481,9 +487,31 @@ function Settings.ApplyRaidAccordions(controls)
     controls.page.settingsContentHeight = (expanded and 1280 or 460) - offset
     if controls.page.topSectionState then
         controls.page.settingsContentHeight = -debugY + (controls.page.topSectionState.debug and 66 or 32)
+        Settings.ApplyUIVisibility(controls)
     end
     Settings.UpdateScroll(controls.page.settingsViewport, controls.page, controls.page.settingsContentHeight)
     controls.layout.rule:Hide()
+end
+
+function Settings.ApplyUIVisibility(controls)
+    local page, visible = controls.page, controls.page.topSectionState.ui
+    local function Root(control)
+        if not control then return end
+        if visible then control:Show() else control:Hide() end
+    end
+    local sections = page.primarySections
+    if sections then
+        Root(sections.rosterHeading); Root(sections.rosterGeneral); Root(sections.rosterLayout); Root(sections.raidHeading)
+    end
+    Root(controls.general); Root(controls.layout); Root(controls.leader); Root(controls.loot)
+    if not visible then
+        page.rosterLiveTrackingCheck:Hide(); page.rosterClassColorsCheck:Hide()
+        local index
+        for index = 1, table.getn(controls.layoutControls) do controls.layoutControls[index]:Hide() end
+        for index = 1, table.getn(controls.generalControls or {}) do controls.generalControls[index]:Hide() end
+        if controls.columnsPanel then controls.columnsPanel:Hide() end
+        if controls.opacityLabel then controls.opacityLabel:Hide(); controls.opacityField:Hide(); controls.focusLabel:Hide(); controls.focusField:Hide() end
+    end
 end
 
 function Settings.OffsetRaidLayoutControls(controls, offset)
@@ -519,17 +547,18 @@ end
 
 function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local state = page.rosterAccordionState
+    local uiVisible = not page.topSectionState or page.topSectionState.ui
     local topOffset = page.settingsTopOffset or 0
     sections.rosterHeading:ClearAllPoints(); sections.rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -150 + topOffset)
     sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -178 + topOffset)
     page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, -206 + topOffset)
     sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
-    if state.general then sections.rosterGeneral:LockHighlight(); page.rosterLiveTrackingCheck:Show()
+    if state.general and uiVisible then sections.rosterGeneral:LockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
     local layoutY = (state.general and -234 or -206) + topOffset
     sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 24, layoutY)
-    if state.layout then sections.rosterLayout:LockHighlight(); page.rosterClassColorsCheck:Show()
+    if state.layout and uiVisible then sections.rosterLayout:LockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
     page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, layoutY - 28)
     local raidHeadingY = layoutY - (state.layout and 66 or 38)
