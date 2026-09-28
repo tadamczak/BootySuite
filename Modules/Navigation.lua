@@ -59,8 +59,7 @@ function Navigation.Create(options)
         button.tabBorderRight = button:CreateTexture(nil, "OVERLAY"); button.tabBorderRight:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderRight:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderRight:SetWidth(1); button.tabBorderRight:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0); button.tabBorderRight:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
         button.tabBorderTop = button:CreateTexture(nil, "OVERLAY"); button.tabBorderTop:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderTop:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderTop:SetHeight(1); button.tabBorderTop:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.tabBorderTop:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
         button.SetTabBorderVisible = function(visible)
-            if visible then button.tabBorderLeft:Show(); button.tabBorderRight:Show(); button.tabBorderTop:Show()
-            else button.tabBorderLeft:Hide(); button.tabBorderRight:Hide(); button.tabBorderTop:Hide() end
+            MOS.UI.SetNavigationTabBorder(button, visible)
         end
         button.SetTabBorderVisible(false)
         button:SetScript("OnEnter", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
