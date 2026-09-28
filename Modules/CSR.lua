@@ -83,12 +83,10 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
     controller.raidPanel = MOS.UI.CreateDropdownPanel(page, controller.raidFilter, 190, 178, 20)
     controller.searchLabel = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); controller.searchLabel:SetPoint("LEFT", controller.raidFilter, "RIGHT", 18, 0); controller.searchLabel:SetText("Search")
     controller.search = MOS.UI.CreateFramedEditBox(page, nil, 180); controller.search:ClearAllPoints(); controller.search:SetPoint("LEFT", controller.searchLabel, "RIGHT", 7, 0); controller.search:SetHeight(22); controller.search:SetAutoFocus(false); controller.search:SetScript("OnEscapePressed", function() this:ClearFocus() end); controller.search:SetScript("OnEnterPressed", function() this:ClearFocus() end)
-    controller.raidDismiss = CreateFrame("Button", nil, UIParent); controller.raidDismiss:SetAllPoints(UIParent); controller.raidDismiss:SetFrameStrata("FULLSCREEN_DIALOG"); controller.raidDismiss:SetFrameLevel(1); controller.raidDismiss:Hide()
-    controller.raidPanel:SetFrameStrata("FULLSCREEN_DIALOG"); controller.raidPanel:SetFrameLevel(2)
-    controller.raidDismiss:SetScript("OnClick", function() controller.raidPanel:Hide(); controller.raidDismiss:Hide() end)
+    controller.raidDismiss = controller.raidPanel.dismiss
     controller.raidFilter:SetScript("OnClick", function()
-        if controller.raidPanel:IsVisible() then controller.raidPanel:Hide(); controller.raidDismiss:Hide()
-        else controller.raidDismiss:Show(); controller.raidPanel:Show() end
+        if controller.raidPanel:IsVisible() then controller.raidPanel:Hide()
+        else controller.raidPanel:Show() end
     end)
     local allCheckbox = CreateFrame("CheckButton", nil, controller.raidPanel, "UICheckButtonTemplate"); allCheckbox:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheckbox:SetWidth(20); allCheckbox:SetHeight(20); allCheckbox:SetChecked(1)
     allCheckbox.label = controller.raidPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); allCheckbox.label:SetPoint("LEFT", allCheckbox, "RIGHT", 2, 0); allCheckbox.label:SetText("All")

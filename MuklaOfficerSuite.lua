@@ -1,5 +1,6 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0"
+local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
@@ -75,6 +76,7 @@ sidebarToggleButton:SetScript("OnClick", function() if ToggleSidebar then Toggle
 
 UIState.statusBar = MOS.UI.Dashboard.CreateStatusBar(dashboard)
 SetStatus("Ready")
+local navigation
 MOS.UI.Dashboard.BindWindow(dashboardView, {
     statusBar = UIState.statusBar,
     saveGeometry = SaveDashboardGeometry,
@@ -93,15 +95,27 @@ MOS.UI.Dashboard.BindWindow(dashboardView, {
     applyOrRefreshLayout = function()
         if ApplyNavigationLayout then ApplyNavigationLayout() elseif RefreshCurrentPageLayout then RefreshCurrentPageLayout() end
     end,
+    setNavigationVisible = function(visible)
+        if not navigation then return end
+        local _, button
+        for _, button in pairs(navigation.buttons) do if visible then button:Show() else button:Hide() end end
+    end,
 })
 
 local dashboardPages = MOS.UI.Dashboard.CreatePages(contentPanel)
 local rosterPage, statisticsPage, raidPage = dashboardPages.roster, dashboardPages.statistics, dashboardPages.raid
 local aboutPage = dashboardPages.about
 
-local settingsView = MOS.Modules.Settings.CreateShell(contentPanel, rosterPage, function()
+local detachedSettingsWindow = MOS.Modules.Settings.CreateDetachedWindow()
+local settingsView = MOS.Modules.Settings.CreateShell(detachedSettingsWindow.content, detachedSettingsWindow.content, function()
     if ApplyNavigationLayout then ApplyNavigationLayout() end
-end)
+end, {
+    minimapVisibilityChanged = function()
+        if not MOS.minimapButton then return end
+        MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
+        if MuklaOfficerSuiteDB.hideMinimapIcon then MOS.minimapButton:Hide() else MOS.minimapButton:Show() end
+    end,
+})
 local configurationViewport = settingsView.viewport
 local configurationPage = settingsView.page
 MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
@@ -111,6 +125,8 @@ MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
         if raidPage.lifecycle and raidPage.lifecycle.SyncTrackingSetting then raidPage.lifecycle:SyncTrackingSetting() end
     end,
 })
+detachedSettingsWindow.AttachView(settingsView)
+dashboardView.settingsButton:SetScript("OnClick", function() detachedSettingsWindow.Toggle() end)
 
 local performanceModule = MOS.Modules.Performance.Create(contentPanel)
 
@@ -376,7 +392,7 @@ RefreshRaidPage = MOS.Diagnostics.Wrap("Raid refresh", RefreshRaidPage)
 local function ShowPage(pageName)
     currentPage = pageName
     MOS.ModuleRegistry.Show(pageName)
-    MOS.Modules.Navigation.SetActive(menuButtons, pageName)
+    if navigation then navigation.SetActive(pageName) else MOS.Modules.Navigation.SetActive(menuButtons, pageName) end
 end
 
 MOS.OpenRaidStatistics = function(raidId)
@@ -427,7 +443,13 @@ MOS.ModuleRegistry.Register("raid", MOS.Modules.RaidManagement.CreateLifecycle({
         })
     end,
 }))
-MOS.ModuleRegistry.Register("about", MOS.Modules.About.Create(aboutPage, VERSION))
+local aboutModule
+aboutModule = MOS.Modules.About.Create(aboutPage, VERSION, {
+    checkVersion = function() if MOS.versionCheck then MOS.versionCheck.CheckNow() end end,
+    getVersionStatus = function() return MOS.versionCheck and MOS.versionCheck.GetStatus() or "Failed to check for update. Check GitHub for latest version." end,
+    getLastSuccessfulCheck = function() return MOS.versionCheck and MOS.versionCheck.GetLastSuccessfulCheck() end,
+})
+MOS.ModuleRegistry.Register("about", aboutModule)
 MOS.ModuleRegistry.Register("configuration", MOS.Modules.Settings.CreateLifecycle({
     viewport = configurationViewport,
     page = configurationPage,
@@ -438,7 +460,7 @@ MOS.ModuleRegistry.Register("configuration", MOS.Modules.Settings.CreateLifecycl
 }))
 MOS.ModuleRegistry.Register("performance", performanceModule)
 
-local navigation = MOS.Modules.Navigation.Create({
+navigation = MOS.Modules.Navigation.Create({
     dashboard = dashboard,
     sidebar = sidebar,
     toggleButton = sidebarToggleButton,
@@ -668,7 +690,7 @@ MOS.Modules.RosterManagement.AttachInteractions({
 })
 
 dashboard:SetScript("OnShow", function() ShowPage(currentPage) end)
-MOS.Modules.Navigation.SetActive(menuButtons, "roster")
+navigation.SetActive("roster")
 
 local function ToggleDashboard()
     if dashboard:IsVisible() then
@@ -692,6 +714,13 @@ MOS.minimapButton = MOS.UI.Dashboard.CreateMinimapButton({
     onClick = ToggleDashboard,
 })
 MOS.PositionMinimapButton = MOS.minimapButton.Position
+
+MOS.versionCheck = MOS.Modules.VersionCheck.Create({
+    releaseVersion = RELEASE_VERSION,
+    addonVersion = VERSION,
+    printMessage = Print,
+    onStatusChanged = function(value, timestamp) aboutModule:SetUpdateStatus(value, timestamp) end,
+})
 
 MOS.Core.Commands.Attach({
     dashboard = dashboard,
@@ -803,7 +832,7 @@ MOS.Core.EventDispatcher.Attach(MOS, {
         end
         MuklaOfficerSuiteDB.uiScale = nil
         MOS.PositionMinimapButton()
-        if MuklaOfficerSuiteDB.minimap.hidden then MOS.minimapButton:Hide() end
+        if MuklaOfficerSuiteDB.hideMinimapIcon then MOS.minimapButton:Hide() end
         MOS.sidebarCollapsed = MuklaOfficerSuiteDB.sidebarCollapsed and true or false
         raidPage.lootMasterController.resetOnLoad()
         ApplyNavigationLayout()

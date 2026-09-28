@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="MuklaOfficerSuite/Assets/readme-header.png" width="100%" alt="Sons of Mukla - Mukla Officer Suite">
+  <img src="Assets/readme-header.png" width="100%" alt="Sons of Mukla - Mukla Officer Suite">
 </p>
 
 # Mukla Officer Suite
@@ -67,7 +67,7 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - **Raid sessions -** Start a new raid, continue an active session, save it, or load a saved session.
 - **Raid type -** Assign Blackwing Lair, Molten Core, Onyxia's Lair, Karazhan10, Zul'Gurub, or Other.
 - **Attendance -** Track the raid roster and optionally include attendance when saving statistics.
-- **Raid views -** Switch between the member list and draggable group layout.
+- **Raid views -** Switch between the member list and a centered, configurable group layout with adjustable sizing, spacing, and typography.
 - **Player actions -** Manage raid leader, assistants, removal, reporting, and ignore state.
 - **Soft Reserve warnings -** Review missing SR, imported SR outside the raid, and SR without loot rights.
 - **Loot rules -** Configure SR, Highly Contested Items, Raycoin, and CSR rights by guild rank.
@@ -111,14 +111,23 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 
 ### Settings
 
-- **Appearance -** Configure the addon skin, colors, navigation style, and window behavior.
+- **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live.
+- **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them.
+- **Settings window -** Settings reopen from the top with your current saved values.
+- **Resizable window -** Settings can be resized within the available game screen; long sections remain available through scrolling.
+- **Roster preferences -** General contains live tracking, while Layout contains class-color display settings.
 - **Raid Management -** Configure Loot Master opacity and related raid preferences.
 - **Logging -** Enable optional concise addon messages in chat.
 - **Reset options -** Restore supported settings to their defaults.
 
 ### About
 
+- **Update notification -** MOS checks once when entering the game and provides **Check for updates!** in About. About shows the current version, checking progress, result, and last successful check. Detection compares complete running versions through private addon traffic with online MOS users and shows a GitHub Releases link for newer builds.
+
 - **Addon information -** Review the installed version and basic project information.
+- **About presentation -** Version labels, update state, last check, authorship, and rights information remain readable across supported window sizes.
+- **Live Settings window -** Use the gear button to adjust the same Settings controls in a separate window while viewing another module.
+- **UI visibility -** Settings can disable the login message or hide the minimap icon.
 
 ## How to record raid session
 

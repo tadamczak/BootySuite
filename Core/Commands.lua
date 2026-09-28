@@ -27,8 +27,9 @@ function Commands.Attach(options)
             options.dashboard:Hide()
         elseif command == "minimap" then
             MOS.Database.Ensure()
-            MuklaOfficerSuiteDB.minimap.hidden = not MuklaOfficerSuiteDB.minimap.hidden
-            if MuklaOfficerSuiteDB.minimap.hidden then options.minimapButton:Hide() else options.minimapButton:Show() end
+            MuklaOfficerSuiteDB.hideMinimapIcon = not MuklaOfficerSuiteDB.hideMinimapIcon
+            MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
+            if MuklaOfficerSuiteDB.hideMinimapIcon then options.minimapButton:Hide() else options.minimapButton:Show() end
         elseif command == "status" then
             options.printMessage("Saved members: " .. options.countSavedMembers())
         else

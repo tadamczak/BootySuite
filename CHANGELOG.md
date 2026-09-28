@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 - 2026-09-28
+
+- Added a movable, resizable Settings window with session-only accordions and UI visibility preferences.
+- Added configurable Raid Group View sizing, spacing, columns and text sizes.
+- Added peer version discovery with update status and manual checks in About.
+- Fixed Settings scrolling, dropdown overlays, input handling, separators and label contrast.
+- Fixed tab navigation, About layout, Loot Master cleanup and restored corpse rolls.
+- Published addon files directly at repository root for installation.
 
 ## 0.3.0 - 2026-09-27
 

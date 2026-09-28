@@ -6,8 +6,15 @@ local Navigation = MOS.Modules.Navigation
 function Navigation.SetActive(buttons, activeName)
     local name, button
     for name, button in pairs(buttons) do
-        if MOS.UI.IsClassicSkin() then
-            local selected = name == activeName
+        local selected = name == activeName
+        button.navigationSelected = selected
+        if button.navigationMode == "tabs" then
+            button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", tile = true, tileSize = 8, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
+            button:SetBackdropColor(0, 0, 0, 0); button:SetBackdropBorderColor(0, 0, 0, 0)
+            if button.mosHighlight then button.mosHighlight:Hide() end
+            button.label:SetTextColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.18 or 0.43)
+            button.SetTabBorderVisible(selected)
+        elseif MOS.UI.IsClassicSkin() then
             button:SetBackdrop({ bgFile = MOS.UI.ClassicAsset("Surfaces\\nav-" .. (selected and "selected" or "normal") .. ".tga"), tile = false, tileSize = 0, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
             button:SetBackdropColor(1, 1, 1, 1)
             button.label:SetTextColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43)
@@ -28,8 +35,8 @@ end
 
 function Navigation.Create(options)
     local controller = { buttons = {} }
-    local order = { "roster", "raid", "statistics", "raidStatistics", "csr", "performance", "configuration", "about" }
-    local ys = { -10, -53, -96, -139, -182, -225, -268, -311 }
+    local order = { "roster", "raid", "statistics", "raidStatistics", "csr", "performance", "about" }
+    local ys = { -10, -53, -96, -139, -182, -225, -268 }
 
     local function CreateButton(name, text, y, iconPath)
         local button = CreateFrame("Button", nil, options.sidebar)
@@ -48,6 +55,15 @@ function Navigation.Create(options)
         local font, size, flags = button.label:GetFont()
         if font then button.label:SetFont(font, math.min(10, size or 10), flags) end
         button:SetScript("OnClick", function() options.showPage(name) end)
+        button.tabBorderLeft = button:CreateTexture(nil, "OVERLAY"); button.tabBorderLeft:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderLeft:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderLeft:SetWidth(1); button.tabBorderLeft:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.tabBorderLeft:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
+        button.tabBorderRight = button:CreateTexture(nil, "OVERLAY"); button.tabBorderRight:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderRight:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderRight:SetWidth(1); button.tabBorderRight:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0); button.tabBorderRight:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
+        button.tabBorderTop = button:CreateTexture(nil, "OVERLAY"); button.tabBorderTop:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderTop:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderTop:SetHeight(1); button.tabBorderTop:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.tabBorderTop:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
+        button.SetTabBorderVisible = function(visible)
+            MOS.UI.SetNavigationTabBorder(button, visible)
+        end
+        button.SetTabBorderVisible(false)
+        button:SetScript("OnEnter", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
+        button:SetScript("OnLeave", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(this.navigationSelected) end end)
         MOS.UI.RegisterSkinnedNavigation(button, name, iconPath)
         controller.buttons[name] = button
     end
@@ -58,8 +74,7 @@ function Navigation.Create(options)
     CreateButton("raidStatistics", "Raid Statistics", -139, "Interface\\Icons\\INV_Misc_Note_06")
     CreateButton("csr", "CSR", -182, "Interface\\Icons\\INV_Misc_Coin_01")
     CreateButton("performance", "Performance", -225, "Interface\\Icons\\INV_Gizmo_02")
-    CreateButton("configuration", "Settings", -268, "Interface\\Icons\\INV_Gizmo_01")
-    CreateButton("about", "About", -311, "Interface\\Icons\\INV_Misc_QuestionMark")
+    CreateButton("about", "About", -268, "Interface\\Icons\\INV_Misc_QuestionMark")
 
     function controller.Toggle(forceState)
         if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.menuStyle == "tabs" then return end
@@ -82,6 +97,7 @@ function Navigation.Create(options)
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
+                button.navigationMode = "tabs"
                 button:SetParent(options.dashboard); button:ClearAllPoints(); button:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 20 + ((index - 1) * width), -70)
                 button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width); button:SetHeight(30)
                 button.icon:Hide(); button.iconBorder:Hide(); button:Show(); button.label:Show(); button.label:ClearAllPoints(); button.label:SetAllPoints(button); button.label:SetWidth(width); button.label:SetJustifyH("CENTER")
@@ -105,6 +121,7 @@ function Navigation.Create(options)
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
+                button.navigationMode = "buttons"; button.SetTabBorderVisible(false)
                 button:SetParent(options.sidebar); button:ClearAllPoints(); button:SetPoint("TOPLEFT", options.sidebar, "TOPLEFT", classic and 3 or 10, classic and (-34 - ((index - 1) * 37)) or ys[index])
                 button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.sidebar:GetFrameLevel() + 2); button:Show(); button:SetWidth(classic and ((collapsed and 44 or 148) - 6) or (collapsed and 38 or 154)); button:SetHeight(classic and 37 or 40)
                 button.icon:Show(); if classic then button.iconBorder:Hide() else button.iconBorder:Show() end; button.icon:ClearAllPoints(); button.icon:SetPoint(collapsed and "CENTER" or "LEFT", button, collapsed and "CENTER" or "LEFT", collapsed and 0 or (classic and 11 or 9), 0)
@@ -118,6 +135,7 @@ function Navigation.Create(options)
                 options.toggleButtonClassicIcon:Show()
             else options.toggleButton:SetText(collapsed and ">>" or "<<") end
         end
+        Navigation.SetActive(controller.buttons, controller.activeName or "roster")
         if options.refreshLayout then options.refreshLayout() end
     end
 

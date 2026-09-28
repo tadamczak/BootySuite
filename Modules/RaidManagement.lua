@@ -1312,26 +1312,51 @@ function RaidManagement.PrintListLayoutDiagnostics(page, members, selectedName)
     DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS raid edges: page right=%.0f bottom=%.0f; row right=%.0f last bottom=%.0f; scroll right=%.0f bottom=%.0f", number(page:GetRight()), number(page:GetBottom()), first and number(first:GetRight()) or 0, last and number(last:GetBottom()) or 0, page.listScrollBar and number(page.listScrollBar:GetRight()) or 0, page.listScrollBar and number(page.listScrollBar:GetBottom()) or 0))
 end
 
-function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader)
+function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin)
     local columnCount = math.max(1, math.min(4, tonumber(columns) or 2))
     local groupRows = math.ceil(8 / columnCount)
-    local preferredWidth = (columnCount * (tonumber(preferredTileWidth) or 280)) + ((columnCount - 1) * 12)
-    local layoutWidth = math.min(math.max(1, tonumber(width) or 1), preferredWidth)
-    local headerHeight = showHeader and 22 or 0
+    local availableWidth = math.max(1, tonumber(width) or 1)
+    local margin = math.max(0, tonumber(groupMargin) or 8)
+    local preferredWidth = (columnCount * (tonumber(preferredTileWidth) or 280)) + ((columnCount - 1) * margin)
+    local layoutWidth = autoTileWidth and availableWidth or math.min(availableWidth, preferredWidth)
+    local headerHeight = showHeader and math.max(14, tonumber(configuredHeaderHeight) or 22) or 0
     local groupHeight = headerHeight + ((tonumber(tileHeight) or 20) * 5)
-    local contentHeight = (groupRows * groupHeight) + ((groupRows - 1) * 8)
+    local contentHeight = (groupRows * groupHeight) + ((groupRows - 1) * margin)
     return {
         columns = columnCount,
         rows = groupRows,
         layoutWidth = layoutWidth,
-        xOffset = math.max(0, math.floor(((tonumber(width) or 1) - layoutWidth) / 2)),
-        columnWidth = math.max(80, math.floor((layoutWidth - ((columnCount - 1) * 12)) / columnCount)),
+        xOffset = math.max(0, math.floor((availableWidth - layoutWidth) / 2)),
+        columnWidth = math.max(80, math.floor((layoutWidth - ((columnCount - 1) * margin)) / columnCount)),
         headerHeight = headerHeight,
         groupHeight = groupHeight,
         contentHeight = contentHeight,
         canvasHeight = math.max(tonumber(height) or 1, contentHeight),
         maximumScroll = math.max(0, contentHeight - (tonumber(height) or 1)),
+        margin = margin,
     }
+end
+
+function RaidManagement.CalculateGroupSlotColumns(slotWidth, reserveRoleIcon, reserveLootIcon, showLevel, showClass, offline)
+    local width = math.max(80, tonumber(slotWidth) or 80)
+    local nameInset = 6 + (reserveRoleIcon and 15 or 0) + (reserveLootIcon and 14 or 0)
+    local offlineWidth = offline and 42 or 0
+    local classWidth = showClass and math.max(36, math.min(64, math.floor(width * 0.25))) or 0
+    local levelWidth = showLevel and 24 or 0
+    local rightSpace = 6 + offlineWidth + (offlineWidth > 0 and 4 or 0) + classWidth + (showClass and 5 or 0) + levelWidth + (showLevel and 5 or 0)
+    return {
+        nameInset = nameInset,
+        nameWidth = math.max(16, width - nameInset - rightSpace),
+        levelWidth = levelWidth,
+        classWidth = classWidth,
+        offlineWidth = offlineWidth,
+    }
+end
+
+local function SetFontSize(fontString, size)
+    if not fontString or not fontString.GetFont or not fontString.SetFont then return end
+    local path, currentSize, flags = fontString:GetFont()
+    if path and currentSize ~= size then fontString:SetFont(path, size, flags) end
 end
 
 function RaidManagement.FilterMembers(target, members, query, selectedClasses, selectedRanks)
@@ -1775,11 +1800,12 @@ function RaidManagement.RefreshGroupView(page)
     local textColor = MuklaOfficerSuiteDB.raidGroupTextColor
     local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
     local slotHeight = tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20
-    local geometry = RaidManagement.CalculateGroupGeometry(width, height, MuklaOfficerSuiteDB.raidGroupColumns, MOS.UI.IsClassicSkin() and width or configuredWidth, slotHeight, MuklaOfficerSuiteDB.raidGroupShowHeader)
+    local tileTextSize = tonumber(MuklaOfficerSuiteDB.raidGroupTileTextSize) or 10
+    local headerTextSize = tonumber(MuklaOfficerSuiteDB.raidGroupHeaderTextSize) or 10
+    local geometry = RaidManagement.CalculateGroupGeometry(width, height, MuklaOfficerSuiteDB.raidGroupColumns, configuredWidth, slotHeight, MuklaOfficerSuiteDB.raidGroupShowHeader, MuklaOfficerSuiteDB.raidGroupAutoTileWidth, MuklaOfficerSuiteDB.raidGroupHeaderHeight, MuklaOfficerSuiteDB.raidGroupMargin)
     local columns, groupRows = geometry.columns, geometry.rows
     local layoutWidth, xOffset, columnWidth = geometry.layoutWidth, geometry.xOffset, geometry.columnWidth
     local headerHeight, groupHeight = geometry.headerHeight, geometry.groupHeight
-    local verticalGap = 8
     local contentHeight = geometry.contentHeight
     local yOffset = 0
     page.groupCanvas:SetWidth(width); page.groupCanvas:SetHeight(geometry.canvasHeight)
@@ -1794,14 +1820,16 @@ function RaidManagement.RefreshGroupView(page)
         page.groupCounts[groupIndex] = 0
         local column = math.mod(groupIndex - 1, columns)
         local row = math.floor((groupIndex - 1) / columns)
-        local x, y = xOffset + (column * (columnWidth + 12)), -yOffset - (row * (groupHeight + verticalGap))
+        local x, y = xOffset + (column * (columnWidth + geometry.margin)), -yOffset - (row * (groupHeight + geometry.margin))
         local panel = page.groupPanels[groupIndex]
         panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(columnWidth); panel:SetHeight(groupHeight)
         local header = page.groupHeaders[groupIndex]
+        SetFontSize(header, headerTextSize)
         header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -4, -4)
         if MuklaOfficerSuiteDB.raidGroupShowHeader then header:Show() else header:Hide() end
         for slotIndex = 1, 5 do
             local slot = page.groupSlots[groupIndex][slotIndex]
+            SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
             slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x + 4, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(columnWidth - 8); slot:SetHeight(slotHeight)
             slot:SetBackdropColor(backgroundColor[1], backgroundColor[2], backgroundColor[3], 0.98); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
             MOS.UI.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
@@ -1870,16 +1898,12 @@ function RaidManagement.RefreshGroupView(page)
             local showLevel = online and MuklaOfficerSuiteDB.raidGroupShowLevel
             local showClass = MuklaOfficerSuiteDB.raidGroupShowClass
             local slotWidth = columnWidth - 8
-            local nameInset = 6 + (showRoleIcon and 15 or 0) + (showLootMasterIcon and 14 or 0)
-            local nameWidth = math.max(24, math.ceil(slot.name:GetStringWidth() or 0) + 2)
-            local classWidth = showClass and math.min(math.ceil(slot.class:GetStringWidth() or 0) + 2, math.max(20, math.floor(slotWidth * 0.26))) or 0
-            local levelWidth = showLevel and 18 or 0
-            local offlineWidth = online and 0 or 42
-            local rightSpace = 6 + offlineWidth + (offlineWidth > 0 and 4 or 0) + classWidth + (showClass and 5 or 0) + levelWidth + (showLevel and 5 or 0)
-            nameWidth = math.min(nameWidth, math.max(16, slotWidth - nameInset - rightSpace))
+            local columns = RaidManagement.CalculateGroupSlotColumns(slotWidth, MuklaOfficerSuiteDB.raidGroupShowRoleIcon, MuklaOfficerSuiteDB.raidGroupShowLootMaster, showLevel, showClass, not online)
+            local nameInset, nameWidth = columns.nameInset, columns.nameWidth
+            local classWidth, levelWidth, offlineWidth = columns.classWidth, columns.levelWidth, columns.offlineWidth
             slot.name:ClearAllPoints(); slot.name:SetPoint("LEFT", slot, "LEFT", nameInset, 0); slot.name:SetWidth(nameWidth); slot.name:Show(); slot.empty:Hide()
             slot.offline:ClearAllPoints(); slot.offline:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.offline:SetWidth(offlineWidth); slot.offline:SetJustifyH("RIGHT")
-            slot.class:ClearAllPoints(); slot.class:SetWidth(classWidth); slot.class:SetJustifyH("RIGHT")
+            slot.class:ClearAllPoints(); slot.class:SetWidth(classWidth); slot.class:SetJustifyH("LEFT")
             if showClass then slot.class:SetPoint("RIGHT", slot, "RIGHT", -6 - offlineWidth - (offlineWidth > 0 and 4 or 0), 0) end
             slot.level:ClearAllPoints(); slot.level:SetWidth(levelWidth)
             if showLevel then
@@ -2421,11 +2445,17 @@ function RaidManagement.CreateLootMasterController(options)
     alphaWatcher:SetScript("OnUpdate", OnLootMasterAlphaUpdate); alphaWatcher:Hide()
     controller.alphaWatcher = alphaWatcher
 
+    controller.closePanels = function()
+        options.page.lmConfigOpen = false
+        options.page.lmConfigPanel:Hide(); options.page.reyCoinPanel:Hide()
+        options.page.lmConfigToggle:Hide(); options.page.reyCoinToggle:Hide()
+    end
+
     controller.resetOnLoad = function()
         local settings = options.getSettings()
         MOS.lootMasterMode = false; MOS.lootMasterMinimized = false
         MOS.lootMasterWidthBeforeMinimize = nil; MOS.lootMasterHeightBeforeMinimize = nil
-        alphaWatcher:Hide(); options.dashboard:SetAlpha(1)
+        alphaWatcher:Hide(); options.dashboard:SetAlpha(1); controller.closePanels()
         options.dashboard:SetMinResize(760, 420); options.dashboard:SetMaxResize(1100, 760)
         options.dashboard:SetWidth(math.max(760, math.min(1100, tonumber(settings.windowWidth) or 840)))
         options.dashboard:SetHeight(math.max(420, math.min(760, tonumber(settings.windowHeight) or 540)))
@@ -2449,7 +2479,7 @@ function RaidManagement.CreateLootMasterController(options)
         MOS.lootMasterMode = enableLootMasterMode
         MOS.raidHeightBeforeExpansion = nil
         if MOS.lootMasterMode then
-            MOS.lootMasterMinimized = false
+            MOS.lootMasterMinimized = false; controller.closePanels()
             options.dashboard:SetMinResize(380, 170); options.dashboard:SetMaxResize(900, 760)
             options.dashboard:SetWidth(math.max(380, math.min(900, tonumber(settings.lootMasterWidth) or 400)))
             options.dashboard:SetHeight(math.max(170, math.min(240, tonumber(settings.lootMasterHeight) or 210)))

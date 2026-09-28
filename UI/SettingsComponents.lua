@@ -93,6 +93,26 @@ function Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum,
     return slider
 end
 
+function Settings.SetSliderEnabled(slider, enabled)
+    if not slider then return end
+    if slider.Enable and slider.Disable then
+        if enabled then slider:Enable() else slider:Disable() end
+    else
+        slider:EnableMouse(enabled and true or false)
+    end
+    slider.mosEnabled = enabled and true or false
+    slider:SetAlpha(enabled and 1 or 0.42)
+    local low = getglobal(slider:GetName() .. "Low")
+    local high = getglobal(slider:GetName() .. "High")
+    local text = getglobal(slider:GetName() .. "Text")
+    local shade = enabled and 1 or 0.5
+    if low then low:SetTextColor(shade, shade, shade) end
+    if high then high:SetTextColor(shade, shade, shade) end
+    if text then
+        if enabled then text:SetTextColor(1, 0.82, 0) else text:SetTextColor(shade, shade, shade) end
+    end
+end
+
 function Settings.CreateColor(parent, x, y, label, key, onChanged)
     local button = CreateFrame("Button", nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
