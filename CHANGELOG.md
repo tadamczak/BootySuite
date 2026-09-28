@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Flattened the repository layout so addon files and directories are published directly at repository root.
 ## 0.3.0 - 2026-09-27
 
 - Added a regression-integrated static-analysis gate for Lua compatibility, architecture boundaries, and performance-sensitive patterns.

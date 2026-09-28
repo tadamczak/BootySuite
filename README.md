@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="MuklaOfficerSuite/Assets/readme-header.png" width="100%" alt="Sons of Mukla - Mukla Officer Suite">
+  <img src="Assets/readme-header.png" width="100%" alt="Sons of Mukla - Mukla Officer Suite">
 </p>
 
 # Mukla Officer Suite

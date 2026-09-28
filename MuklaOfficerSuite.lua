@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.0"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.3.1-dev.1"
 local PREFIX = "|cff33ff99MOS|r"
 
 local function Print(message)
