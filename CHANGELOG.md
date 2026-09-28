@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed selected-tab retention during resize, bounded About artwork, active check feedback, and development-build discovery.
 - Fixed classic tab borders, About presentation, artwork proportions, and legacy-client slider disabling.
 - Fixed About update details, Tab View behavior, and Settings window layering and initial field synchronization.
 - Added a detachable live Settings window, UI visibility options, and session-only accordion state.

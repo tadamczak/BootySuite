@@ -11,6 +11,7 @@ local DOWNLOAD_URL = "https://github.com/tadamczak/MuklaOfficerSuite/releases/la
 
 function VersionCheck.Create(options)
     local releaseVersion = options.releaseVersion
+    local peerVersion = options.addonVersion or releaseVersion
     local frame = CreateFrame("Frame", nil, UIParent)
     local channels = {}
     local lastQueryAt = -QUERY_COOLDOWN
@@ -30,7 +31,7 @@ function VersionCheck.Create(options)
     end
 
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE"] = {
-        text = "A newer Mukla Officer Suite version is available: %s\nInstalled production release: %s\nDownload it from GitHub Releases.",
+        text = "A newer Mukla Officer Suite version is available: %s\nInstalled version: %s\nDownload it from GitHub Releases.",
         button1 = "Close",
         OnAccept = function() StaticPopup_Hide("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE") end,
         OnShow = function()
@@ -54,8 +55,8 @@ function VersionCheck.Create(options)
         MOS.Database.Ensure()
         MuklaOfficerSuiteDB.latestKnownVersion = MOS.Services.Version.SelectLatest(MuklaOfficerSuiteDB.latestKnownVersion, remoteVersion)
         SetStatus("New version available!", true)
-        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite:|r New version " .. remoteVersion .. " is available. Installed production release: " .. releaseVersion .. ".")
-        StaticPopup_Show("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE", remoteVersion, releaseVersion)
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite:|r New version " .. remoteVersion .. " is available. Installed version: " .. peerVersion .. ".")
+        StaticPopup_Show("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE", remoteVersion, peerVersion)
     end
 
     local function SendQuery(force)
@@ -65,10 +66,10 @@ function VersionCheck.Create(options)
         MOS.Services.AddonMessage.GetAvailableChannels(channels)
         local index
         for index = 1, table.getn(channels) do
-            MOS.Services.AddonMessage.Send(TOPIC, QUERY, releaseVersion, channels[index])
+            MOS.Services.AddonMessage.Send(TOPIC, QUERY, peerVersion, channels[index])
         end
         if table.getn(channels) > 0 then
-            SetStatus("Checking online MOS users for newer releases...")
+            SetStatus("Checking...", false)
             checkDeadline = now + 5
             frame:SetScript("OnUpdate", function()
                 if checkDeadline and GetTime() >= checkDeadline then
@@ -86,14 +87,14 @@ function VersionCheck.Create(options)
     local function HandleMessage(prefix, message, channel)
         local topic, action, remoteVersion = MOS.Services.AddonMessage.Decode(prefix, message)
         if topic ~= TOPIC or not MOS.Services.Version.Parse(remoteVersion) then return end
-        if action == QUERY and MOS.Services.Version.IsNewer(releaseVersion, remoteVersion) then
+        if action == QUERY and MOS.Services.Version.IsNewer(peerVersion, remoteVersion) then
             local responseKey = tostring(channel) .. ":" .. remoteVersion
             local now = GetTime()
             if not responseTimes[responseKey] or now - responseTimes[responseKey] >= QUERY_COOLDOWN then
                 responseTimes[responseKey] = now
-                MOS.Services.AddonMessage.Send(TOPIC, RESPONSE, releaseVersion, channel)
+                MOS.Services.AddonMessage.Send(TOPIC, RESPONSE, peerVersion, channel)
             end
-        elseif action == RESPONSE and MOS.Services.Version.IsNewer(remoteVersion, releaseVersion) then
+        elseif action == RESPONSE and MOS.Services.Version.IsNewer(remoteVersion, peerVersion) then
             Notify(remoteVersion)
         end
     end

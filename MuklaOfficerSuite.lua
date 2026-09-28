@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.6"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.7"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.3.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -391,7 +391,7 @@ RefreshRaidPage = MOS.Diagnostics.Wrap("Raid refresh", RefreshRaidPage)
 local function ShowPage(pageName)
     currentPage = pageName
     MOS.ModuleRegistry.Show(pageName)
-    MOS.Modules.Navigation.SetActive(menuButtons, pageName)
+    if navigation then navigation.SetActive(pageName) else MOS.Modules.Navigation.SetActive(menuButtons, pageName) end
 end
 
 MOS.OpenRaidStatistics = function(raidId)
@@ -689,7 +689,7 @@ MOS.Modules.RosterManagement.AttachInteractions({
 })
 
 dashboard:SetScript("OnShow", function() ShowPage(currentPage) end)
-MOS.Modules.Navigation.SetActive(menuButtons, "roster")
+navigation.SetActive("roster")
 
 local function ToggleDashboard()
     if dashboard:IsVisible() then
