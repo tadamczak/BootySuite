@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.4"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.0-dev.5"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.3.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -76,6 +76,7 @@ sidebarToggleButton:SetScript("OnClick", function() if ToggleSidebar then Toggle
 
 UIState.statusBar = MOS.UI.Dashboard.CreateStatusBar(dashboard)
 SetStatus("Ready")
+local navigation
 MOS.UI.Dashboard.BindWindow(dashboardView, {
     statusBar = UIState.statusBar,
     saveGeometry = SaveDashboardGeometry,
@@ -93,6 +94,11 @@ MOS.UI.Dashboard.BindWindow(dashboardView, {
     refreshLayout = function() if RefreshCurrentPageLayout then RefreshCurrentPageLayout() end end,
     applyOrRefreshLayout = function()
         if ApplyNavigationLayout then ApplyNavigationLayout() elseif RefreshCurrentPageLayout then RefreshCurrentPageLayout() end
+    end,
+    setNavigationVisible = function(visible)
+        if not navigation then return end
+        local _, button
+        for _, button in pairs(navigation.buttons) do if visible then button:Show() else button:Hide() end end
     end,
 })
 
@@ -439,7 +445,8 @@ MOS.ModuleRegistry.Register("raid", MOS.Modules.RaidManagement.CreateLifecycle({
 local aboutModule
 aboutModule = MOS.Modules.About.Create(aboutPage, VERSION, {
     checkVersion = function() if MOS.versionCheck then MOS.versionCheck.CheckNow() end end,
-    getVersionStatus = function() return MOS.versionCheck and MOS.versionCheck.GetStatus() or "Not checked yet." end,
+    getVersionStatus = function() return MOS.versionCheck and MOS.versionCheck.GetStatus() or "Failed to check for update. Check GitHub for latest version." end,
+    getLastSuccessfulCheck = function() return MOS.versionCheck and MOS.versionCheck.GetLastSuccessfulCheck() end,
 })
 MOS.ModuleRegistry.Register("about", aboutModule)
 MOS.ModuleRegistry.Register("configuration", MOS.Modules.Settings.CreateLifecycle({
@@ -452,7 +459,7 @@ MOS.ModuleRegistry.Register("configuration", MOS.Modules.Settings.CreateLifecycl
 }))
 MOS.ModuleRegistry.Register("performance", performanceModule)
 
-local navigation = MOS.Modules.Navigation.Create({
+navigation = MOS.Modules.Navigation.Create({
     dashboard = dashboard,
     sidebar = sidebar,
     toggleButton = sidebarToggleButton,
@@ -711,7 +718,7 @@ MOS.versionCheck = MOS.Modules.VersionCheck.Create({
     releaseVersion = RELEASE_VERSION,
     addonVersion = VERSION,
     printMessage = Print,
-    onStatusChanged = function(value) aboutModule:SetUpdateStatus(value) end,
+    onStatusChanged = function(value, timestamp) aboutModule:SetUpdateStatus(value, timestamp) end,
 })
 
 MOS.Core.Commands.Attach({

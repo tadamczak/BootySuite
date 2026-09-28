@@ -18,11 +18,15 @@ function VersionCheck.Create(options)
     local shownVersions = {}
     local welcomeShown = false
     local checkDeadline = nil
-    local status = "Not checked yet."
+    local status = "Failed to check for update. Check GitHub for latest version."
 
-    local function SetStatus(value)
+    local function SetStatus(value, successful)
         status = value
-        if options.onStatusChanged then options.onStatusChanged(value) end
+        if successful then
+            MOS.Database.Ensure()
+            MuklaOfficerSuiteDB.lastSuccessfulVersionCheck = time()
+        end
+        if options.onStatusChanged then options.onStatusChanged(value, MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.lastSuccessfulVersionCheck) end
     end
 
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE"] = {
@@ -49,7 +53,7 @@ function VersionCheck.Create(options)
         shownVersions[remoteVersion] = true
         MOS.Database.Ensure()
         MuklaOfficerSuiteDB.latestKnownVersion = MOS.Services.Version.SelectLatest(MuklaOfficerSuiteDB.latestKnownVersion, remoteVersion)
-        SetStatus("New production release available: " .. remoteVersion)
+        SetStatus("New version available!", true)
         DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite:|r New version " .. remoteVersion .. " is available. Installed production release: " .. releaseVersion .. ".")
         StaticPopup_Show("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE", remoteVersion, releaseVersion)
     end
@@ -70,11 +74,11 @@ function VersionCheck.Create(options)
                 if checkDeadline and GetTime() >= checkDeadline then
                     checkDeadline = nil
                     this:SetScript("OnUpdate", nil)
-                    if string.find(status, "Checking", 1, true) then SetStatus("No newer production release was reported by online MOS users.") end
+                    if status ~= "New version available!" then SetStatus("Up to date!", true) end
                 end
             end)
-        elseif force then
-            SetStatus("Version check unavailable: join a guild, party, or raid.")
+        else
+            SetStatus("Failed to check for update. Check GitHub for latest version.", false)
         end
         return table.getn(channels)
     end
@@ -123,6 +127,7 @@ function VersionCheck.Create(options)
         end,
         GetLatestKnownVersion = function() return MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.latestKnownVersion end,
         GetStatus = function() return status end,
+        GetLastSuccessfulCheck = function() return MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.lastSuccessfulVersionCheck end,
         HandleMessage = HandleMessage,
         frame = frame,
     }
