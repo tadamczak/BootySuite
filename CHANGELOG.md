@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed dropdown layering and option typography, isolated Columns styling, full-width view dividers, and screen-safe Settings resize.
 - Fixed repeated update checks, Settings frame hierarchy and reopen state, and oversized header branding.
 - Fixed Settings input handling, heading opacity, slider labels, roster accordions, and dynamic section spacing.
 - Fixed Settings spacing, initial dropdown synchronization, indentation, clipping, and accordion scrolling.

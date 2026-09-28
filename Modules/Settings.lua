@@ -61,9 +61,9 @@ function Settings.CreateSkinControl(parent, x, y)
     dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
     local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 44, 20)
     dropdown.panel = panel
-    panel:SetFrameLevel(parent:GetFrameLevel() + 20)
     local function AddChoice(text, value, offsetY)
         local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
+          button.label:SetFontObject(GameFontHighlightSmall)
           button:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, offsetY - 5)
           button:SetScript("OnClick", function()
               MOS.UI.SetSkin(value, true); dropdown:SetText(text); panel:Hide()
@@ -91,7 +91,7 @@ function Settings.CreatePrimarySections(page)
 end
 
 function Settings.CreateRaidColumnControl(page, x, y, onChanged)
-    local label = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local label = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("TOPLEFT", page, "TOPLEFT", x, y - 6)
     label:SetText("Columns")
     label:SetTextColor(1, 1, 1)
@@ -135,13 +135,13 @@ function Settings.CreateRaidViewShell(page)
     groupHeading:SetTextColor(1, 0.82, 0)
     local groupReset = MOS.UI.CreateButton(page, nil, "Reset to default", 112, 20)
     groupReset:SetPoint("LEFT", groupHeading, "RIGHT", 12, 0)
-    local groupDivider = panel:CreateTexture(nil, "ARTWORK")
+    local groupDivider = page:CreateTexture(nil, "ARTWORK")
     groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -336)
     groupDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -336)
     groupDivider:SetHeight(1)
     groupDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
 
-    local listDivider = panel:CreateTexture(nil, "ARTWORK")
+    local listDivider = page:CreateTexture(nil, "ARTWORK")
     listDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -866)
     listDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -866)
     listDivider:SetHeight(1)
@@ -321,10 +321,9 @@ function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
     dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
     local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 44, 20)
     dropdown.panel = panel
-    panel:SetFrameLevel(parent:GetFrameLevel() + 20)
-
     local function AddChoice(text, value, offsetY)
         local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
+        button.label:SetFontObject(GameFontHighlightSmall)
         button:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, offsetY - 5)
         button:SetScript("OnClick", function()
             MOS.Database.Ensure()
@@ -663,7 +662,7 @@ function Settings.CreateDetachedWindow()
     window:SetPoint("CENTER", UIParent, "CENTER", 40, 10)
     window:SetFrameStrata("FULLSCREEN_DIALOG"); window:SetFrameLevel(200); window:SetMovable(true); window:SetResizable(true)
     if window.SetClampedToScreen then window:SetClampedToScreen(true) end
-    window:SetMinResize(660, 420); window:SetMaxResize(1100, 760)
+    window:SetMinResize(760, 480); window:SetMaxResize(1100, 760)
     window:EnableMouse(true); window:RegisterForDrag("LeftButton")
     window:SetScript("OnDragStart", function() this:StartMoving() end)
     window:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
@@ -685,10 +684,26 @@ function Settings.CreateDetachedWindow()
     content:SetFrameLevel(window:GetFrameLevel() + 1)
     content:SetPoint("TOPLEFT", window, "TOPLEFT", 8, -42); content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -8, 8)
     local resize = CreateFrame("Button", nil, window)
+    resize:SetFrameStrata("FULLSCREEN_DIALOG"); resize:SetFrameLevel(window:GetFrameLevel() + 250); resize:EnableMouse(true)
     resize:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -7, 7); resize:SetWidth(18); resize:SetHeight(18)
     local resizeTexture = resize:CreateTexture(nil, "OVERLAY"); resizeTexture:SetAllPoints(resize); resizeTexture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
     resize:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
     resize:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end)
+
+    local function ApplyResizeBounds()
+        local screenWidth = (UIParent.GetWidth and UIParent:GetWidth()) or 1100
+        local screenHeight = (UIParent.GetHeight and UIParent:GetHeight()) or 760
+        local maximumWidth = math.max(320, math.min(1100, screenWidth - 32))
+        local maximumHeight = math.max(260, math.min(760, screenHeight - 32))
+        local minimumWidth = math.min(760, maximumWidth)
+        local minimumHeight = math.min(480, maximumHeight)
+        window:SetMinResize(minimumWidth, minimumHeight); window:SetMaxResize(maximumWidth, maximumHeight)
+        if window:GetWidth() > maximumWidth then window:SetWidth(maximumWidth) end
+        if window:GetHeight() > maximumHeight then window:SetHeight(maximumHeight) end
+        if window:GetWidth() < minimumWidth then window:SetWidth(minimumWidth) end
+        if window:GetHeight() < minimumHeight then window:SetHeight(minimumHeight) end
+    end
+    window:SetScript("OnSizeChanged", function() if view then Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end end)
 
     local function CloseWindow() window:Hide() end
     close:SetScript("OnClick", CloseWindow)
@@ -702,6 +717,7 @@ function Settings.CreateDetachedWindow()
     end)
     window.Open = function()
         if window:IsVisible() or not view then return end
+        ApplyResizeBounds()
         window.minimized = false; content:Show(); resize:Show(); minimize:SetText("_")
         window:Show(); view.viewport:SetVerticalScroll(0); view.viewport:Show()
         if view.scrollBar then view.scrollBar:SetValue(0) end
@@ -715,6 +731,8 @@ function Settings.CreateDetachedWindow()
         view.viewport:Hide()
     end
     window.content = content
+    window.resizeGrip = resize
+    window.ApplyResizeBounds = ApplyResizeBounds
     window:Hide()
     return window
 end
