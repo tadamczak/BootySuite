@@ -34,6 +34,19 @@ function Settings.CreateAccordion(parent, text, y)
     return button
 end
 
+function Settings.CreateSectionAccordion(parent, text, y)
+    local button = Settings.CreateAccordion(parent, text, y)
+    button:SetWidth(200); button:SetHeight(20)
+    local font, _, flags = button.label:GetFont()
+    button.label:SetFont(font, MOS.UI.Components.HeadingSizes[2], flags)
+    button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
+    button.rule:ClearAllPoints()
+    button.rule:SetPoint("LEFT", button.label, "RIGHT", 10, 0)
+    button.rule:SetPoint("RIGHT", parent, "RIGHT", -12, 0)
+    button.rule:SetHeight(1); button.rule:SetTexture(0.55, 0.42, 0.16, 0.75); button.rule:Show()
+    return button
+end
+
 function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
     local button = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)

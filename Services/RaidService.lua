@@ -229,9 +229,9 @@ local reyCoinPolicy = {
     end,
     reason = function(roll, name, range, used, usedItem)
         if not roll.reyCoinRights[name] then
-            return "no loot rights to ReyCoin for rank " .. (roll.srRankNames[name] or "Unknown")
+            return "no loot rights to Reycoin for rank " .. (roll.srRankNames[name] or "Unknown")
         end
-        return "ReyCoin already used for: " .. tostring(usedItem or "unknown item")
+        return "Reycoin already used for: " .. tostring(usedItem or "unknown item")
     end,
 }
 local regularPolicy = { pool = "main", valid = function() return true end }
@@ -435,7 +435,7 @@ function RaidService.QueueReyCoinAward(winner, itemLink, carrier, reyCoinRollers
     reyCoinRollers[string.lower(winner)] = true
     nextReyCoinTransactionId = nextReyCoinTransactionId + 1
     if RaidService.debugReyCoin and DEFAULT_CHAT_FRAME then
-        DEFAULT_CHAT_FRAME:AddMessage("MOS ReyCoin trace: queued winner=" .. tostring(winner)
+        DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: queued winner=" .. tostring(winner)
             .. " carrier=" .. tostring(carrier or winner) .. " item=" .. tostring(itemId))
     end
     table.insert(pendingReyCoinAwards, {
@@ -477,7 +477,7 @@ function RaidService.ConfirmReyCoinReceipt(recipient, itemLink)
     local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
     if not itemId or not recipient then return false end
     if RaidService.debugReyCoin and DEFAULT_CHAT_FRAME and table.getn(pendingReyCoinAwards) > 0 then
-        DEFAULT_CHAT_FRAME:AddMessage("MOS ReyCoin trace: receipt recipient=" .. tostring(recipient)
+        DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: receipt recipient=" .. tostring(recipient)
             .. " item=" .. tostring(itemId) .. " pending=" .. tostring(table.getn(pendingReyCoinAwards)))
     end
     local index
@@ -499,7 +499,7 @@ function RaidService.ConfirmReyCoinReceipt(recipient, itemLink)
     end
     if RaidService.debugReyCoin and DEFAULT_CHAT_FRAME and table.getn(pendingReyCoinAwards) > 0 then
         local first = pendingReyCoinAwards[1]
-        DEFAULT_CHAT_FRAME:AddMessage("MOS ReyCoin trace: receipt unmatched; first pending winner="
+        DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: receipt unmatched; first pending winner="
             .. tostring(first.winner) .. " carrier=" .. tostring(first.carrier) .. " item=" .. tostring(first.itemId))
     end
     return false
@@ -548,7 +548,7 @@ function RaidService.ConfirmReyCoinTrade(sender, recipient, itemLink)
             or (not itemId and pendingName and string.lower(pendingName) == string.lower(itemName))
         if itemMatches then
             if string.lower(pending.carrier) ~= string.lower(sender) then failure = "sender mismatch"
-            elseif not pending.reyCoinRollers or not pending.reyCoinRollers[string.lower(recipient)] then failure = "recipient not in valid ReyCoin rolls"
+            elseif not pending.reyCoinRollers or not pending.reyCoinRollers[string.lower(recipient)] then failure = "recipient not in valid Reycoin rolls"
             else failure = "usage save failed" end
         end
         if itemMatches and pending.state == "awaiting_trade"
@@ -980,7 +980,7 @@ function RaidService.SendLootRules(rules)
         local hasCSR = rule and rule.csr or (not rule and rankKey == "silverback")
         local parts = {}
         if hasSR then parts[table.getn(parts) + 1] = hasContested and "SR + Highly Contested Items" or "SR" end
-        if hasReyCoin then parts[table.getn(parts) + 1] = "ReyCoin" end
+        if hasReyCoin then parts[table.getn(parts) + 1] = "Reycoin" end
         if hasCSR then parts[table.getn(parts) + 1] = "CSR" end
         local rights = table.getn(parts) > 0 and table.concat(parts, ", ") or "None"
         sent, errorMessage = RaidService.SendRaidWarning(rankName .. ": " .. rights)

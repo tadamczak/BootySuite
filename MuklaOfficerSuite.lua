@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.4.1-dev.4"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.1"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -120,6 +120,15 @@ local detachedSettingsWindow = MOS.Modules.Settings.CreateDetachedWindow()
 local settingsView = MOS.Modules.Settings.CreateShell(detachedSettingsWindow.content, detachedSettingsWindow.content, function()
     if ApplyNavigationLayout then ApplyNavigationLayout() end
 end, {
+    profileLoaded = function()
+        if rosterPage.dataController then
+            if rosterPage:IsVisible() then MOS.Modules.RosterManagement.ActivateDataController(rosterPage.dataController, false)
+            else MOS.Modules.RosterManagement.DeactivateDataController(rosterPage.dataController) end
+        end
+        if raidPage.lifecycle and raidPage.lifecycle.SyncTrackingSetting then raidPage.lifecycle:SyncTrackingSetting() end
+        if RefreshRosterPage and rosterPage:IsVisible() then RefreshRosterPage() end
+        if RefreshRaidPage and raidPage:IsVisible() then RefreshRaidPage() end
+    end,
     minimapVisibilityChanged = function()
         if not MOS.minimapButton then return end
         MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon

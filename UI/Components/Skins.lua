@@ -181,6 +181,45 @@ local function ApplyControl(entry)
         if button.mosHighlight then button.mosHighlight:Show(); button.mosHighlight:SetAlpha(1); button.mosHighlight:SetTexture(unpack(entry.highlight)); button.mosHighlight:SetVertexColor(1, 1, 1, 1) end
     end
     if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosTextColor)) end
+    if button.mosClassicKeepNormalSurface then
+        button:SetBackdropBorderColor(0, 0, 0, 0)
+        if not entry.selectionOutline then
+            entry.selectionOutline = {}
+            local index
+            for index = 1, 4 do
+                local edge = button:CreateTexture(nil, "OVERLAY")
+                edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+                edge:SetVertexColor(0.85, 0.68, 0.22, 1)
+                if index <= 2 then
+                    local side = index == 1 and "TOP" or "BOTTOM"
+                    edge:SetPoint(side .. "LEFT", button, side .. "LEFT", 1, 0)
+                    edge:SetPoint(side .. "RIGHT", button, side .. "RIGHT", -1, 0); edge:SetHeight(1)
+                else
+                    local side = index == 3 and "LEFT" or "RIGHT"
+                    edge:SetPoint("TOP" .. side, button, "TOP" .. side, 0, -1)
+                    edge:SetPoint("BOTTOM" .. side, button, "BOTTOM" .. side, 0, 1); edge:SetWidth(1)
+                end
+                entry.selectionOutline[index] = edge
+            end
+        end
+        local index
+        for index = 1, 4 do
+            if button.mosClassicSelected then entry.selectionOutline[index]:Show() else entry.selectionOutline[index]:Hide() end
+        end
+        if not entry.flatHoverOutline then
+            entry.flatHoverOutline = {}
+            for index = 1, 4 do
+                local edge = button:CreateTexture(nil, "HIGHLIGHT")
+                edge:SetAllPoints(entry.selectionOutline[index])
+                edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+                edge:SetVertexColor(1, 0.78, 0.2, 1)
+                entry.flatHoverOutline[index] = edge
+            end
+        end
+        SetNineSliceShown(entry.classicHoverBorder, false)
+        if button.mosHighlight then button.mosHighlight:Hide() end
+        if entry.classicRedFill then entry.classicRedFill:Hide() end
+    end
     if button.label and button.mosLabelInsets then
         button.label:ClearAllPoints()
         button.label:SetPoint("LEFT", button, "LEFT", button.mosLabelInsets[1], 0)

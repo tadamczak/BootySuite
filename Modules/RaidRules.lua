@@ -15,7 +15,7 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame:SetBackdropColor(0.018, 0.018, 0.016, 1)
     frame.title = MOS.UI.Components.CreateHeading(frame, "", 1, "orange"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -17); frame.title:SetText("Set Loot Rules")
     frame.close = MOS.UI.Components.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
-    local headers = { { "Guild rank", 22, 190 }, { "SR", 224, 66 }, { "ReyCoin", 310, 92 }, { "CSR", 422, 66 }, { "Highly Contested Items", 508, 158 } }
+    local headers = { { "Guild rank", 22, 190 }, { "SR", 224, 66 }, { "Reycoin", 310, 92 }, { "CSR", 422, 66 }, { "Highly Contested Items", 508, 158 } }
     local index
     for index = 1, table.getn(headers) do
         local header = MOS.UI.Components.CreateColumnLabel(frame, "", "orange"); header:SetPoint("TOPLEFT", frame, "TOPLEFT", headers[index][2], -58); header:SetWidth(headers[index][3]); header:SetJustifyH(index == 1 and "LEFT" or "CENTER"); header:SetText(headers[index][1])
@@ -46,7 +46,7 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame.rulesScroll:SetPoint("TOPLEFT", frame.rulesPanel, "TOPLEFT", 8, -7); frame.rulesScroll:SetPoint("BOTTOMRIGHT", frame.rulesPanel, "BOTTOMRIGHT", -28, 7)
     frame.rulesCanvas = MOS.UI.Components.CreateContainer(nil, frame.rulesScroll); frame.rulesCanvas:SetWidth(604); frame.rulesCanvas:SetHeight(280); frame.rulesScroll:SetScrollChild(frame.rulesCanvas)
     frame.rulesText = MOS.UI.Components.CreateLabel(frame.rulesCanvas, nil, "OVERLAY", "GameFontHighlightSmall"); frame.rulesText:SetPoint("TOPLEFT", frame.rulesCanvas, "TOPLEFT", 0, 0); frame.rulesText:SetWidth(596); frame.rulesText:SetJustifyH("LEFT"); frame.rulesText:SetJustifyV("TOP")
-    frame.rulesText:SetText("MACAQUE\nLoot rights: none. Lower raid priority than other ranks and may not be selected for the raid.\n\nGUEST\nStarts with Macaque rights and may earn Baboon or Chimp rights under the same requirements as guild members. Silverback rights are unavailable.\n\nALT\nAn alt requested by the raid leader receives the main character's loot rights. A voluntary alt has no loot rights and receives loot after mains. Rights may change with progression and guild needs.\n\nBABOON\nLoot rights: SR excluding Highly Contested Items, plus ReyCoin.\n\nCHIMP\nLoot rights: SR plus ReyCoin.\n\nSILVERBACK\nLoot rights: CSR, SR and ReyCoin. Gains +10 CSR after each unsuccessful SR.")
+    frame.rulesText:SetText("MACAQUE\nLoot rights: none. Lower raid priority than other ranks and may not be selected for the raid.\n\nGUEST\nStarts with Macaque rights and may earn Baboon or Chimp rights under the same requirements as guild members. Silverback rights are unavailable.\n\nALT\nAn alt requested by the raid leader receives the main character's loot rights. A voluntary alt has no loot rights and receives loot after mains. Rights may change with progression and guild needs.\n\nBABOON\nLoot rights: SR excluding Highly Contested Items, plus Reycoin.\n\nCHIMP\nLoot rights: SR plus Reycoin.\n\nSILVERBACK\nLoot rights: CSR, SR and Reycoin. Gains +10 CSR after each unsuccessful SR.")
     frame.rulesCanvas:SetHeight(math.max(280, frame.rulesText:GetStringHeight() + 8))
     frame.contestedItems = MOS.UI.Components.CreateButton(frame, nil, "Set Highly Contested Items", 154, 22)
     frame.contestedItems:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 18)
