@@ -59,7 +59,7 @@ function Settings.CreateSkinControl(parent, x, y)
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); label:SetText("Skin")
     local dropdown = MOS.UI.CreateDropdownButton(parent, nil, "Default", 126)
     dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
-    local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 44, 20)
+    local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 51, 20)
     dropdown.panel = panel
     local function AddChoice(text, value, offsetY)
         local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
@@ -91,8 +91,8 @@ function Settings.CreatePrimarySections(page)
     return { rosterHeading = rosterHeading, rosterGeneral = rosterGeneral, rosterLayout = rosterLayout, raidHeading = raidHeading, debugHeading = debugHeading }
 end
 
-function Settings.CreateRaidColumnControl(page, x, y, onChanged)
-    local label = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+function Settings.CreateRaidColumnControl(page, x, y, onChanged, labelOwner)
+    local label = (labelOwner or page):CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("TOPLEFT", page, "TOPLEFT", x, y - 6)
     label:SetText("Columns")
     label:SetTextColor(1, 1, 1)
@@ -189,7 +189,7 @@ end
 
 function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsChanged)
     local function Heading(text, y)
-        local heading = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local heading = shell.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         heading:SetPoint("TOPLEFT", page, "TOPLEFT", 40, y)
         heading:SetText(text)
         heading:SetTextColor(1, 0.82, 0)
@@ -197,7 +197,7 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
         return heading
     end
     local displayHeading = Heading("Display", -356)
-    local columnsLabel, columnsButton, columnsPanel = Settings.CreateRaidColumnControl(page, 40, -382, onColumnsChanged)
+    local columnsLabel, columnsButton, columnsPanel = Settings.CreateRaidColumnControl(page, 40, -382, onColumnsChanged, shell.panel)
     columnsLabel:SetTextColor(1, 1, 1)
     local showClass = factory.Checkbox(40, -410, "Show class", "raidGroupShowClass")
     local showLevel = factory.Checkbox(300, -410, "Show lvl", "raidGroupShowLevel")
@@ -322,7 +322,7 @@ function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
 
     local dropdown = MOS.UI.CreateDropdownButton(parent, nil, "Button view", 126)
     dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
-    local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 44, 20)
+    local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 51, 20)
     dropdown.panel = panel
     local function AddChoice(text, value, offsetY)
         local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
