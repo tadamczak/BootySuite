@@ -36,6 +36,8 @@ function Database.Ensure()
     MuklaOfficerSuiteDB.raidGroupTileHeight = math.max(14, math.min(28, tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20))
     MuklaOfficerSuiteDB.raidGroupHeaderHeight = math.max(14, math.min(40, tonumber(MuklaOfficerSuiteDB.raidGroupHeaderHeight) or 22))
     MuklaOfficerSuiteDB.raidGroupMargin = math.max(0, math.min(32, tonumber(MuklaOfficerSuiteDB.raidGroupMargin) or 8))
+    MuklaOfficerSuiteDB.raidGroupTileTextSize = math.max(8, math.min(16, tonumber(MuklaOfficerSuiteDB.raidGroupTileTextSize) or 10))
+    MuklaOfficerSuiteDB.raidGroupHeaderTextSize = math.max(8, math.min(16, tonumber(MuklaOfficerSuiteDB.raidGroupHeaderTextSize) or 10))
     if type(MuklaOfficerSuiteDB.raidGroupBackgroundColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupBackgroundColor = { 0.025, 0.025, 0.025 } end
     if type(MuklaOfficerSuiteDB.raidGroupTextColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupTextColor = { 1, 1, 1 } end
     if type(MuklaOfficerSuiteDB.raidGroupHoverColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupHoverColor = { 0.12, 0.09, 0.025 } end
@@ -278,6 +280,8 @@ function Database.ResetRaidGroupView()
     MuklaOfficerSuiteDB.raidGroupTileHeight = 20
     MuklaOfficerSuiteDB.raidGroupHeaderHeight = 22
     MuklaOfficerSuiteDB.raidGroupMargin = 8
+    MuklaOfficerSuiteDB.raidGroupTileTextSize = 10
+    MuklaOfficerSuiteDB.raidGroupHeaderTextSize = 10
     MuklaOfficerSuiteDB.raidGroupBackgroundColor = { 0.025, 0.025, 0.025 }
     MuklaOfficerSuiteDB.raidGroupTextColor = { 1, 1, 1 }
     MuklaOfficerSuiteDB.raidGroupHoverColor = { 0.12, 0.09, 0.025 }

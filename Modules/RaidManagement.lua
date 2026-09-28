@@ -1353,6 +1353,12 @@ function RaidManagement.CalculateGroupSlotColumns(slotWidth, reserveRoleIcon, re
     }
 end
 
+local function SetFontSize(fontString, size)
+    if not fontString or not fontString.GetFont or not fontString.SetFont then return end
+    local path, currentSize, flags = fontString:GetFont()
+    if path and currentSize ~= size then fontString:SetFont(path, size, flags) end
+end
+
 function RaidManagement.FilterMembers(target, members, query, selectedClasses, selectedRanks)
     local targetIndex
     for targetIndex = table.getn(target), 1, -1 do target[targetIndex] = nil end
@@ -1794,6 +1800,8 @@ function RaidManagement.RefreshGroupView(page)
     local textColor = MuklaOfficerSuiteDB.raidGroupTextColor
     local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
     local slotHeight = tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20
+    local tileTextSize = tonumber(MuklaOfficerSuiteDB.raidGroupTileTextSize) or 10
+    local headerTextSize = tonumber(MuklaOfficerSuiteDB.raidGroupHeaderTextSize) or 10
     local geometry = RaidManagement.CalculateGroupGeometry(width, height, MuklaOfficerSuiteDB.raidGroupColumns, configuredWidth, slotHeight, MuklaOfficerSuiteDB.raidGroupShowHeader, MuklaOfficerSuiteDB.raidGroupAutoTileWidth, MuklaOfficerSuiteDB.raidGroupHeaderHeight, MuklaOfficerSuiteDB.raidGroupMargin)
     local columns, groupRows = geometry.columns, geometry.rows
     local layoutWidth, xOffset, columnWidth = geometry.layoutWidth, geometry.xOffset, geometry.columnWidth
@@ -1816,10 +1824,12 @@ function RaidManagement.RefreshGroupView(page)
         local panel = page.groupPanels[groupIndex]
         panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(columnWidth); panel:SetHeight(groupHeight)
         local header = page.groupHeaders[groupIndex]
+        SetFontSize(header, headerTextSize)
         header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -4, -4)
         if MuklaOfficerSuiteDB.raidGroupShowHeader then header:Show() else header:Hide() end
         for slotIndex = 1, 5 do
             local slot = page.groupSlots[groupIndex][slotIndex]
+            SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
             slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x + 4, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(columnWidth - 8); slot:SetHeight(slotHeight)
             slot:SetBackdropColor(backgroundColor[1], backgroundColor[2], backgroundColor[3], 0.98); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
             MOS.UI.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
