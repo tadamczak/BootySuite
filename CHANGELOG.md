@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0-dev.15 - 2026-09-28
+
+- Prepared production release verification and expanded version-discovery workflow coverage.
+
 ## 0.4.0-dev.14 - 2026-09-28
 
 - Refreshed the project handoff for continued work in a new chat.
