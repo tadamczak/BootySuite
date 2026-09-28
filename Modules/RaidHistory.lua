@@ -30,7 +30,7 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
             button:Show(); deleteButton:Show()
         else button.savedAt:SetText(""); button:Hide(); deleteButton:Hide() end
     end
-    if not MOS.UI.ApplySelectionListStyle(controls.historyButtons, snapshots, page.selectedRaidHistoryId, controls.loadRaid) then page.selectedRaidHistoryId = nil end
+    if not MOS.UI.Components.ApplySelectionListStyle(controls.historyButtons, snapshots, page.selectedRaidHistoryId, controls.loadRaid) then page.selectedRaidHistoryId = nil end
     if table.getn(snapshots) == 0 then
         controls.historyEmpty:ClearAllPoints(); controls.historyEmpty:SetPoint("TOP", controls.historyTitle, "BOTTOM", 0, -14); controls.historyEmpty:Show()
     else controls.historyEmpty:Hide() end

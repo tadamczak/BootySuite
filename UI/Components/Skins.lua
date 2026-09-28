@@ -1,5 +1,5 @@
 local MOS = MuklaOfficerSuite
-local UI = MOS.UI
+local UI = MOS.UI.Components
 
 UI.Skins = UI.Skins or {}
 local Skins = UI.Skins
@@ -372,7 +372,7 @@ function UI.SetSkin(value, persist)
     local wanted = string.lower(tostring(value or "default"))
     if not Skins.definitions[wanted] then wanted = "default" end
     Skins.current = wanted
-    if persist and MOS.Database then MOS.Database.SetSetting("uiSkin", wanted) end
+    if persist and Skins.persist then Skins.persist(wanted) end
     local index
     for index = 1, table.getn(Skins.controls) do ApplyControl(Skins.controls[index]) end
     for index = 1, table.getn(Skins.surfaces) do ApplySurface(Skins.surfaces[index]) end
@@ -492,4 +492,8 @@ end
 
 function UI.ClassicAsset(path)
     return ClassicPath(path)
+end
+
+function UI.SetSkinPersistence(callback)
+    Skins.persist = callback
 end

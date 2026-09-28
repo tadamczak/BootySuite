@@ -5,9 +5,9 @@ local MasterLootEvents = MOS.Modules.MasterLootEvents
 
 -- WoW event subscriptions live here; award state belongs to RaidService.
 function MasterLootEvents.Create(raid, announce)
-    local lootEvents = CreateFrame("Frame", nil, UIParent)
-    local bagEvents = CreateFrame("Frame", nil, UIParent)
-    local messageEvents = CreateFrame("Frame", nil, UIParent)
+    local lootEvents = MOS.UI.Components.CreateContainer(nil, UIParent)
+    local bagEvents = MOS.UI.Components.CreateContainer(nil, UIParent)
+    local messageEvents = MOS.UI.Components.CreateContainer(nil, UIParent)
     local pendingBagLink, pendingBagCount, pendingLocalTrade
     local listeningForLoot, listeningForTrade, listeningForSay = false, false, false
 

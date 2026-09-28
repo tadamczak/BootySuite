@@ -2,6 +2,11 @@ local MOS = MuklaOfficerSuite
 
 MOS.Modules.Settings = MOS.Modules.Settings or {}
 local Settings = MOS.Modules.Settings
+local controls = MOS.UI.Components.Settings.CreateFactory({
+    ensure = MOS.Database.Ensure,
+    get = MOS.Database.GetSetting,
+    set = MOS.Database.SetSetting,
+})
 
 local function OnSettingsMouseWheel()
     local page = this.settingsPage
@@ -13,12 +18,12 @@ end
 
 function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     options = options or {}
-    local viewport = CreateFrame("ScrollFrame", "MuklaOfficerSuiteSettingsScroll", parent, "UIPanelScrollFrameTemplate")
-    MOS.UI.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteSettingsScrollScrollBar"))
+    local viewport = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteSettingsScroll", parent, "UIPanelScrollFrameTemplate")
+    MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteSettingsScrollScrollBar"))
     viewport:SetPoint("TOPLEFT", anchorPage, "TOPLEFT", 8, -8)
     viewport:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -36, 8)
     viewport:EnableMouseWheel(true)
-    local page = CreateFrame("Frame", nil, viewport)
+    local page = MOS.UI.Components.CreateContainer(nil, viewport)
     page:SetWidth(1000); page:SetHeight(960)
     viewport:SetScrollChild(page)
     viewport.settingsPage = page
@@ -31,14 +36,14 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         scrollBar:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -8, 24)
     end
     viewport:Hide()
-    MOS.UI.Settings.CreateSection(page, "UI", -10)
-    local generalHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    MOS.UI.Components.Settings.CreateSection(page, "UI", -10)
+    local generalHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     generalHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -38)
     generalHeading:SetText("General")
     local skinControl = Settings.CreateSkinControl(page, 40, -66)
     local loginMessageCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteDisableLoginMessage", 240, -66, "Turn off addon login message", "suppressLoginMessage")
     local minimapCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteHideMinimapIcon", 500, -66, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
-    local layoutHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local layoutHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     layoutHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -94)
     layoutHeading:SetText("Layout")
     local menuStyleControl = Settings.CreateMenuStyleControl(page, 40, -122, onNavigationLayout)
@@ -46,7 +51,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     page.menuStyleControl = menuStyleControl
     page.RefreshGeneralSettings = function()
         MOS.Database.Ensure()
-        skinControl:SetText(MOS.UI.IsClassicSkin() and "Classic" or "Default")
+        skinControl:SetText(MOS.UI.Components.IsClassicSkin() and "Classic" or "Default")
         menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or "Button view")
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
@@ -55,105 +60,73 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
 end
 
 function Settings.CreateSkinControl(parent, x, y)
-    local label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); label:SetText("Skin")
-    local dropdown = MOS.UI.CreateDropdownButton(parent, nil, "Default", 126)
-    dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
-    local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 51, 20)
-    dropdown.panel = panel
-    local function AddChoice(text, value, offsetY)
-        local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
-        MOS.UI.StyleDropdownChoice(button)
-        button:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, offsetY - 5)
-        button:SetScript("OnClick", function()
-            MOS.UI.SetSkin(value, true); dropdown:SetText(text); panel:Hide()
-        end)
-        table.insert(panel.options, button)
-    end
-    AddChoice("Default", "default", -2); AddChoice("Classic", "classic", -21)
-    dropdown:SetScript("OnClick", function() if panel:IsVisible() then panel:Hide() else panel:Show() end end)
-    dropdown:SetScript("OnShow", function() this:SetText(MOS.UI.IsClassicSkin() and "Classic" or "Default") end)
-    return dropdown
+    local _, button = MOS.UI.Components.CreateChoiceField({
+        parent = parent, x = x, y = y, label = "Skin", width = 126, height = 51,
+        initialText = "Default", firstY = -7, step = 19,
+        choices = { { text = "Default", value = "default" }, { text = "Classic", value = "classic" } },
+        getValue = function() return MOS.UI.Components.IsClassicSkin() and "classic" or "default" end,
+        onSelect = function(value) MOS.UI.Components.SetSkin(value, true) end,
+    })
+    return button
 end
 
 function Settings.CreatePrimarySections(page)
-    local rosterHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local rosterHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -150)
     rosterHeading:SetText("Roster management")
-    local rosterGeneral = MOS.UI.Settings.CreateAccordion(page, "General", -178)
+    local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
     page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 40, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
-    local rosterLayout = MOS.UI.Settings.CreateAccordion(page, "Layout", -206)
+    local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
     page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 40, -234, "Use class colors", "rosterClassColors")
-    local raidHeading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local raidHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -206)
     raidHeading:SetText("Raid management")
-    local debugHeading = MOS.UI.Settings.CreateSection(page, "Debug", -645)
+    local debugHeading = MOS.UI.Components.Settings.CreateSection(page, "Debug", -645)
     return { rosterHeading = rosterHeading, rosterGeneral = rosterGeneral, rosterLayout = rosterLayout, raidHeading = raidHeading, debugHeading = debugHeading }
 end
 
 function Settings.CreateRaidColumnControl(page, x, y, onChanged, labelOwner)
-    local label = (labelOwner or page):CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    label:SetPoint("TOPLEFT", page, "TOPLEFT", x, y - 6)
-    label:SetText("Columns")
-    label:SetTextColor(1, 1, 1)
-    label:SetAlpha(1)
-
-    local button = MOS.UI.CreateDropdownButton(page, nil, "2", 52)
-    button:SetPoint("TOPLEFT", page, "TOPLEFT", x + 52, y)
-    local panel = MOS.UI.CreateDropdownPanel(page, button, 52, 86, 20)
-    local columnNumber
-    for columnNumber = 1, 4 do
-        local choice = MOS.UI.CreateButton(panel, nil, tostring(columnNumber), 38, 18)
-        MOS.UI.StyleDropdownChoice(choice)
-        choice:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, -5 - ((columnNumber - 1) * 20))
-        choice.columnCount = columnNumber
-        choice:SetScript("OnClick", function()
-            MOS.Database.Ensure()
-            MOS.Database.SetSetting("raidGroupColumns", this.columnCount)
-            button.label:SetText(tostring(this.columnCount))
-            panel:Hide()
-            if onChanged then onChanged() end
-        end)
-        table.insert(panel.options, choice)
-    end
-    button:SetScript("OnClick", function() if panel:IsVisible() then panel:Hide() else panel:Show() end end)
-    button:SetScript("OnShow", function()
-        MOS.Database.Ensure()
-        this.label:SetText(tostring(MuklaOfficerSuiteDB.raidGroupColumns))
-    end)
-    return label, button, panel
+    return MOS.UI.Components.CreateChoiceField({
+        parent = page, labelOwner = labelOwner, x = x, y = y, label = "Columns",
+        font = "GameFontHighlightSmall", color = { 1, 1, 1 }, labelOffset = -6, buttonOffset = 52,
+        width = 52, height = 86, initialText = "2", firstY = -5, step = 20, labelValue = true,
+        choices = { { text = "1", value = 1 }, { text = "2", value = 2 }, { text = "3", value = 3 }, { text = "4", value = 4 } },
+        getValue = function() MOS.Database.Ensure(); return MOS.Database.GetSetting("raidGroupColumns") end,
+        onSelect = function(value) MOS.Database.Ensure(); MOS.Database.SetSetting("raidGroupColumns", value) end,
+        onChanged = onChanged,
+    })
 end
 
 function Settings.CreateRaidViewShell(page)
-    local panel = CreateFrame("Frame", nil, page)
+    local panel = MOS.UI.Components.CreateContainer(nil, page)
     panel:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -306)
     panel:SetPoint("BOTTOMRIGHT", page, "TOPRIGHT", -12, -1110)
     panel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     panel:SetBackdropColor(0.025, 0.025, 0.025, 0.48)
     panel:SetBackdropBorderColor(0, 0, 0, 0)
 
-    local groupHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local groupHeading = MOS.UI.Components.CreateLabel(panel, nil, "OVERLAY", "GameFontNormal")
     groupHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -318)
     groupHeading:SetText("Group View")
     groupHeading:SetTextColor(1, 0.82, 0)
-    local groupReset = MOS.UI.CreateButton(page, nil, "Reset to default", 112, 20)
+    local groupReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
     groupReset:SetPoint("LEFT", groupHeading, "RIGHT", 12, 0)
-    local groupDivider = page:CreateTexture(nil, "ARTWORK")
+    local groupDivider = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
     groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -336)
     groupDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -336)
     groupDivider:SetHeight(1)
     groupDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
 
-    local listDivider = page:CreateTexture(nil, "ARTWORK")
+    local listDivider = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
     listDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -866)
     listDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -866)
     listDivider:SetHeight(1)
     listDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
-    local listHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local listHeading = MOS.UI.Components.CreateLabel(panel, nil, "OVERLAY", "GameFontNormal")
     listHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -846)
     listHeading:SetText("List View")
     listHeading:SetTextColor(1, 0.82, 0)
-    local listReset = MOS.UI.CreateButton(page, nil, "Reset to default", 112, 20)
+    local listReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
     listReset:SetPoint("LEFT", listHeading, "RIGHT", 12, 0)
 
     return { panel = panel, groupHeading = groupHeading, groupReset = groupReset, groupDivider = groupDivider, listDivider = listDivider, listHeading = listHeading, listReset = listReset }
@@ -169,13 +142,13 @@ function Settings.CreateRaidControlFactory(page, callbacks)
     end
     return {
         Checkbox = function(x, y, text, key)
-            return MOS.UI.Settings.CreateCheckbox(page, x, y, text, key, Refresh)
+            return controls.CreateCheckbox(page, x, y, text, key, Refresh)
         end,
         Slider = function(name, x, y, label, key, minimum, maximum)
-            return MOS.UI.Settings.CreateSlider(page, name, x, y, label, key, minimum, maximum, Refresh)
+            return controls.CreateSlider(page, name, x, y, label, key, minimum, maximum, Refresh)
         end,
         Color = function(x, y, label, key)
-            return MOS.UI.Settings.CreateColor(page, x, y, label, key, Refresh)
+            return controls.CreateColor(page, x, y, label, key, Refresh)
         end,
     }
 end
@@ -189,7 +162,7 @@ end
 
 function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsChanged)
     local function Heading(text, y)
-        local heading = shell.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local heading = MOS.UI.Components.CreateLabel(shell.panel, nil, "OVERLAY", "GameFontNormal")
         heading:SetPoint("TOPLEFT", page, "TOPLEFT", 40, y)
         heading:SetText(text)
         heading:SetTextColor(1, 0.82, 0)
@@ -221,7 +194,7 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local originalAutoWidthSave = autoWidth.SaveSetting
     autoWidth.SaveSetting = function(owner)
         originalAutoWidthSave(owner)
-        MOS.UI.Settings.SetSliderEnabled(width, not owner:GetChecked())
+        MOS.UI.Components.Settings.SetSliderEnabled(width, not owner:GetChecked())
     end
     local colorHeading = Heading("Member tile colors", -724)
     local classColors = factory.Checkbox(40, -746, "Use class colors", "raidGroupClassColors")
@@ -272,16 +245,16 @@ end
 
 function Settings.CreateRaidSettings(page, callbacks)
     local primarySections = Settings.CreatePrimarySections(page)
-    local general = MOS.UI.Settings.CreateAccordion(page, "General", -230)
+    local general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -230)
     local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 40, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid Management is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
     page.raidLiveTrackingCheck = liveTracking
-    local layout = MOS.UI.Settings.CreateAccordion(page, "Layout", -280)
+    local layout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -280)
     local shell = Settings.CreateRaidViewShell(page)
     local factory = Settings.CreateRaidControlFactory(page, callbacks)
     local groupControls = Settings.CreateRaidGroupViewControls(page, shell, factory, callbacks.refreshGroup)
     local listControls = Settings.CreateRaidListViewControls(page, shell, factory)
-    local leader = MOS.UI.Settings.CreateAccordion(page, "Raid Leader Mode", -1126)
-    local loot = MOS.UI.Settings.CreateAccordion(page, "Loot Master Mode", -1154)
+    local leader = MOS.UI.Components.Settings.CreateAccordion(page, "Raid Leader Mode", -1126)
+    local loot = MOS.UI.Components.Settings.CreateAccordion(page, "Loot Master Mode", -1154)
     local layoutControls = Settings.MergeControls(groupControls.layoutControls, listControls.layoutControls)
     local viewControls = {
         columnsButton = groupControls.columnsButton,
@@ -316,96 +289,20 @@ function Settings.CreateRaidSettings(page, callbacks)
 end
 
 function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
-    local label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    label:SetText("Menu type")
-
-    local dropdown = MOS.UI.CreateDropdownButton(parent, nil, "Button view", 126)
-    dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
-    local panel = MOS.UI.CreateDropdownPanel(parent, dropdown, 126, 51, 20)
-    dropdown.panel = panel
-    local function AddChoice(text, value, offsetY)
-        local button = MOS.UI.CreateButton(panel, nil, text, 112, 18)
-        MOS.UI.StyleDropdownChoice(button)
-        button:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, offsetY - 5)
-        button:SetScript("OnClick", function()
-            MOS.Database.Ensure()
-            MOS.Database.SetSetting("menuStyle", value)
-            dropdown:SetText(text)
-            panel:Hide()
-            if onChanged then onChanged(value) end
-        end)
-        table.insert(panel.options, button)
-    end
-
-    AddChoice("Tab view", "tabs", -2)
-    AddChoice("Button view", "buttons", -21)
-    dropdown:SetScript("OnClick", function() if panel:IsVisible() then panel:Hide() else panel:Show() end end)
-    dropdown:SetScript("OnShow", function()
-        MOS.Database.Ensure()
-        this:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or "Button view")
-    end)
-    return dropdown
+    local _, button = MOS.UI.Components.CreateChoiceField({
+        parent = parent, x = x, y = y, label = "Menu type", width = 126, height = 51,
+        initialText = "Button view", firstY = -7, step = 19,
+        choices = { { text = "Tab view", value = "tabs" }, { text = "Button view", value = "buttons" } },
+        getValue = function() MOS.Database.Ensure(); return MOS.Database.GetSetting("menuStyle") end,
+        onSelect = function(value) MOS.Database.Ensure(); MOS.Database.SetSetting("menuStyle", value) end,
+        onChanged = onChanged,
+    })
+    return button
 end
 
-function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tooltipTitle, tooltipText, onChanged)
-    local check = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-    check:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    check:SetWidth(24)
-    check:SetHeight(24)
-    check.settingKey = settingKey
-    check.label = check:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    check.label:SetPoint("LEFT", check, "RIGHT", 4, 0)
-    check.label:SetText(text)
-    check:SetScript("OnShow", function()
-        MOS.Database.Ensure()
-        this:SetChecked(MuklaOfficerSuiteDB[this.settingKey] and 1 or nil)
-    end)
-    check.SaveSetting = function(owner)
-        MOS.Database.Ensure()
-        MOS.Database.SetSetting(owner.settingKey, owner:GetChecked() and true or false)
-        if onChanged then onChanged(owner.settingKey) end
-    end
-    check:SetScript("OnClick", function() this:SaveSetting() end)
-    check.labelHit = CreateFrame("Button", nil, check)
-    check.labelHit:SetPoint("LEFT", check, "RIGHT", 2, 0)
-    check.labelHit:SetWidth(math.max(18, check.label:GetStringWidth() + 8))
-    check.labelHit:SetHeight(24)
-    check.labelHit.owner = check
-    check.labelHit:SetScript("OnClick", function()
-        local owner = this.owner
-        owner:SetChecked(not owner:GetChecked())
-        owner:SaveSetting()
-    end)
-    if tooltipTitle then
-        MOS.UI.AttachTooltip(check, tooltipTitle, tooltipText)
-        MOS.UI.AttachTooltip(check.labelHit, tooltipTitle, tooltipText)
-    end
-    return check
-end
 
-function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback)
-    local label = parent:CreateFontString(name .. "Label", "OVERLAY", "GameFontDisableSmall")
-    label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    label:SetText(labelText)
-    local field = CreateFrame("EditBox", name, parent, "InputBoxTemplate")
-    field:SetWidth(34)
-    field:SetHeight(18)
-    field:SetPoint("LEFT", label, "RIGHT", 8, 0)
-    field:SetAutoFocus(false)
-    field:SetMaxLetters(3)
-    field.settingKey = settingKey
-    field.fallback = fallback
-    field:SetScript("OnEnterPressed", function() this:ClearFocus() end)
-    field:SetScript("OnEscapePressed", function() this:ClearFocus() end)
-    field:SetScript("OnEditFocusLost", function()
-        MOS.Database.Ensure()
-        local value = math.max(0, math.min(100, tonumber(this:GetText()) or this.fallback))
-        MOS.Database.SetSetting(this.settingKey, value)
-        this:SetText(value)
-    end)
-    return label, field
-end
+
+
 
 function Settings.SyncSavedControls(chatLogsCheck, opacityField, focusField)
     MOS.Database.Ensure()
@@ -414,19 +311,7 @@ function Settings.SyncSavedControls(chatLogsCheck, opacityField, focusField)
     if focusField then focusField:SetText(MuklaOfficerSuiteDB.outOfFocusOpacity) end
 end
 
-function Settings.UpdateScroll(viewport, page, pageHeight)
-    if not viewport or not page then return end
-    page:SetWidth(math.max(640, viewport:GetWidth() - 4))
-    page:SetHeight(pageHeight or 960)
-    local scrollBar = getglobal(viewport:GetName() .. "ScrollBar")
-    local maximum = math.max(0, page:GetHeight() - viewport:GetHeight())
-    if scrollBar then
-        scrollBar:SetMinMaxValues(0, maximum)
-        scrollBar:SetValue(math.max(0, math.min(maximum, viewport:GetVerticalScroll())))
-        if maximum > 0 then scrollBar:Show() else scrollBar:Hide() end
-    end
-    if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
-end
+
 
 function Settings.RefreshRaidViewControls(controls)
     if not controls then return end
@@ -445,7 +330,7 @@ function Settings.RefreshRaidViewControls(controls)
     controls.groupMargin:SetValue(MuklaOfficerSuiteDB.raidGroupMargin)
     controls.groupTileTextSize:SetValue(MuklaOfficerSuiteDB.raidGroupTileTextSize)
     controls.groupHeaderTextSize:SetValue(MuklaOfficerSuiteDB.raidGroupHeaderTextSize)
-    MOS.UI.Settings.SetSliderEnabled(controls.groupWidth, not MuklaOfficerSuiteDB.raidGroupAutoTileWidth)
+    MOS.UI.Components.Settings.SetSliderEnabled(controls.groupWidth, not MuklaOfficerSuiteDB.raidGroupAutoTileWidth)
     controls.listWidth:SetValue(MuklaOfficerSuiteDB.raidListRowWidth)
     controls.listHeight:SetValue(MuklaOfficerSuiteDB.raidListRowHeight)
 
@@ -485,8 +370,8 @@ function Settings.BindRaidViewControls(page, controls, groupReset, listReset, ca
         OnAccept = function() Settings.ResetRaidListView(controls, callbacks.refreshList) end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    groupReset:SetScript("OnClick", function() MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_GROUP_VIEW") end)
-    listReset:SetScript("OnClick", function() MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_LIST_VIEW") end)
+    groupReset:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_GROUP_VIEW") end)
+    listReset:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_LIST_VIEW") end)
 end
 
 function Settings.ApplyRaidAccordions(controls)
@@ -674,85 +559,12 @@ function Settings.AttachShell(view, parent, anchor, detached)
 end
 
 function Settings.CreateDetachedWindow()
-    local view
-    local window = CreateFrame("Frame", "MuklaOfficerSuiteSettingsWindow", UIParent)
-    window:SetWidth(780); window:SetHeight(620)
-    window:SetPoint("CENTER", UIParent, "CENTER", 40, 10)
-    window:SetFrameStrata("FULLSCREEN_DIALOG"); window:SetFrameLevel(200); window:SetMovable(true); window:SetResizable(true)
-    if window.SetClampedToScreen then window:SetClampedToScreen(true) end
-    window:SetMinResize(760, 480); window:SetMaxResize(1100, 760)
-    window:EnableMouse(true); window:RegisterForDrag("LeftButton")
-    window:SetScript("OnDragStart", function() this:StartMoving() end)
-    window:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    window:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
-    window:SetBackdropColor(0.015, 0.015, 0.015, 1); window:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
-
-    local titleBar = CreateFrame("Frame", nil, window)
-    titleBar:SetFrameLevel(window:GetFrameLevel() + 1)
-    titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 10, -10); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -10, -10); titleBar:SetHeight(30)
-    local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("LEFT", titleBar, "LEFT", 8, 0); title:SetText("Settings")
-    local close = MOS.UI.CreateButton(titleBar, nil, "X", 18, 18)
-    close:SetPoint("RIGHT", titleBar, "RIGHT", -4, 0); MOS.UI.SetClassicButtonCompact(close, true); MOS.UI.AttachGoldHoverBorder(close, 0.35, 0.35, 0.35, 1)
-    close.label:SetTextColor(1, 0.82, 0.18)
-    local minimize = MOS.UI.CreateButton(titleBar, nil, "_", 18, 18)
-    minimize:SetPoint("RIGHT", close, "LEFT", -4, 0); MOS.UI.SetClassicButtonCompact(minimize, true); MOS.UI.AttachGoldHoverBorder(minimize, 0.35, 0.35, 0.35, 1)
-    minimize.label:SetTextColor(1, 0.82, 0.18)
-    local content = CreateFrame("Frame", nil, window)
-    content:SetFrameLevel(window:GetFrameLevel() + 1)
-    content:SetPoint("TOPLEFT", window, "TOPLEFT", 8, -42); content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -8, 8)
-    local resize = CreateFrame("Button", nil, window)
-    resize:SetFrameStrata("FULLSCREEN_DIALOG"); resize:SetFrameLevel(window:GetFrameLevel() + 250); resize:EnableMouse(true)
-    resize:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -7, 7); resize:SetWidth(18); resize:SetHeight(18)
-    local resizeTexture = resize:CreateTexture(nil, "OVERLAY"); resizeTexture:SetAllPoints(resize); resizeTexture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-    resize:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
-    resize:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end)
-
-    local function ApplyResizeBounds()
-        local screenWidth = (UIParent.GetWidth and UIParent:GetWidth()) or 1100
-        local screenHeight = (UIParent.GetHeight and UIParent:GetHeight()) or 760
-        local maximumWidth = math.max(320, math.min(1100, screenWidth - 32))
-        local maximumHeight = math.max(260, math.min(760, screenHeight - 32))
-        local minimumWidth = math.min(760, maximumWidth)
-        local minimumHeight = math.min(480, maximumHeight)
-        window:SetMinResize(minimumWidth, minimumHeight); window:SetMaxResize(maximumWidth, maximumHeight)
-        if window:GetWidth() > maximumWidth then window:SetWidth(maximumWidth) end
-        if window:GetHeight() > maximumHeight then window:SetHeight(maximumHeight) end
-        if window:GetWidth() < minimumWidth then window:SetWidth(minimumWidth) end
-        if window:GetHeight() < minimumHeight then window:SetHeight(minimumHeight) end
-    end
-    window:SetScript("OnSizeChanged", function() if view then Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end end)
-
-    local function CloseWindow() window:Hide() end
-    close:SetScript("OnClick", CloseWindow)
-    minimize:SetScript("OnClick", function()
-        if not view then return end
-        if window.minimized then
-            window.minimized = false; window:SetHeight(window.expandedHeight or 620); content:Show(); resize:Show(); view.viewport:Show(); minimize:SetText("_")
-        else
-            window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(50); minimize:SetText("[]")
-        end
-    end)
-    window.Open = function()
-        if window:IsVisible() or not view then return end
-        ApplyResizeBounds()
-        window.minimized = false; content:Show(); resize:Show(); minimize:SetText("_")
-        window:Show(); view.viewport:SetVerticalScroll(0); view.viewport:Show()
-        if view.scrollBar then view.scrollBar:SetValue(0) end
-        if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end
-        Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)
-    end
-    window.Toggle = function() if window:IsVisible() then CloseWindow() else window.Open() end end
-    window.AttachView = function(settingsView)
-        view = settingsView
-        Settings.AttachShell(view, content, content, true)
-        view.viewport:Hide()
-    end
-    window.content = content
-    window.resizeGrip = resize
-    window.ApplyResizeBounds = ApplyResizeBounds
-    window:Hide()
-    return window
+    return MOS.UI.Components.Window.Create({
+        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings",
+        update = function(view) Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end,
+        refresh = function(view) if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end end,
+        attach = function(view, content) Settings.AttachShell(view, content, content, true) end,
+    })
 end
 
 function Settings.CreateLifecycle(options)
@@ -770,3 +582,9 @@ function Settings.CreateLifecycle(options)
         OnResize = function(self) UpdateScroll() end,
     }
 end
+
+Settings.CreateSavedCheckbox = controls.CreateSavedCheckbox
+
+Settings.CreatePercentageField = controls.CreatePercentageField
+
+Settings.UpdateScroll = MOS.UI.Components.Settings.UpdateScroll

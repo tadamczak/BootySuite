@@ -1,7 +1,7 @@
 local MOS = MuklaOfficerSuite
 
-MOS.UI.Settings = MOS.UI.Settings or {}
-local Settings = MOS.UI.Settings
+MOS.UI.Components.Settings = MOS.UI.Components.Settings or {}
+local Settings = MOS.UI.Components.Settings
 
 function Settings.CreateSection(parent, title, y)
     local heading = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -34,7 +34,7 @@ function Settings.CreateAccordion(parent, text, y)
     return button
 end
 
-function Settings.CreateCheckbox(parent, x, y, text, key, onChanged)
+function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
     local button = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
     button:SetWidth(22)
@@ -45,13 +45,13 @@ function Settings.CreateCheckbox(parent, x, y, text, key, onChanged)
     button.label:SetPoint("LEFT", button, "RIGHT", 2, 0)
     button.label:SetText(text)
     button.SaveSetting = function(owner)
-        MOS.Database.Ensure()
-        MOS.Database.SetSetting(owner.settingKey, owner:GetChecked() and true or false)
+        binding.ensure()
+        binding.set(owner.settingKey, owner:GetChecked() and true or false)
         if owner.onChanged then owner.onChanged(owner.settingKey) end
     end
     button:SetScript("OnShow", function()
-        MOS.Database.Ensure()
-        this:SetChecked(MuklaOfficerSuiteDB[this.settingKey] and 1 or nil)
+        binding.ensure()
+        this:SetChecked(binding.get(this.settingKey) and 1 or nil)
     end)
     button:SetScript("OnClick", function() this:SaveSetting() end)
     button.labelHit = CreateFrame("Button", nil, button)
@@ -67,7 +67,7 @@ function Settings.CreateCheckbox(parent, x, y, text, key, onChanged)
     return button
 end
 
-function Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum, onChanged)
+function Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum, onChanged, binding)
     local slider = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
     slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
     slider:SetWidth(220)
@@ -80,13 +80,13 @@ function Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum,
     getglobal(name .. "Low"):SetText(tostring(minimum))
     getglobal(name .. "High"):SetText(tostring(maximum))
     slider:SetScript("OnShow", function()
-        MOS.Database.Ensure()
-        this:SetValue(MuklaOfficerSuiteDB[this.settingKey])
+        binding.ensure()
+        this:SetValue(binding.get(this.settingKey))
     end)
     slider:SetScript("OnValueChanged", function()
-        MOS.Database.Ensure()
+        binding.ensure()
         local value = math.floor(this:GetValue() + 0.5)
-        MOS.Database.SetSetting(this.settingKey, value)
+        binding.set(this.settingKey, value)
         getglobal(this:GetName() .. "Text"):SetText(this.settingLabel .. ": " .. value)
         if this.onChanged then this.onChanged(this.settingKey) end
     end)
@@ -113,7 +113,7 @@ function Settings.SetSliderEnabled(slider, enabled)
     end
 end
 
-function Settings.CreateColor(parent, x, y, label, key, onChanged)
+function Settings.CreateColor(parent, x, y, label, key, onChanged, binding)
     local button = CreateFrame("Button", nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
     button:SetWidth(176)
@@ -134,14 +134,14 @@ function Settings.CreateColor(parent, x, y, label, key, onChanged)
     button.label:SetPoint("LEFT", button.swatchBorder, "RIGHT", 6, 0)
     button.label:SetText(label)
     button:SetScript("OnShow", function()
-        MOS.Database.Ensure()
-        local color = MuklaOfficerSuiteDB[this.settingKey]
+        binding.ensure()
+        local color = binding.get(this.settingKey)
         this.swatch:SetTexture(color[1], color[2], color[3], 1)
     end)
     button:SetScript("OnClick", function()
-        MOS.Database.Ensure()
+        binding.ensure()
         local owner = this
-        local color = MuklaOfficerSuiteDB[owner.settingKey]
+        local color = binding.get(owner.settingKey)
         local original = { color[1], color[2], color[3] }
         ColorPickerFrame:Hide()
         ColorPickerFrame.hasOpacity = false
@@ -150,12 +150,12 @@ function Settings.CreateColor(parent, x, y, label, key, onChanged)
         ColorPickerFrame.previousValues = original
         ColorPickerFrame.func = function()
             local r, g, b = ColorPickerFrame:GetColorRGB()
-            MOS.Database.SetSetting(owner.settingKey, { r, g, b })
+            binding.set(owner.settingKey, { r, g, b })
             owner.swatch:SetTexture(r, g, b, 1)
             if owner.onChanged then owner.onChanged(owner.settingKey) end
         end
         ColorPickerFrame.cancelFunc = function()
-            MOS.Database.SetSetting(owner.settingKey, original)
+            binding.set(owner.settingKey, original)
             owner.swatch:SetTexture(original[1], original[2], original[3], 1)
             if owner.onChanged then owner.onChanged(owner.settingKey) end
         end
@@ -198,4 +198,97 @@ function Settings.CreateColor(parent, x, y, label, key, onChanged)
         if ColorPickerFrame.Raise then ColorPickerFrame:Raise() end
     end)
     return button
+end
+
+function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tooltipTitle, tooltipText, onChanged, binding)
+    local check = MOS.UI.Components.CreateCheckButton(name, parent, "UICheckButtonTemplate")
+    check:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    check:SetWidth(24)
+    check:SetHeight(24)
+    check.settingKey = settingKey
+    check.label = MOS.UI.Components.CreateLabel(check, nil, "OVERLAY", "GameFontHighlight")
+    check.label:SetPoint("LEFT", check, "RIGHT", 4, 0)
+    check.label:SetText(text)
+    check:SetScript("OnShow", function()
+        binding.ensure()
+        this:SetChecked(binding.get(this.settingKey) and 1 or nil)
+    end)
+    check.SaveSetting = function(owner)
+        binding.ensure()
+        binding.set(owner.settingKey, owner:GetChecked() and true or false)
+        if onChanged then onChanged(owner.settingKey) end
+    end
+    check:SetScript("OnClick", function() this:SaveSetting() end)
+    check.labelHit = MOS.UI.Components.CreateControl(nil, check)
+    check.labelHit:SetPoint("LEFT", check, "RIGHT", 2, 0)
+    check.labelHit:SetWidth(math.max(18, check.label:GetStringWidth() + 8))
+    check.labelHit:SetHeight(24)
+    check.labelHit.owner = check
+    check.labelHit:SetScript("OnClick", function()
+        local owner = this.owner
+        owner:SetChecked(not owner:GetChecked())
+        owner:SaveSetting()
+    end)
+    if tooltipTitle then
+        MOS.UI.Components.AttachTooltip(check, tooltipTitle, tooltipText)
+        MOS.UI.Components.AttachTooltip(check.labelHit, tooltipTitle, tooltipText)
+    end
+    return check
+end
+
+function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback, binding)
+    local label = MOS.UI.Components.CreateLabel(parent, name .. "Label", "OVERLAY", "GameFontDisableSmall")
+    label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    label:SetText(labelText)
+    local field = MOS.UI.Components.CreateEditField(name, parent, "InputBoxTemplate")
+    field:SetWidth(34)
+    field:SetHeight(18)
+    field:SetPoint("LEFT", label, "RIGHT", 8, 0)
+    field:SetAutoFocus(false)
+    field:SetMaxLetters(3)
+    field.settingKey = settingKey
+    field.fallback = fallback
+    field:SetScript("OnEnterPressed", function() this:ClearFocus() end)
+    field:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+    field:SetScript("OnEditFocusLost", function()
+        binding.ensure()
+        local value = math.max(0, math.min(100, tonumber(this:GetText()) or this.fallback))
+        binding.set(this.settingKey, value)
+        this:SetText(value)
+    end)
+    return label, field
+end
+
+function Settings.UpdateScroll(viewport, page, pageHeight)
+    if not viewport or not page then return end
+    page:SetWidth(math.max(640, viewport:GetWidth() - 4))
+    page:SetHeight(pageHeight or 960)
+    local scrollBar = getglobal(viewport:GetName() .. "ScrollBar")
+    local maximum = math.max(0, page:GetHeight() - viewport:GetHeight())
+    if scrollBar then
+        scrollBar:SetMinMaxValues(0, maximum)
+        scrollBar:SetValue(math.max(0, math.min(maximum, viewport:GetVerticalScroll())))
+        if maximum > 0 then scrollBar:Show() else scrollBar:Hide() end
+    end
+    if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
+end
+
+function Settings.CreateFactory(binding)
+    local factory = {}
+    factory.CreateCheckbox = function(parent, x, y, text, key, onChanged)
+        return Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
+    end
+    factory.CreateSlider = function(parent, name, x, y, label, key, minimum, maximum, onChanged)
+        return Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum, onChanged, binding)
+    end
+    factory.CreateColor = function(parent, x, y, label, key, onChanged)
+        return Settings.CreateColor(parent, x, y, label, key, onChanged, binding)
+    end
+    factory.CreateSavedCheckbox = function(parent, name, x, y, text, settingKey, tooltipTitle, tooltipText, onChanged)
+        return Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tooltipTitle, tooltipText, onChanged, binding)
+    end
+    factory.CreatePercentageField = function(parent, name, labelText, x, y, settingKey, fallback)
+        return Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback, binding)
+    end
+    return factory
 end

@@ -5,27 +5,27 @@ local RaidManagement = MOS.Modules.RaidManagement
 
 function RaidManagement.CreateChrome(page, callbacks)
     local view = {}
-    view.classicToolbar = CreateFrame("Frame", nil, page)
+    view.classicToolbar = MOS.UI.Components.CreateContainer(nil, page)
     page.classicToolbar = view.classicToolbar
     view.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", -3, -48); view.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 3, -48); view.classicToolbar:SetHeight(42)
     view.classicToolbar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }); view.classicToolbar:SetBackdropColor(0, 0, 0, 0); view.classicToolbar:SetBackdropBorderColor(0, 0, 0, 0)
-    MOS.UI.RegisterSkinnedSurface(view.classicToolbar, "title", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }); view.classicToolbar:Hide()
+    MOS.UI.Components.RegisterSkinnedSurface(view.classicToolbar, "title", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }); view.classicToolbar:Hide()
     view.classicToolbar:SetFrameLevel(page:GetFrameLevel())
-    view.classicSummary = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    view.classicSummary = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     view.classicSummary:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -31); view.classicSummary:SetWidth(245); view.classicSummary:SetHeight(14); view.classicSummary:SetJustifyH("LEFT"); view.classicSummary:Hide()
     page.classicSummary = view.classicSummary
-    view.title = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    view.title = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); view.title:SetText("Raid Management")
-    view.classicRaidName = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    view.classicRaidName = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalLarge")
     view.classicRaidName:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); view.classicRaidName:SetWidth(120); view.classicRaidName:SetJustifyH("LEFT"); view.classicRaidName:Hide()
-    view.classicMeta = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    view.classicMeta = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     view.classicMeta:SetPoint("LEFT", view.classicRaidName, "RIGHT", 10, 0); view.classicMeta:SetWidth(82); view.classicMeta:SetJustifyH("LEFT"); view.classicMeta:Hide()
-    view.classicSaved = MOS.UI.CreateButton(page, nil, "Not saved yet", 108, 24)
-    view.classicSaved:SetPoint("LEFT", view.classicMeta, "RIGHT", 8, 0); view.classicSaved:EnableMouse(false); MOS.UI.SetClassicButtonGold(view.classicSaved, true); view.classicSaved:Hide()
-    MOS.UI.SetClassicButtonLabelOffset(view.classicSaved, 2)
-    view.classicIssues = MOS.UI.CreateButton(page, nil, "", 96, 24)
-    view.classicIssues:SetPoint("LEFT", view.classicSaved, "RIGHT", 8, 0); MOS.UI.SetClassicButtonIcon(view.classicIssues, "warning_triangle", 13, 7, 1); MOS.UI.SetClassicButtonGold(view.classicIssues, true); view.classicIssues:Hide()
-    MOS.UI.SetClassicButtonLabelOffset(view.classicIssues, 2, 4)
+    view.classicSaved = MOS.UI.Components.CreateButton(page, nil, "Not saved yet", 108, 24)
+    view.classicSaved:SetPoint("LEFT", view.classicMeta, "RIGHT", 8, 0); view.classicSaved:EnableMouse(false); MOS.UI.Components.SetClassicButtonGold(view.classicSaved, true); view.classicSaved:Hide()
+    MOS.UI.Components.SetClassicButtonLabelOffset(view.classicSaved, 2)
+    view.classicIssues = MOS.UI.Components.CreateButton(page, nil, "", 96, 24)
+    view.classicIssues:SetPoint("LEFT", view.classicSaved, "RIGHT", 8, 0); MOS.UI.Components.SetClassicButtonIcon(view.classicIssues, "warning_triangle", 13, 7, 1); MOS.UI.Components.SetClassicButtonGold(view.classicIssues, true); view.classicIssues:Hide()
+    MOS.UI.Components.SetClassicButtonLabelOffset(view.classicIssues, 2, 4)
     view.classicIssues:SetScript("OnClick", function()
         if page.softReserveWarning then page.softReserveWarning.userDismissed = false end
         if page.missingSoftReserveWarning then page.missingSoftReserveWarning.userDismissed = false end
@@ -33,18 +33,18 @@ function RaidManagement.CreateChrome(page, callbacks)
         if page.resizeRefresh then page.resizeRefresh() end
     end)
     page.classicRaidName = view.classicRaidName; page.classicMeta = view.classicMeta; page.classicSaved = view.classicSaved; page.classicIssues = view.classicIssues
-    view.modeButton = MOS.UI.CreateButton(page, "MuklaOfficerSuiteRaidModeButton", "LM Mode", 96, 22)
+    view.modeButton = MOS.UI.Components.CreateButton(page, "MuklaOfficerSuiteRaidModeButton", "LM Mode", 96, 22)
     view.modeButton.mosClassicReserveIconSpace = true
-    MOS.UI.SetClassicButtonIcon(view.modeButton, "loot_tools", 13, 7, 0)
-    MOS.UI.AttachGoldHoverBorder(view.modeButton, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.SetClassicButtonIcon(view.modeButton, "loot_tools", 13, 7, 0)
+    MOS.UI.Components.AttachGoldHoverBorder(view.modeButton, 0.35, 0.35, 0.35, 1)
     view.modeButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -8)
     view.modeButton:SetScript("OnClick", callbacks.toggleLootMaster); view.modeButton:Hide()
-    view.minimizeButton = MOS.UI.CreateButton(page, "MuklaOfficerSuiteRaidMinimizeButton", "Minimize", 66, 22)
-    MOS.UI.SetClassicButtonCompact(view.minimizeButton, true)
-    MOS.UI.AttachGoldHoverBorder(view.minimizeButton, 0.35, 0.35, 0.35, 1)
+    view.minimizeButton = MOS.UI.Components.CreateButton(page, "MuklaOfficerSuiteRaidMinimizeButton", "Minimize", 66, 22)
+    MOS.UI.Components.SetClassicButtonCompact(view.minimizeButton, true)
+    MOS.UI.Components.AttachGoldHoverBorder(view.minimizeButton, 0.35, 0.35, 0.35, 1)
     view.minimizeButton:SetScript("OnClick", callbacks.toggleMinimize); view.minimizeButton:Hide()
     page.lmConfigOpen = false
-    view.lmConfigPanel = CreateFrame("Frame", nil, page)
+    view.lmConfigPanel = MOS.UI.Components.CreateContainer(nil, page)
     view.lmConfigPanel:SetWidth(150)
     view.lmConfigPanel:SetPoint("TOPLEFT", page, "TOPRIGHT", 0, 0)
     view.lmConfigPanel:SetPoint("BOTTOMLEFT", page, "BOTTOMRIGHT", 0, 0)
@@ -53,19 +53,19 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.lmConfigPanel:SetBackdropBorderColor(0.65, 0.5, 0.2, 0.7)
     view.lmConfigPanel:SetFrameLevel(page:GetFrameLevel() + 12)
     view.lmConfigPanel:Hide()
-    view.lmConfigTitle = view.lmConfigPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    view.lmConfigTitle = MOS.UI.Components.CreateLabel(view.lmConfigPanel, nil, "OVERLAY", "GameFontNormalSmall")
     view.lmConfigTitle:SetPoint("TOPLEFT", view.lmConfigPanel, "TOPLEFT", 8, -8)
     view.lmConfigTitle:SetText("LM config")
-    view.lmAutoLoot = MOS.UI.Settings.CreateCheckbox(view.lmConfigPanel, 8, -30, "LM auto loot", "lmAutoLoot", function()
+    view.lmAutoLoot = MOS.UI.Components.Settings.CreateCheckbox(view.lmConfigPanel, 8, -30, "LM auto loot", "lmAutoLoot", function()
         if MOS.Modules.MasterLootWindow and MOS.Modules.MasterLootWindow.ApplyAutoLootSetting then MOS.Modules.MasterLootWindow.ApplyAutoLootSetting() end
     end)
     page.lmAutoLoot = view.lmAutoLoot
-    view.lmConfigToggle = MOS.UI.CreateButton(page, nil, "", 18, 18)
-    MOS.UI.SetClassicButtonCompact(view.lmConfigToggle, true)
-    MOS.UI.AttachGoldHoverBorder(view.lmConfigToggle, 0.35, 0.35, 0.35, 1)
+    view.lmConfigToggle = MOS.UI.Components.CreateButton(page, nil, "", 18, 18)
+    MOS.UI.Components.SetClassicButtonCompact(view.lmConfigToggle, true)
+    MOS.UI.Components.AttachGoldHoverBorder(view.lmConfigToggle, 0.35, 0.35, 0.35, 1)
     view.lmConfigToggle:SetPoint("RIGHT", view.minimizeButton, "LEFT", -4, 0)
     view.lmConfigToggle:SetFrameLevel(page:GetFrameLevel() + 13)
-    view.lmConfigIcon = view.lmConfigToggle:CreateTexture(nil, "OVERLAY")
+    view.lmConfigIcon = MOS.UI.Components.CreateTexture(view.lmConfigToggle, nil, "OVERLAY")
     view.lmConfigIcon:SetWidth(12); view.lmConfigIcon:SetHeight(12)
     view.lmConfigIcon:SetPoint("CENTER", view.lmConfigToggle, "CENTER", 0, 0)
     view.lmConfigIcon:SetTexture("Interface\\Icons\\INV_Misc_Gear_01")
@@ -79,7 +79,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     end)
     view.lmConfigToggle:Hide()
     page.lmConfigPanel = view.lmConfigPanel; page.lmConfigToggle = view.lmConfigToggle
-    view.reyCoinPanel = CreateFrame("Frame", nil, page)
+    view.reyCoinPanel = MOS.UI.Components.CreateContainer(nil, page)
     view.reyCoinPanel:SetWidth(150); view.reyCoinPanel:SetHeight(210)
     view.reyCoinPanel:SetPoint("TOPLEFT", page, "TOPRIGHT", 0, 0)
     view.reyCoinPanel:SetFrameLevel(view.lmConfigPanel:GetFrameLevel() + 1)
@@ -89,13 +89,13 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.reyCoinPanel:EnableMouse(true)
     view.reyCoinPanel:Hide()
     page.reyCoinPanel = view.reyCoinPanel
-    view.reyCoinTitle = view.reyCoinPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    view.reyCoinTitle = MOS.UI.Components.CreateLabel(view.reyCoinPanel, nil, "OVERLAY", "GameFontNormalSmall")
     view.reyCoinTitle:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 8, -8)
     view.reyCoinTitle:SetText("Raycoin list")
-    view.reyCoinScroll = CreateFrame("ScrollFrame", nil, view.reyCoinPanel)
+    view.reyCoinScroll = MOS.UI.Components.CreateScrollFrame(nil, view.reyCoinPanel)
     view.reyCoinScroll:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 6, -29)
     view.reyCoinScroll:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -6, 37)
-    view.reyCoinCanvas = CreateFrame("Frame", nil, view.reyCoinScroll)
+    view.reyCoinCanvas = MOS.UI.Components.CreateContainer(nil, view.reyCoinScroll)
     view.reyCoinCanvas:SetWidth(130); view.reyCoinCanvas:SetHeight(1)
     view.reyCoinScroll:SetScrollChild(view.reyCoinCanvas)
     view.reyCoinScroll:EnableMouseWheel(true)
@@ -145,15 +145,15 @@ function RaidManagement.CreateChrome(page, callbacks)
         if view.reyCoinPanel:IsShown() then RefreshReyCoinList() end
     end
     for index = 1, 40 do
-        local row = CreateFrame("Frame", nil, view.reyCoinCanvas)
+        local row = MOS.UI.Components.CreateContainer(nil, view.reyCoinCanvas)
         row:SetHeight(24); row:SetPoint("TOPLEFT", view.reyCoinCanvas, "TOPLEFT", 0, -(index - 1) * 25)
         row:SetPoint("RIGHT", view.reyCoinCanvas, "RIGHT", 0, 0)
-        row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.label = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
         row.label:SetPoint("LEFT", row, "LEFT", 2, 0); row.label:SetPoint("RIGHT", row, "RIGHT", -18, 0)
         row.label:SetJustifyH("LEFT")
-        row.remove = CreateFrame("Button", nil, row)
+        row.remove = MOS.UI.Components.CreateControl(nil, row)
         row.remove:SetWidth(16); row.remove:SetHeight(16); row.remove:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-        row.remove.text = row.remove:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        row.remove.text = MOS.UI.Components.CreateLabel(row.remove, nil, "OVERLAY", "GameFontNormalSmall")
         row.remove.text:SetAllPoints(row.remove); row.remove.text:SetText("X")
         row.remove:SetScript("OnClick", function()
             local selected = this:GetParent()
@@ -166,10 +166,10 @@ function RaidManagement.CreateChrome(page, callbacks)
         end)
         row:Hide(); view.reyCoinRows[index] = row
     end
-    view.reyCoinInput = MOS.UI.CreateFramedEditBox(view.reyCoinPanel, nil, 83)
+    view.reyCoinInput = MOS.UI.Components.CreateFramedEditBox(view.reyCoinPanel, nil, 83)
     view.reyCoinInput:SetHeight(22); view.reyCoinInput:ClearAllPoints(); view.reyCoinInput:SetPoint("BOTTOMLEFT", view.reyCoinPanel, "BOTTOMLEFT", 8, 8); view.reyCoinInput:SetAutoFocus(false)
     view.reyCoinInput:SetScript("OnEscapePressed", function() this:ClearFocus() end); view.reyCoinInput:SetScript("OnEnterPressed", function() this:ClearFocus() end)
-    view.reyCoinAdd = MOS.UI.CreateButton(view.reyCoinPanel, nil, "Add", 40, 22)
+    view.reyCoinAdd = MOS.UI.Components.CreateButton(view.reyCoinPanel, nil, "Add", 40, 22)
     page.reyCoinInput = view.reyCoinInput; page.reyCoinAdd = view.reyCoinAdd
     view.reyCoinAdd:SetPoint("LEFT", view.reyCoinInput, "RIGHT", 4, 0)
     view.reyCoinInput:SetFrameLevel(view.reyCoinPanel:GetFrameLevel() + 3); view.reyCoinAdd:SetFrameLevel(view.reyCoinPanel:GetFrameLevel() + 3)
@@ -181,14 +181,14 @@ function RaidManagement.CreateChrome(page, callbacks)
         view.reyCoinCanvas:SetWidth(math.max(1, view.reyCoinPanel:GetWidth() - 12))
         view.reyCoinInput:SetWidth(math.max(40, view.reyCoinPanel:GetWidth() - 60))
     end)
-    view.reyCoinToggle = CreateFrame("Button", nil, page)
+    view.reyCoinToggle = MOS.UI.Components.CreateControl(nil, page)
     page.reyCoinToggle = view.reyCoinToggle
     view.reyCoinToggle:SetWidth(18); view.reyCoinToggle:SetHeight(18)
     view.reyCoinToggle:SetPoint("RIGHT", view.lmConfigToggle, "LEFT", -4, 0)
-    view.reyCoinToggle.icon = view.reyCoinToggle:CreateTexture(nil, "ARTWORK")
+    view.reyCoinToggle.icon = MOS.UI.Components.CreateTexture(view.reyCoinToggle, nil, "ARTWORK")
     view.reyCoinToggle.icon:SetAllPoints(view.reyCoinToggle)
     view.reyCoinToggle.icon:SetTexture("Interface\\Icons\\INV_Misc_Coin_01")
-    MOS.UI.AttachGoldHoverBorder(view.reyCoinToggle, 0.38, 0.38, 0.38, 0.95)
+    MOS.UI.Components.AttachGoldHoverBorder(view.reyCoinToggle, 0.38, 0.38, 0.38, 0.95)
     view.reyCoinToggle:SetScript("OnClick", function()
         if view.reyCoinPanel:IsShown() then view.reyCoinPanel:Hide(); return end
         if view.lmConfigPanel:IsShown() then view.lmConfigToggle:Click() end
@@ -196,23 +196,23 @@ function RaidManagement.CreateChrome(page, callbacks)
         view.reyCoinPanel:Show()
     end)
     view.reyCoinToggle:Hide()
-    view.minimizedLabel = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    view.minimizedLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
     view.minimizedLabel:SetText("LM Mode"); view.minimizedLabel:SetJustifyH("LEFT"); view.minimizedLabel:Hide()
-    view.info = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    view.info = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     view.info:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -15); view.info:SetText(""); view.info:Hide()
 
-    view.searchLabel = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    view.searchLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
     view.searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -82); view.searchLabel:SetText("Search"); view.searchLabel:Hide()
-    view.searchBox = MOS.UI.CreateSearchBox(page, "MuklaOfficerSuiteRaidSearch", 178)
+    view.searchBox = MOS.UI.Components.CreateSearchBox(page, "MuklaOfficerSuiteRaidSearch", 178)
     view.searchBox:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -76); view.searchBox:Hide()
-    view.refreshButton = MOS.UI.CreateIconButton(page, nil, "Interface\\Buttons\\UI-RotationRight-Button-Up", 24)
+    view.refreshButton = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Buttons\\UI-RotationRight-Button-Up", 24)
     view.refreshButton:SetPoint("LEFT", view.searchBox, "RIGHT", 4, 0); view.refreshButton:Hide()
-    MOS.UI.AttachTooltip(view.refreshButton, "Refresh raid data", "Refresh the raid roster now. Disabled while Raid live tracking is active.")
-    view.filterLabel = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    MOS.UI.Components.AttachTooltip(view.refreshButton, "Refresh raid data", "Refresh the raid roster now. Disabled while Raid live tracking is active.")
+    view.filterLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
     view.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -82); view.filterLabel:SetText("Filters"); view.filterLabel:Hide()
 
     local function CreateFilterButton(text, x)
-        local button = MOS.UI.CreateDropdownButton(page, nil, text, 84)
+        local button = MOS.UI.Components.CreateDropdownButton(page, nil, text, 84)
         button:SetPoint("TOPLEFT", page, "TOPLEFT", x, -76)
         button.SetText = function(self, value) self.label:SetText(value) end
         button.arrow:SetWidth(14); button.arrow:SetHeight(14)
@@ -222,28 +222,28 @@ function RaidManagement.CreateChrome(page, callbacks)
     end
     view.classButton = CreateFilterButton("Class", 50)
     view.rankButton = CreateFilterButton("Rank", 142)
-    view.classPanel = MOS.UI.CreateDropdownPanel(page, view.classButton, 130, 80, 25)
-    view.rankPanel = MOS.UI.CreateDropdownPanel(page, view.rankButton, 130, 80, 25)
-    view.dismiss = CreateFrame("Button", "MuklaOfficerSuiteRaidFilterDismiss", page)
+    view.classPanel = MOS.UI.Components.CreateDropdownPanel(page, view.classButton, 130, 80, 25)
+    view.rankPanel = MOS.UI.Components.CreateDropdownPanel(page, view.rankButton, 130, 80, 25)
+    view.dismiss = MOS.UI.Components.CreateControl("MuklaOfficerSuiteRaidFilterDismiss", page)
     view.dismiss:SetAllPoints(page); view.dismiss:SetFrameLevel(page:GetFrameLevel() + 20); view.dismiss:Hide()
     view.classPanel:SetFrameLevel(page:GetFrameLevel() + 30); view.rankPanel:SetFrameLevel(page:GetFrameLevel() + 30)
     view.classButton:SetFrameLevel(page:GetFrameLevel() + 31); view.rankButton:SetFrameLevel(page:GetFrameLevel() + 31)
 
-    view.unavailable = page:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    view.unavailable = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlight")
     view.unavailable:SetPoint("CENTER", page, "CENTER", 0, 12)
     view.unavailable:SetText("You must be in a raid to scan the raid roster.")
-    view.status = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    view.status = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     view.status:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -48); view.status:SetWidth(245); view.status:SetJustifyH("LEFT")
 
-    page.leaderModeButton = MOS.UI.CreateButton(page, nil, "Raid Leader Mode", 118, 22)
-    MOS.UI.SetClassicButtonIcon(page.leaderModeButton, "raid_tools")
+    page.leaderModeButton = MOS.UI.Components.CreateButton(page, nil, "Raid Leader Mode", 118, 22)
+    MOS.UI.Components.SetClassicButtonIcon(page.leaderModeButton, "raid_tools")
     page.leaderModeButton:SetPoint("TOPRIGHT", view.modeButton, "BOTTOMRIGHT", 0, -8)
     page.leaderModeButton:Disable(); page.leaderModeButton:Hide()
-    MOS.UI.AttachTooltip(page.leaderModeButton, "Raid Leader Mode", "Reserved for a future raid-leader workspace.")
-    page.resetFiltersButton = MOS.UI.CreateButton(page, nil, "Reset Filters", 104, 22)
-    MOS.UI.SetClassicButtonIcon(page.resetFiltersButton, "reset")
+    MOS.UI.Components.AttachTooltip(page.leaderModeButton, "Raid Leader Mode", "Reserved for a future raid-leader workspace.")
+    page.resetFiltersButton = MOS.UI.Components.CreateButton(page, nil, "Reset Filters", 104, 22)
+    MOS.UI.Components.SetClassicButtonIcon(page.resetFiltersButton, "reset")
     page.resetFiltersButton:SetPoint("TOPLEFT", page, "TOPLEFT", 242, -76); page.resetFiltersButton:Hide()
-    MOS.UI.RegisterSkinCallback(function(skin)
+    MOS.UI.Components.RegisterSkinCallback(function(skin)
         if skin == "classic" then view.classicToolbar:Show()
         else view.classicToolbar:Hide(); view.classicSummary:Hide(); view.classicRaidName:Hide(); view.classicMeta:Hide(); view.classicSaved:Hide(); view.classicIssues:Hide(); view.title:Show() end
     end)
@@ -252,75 +252,75 @@ end
 
 function RaidManagement.CreateActionControls(page)
     local controls = {}
-    controls.scan = MOS.UI.CreateButton(page, nil, "Scan Raid", 140, 24)
+    controls.scan = MOS.UI.Components.CreateButton(page, nil, "Scan Raid", 140, 24)
     controls.scan:SetPoint("CENTER", page, "CENTER", 0, 12); controls.scan:Hide()
-    controls.loadRaid = MOS.UI.CreateButton(page, nil, "Load", 78, 24); controls.loadRaid:Hide(); controls.loadRaid:Disable()
-    MOS.UI.AttachTooltip(controls.scan, "Start New Raid", "Create a new raid session with a unique ID and scan the current raid roster.")
-    MOS.UI.AttachTooltip(controls.loadRaid, "Load Raid", "Load the selected saved raid snapshot.")
-    controls.testRaid = MOS.UI.CreateButton(page, nil, "Test Raid", 88, 24); controls.testRaid:Hide()
-    MOS.UI.AttachTooltip(controls.testRaid, "Test Raid", "Open a transient 40-player raid sandbox. Test data is never saved.")
-    controls.historyTitle = page:CreateFontString(nil, "OVERLAY", "GameFontNormal"); controls.historyTitle:SetText("Saved raids"); controls.historyTitle:Hide()
+    controls.loadRaid = MOS.UI.Components.CreateButton(page, nil, "Load", 78, 24); controls.loadRaid:Hide(); controls.loadRaid:Disable()
+    MOS.UI.Components.AttachTooltip(controls.scan, "Start New Raid", "Create a new raid session with a unique ID and scan the current raid roster.")
+    MOS.UI.Components.AttachTooltip(controls.loadRaid, "Load Raid", "Load the selected saved raid snapshot.")
+    controls.testRaid = MOS.UI.Components.CreateButton(page, nil, "Test Raid", 88, 24); controls.testRaid:Hide()
+    MOS.UI.Components.AttachTooltip(controls.testRaid, "Test Raid", "Open a transient 40-player raid sandbox. Test data is never saved.")
+    controls.historyTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controls.historyTitle:SetText("Saved raids"); controls.historyTitle:Hide()
     controls.historyButtons = {}
     controls.historyDeleteButtons = {}
     local historyIndex
     for historyIndex = 1, 5 do
-        local button = MOS.UI.CreateButton(page, nil, "", 380, 26); button.historyIndex = historyIndex; button:Hide()
+        local button = MOS.UI.Components.CreateButton(page, nil, "", 380, 26); button.historyIndex = historyIndex; button:Hide()
         button.mosClassicKeepNormalSurface = true
         button.label:ClearAllPoints(); button.label:SetPoint("LEFT", button, "LEFT", 8, 0); button.label:SetPoint("RIGHT", button, "RIGHT", -126, 0); button.label:SetJustifyH("LEFT")
-        button.savedAt = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.savedAt = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall")
         button.savedAt:SetPoint("RIGHT", button, "RIGHT", -8, 0); button.savedAt:SetWidth(112); button.savedAt:SetJustifyH("RIGHT"); button.savedAt:SetTextColor(0.78, 0.78, 0.72)
         controls.historyButtons[historyIndex] = button
-        local deleteButton = MOS.UI.CreateIconButton(page, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 30, 4)
+        local deleteButton = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 30, 4)
         deleteButton.historyIndex = historyIndex; deleteButton:Hide()
-        MOS.UI.AttachTooltip(deleteButton, "Delete saved raid", "Permanently remove this raid snapshot from saved history.")
+        MOS.UI.Components.AttachTooltip(deleteButton, "Delete saved raid", "Permanently remove this raid snapshot from saved history.")
         controls.historyDeleteButtons[historyIndex] = deleteButton
     end
-    controls.historyEmpty = page:CreateFontString(nil, "OVERLAY", "GameFontDisable"); controls.historyEmpty:SetText("No raids to load"); controls.historyEmpty:Hide()
-    controls.addStatistics = MOS.UI.CreateButton(page, nil, "Add to Raid Statistics", 132, 22); controls.addStatistics:Hide()
-    MOS.UI.SetClassicButtonVariant(controls.addStatistics, "red")
-    MOS.UI.SetClassicButtonIcon(controls.addStatistics, "raid_stats")
+    controls.historyEmpty = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisable"); controls.historyEmpty:SetText("No raids to load"); controls.historyEmpty:Hide()
+    controls.addStatistics = MOS.UI.Components.CreateButton(page, nil, "Add to Raid Statistics", 132, 22); controls.addStatistics:Hide()
+    MOS.UI.Components.SetClassicButtonVariant(controls.addStatistics, "red")
+    MOS.UI.Components.SetClassicButtonIcon(controls.addStatistics, "raid_stats")
     controls.addStatistics.mosClassicPersistentRed = true
-    MOS.UI.SetClassicButtonGold(controls.addStatistics, true)
-    MOS.UI.AttachTooltip(controls.addStatistics, "Add to Raid Statistics", "Save this session and add its compact result to Raid Statistics.")
-    controls.export = MOS.UI.CreateButton(page, nil, "Save Session", 88, 22)
-    MOS.UI.SetClassicButtonVariant(controls.export, "red")
-    MOS.UI.SetClassicButtonIcon(controls.export, "save")
+    MOS.UI.Components.SetClassicButtonGold(controls.addStatistics, true)
+    MOS.UI.Components.AttachTooltip(controls.addStatistics, "Add to Raid Statistics", "Save this session and add its compact result to Raid Statistics.")
+    controls.export = MOS.UI.Components.CreateButton(page, nil, "Save Session", 88, 22)
+    MOS.UI.Components.SetClassicButtonVariant(controls.export, "red")
+    MOS.UI.Components.SetClassicButtonIcon(controls.export, "save")
     controls.export.mosClassicPersistentRed = true
-    MOS.UI.SetClassicButtonGold(controls.export, true)
+    MOS.UI.Components.SetClassicButtonGold(controls.export, true)
     controls.export:SetPoint("TOPRIGHT", page, "TOPRIGHT", -110, -42); controls.export:Hide()
-    controls.quit = MOS.UI.CreateButton(page, nil, "Quit", 72, 22); controls.quit:Hide()
-    MOS.UI.SetClassicButtonVariant(controls.quit, "red")
-    MOS.UI.SetClassicButtonIcon(controls.quit, "quit")
-    MOS.UI.SetClassicButtonGold(controls.quit, true)
-    controls.raidLeaderTools = MOS.UI.CreateButton(page, nil, "Raid Leader Tools", 118, 22); controls.raidLeaderTools:Hide()
-    MOS.UI.SetClassicButtonVariant(controls.raidLeaderTools, "red")
-    MOS.UI.SetClassicButtonIcon(controls.raidLeaderTools, "raid_tools", 13, 7, 2)
-    MOS.UI.SetClassicButtonLabelOffset(controls.raidLeaderTools, 2)
-    controls.lootMasterTools = MOS.UI.CreateButton(page, nil, "Loot Master Tools", 118, 22); controls.lootMasterTools:Hide()
-    MOS.UI.SetClassicButtonIcon(controls.lootMasterTools, "loot_tools", 13, 7, 2)
-    MOS.UI.SetClassicButtonLabelOffset(controls.lootMasterTools, 2)
-    controls.lootRules = MOS.UI.CreateButton(page, nil, "Set Loot Rules", 102, 22)
+    controls.quit = MOS.UI.Components.CreateButton(page, nil, "Quit", 72, 22); controls.quit:Hide()
+    MOS.UI.Components.SetClassicButtonVariant(controls.quit, "red")
+    MOS.UI.Components.SetClassicButtonIcon(controls.quit, "quit")
+    MOS.UI.Components.SetClassicButtonGold(controls.quit, true)
+    controls.raidLeaderTools = MOS.UI.Components.CreateButton(page, nil, "Raid Leader Tools", 118, 22); controls.raidLeaderTools:Hide()
+    MOS.UI.Components.SetClassicButtonVariant(controls.raidLeaderTools, "red")
+    MOS.UI.Components.SetClassicButtonIcon(controls.raidLeaderTools, "raid_tools", 13, 7, 2)
+    MOS.UI.Components.SetClassicButtonLabelOffset(controls.raidLeaderTools, 2)
+    controls.lootMasterTools = MOS.UI.Components.CreateButton(page, nil, "Loot Master Tools", 118, 22); controls.lootMasterTools:Hide()
+    MOS.UI.Components.SetClassicButtonIcon(controls.lootMasterTools, "loot_tools", 13, 7, 2)
+    MOS.UI.Components.SetClassicButtonLabelOffset(controls.lootMasterTools, 2)
+    controls.lootRules = MOS.UI.Components.CreateButton(page, nil, "Set Loot Rules", 102, 22)
     controls.lootRules.mosClassicReserveIconSpace = true
-    MOS.UI.SetClassicButtonIcon(controls.lootRules, "rules")
+    MOS.UI.Components.SetClassicButtonIcon(controls.lootRules, "rules")
     controls.lootRules:SetPoint("TOPRIGHT", page, "TOPRIGHT", -326, -42); controls.lootRules:Hide()
-    controls.sendLootRules = MOS.UI.CreateButton(page, nil, "Send Loot Rules", 112, 22)
+    controls.sendLootRules = MOS.UI.Components.CreateButton(page, nil, "Send Loot Rules", 112, 22)
     controls.sendLootRules.mosClassicReserveIconSpace = true
-    MOS.UI.SetClassicButtonIcon(controls.sendLootRules, "rules")
+    MOS.UI.Components.SetClassicButtonIcon(controls.sendLootRules, "rules")
     controls.sendLootRules:Hide()
-    controls.import = MOS.UI.CreateButton(page, nil, "Import SR", 82, 22)
+    controls.import = MOS.UI.Components.CreateButton(page, nil, "Import SR", 82, 22)
     controls.import.mosClassicReserveIconSpace = true
-    MOS.UI.SetClassicButtonIcon(controls.import, "import")
+    MOS.UI.Components.SetClassicButtonIcon(controls.import, "import")
     controls.import:SetPoint("TOPRIGHT", page, "TOPRIGHT", -236, -42); controls.import:Hide()
-    controls.shareSr = MOS.UI.CreateButton(page, nil, "Share SR Link", 92, 22); controls.shareSr:Hide()
+    controls.shareSr = MOS.UI.Components.CreateButton(page, nil, "Share SR Link", 92, 22); controls.shareSr:Hide()
     controls.shareSr.mosClassicReserveIconSpace = true
-    MOS.UI.SetClassicButtonIcon(controls.shareSr, "link")
-    MOS.UI.AttachTooltip(controls.shareSr, "Share SR Link", "Send the saved Soft Reserve URL to the raid as a Raid Warning.")
-    controls.resetLoot = MOS.UI.CreateButton(page, "MuklaOfficerSuiteRaidResetLootButton", "Reset loot", 82, 22)
+    MOS.UI.Components.SetClassicButtonIcon(controls.shareSr, "link")
+    MOS.UI.Components.AttachTooltip(controls.shareSr, "Share SR Link", "Send the saved Soft Reserve URL to the raid as a Raid Warning.")
+    controls.resetLoot = MOS.UI.Components.CreateButton(page, "MuklaOfficerSuiteRaidResetLootButton", "Reset loot", 82, 22)
     controls.resetLoot.mosClassicReserveIconSpace = true
-    MOS.UI.SetClassicButtonIcon(controls.resetLoot, "reset")
+    MOS.UI.Components.SetClassicButtonIcon(controls.resetLoot, "reset")
     controls.resetLoot:SetPoint("TOPRIGHT", page, "TOPRIGHT", -326, -42); controls.resetLoot:Hide()
-    controls.resetLoot:SetScript("OnClick", function() MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_LOOT") end)
-    controls.live = MOS.UI.CreateButton(page, nil, "Start Live Tracking", 118, 22)
+    controls.resetLoot:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_LOOT") end)
+    controls.live = MOS.UI.Components.CreateButton(page, nil, "Start Live Tracking", 118, 22)
     controls.live:SetPoint("TOPRIGHT", page, "TOPRIGHT", -416, -42); controls.live:Hide()
     return controls
 end
@@ -419,8 +419,8 @@ local function OnGroupClick()
     if row and row.controller and row.controller.onGroup then row.controller.onGroup(row) end
 end
 
-local function OnSoftReserveEnter() MOS.UI.ShowItemTooltip(this) end
-local function OnSoftReserveClick() MOS.UI.HandleItemClick(this) end
+local function OnSoftReserveEnter() MOS.UI.Components.ShowItemTooltip(this) end
+local function OnSoftReserveClick() MOS.UI.Components.HandleItemClick(this) end
 local function OnSoftReserveLeave() GameTooltip:Hide() end
 local function OnSoftReserveDeleteClick()
     local row = this.ownerRow
@@ -428,14 +428,14 @@ local function OnSoftReserveDeleteClick()
 end
 local function OnLootItemEnter()
     if not this.itemId then return end
-    MOS.UI.ShowItemTooltip(this)
+    MOS.UI.Components.ShowItemTooltip(this)
 end
 local function OnLootItemLeave() GameTooltip:Hide() end
 local function OnLootItemClick()
     if not IsShiftKeyDown() and not IsControlKeyDown() and MOS.Modules.MasterLootWindow and MOS.Modules.MasterLootWindow.ShowHistory then
         MOS.Modules.MasterLootWindow.ShowHistory(this.itemLink or this.itemName, this.rollHistory, this.itemId, this.itemName)
     else
-        MOS.UI.HandleItemClick(this)
+        MOS.UI.Components.HandleItemClick(this)
     end
 end
 
@@ -450,7 +450,7 @@ end
 
 local function OnRaidRowEnter()
     if this.displayedMember and this.controller and not this.controller.isSelected(this.displayedMember) then
-        if MOS.UI.IsClassicSkin() then MOS.UI.SetClassicRowShade(this, math.mod(this.visibleIndex or 1, 2) == 0, true); return end
+        if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.visibleIndex or 1, 2) == 0, true); return end
         local color = MuklaOfficerSuiteDB.raidListHoverColor
         this:SetBackdropColor(color[1], color[2], color[3], 0.98)
     end
@@ -458,7 +458,7 @@ end
 
 local function OnRaidRowLeave()
     if this.displayedMember and this.controller and not this.controller.isSelected(this.displayedMember) then
-        if MOS.UI.IsClassicSkin() then MOS.UI.SetClassicRowShade(this, math.mod(this.visibleIndex or 1, 2) == 0, false); return end
+        if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.visibleIndex or 1, 2) == 0, false); return end
         local color = MuklaOfficerSuiteDB.raidListBackgroundColor
         this:SetBackdropColor(color[1], color[2], color[3], math.mod(this.visibleIndex or 1, 2) == 0 and 0.98 or 0.82)
     end
@@ -470,77 +470,77 @@ local function OnLootScroll()
 end
 
 local function AddRaidCell(parent, row, key, x, width, hidden)
-    row[key] = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row[key] = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
     row[key]:SetPoint("TOPLEFT", parent, "TOPLEFT", x, row.initialY)
     row[key]:SetWidth(width); row[key]:SetHeight(20); row[key]:SetJustifyH("LEFT")
     if hidden then row[key]:Hide() end
 end
 
 function RaidManagement.CreateListRow(parent, index, controller)
-    local row = CreateFrame("Button", nil, parent)
+    local row = MOS.UI.Components.CreateControl(nil, parent)
     row.controller = controller
     row.initialY = -132 - ((index - 1) * 21)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, row.initialY)
     row:SetWidth(543); row:SetHeight(20)
-    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.name = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
     row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0); row.name:SetWidth(148); row.name:SetHeight(20); row.name:SetJustifyH("LEFT")
-    row.crown = row:CreateTexture(nil, "OVERLAY")
+    row.crown = MOS.UI.Components.CreateTexture(row, nil, "OVERLAY")
     row.crown:SetWidth(14); row.crown:SetHeight(14); row.crown:SetPoint("LEFT", row, "LEFT", 1, 0); row.crown:SetTexture("Interface\\GroupFrame\\UI-Group-LeaderIcon"); row.crown:Hide()
-    row.lootMasterIcon = row:CreateTexture(nil, "OVERLAY")
+    row.lootMasterIcon = MOS.UI.Components.CreateTexture(row, nil, "OVERLAY")
     row.lootMasterIcon:SetWidth(13); row.lootMasterIcon:SetHeight(13); row.lootMasterIcon:SetPoint("RIGHT", row, "RIGHT", -3, 0); row.lootMasterIcon:SetTexture("Interface\\GroupFrame\\UI-Group-MasterLooter"); row.lootMasterIcon:Hide()
     AddRaidCell(parent, row, "level", 0, 45, true)
     AddRaidCell(parent, row, "status", 0, 62, true)
     AddRaidCell(parent, row, "group", 172, 70, false)
-    row.groupHit = CreateFrame("Button", nil, parent); row.groupHit.ownerRow = row; row.groupHit:Hide()
+    row.groupHit = MOS.UI.Components.CreateControl(nil, parent); row.groupHit.ownerRow = row; row.groupHit:Hide()
     row.groupHit:SetScript("OnClick", OnGroupClick)
     AddRaidCell(parent, row, "class", 252, 85, false)
     AddRaidCell(parent, row, "rank", 347, 135, false)
     AddRaidCell(parent, row, "sr", 500, 55, false)
-    row.srHit = CreateFrame("Button", nil, row)
+    row.srHit = MOS.UI.Components.CreateControl(nil, row)
     row.srHit.ownerRow = row; row.srHit.label = row.sr; row.srHit:Hide()
-    row.srDelete = MOS.UI.CreateIconButton(row.srHit, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 18, 3)
+    row.srDelete = MOS.UI.Components.CreateIconButton(row.srHit, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 18, 3)
     row.srDelete:SetPoint("LEFT", row.srHit, "LEFT", 0, 0); row.srDelete.ownerRow = row; row.srDelete:SetScript("OnClick", OnSoftReserveDeleteClick); row.srDelete:Hide()
-    MOS.UI.AttachTooltip(row.srDelete, "Remove Soft Reserve", "Remove this player's assigned Soft Reserve.")
-    row.srIcon = row.srHit:CreateTexture(nil, "ARTWORK")
+    MOS.UI.Components.AttachTooltip(row.srDelete, "Remove Soft Reserve", "Remove this player's assigned Soft Reserve.")
+    row.srIcon = MOS.UI.Components.CreateTexture(row.srHit, nil, "ARTWORK")
     row.srIcon:SetWidth(16); row.srIcon:SetHeight(16); row.srIcon:SetPoint("LEFT", row.srHit, "LEFT", 20, 0); row.srIcon:Hide()
     row.srHit.iconRegion = row.srIcon
     row.srHit:SetScript("OnEnter", OnSoftReserveEnter); row.srHit:SetScript("OnLeave", OnSoftReserveLeave); row.srHit:SetScript("OnClick", OnSoftReserveClick)
     row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0); row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    MOS.UI.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
-    row.lootPanel = CreateFrame("Frame", nil, row)
+    MOS.UI.Components.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
+    row.lootPanel = MOS.UI.Components.CreateContainer(nil, row)
     row.lootPanel:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -21); row.lootPanel:SetWidth(535); row.lootPanel:SetHeight(106)
     row.lootPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     row.lootPanel:SetBackdropColor(0.07, 0.08, 0.07, 0.94); row.lootPanel:SetBackdropBorderColor(0.30, 0.34, 0.30, 1)
-    row.actions = CreateFrame("Frame", nil, row.lootPanel)
+    row.actions = MOS.UI.Components.CreateContainer(nil, row.lootPanel)
     row.actions:SetPoint("TOPLEFT", row.lootPanel, "TOPLEFT", 7, -7); row.actions:SetPoint("TOPRIGHT", row.lootPanel, "TOPRIGHT", -7, -7); row.actions:SetHeight(22)
     row.actionButtons = {}
     local actionIndex
     for actionIndex = 1, table.getn(raidActionSpecs) do
-        local actionButton = MOS.UI.CreateButton(row.actions, nil, raidActionSpecs[actionIndex][1], 58, 19)
+        local actionButton = MOS.UI.Components.CreateButton(row.actions, nil, raidActionSpecs[actionIndex][1], 58, 19)
         actionButton:SetPoint("LEFT", row.actions, "LEFT", (actionIndex - 1) * 62, 0)
         actionButton.action = raidActionSpecs[actionIndex][2]; actionButton.ownerRow = row; actionButton:SetScript("OnClick", OnRaidActionClick)
         row.actionButtons[actionIndex] = actionButton
     end
-    row.lootTitle = row.lootPanel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.lootTitle = MOS.UI.Components.CreateLabel(row.lootPanel, nil, "OVERLAY", "GameFontDisableSmall")
     row.lootTitle:SetPoint("TOPLEFT", row.lootPanel, "TOPLEFT", 10, -33); row.lootTitle:SetText("Loot received")
-    row.lootEmpty = row.lootPanel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.lootEmpty = MOS.UI.Components.CreateLabel(row.lootPanel, nil, "OVERLAY", "GameFontDisableSmall")
     row.lootEmpty:SetPoint("TOPLEFT", row.lootPanel, "TOPLEFT", 10, -55); row.lootEmpty:SetText("No recorded items.")
     row.lootRows = {}
     local lootIndex
     for lootIndex = 1, 25 do
         local lootRow = {}
-        lootRow.hit = CreateFrame("Button", nil, row.lootPanel); lootRow.hit:SetHeight(22)
-        local highlight = lootRow.hit:CreateTexture(nil, "HIGHLIGHT"); highlight:SetAllPoints(lootRow.hit); highlight:SetTexture(1, 0.72, 0.12, 0.14)
-        lootRow.icon = lootRow.hit:CreateTexture(nil, "ARTWORK")
+        lootRow.hit = MOS.UI.Components.CreateControl(nil, row.lootPanel); lootRow.hit:SetHeight(22)
+        local highlight = MOS.UI.Components.CreateTexture(lootRow.hit, nil, "HIGHLIGHT"); highlight:SetAllPoints(lootRow.hit); highlight:SetTexture(1, 0.72, 0.12, 0.14)
+        lootRow.icon = MOS.UI.Components.CreateTexture(lootRow.hit, nil, "ARTWORK")
         lootRow.icon:SetPoint("LEFT", lootRow.hit, "LEFT", 2, 0); lootRow.icon:SetWidth(20); lootRow.icon:SetHeight(20)
-        lootRow.name = lootRow.hit:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        lootRow.name = MOS.UI.Components.CreateLabel(lootRow.hit, nil, "OVERLAY", "GameFontHighlightSmall")
         lootRow.name:SetPoint("LEFT", lootRow.icon, "RIGHT", 7, 0); lootRow.name:SetWidth(455); lootRow.name:SetJustifyH("LEFT")
         lootRow.hit.label = lootRow.name; lootRow.hit.iconRegion = lootRow.icon
         lootRow.hit:SetScript("OnEnter", OnLootItemEnter); lootRow.hit:SetScript("OnLeave", OnLootItemLeave); lootRow.hit:SetScript("OnClick", OnLootItemClick); lootRow.hit:Hide()
         row.lootRows[lootIndex] = lootRow
     end
-    row.lootScroll = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRaidLootScroll" .. index, row.lootPanel, "FauxScrollFrameTemplate")
+    row.lootScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidLootScroll" .. index, row.lootPanel, "FauxScrollFrameTemplate")
     row.lootScroll:SetPoint("TOPLEFT", row.lootPanel, "TOPLEFT", 8, -24); row.lootScroll:SetPoint("BOTTOMRIGHT", row.lootPanel, "BOTTOMRIGHT", -30, 8)
     row.lootScrollBar = getglobal(row.lootScroll:GetName() .. "ScrollBar")
     if row.lootScrollBar then
@@ -558,22 +558,22 @@ function RaidManagement.CreateListHeaders(page, onSort)
     local index
     for index = 1, table.getn(listHeaderSpecs) do
         local spec = listHeaderSpecs[index]
-        local label = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local label = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
         label:SetPoint("TOPLEFT", page, "TOPLEFT", spec[3], -110)
         label:SetWidth(spec[4]); label:SetJustifyH("LEFT"); label:SetText(spec[1]); label:Hide()
-        local button = CreateFrame("Button", nil, page)
+        local button = MOS.UI.Components.CreateControl(nil, page)
         button:SetPoint("TOPLEFT", page, "TOPLEFT", spec[3], -106); button:SetWidth(spec[4]); button:SetHeight(22)
         button.label = label; button.baseText = spec[1]; button.sortKey = spec[2]; button.defaultAscending = true; button.headerController = ui.controller
-        local highlight = button:CreateTexture(nil, "HIGHLIGHT"); highlight:SetAllPoints(button); highlight:SetTexture(1, 0.72, 0.12, 0.12)
+        local highlight = MOS.UI.Components.CreateTexture(button, nil, "HIGHLIGHT"); highlight:SetAllPoints(button); highlight:SetTexture(1, 0.72, 0.12, 0.12)
         button:SetScript("OnClick", OnListHeaderClick); button:Hide()
         ui.buttons[index] = button
     end
     ui.name = ui.buttons[1].label; ui.group = ui.buttons[2].label; ui.class = ui.buttons[3].label
     ui.rank = ui.buttons[4].label; ui.sr = ui.buttons[5].label; ui.level = ui.buttons[6].label; ui.levelButton = ui.buttons[6]
 
-    ui.online = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ui.online = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
     ui.online:SetWidth(62); ui.online:SetJustifyH("LEFT"); ui.online:SetText("Status"); ui.online:Hide()
-    ui.onlineButton = CreateFrame("Button", nil, page)
+    ui.onlineButton = MOS.UI.Components.CreateControl(nil, page)
     ui.onlineButton:SetWidth(62); ui.onlineButton:SetHeight(22); ui.onlineButton.label = ui.online; ui.onlineButton.baseText = "Status"
     ui.onlineButton.sortKey = "online"; ui.onlineButton.defaultAscending = false; ui.onlineButton.headerController = ui.controller
     ui.onlineButton:SetScript("OnClick", OnListHeaderClick); ui.onlineButton:Hide()
@@ -595,24 +595,24 @@ end
 
 function RaidManagement.CreateGroupViewport(page)
     page.raidView = "list"
-    page.viewButton = MOS.UI.CreateButton(page, nil, "Group View", 92, 22)
+    page.viewButton = MOS.UI.Components.CreateButton(page, nil, "Group View", 92, 22)
     page.viewButton:Hide()
-    page.classicListButton = MOS.UI.CreateButton(page, nil, "List", 90, 24); page.classicListButton:Hide()
-    page.classicGroupButton = MOS.UI.CreateButton(page, nil, "Groups", 100, 24); page.classicGroupButton:Hide()
-    page.classicTwoButton = MOS.UI.CreateButton(page, nil, "2 x 4", 78, 24); page.classicTwoButton:Hide()
-    page.classicFourButton = MOS.UI.CreateButton(page, nil, "4 x 2", 76, 24); page.classicFourButton:Hide()
-    MOS.UI.SetClassicButtonIcon(page.classicListButton, "list", 13, 7, 2); MOS.UI.SetClassicButtonIcon(page.classicGroupButton, "groups", 13, 7, 2)
-    MOS.UI.SetClassicButtonIcon(page.classicTwoButton, "list", 12, 7, 2); MOS.UI.SetClassicButtonIcon(page.classicFourButton, "groups", 12, 7, 2)
-    MOS.UI.SetClassicButtonLabelOffset(page.classicListButton, 2); MOS.UI.SetClassicButtonLabelOffset(page.classicGroupButton, 2)
-    MOS.UI.SetClassicButtonLabelOffset(page.classicTwoButton, 2); MOS.UI.SetClassicButtonLabelOffset(page.classicFourButton, 2)
-    page.groupFrame = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRaidGroupScroll", page, "UIPanelScrollFrameTemplate")
+    page.classicListButton = MOS.UI.Components.CreateButton(page, nil, "List", 90, 24); page.classicListButton:Hide()
+    page.classicGroupButton = MOS.UI.Components.CreateButton(page, nil, "Groups", 100, 24); page.classicGroupButton:Hide()
+    page.classicTwoButton = MOS.UI.Components.CreateButton(page, nil, "2 x 4", 78, 24); page.classicTwoButton:Hide()
+    page.classicFourButton = MOS.UI.Components.CreateButton(page, nil, "4 x 2", 76, 24); page.classicFourButton:Hide()
+    MOS.UI.Components.SetClassicButtonIcon(page.classicListButton, "list", 13, 7, 2); MOS.UI.Components.SetClassicButtonIcon(page.classicGroupButton, "groups", 13, 7, 2)
+    MOS.UI.Components.SetClassicButtonIcon(page.classicTwoButton, "list", 12, 7, 2); MOS.UI.Components.SetClassicButtonIcon(page.classicFourButton, "groups", 12, 7, 2)
+    MOS.UI.Components.SetClassicButtonLabelOffset(page.classicListButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicGroupButton, 2)
+    MOS.UI.Components.SetClassicButtonLabelOffset(page.classicTwoButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicFourButton, 2)
+    page.groupFrame = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidGroupScroll", page, "UIPanelScrollFrameTemplate")
     page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -72)
     page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -30, 10)
-    page.groupCanvas = CreateFrame("Frame", nil, page.groupFrame)
+    page.groupCanvas = MOS.UI.Components.CreateContainer(nil, page.groupFrame)
     page.groupCanvas:SetWidth(1); page.groupCanvas:SetHeight(1)
     page.groupFrame:SetScrollChild(page.groupCanvas)
     page.groupScrollBar = getglobal("MuklaOfficerSuiteRaidGroupScrollScrollBar")
-    MOS.UI.RegisterSkinnedScrollBar(page.groupScrollBar)
+    MOS.UI.Components.RegisterSkinnedScrollBar(page.groupScrollBar)
     page.groupFrame.groupPage = page
     page.groupFrame:EnableMouseWheel(true); page.groupFrame:SetScript("OnMouseWheel", OnGroupViewportMouseWheel)
     page.groupFrame:Hide()
@@ -646,12 +646,12 @@ function RaidManagement.CreateListViewport(page, rowCount, controller)
     local rows = {}
     local index
     for index = 1, rowCount do rows[index] = RaidManagement.CreateListRow(page, index, controller) end
-    local scrollFrame = CreateFrame("ScrollFrame", "MuklaOfficerSuiteRaidScrollFrame", page, "FauxScrollFrameTemplate")
+    local scrollFrame = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidScrollFrame", page, "FauxScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", -4, -121)
     scrollFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -12, 18)
     page.listRows = rows; page.listScrollFrame = scrollFrame
     page.listScrollBar = getglobal("MuklaOfficerSuiteRaidScrollFrameScrollBar")
-    MOS.UI.RegisterSkinnedScrollBar(page.listScrollBar)
+    MOS.UI.Components.RegisterSkinnedScrollBar(page.listScrollBar)
     return rows, scrollFrame
 end
 
@@ -679,7 +679,7 @@ function RaidManagement.MountList(page, chrome, options)
         page = page, runMemberAction = options.runMemberAction, isSelected = options.isSelected,
         refresh = options.refresh, onSelect = options.onSelect, removeSoftReserve = function(memberName)
             pendingSoftReserveRemoval = memberName
-            MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_REMOVE_MEMBER_SR", memberName)
+            MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_REMOVE_MEMBER_SR", memberName)
             return false
         end,
     })
@@ -697,11 +697,11 @@ function RaidManagement.AttachResizeHandler(page, refresh)
     page.resizeRefresh = refresh
     page:SetScript("OnUpdate", nil)
     page:SetScript("OnSizeChanged", OnRaidPageSizeChanged)
-    MOS.UI.RegisterSkinCallback(function() if page:IsVisible() then refresh() end end)
+    MOS.UI.Components.RegisterSkinCallback(function() if page:IsVisible() then refresh() end end)
 end
 
 function RaidManagement.BeginRefresh(page, rows)
-    page.groupFrame:Hide(); MOS.UI.SetScrollBarVisible(page.groupScrollBar, false); page.viewButton:Hide()
+    page.groupFrame:Hide(); MOS.UI.Components.SetScrollBarVisible(page.groupScrollBar, false); page.viewButton:Hide()
     page.classicToolbar:Hide()
     page.classicSummary:Hide()
     page.lmConfigToggle:Hide()
@@ -758,15 +758,15 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
         controls.modeButton:SetScale(1); controls.minimizeButton:SetScale(1)
         controls.modeButton:ClearAllPoints(); controls.modeButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -8); controls.modeButton:SetWidth(18); controls.modeButton:SetHeight(18); controls.modeButton:SetText("X")
         controls.minimizeButton:ClearAllPoints(); controls.minimizeButton:SetPoint("RIGHT", controls.modeButton, "LEFT", -4, 0); controls.minimizeButton:SetWidth(18); controls.minimizeButton:SetHeight(18); controls.minimizeButton:SetText("_")
-        MOS.UI.SetClassicButtonCompact(controls.modeButton, true)
-        if controls.modeButton.mosClassicIconKey then MOS.UI.SetClassicButtonIcon(controls.modeButton, nil) end
+        MOS.UI.Components.SetClassicButtonCompact(controls.modeButton, true)
+        if controls.modeButton.mosClassicIconKey then MOS.UI.Components.SetClassicButtonIcon(controls.modeButton, nil) end
         controls.searchLabel:ClearAllPoints(); controls.searchLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -10); controls.searchLabel:SetWidth(52); controls.searchLabel:SetJustifyH("LEFT"); controls.searchLabel:SetText("LM Mode")
         page.lmConfigToggle:ClearAllPoints(); page.lmConfigToggle:SetPoint("RIGHT", controls.minimizeButton, "LEFT", -4, 0)
         controls.searchLabel:Hide(); controls.searchBox:Hide(); controls.classButton:Hide(); controls.rankButton:Hide()
         return
     end
 
-    local classic = MOS.UI.IsClassicSkin()
+    local classic = MOS.UI.Components.IsClassicSkin()
     page.reyCoinToggle:Hide(); page.reyCoinPanel:Hide(); page.lmConfigPanel:Hide(); page.lmConfigToggle:Hide()
     local submenuOffset = classic and ((page.activeToolMenu and 32 or 0) + (page.classicActionOffset or 0) + (page.classicToolbarOffset or 0)) or 0
     controls.filterLabel:ClearAllPoints(); controls.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -106 - submenuOffset)
@@ -775,9 +775,9 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
     controls.classButton:ClearAllPoints(); controls.classButton:SetPoint("TOPLEFT", page, "TOPLEFT", 50, -100 - submenuOffset); controls.classButton:SetWidth(filterWidth)
     controls.rankButton:ClearAllPoints(); controls.rankButton:SetPoint("LEFT", controls.classButton, "RIGHT", 8, 0); controls.rankButton:SetWidth(filterWidth)
     controls.resetButton:ClearAllPoints(); controls.resetButton:SetPoint("LEFT", controls.rankButton, "RIGHT", 8, 0)
-    MOS.UI.SetClassicButtonCompact(controls.modeButton, false)
+    MOS.UI.Components.SetClassicButtonCompact(controls.modeButton, false)
     controls.modeButton:SetWidth(96); controls.modeButton:SetHeight(22)
-    if not controls.modeButton.mosClassicIconKey then MOS.UI.SetClassicButtonIcon(controls.modeButton, "loot_tools", 13, 7, 0) end
+    if not controls.modeButton.mosClassicIconKey then MOS.UI.Components.SetClassicButtonIcon(controls.modeButton, "loot_tools", 13, 7, 0) end
     controls.searchLabel:SetText("Search")
     controls.searchLabel:SetWidth(42)
     controls.searchLabel:ClearAllPoints()
@@ -881,15 +881,15 @@ function RaidManagement.RefreshPage(renderer)
     renderer.countRefresh()
     RaidManagement.BeginRefresh(page, rows)
     local pageWidth = PageSpan(page)
-    page.classicActionOffset = MOS.UI.IsClassicSkin() and pageWidth < 680 and 38 or 0
-    page.classicActionScale = MOS.UI.IsClassicSkin() and page.classicActionOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 270) / 544)) or 1
-    page.classicToolbarOffset = MOS.UI.IsClassicSkin() and page.raidView == "groups" and pageWidth < 616 and 30 or 0
+    page.classicActionOffset = MOS.UI.Components.IsClassicSkin() and pageWidth < 680 and 38 or 0
+    page.classicActionScale = MOS.UI.Components.IsClassicSkin() and page.classicActionOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 270) / 544)) or 1
+    page.classicToolbarOffset = MOS.UI.Components.IsClassicSkin() and page.raidView == "groups" and pageWidth < 616 and 30 or 0
     local attendance = renderer.getData()
     local importInfo = attendance and attendance.softReserveImport
     local raidId = attendance and (attendance.snapshotId or (importInfo and importInfo.id))
     if attendance and raidId then
         local savedText = attendance.lastSavedAt and date("%Y-%m-%d %H:%M", attendance.lastSavedAt) or "Not saved yet"
-        if MOS.UI.IsClassicSkin() then
+        if MOS.UI.Components.IsClassicSkin() then
             local issueCount = 0
             local issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
             if table.getn(issues.unmatchedNames) > 0 then issueCount = issueCount + 1 end
@@ -913,7 +913,7 @@ function RaidManagement.RefreshPage(renderer)
         page.refreshControls.title:Hide(); page.classicRaidName:Hide(); page.classicMeta:Hide()
         page.classicSaved:Hide(); page.classicIssues:Hide()
     end
-    if MOS.UI.IsClassicSkin() and attendance and attendance.members then
+    if MOS.UI.Components.IsClassicSkin() and attendance and attendance.members then
         local memberCount, onlineCount, memberIndex = table.getn(attendance.members), 0, nil
         for memberIndex = 1, memberCount do if attendance.members[memberIndex].online then onlineCount = onlineCount + 1 end end
         page.classicSummary:SetText(memberCount .. " | " .. onlineCount .. " online | " .. (memberCount - onlineCount) .. " offline")
@@ -988,7 +988,7 @@ end
 
 function RaidManagement.ShowReadyState(page, lootMasterMode)
     local controls = page.refreshControls
-    if MOS.UI.IsClassicSkin() and not lootMasterMode then page.classicToolbar:Show(); page.classicSummary:Show() else page.classicToolbar:Hide(); page.classicSummary:Hide() end
+    if MOS.UI.Components.IsClassicSkin() and not lootMasterMode then page.classicToolbar:Show(); page.classicSummary:Show() else page.classicToolbar:Hide(); page.classicSummary:Hide() end
     controls.mode:Show(); controls.scan:Hide(); controls.live:Hide()
     controls.testRaid:Hide()
     RaidManagement.HideRaidHistoryControls(controls)
@@ -1004,9 +1004,9 @@ function RaidManagement.ShowReadyState(page, lootMasterMode)
         controls.resetFilters:Show(); controls.raidLeaderTools:Show(); controls.lootMasterTools:Show(); controls.addStatistics:Hide(); controls.export:Show(); controls.quit:Show()
         controls.leaderMode:Hide(); controls.mode:Hide(); controls.lootRules:Hide(); controls.sendLootRules:Hide(); controls.import:Hide(); controls.shareSr:Hide(); controls.resetLoot:Hide()
         if page.isTestRaid and page.isTestRaid() then
-            controls.export:Disable(); MOS.UI.SetClassicButtonDisabled(controls.export, true)
+            controls.export:Disable(); MOS.UI.Components.SetClassicButtonDisabled(controls.export, true)
         else
-            controls.export:Enable(); MOS.UI.SetClassicButtonDisabled(controls.export, false)
+            controls.export:Enable(); MOS.UI.Components.SetClassicButtonDisabled(controls.export, false)
         end
         controls.shareSr:Enable(); controls.import:Enable()
         controls.live:Hide(); controls.scan:Hide(); controls.minimize:Hide()
@@ -1016,15 +1016,15 @@ end
 
 function RaidManagement.UpdateViewSelector(page, lootMasterMode)
     if lootMasterMode then return end
-    if MOS.UI.IsClassicSkin() then
+    if MOS.UI.Components.IsClassicSkin() then
         page.viewButton:Hide()
         page.classicListButton:Show(); page.classicGroupButton:Show()
         if page.raidView == "groups" then page.classicTwoButton:Show(); page.classicFourButton:Show()
         else page.classicTwoButton:Hide(); page.classicFourButton:Hide() end
-        MOS.UI.SetClassicButtonSelected(page.classicListButton, page.raidView == "list")
-        MOS.UI.SetClassicButtonSelected(page.classicGroupButton, page.raidView == "groups")
-        MOS.UI.SetClassicButtonSelected(page.classicTwoButton, page.raidView == "groups" and tonumber(MuklaOfficerSuiteDB.raidGroupColumns) == 2)
-        MOS.UI.SetClassicButtonSelected(page.classicFourButton, page.raidView == "groups" and tonumber(MuklaOfficerSuiteDB.raidGroupColumns) == 4)
+        MOS.UI.Components.SetClassicButtonSelected(page.classicListButton, page.raidView == "list")
+        MOS.UI.Components.SetClassicButtonSelected(page.classicGroupButton, page.raidView == "groups")
+        MOS.UI.Components.SetClassicButtonSelected(page.classicTwoButton, page.raidView == "groups" and tonumber(MuklaOfficerSuiteDB.raidGroupColumns) == 2)
+        MOS.UI.Components.SetClassicButtonSelected(page.classicFourButton, page.raidView == "groups" and tonumber(MuklaOfficerSuiteDB.raidGroupColumns) == 4)
         RaidManagement.LayoutActions(page)
         return
     end
@@ -1124,7 +1124,7 @@ function RaidManagement.ShowGroupView(page, rows)
     controls.classButton:Hide(); controls.rankButton:Hide(); controls.classPanel:Hide(); controls.rankPanel:Hide()
     RaidManagement.HideListTable(page, rows)
     page.groupFrame:ClearAllPoints()
-    if MOS.UI.IsClassicSkin() then
+    if MOS.UI.Components.IsClassicSkin() then
         local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
         if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then warningWidth = 0 end
         page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 20, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(warningWidth + 24), 8)
@@ -1165,7 +1165,7 @@ end
 
 function RaidManagement.RefreshListView(page, rows, members, selectedName, sortKey, lootMasterMode, settings)
     local renderer = page.listRenderer
-    if MOS.UI.IsClassicSkin() then
+    if MOS.UI.Components.IsClassicSkin() then
         page.classicWarningWidth = RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true)
         if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then page.classicWarningWidth = 0 end
     else page.classicWarningWidth = 0; RaidManagement.RestoreDefaultWarningLayout(page) end
@@ -1174,7 +1174,7 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     local searchSpace = pageWidth - (page.classicWarningWidth or 0) - ((page.classicWarningWidth or 0) > 0 and 8 or 12)
     local searchFixed = 50 + (filterWidth * 2) + 16 + 104 + 10 + 45 + 8 + 4 + 24
     local searchWidth = searchSpace - searchFixed
-    page.classicSearchOffset = not lootMasterMode and MOS.UI.IsClassicSkin() and settings.raidListShowFilters and settings.raidListShowSearch and searchWidth < 90 and 30 or 0
+    page.classicSearchOffset = not lootMasterMode and MOS.UI.Components.IsClassicSkin() and settings.raidListShowFilters and settings.raidListShowSearch and searchWidth < 90 and 30 or 0
     page.classicSearchWidth = (page.classicSearchOffset or 0) > 0 and math.max(60, math.min(178, searchSpace - 93)) or math.max(90, math.min(178, searchWidth))
     if not settings.raidListShowFilters then page.classicSearchWidth = math.max(90, math.min(178, searchSpace - 93)) end
     RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
@@ -1186,7 +1186,7 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     local showUnmatched = not lootMasterMode and table.getn(unmatchedNames) > 0 and not page.softReserveWarning.userDismissed
     local showMissing = not lootMasterMode and table.getn(missingNames) > 0 and not page.missingSoftReserveWarning.userDismissed
     local showInvalid = not lootMasterMode and table.getn(invalidNames) > 0 and not page.invalidSoftReserveWarning.userDismissed
-    if MOS.UI.IsClassicSkin() then
+    if MOS.UI.Components.IsClassicSkin() then
         warningHeight = 0
     elseif showUnmatched or showMissing or showInvalid then
         local availableWarningWidth = math.max(1, page:GetWidth() - 42)
@@ -1230,10 +1230,10 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
         page.softReserveWarning:Hide(); page.missingSoftReserveWarning:Hide(); page.invalidSoftReserveWarning:Hide()
     end
     local scrollFrame = page.listScrollFrame
-    local listBottom = lootMasterMode and 3 or (MOS.UI.IsClassicSkin() and 8 or 22)
+    local listBottom = lootMasterMode and 3 or (MOS.UI.Components.IsClassicSkin() and 8 or 22)
     scrollFrame:ClearAllPoints(); scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", tableLeft, rowStartY); scrollFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", tableLeft + tableWidth, listBottom + warningHeight)
     if page.listScrollBar then
-        local scrollBarBottom = lootMasterMode and (listBottom + 12) or (MOS.UI.IsClassicSkin() and 16 or listBottom)
+        local scrollBarBottom = lootMasterMode and (listBottom + 12) or (MOS.UI.Components.IsClassicSkin() and 16 or listBottom)
         page.listScrollBar:ClearAllPoints(); page.listScrollBar:SetWidth(16); page.listScrollBar:SetPoint("TOPLEFT", page, "TOPLEFT", tableLeft + tableWidth + 4, rowStartY); page.listScrollBar:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", tableLeft + tableWidth + 4, scrollBarBottom + warningHeight)
     end
     local rowStep = lootMasterMode and 21 or ((tonumber(settings.raidListRowHeight) or 20) + 1)
@@ -1380,7 +1380,7 @@ function RaidManagement.FilterMembers(target, members, query, selectedClasses, s
 end
 
 function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMasterMode, configuredRowWidth, memberCount, selectedName)
-    local submenuOffset = not lootMasterMode and MOS.UI.IsClassicSkin() and ((page.activeToolMenu and 32 or 0) + (page.classicActionOffset or 0) + (page.classicToolbarOffset or 0) + (page.classicSearchOffset or 0)) or 0
+    local submenuOffset = not lootMasterMode and MOS.UI.Components.IsClassicSkin() and ((page.activeToolMenu and 32 or 0) + (page.classicActionOffset or 0) + (page.classicToolbarOffset or 0) + (page.classicSearchOffset or 0)) or 0
     local headerY = lootMasterMode and -29 or -134 - submenuOffset
     local rowStartY = lootMasterMode and -46 or -156 - submenuOffset
     local positions = lootMasterMode and lootHeaderPositions or normalHeaderPositions
@@ -1410,7 +1410,7 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
 
     local tableLeft = lootMasterMode and 3 or 12
     local pageWidth, pageHeight = PageSpan(page)
-    local classic = MOS.UI.IsClassicSkin()
+    local classic = MOS.UI.Components.IsClassicSkin()
     local warningWidth = classic and (page.classicWarningWidth or 0) or 0
     -- Leave room for the separately anchored 16-unit scrollbar and its gap.
     local tableRight = pageWidth - (classic and warningWidth == 0 and 24 or 30) - (warningWidth > 0 and (warningWidth + 18) or 0)
@@ -1420,13 +1420,13 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
         local needsScroll = not selectedName and (memberCount or 0) > visibleRows
         tableRight = pageWidth - (needsScroll and 21 or 3)
     end
-    if MOS.UI.IsClassicSkin() and (tonumber(page.classicWarningWidth) or 0) > 0 and page:GetLeft() then
+    if MOS.UI.Components.IsClassicSkin() and (tonumber(page.classicWarningWidth) or 0) > 0 and page:GetLeft() then
         local warning = page.softReserveWarning and page.softReserveWarning:IsVisible() and page.softReserveWarning
             or page.missingSoftReserveWarning and page.missingSoftReserveWarning:IsVisible() and page.missingSoftReserveWarning
             or page.invalidSoftReserveWarning
         if warning and warning:IsVisible() and warning:GetLeft() then tableRight = warning:GetLeft() - page:GetLeft() - 30 end
     end
-    if not MOS.UI.IsClassicSkin() and page.listScrollBar and page.listScrollBar:GetLeft() and page:GetLeft() then
+    if not MOS.UI.Components.IsClassicSkin() and page.listScrollBar and page.listScrollBar:GetLeft() and page:GetLeft() then
         tableRight = page.listScrollBar:GetLeft() - page:GetLeft() - 4
     end
     local availableWidth = math.max(1, tableRight - tableLeft)
@@ -1558,7 +1558,7 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
     row.class:SetText(shorten(member.class, 12))
     row.rank:SetText(shorten(member.guildRank ~= "" and member.guildRank or "Guest", 18))
     local itemId = member.srItemIds and member.srItemIds[1]
-    row.sr:SetText(itemId and MOS.UI.GetItemLabel(itemId) or "")
+    row.sr:SetText(itemId and MOS.UI.Components.GetItemLabel(itemId) or "")
     row.srHit.itemId = itemId
     local srTexture = itemId and type(GetItemIcon) == "function" and GetItemIcon(itemId) or nil
     if not srTexture and itemId then local _, _, _, _, _, _, _, _, _, cachedTexture = GetItemInfo(itemId); srTexture = cachedTexture end
@@ -1570,7 +1570,7 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
     if member.online and MuklaOfficerSuiteDB.raidClassColors then
         local classKey = string.upper(member.classFile or "")
         local className = string.upper(member.class or "")
-        local classColor = (RAID_CLASS_COLORS and (RAID_CLASS_COLORS[classKey] or RAID_CLASS_COLORS[className])) or MOS.UI.Theme.classColors[classKey] or MOS.UI.Theme.classColors[className]
+        local classColor = (RAID_CLASS_COLORS and (RAID_CLASS_COLORS[classKey] or RAID_CLASS_COLORS[className])) or MOS.UI.Components.Theme.classColors[classKey] or MOS.UI.Components.Theme.classColors[className]
         if classColor then
             row.name:SetTextColor(classColor.r * shade, classColor.g * shade, classColor.b * shade)
             row.class:SetTextColor(classColor.r * shade, classColor.g * shade, classColor.b * shade)
@@ -1598,7 +1598,7 @@ function RaidManagement.ExpandListRow(row, member, lootMasterMode, requestedHeig
     local pressedColor = MuklaOfficerSuiteDB.raidListPressedColor
     row:SetBackdropColor(pressedColor[1], pressedColor[2], pressedColor[3], 0.98)
     row:SetBackdropBorderColor(0.7, 0.55, 0.15, 0.9)
-    MOS.UI.SetClassicRowShade(row, false, false, true)
+    MOS.UI.Components.SetClassicRowShade(row, false, false, true)
     row.lootPanel:Show()
     local loot = member.loot or {}
     table.sort(loot, SortLootByName)
@@ -1621,7 +1621,7 @@ function RaidManagement.ExpandListRow(row, member, lootMasterMode, requestedHeig
             if itemId and type(GetItemIcon) == "function" then refreshedTexture = GetItemIcon(itemId) or refreshedTexture end
             if realName then item.name = realName end; if realLink then item.link = realLink end; if refreshedTexture then item.icon = refreshedTexture end
             lootRow.icon:SetTexture(item.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-            lootRow.name:SetText((itemId and MOS.UI.GetItemLabel(itemId) or (item.name or "Unknown item")) .. ((tonumber(item.count) or 1) > 1 and (" x " .. item.count) or ""))
+            lootRow.name:SetText((itemId and MOS.UI.Components.GetItemLabel(itemId) or (item.name or "Unknown item")) .. ((tonumber(item.count) or 1) > 1 and (" x " .. item.count) or ""))
             lootRow.hit.itemId = itemId; lootRow.hit.itemName = item.name; lootRow.hit.itemLink = item.link; lootRow.hit.itemCount = item.count; lootRow.hit.rollHistory = item.rollHistory; lootRow.hit.labelSuffix = (tonumber(item.count) or 1) > 1 and (" x " .. item.count) or ""; lootRow.hit:Show(); lootRow.icon:Show(); lootRow.name:Show()
         else
             lootRow.hit.itemId = nil; lootRow.hit.itemName = nil; lootRow.hit.itemLink = nil; lootRow.hit.itemCount = nil; lootRow.hit.rollHistory = nil; lootRow.hit.labelSuffix = nil; lootRow.hit:Hide(); lootRow.icon:Hide(); lootRow.name:Hide()
@@ -1635,7 +1635,7 @@ function RaidManagement.CollapseListRow(row, visibleIndex, lootMasterMode, rowSt
     local background = MuklaOfficerSuiteDB.raidListBackgroundColor
     row:SetBackdropColor(background[1], background[2], background[3], math.mod(visibleIndex, 2) == 0 and 0.98 or 0.82)
     row:SetBackdropBorderColor(0, 0, 0, 0)
-    MOS.UI.SetClassicRowShade(row, math.mod(visibleIndex, 2) == 0, false)
+    MOS.UI.Components.SetClassicRowShade(row, math.mod(visibleIndex, 2) == 0, false)
     row.lootPanel:Hide()
     return rowStep
 end
@@ -1767,13 +1767,13 @@ local function OnGroupSlotDragStop()
 end
 
 local function OnGroupSlotEnter()
-    if MOS.UI.IsClassicSkin() then MOS.UI.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, true) end
+    if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, true) end
     local color = MuklaOfficerSuiteDB.raidGroupHoverColor; this:SetBackdropColor(color[1], color[2], color[3], 0.98)
     if MOS.dragRaidIndex then MOS.raidDropSlot = this end
 end
 
 local function OnGroupSlotLeave()
-    if MOS.UI.IsClassicSkin() then MOS.UI.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, false) end
+    if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, false) end
     local color = MuklaOfficerSuiteDB.raidGroupBackgroundColor; this:SetBackdropColor(color[1], color[2], color[3], 0.98)
     if MOS.raidDropSlot == this then MOS.raidDropSlot = nil end
 end
@@ -1813,7 +1813,7 @@ function RaidManagement.RefreshGroupView(page)
     if page.groupScrollBar then
         page.groupScrollBar:SetMinMaxValues(0, maximum)
         page.groupScrollBar:SetValue(math.max(0, math.min(maximum, page.groupFrame:GetVerticalScroll())))
-        MOS.UI.SetScrollBarVisible(page.groupScrollBar, maximum > 0)
+        MOS.UI.Components.SetScrollBarVisible(page.groupScrollBar, maximum > 0)
     end
     local groupIndex, slotIndex
     for groupIndex = 1, 8 do
@@ -1832,7 +1832,7 @@ function RaidManagement.RefreshGroupView(page)
             SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
             slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x + 4, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(columnWidth - 8); slot:SetHeight(slotHeight)
             slot:SetBackdropColor(backgroundColor[1], backgroundColor[2], backgroundColor[3], 0.98); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
-            MOS.UI.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
+            MOS.UI.Components.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
             slot.empty:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55); slot.offline:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55)
             slot.raidIndex = nil; slot.hasMember = nil; slot.displayedMember.name = nil; slot.displayedMember.raidRank = nil
             slot.name:Hide(); slot.level:Hide(); slot.class:Hide(); slot.crown:Hide(); slot.lootMasterIcon:Hide(); slot.offline:Hide(); slot.empty:Show()
@@ -1920,32 +1920,32 @@ function RaidManagement.RefreshGroupView(page)
             slot.offline:SetTextColor(baseR * shade, baseG * shade, baseB * shade)
             slot.crown:SetAlpha(online and 1 or 0.55); slot.lootMasterIcon:SetAlpha(online and 1 or 0.55)
             local classKey = string.upper(classFile or class or "")
-            local color = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or MOS.UI.Theme.classColors[classKey]
+            local color = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or MOS.UI.Components.Theme.classColors[classKey]
             if online and MuklaOfficerSuiteDB.raidGroupClassColors and color then slot.name:SetTextColor(color.r, color.g, color.b); slot.class:SetTextColor(color.r, color.g, color.b) end
         end
     end
 end
 
 function RaidManagement.CreateDragGhost(page)
-    local ghost = CreateFrame("Frame", nil, UIParent)
+    local ghost = MOS.UI.Components.CreateContainer(nil, UIParent)
     ghost:SetWidth(300); ghost:SetHeight(20); ghost:SetFrameStrata("TOOLTIP"); ghost:EnableMouse(false)
     ghost:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 9, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     ghost:SetBackdropColor(0.025, 0.025, 0.025, 0.98); ghost:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
-    ghost.topEdge = ghost:CreateTexture(nil, "BORDER")
+    ghost.topEdge = MOS.UI.Components.CreateTexture(ghost, nil, "BORDER")
     ghost.topEdge:SetPoint("TOPLEFT", ghost, "TOPLEFT", 3, -2); ghost.topEdge:SetPoint("TOPRIGHT", ghost, "TOPRIGHT", -3, -2); ghost.topEdge:SetHeight(1); ghost.topEdge:SetTexture(0.42, 0.42, 0.42, 0.8)
-    ghost.bottomEdge = ghost:CreateTexture(nil, "BORDER")
+    ghost.bottomEdge = MOS.UI.Components.CreateTexture(ghost, nil, "BORDER")
     ghost.bottomEdge:SetPoint("BOTTOMLEFT", ghost, "BOTTOMLEFT", 3, 2); ghost.bottomEdge:SetPoint("BOTTOMRIGHT", ghost, "BOTTOMRIGHT", -3, 2); ghost.bottomEdge:SetHeight(1); ghost.bottomEdge:SetTexture(0, 0, 0, 1)
-    ghost.name = ghost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    ghost.name = MOS.UI.Components.CreateLabel(ghost, nil, "OVERLAY", "GameFontHighlightSmall")
     ghost.name:SetPoint("LEFT", ghost, "LEFT", 6, 0); ghost.name:SetJustifyH("LEFT")
-    ghost.crown = ghost:CreateTexture(nil, "OVERLAY")
+    ghost.crown = MOS.UI.Components.CreateTexture(ghost, nil, "OVERLAY")
     ghost.crown:SetPoint("LEFT", ghost, "LEFT", 5, 0); ghost.crown:SetWidth(13); ghost.crown:SetHeight(13); ghost.crown:Hide()
-    ghost.lootMasterIcon = ghost:CreateTexture(nil, "OVERLAY")
+    ghost.lootMasterIcon = MOS.UI.Components.CreateTexture(ghost, nil, "OVERLAY")
     ghost.lootMasterIcon:SetPoint("LEFT", ghost, "LEFT", 5, 0); ghost.lootMasterIcon:SetWidth(13); ghost.lootMasterIcon:SetHeight(13); ghost.lootMasterIcon:SetTexture("Interface\\GroupFrame\\UI-Group-MasterLooter"); ghost.lootMasterIcon:Hide()
-    ghost.level = ghost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    ghost.level = MOS.UI.Components.CreateLabel(ghost, nil, "OVERLAY", "GameFontHighlightSmall")
     ghost.level:SetPoint("RIGHT", ghost, "RIGHT", -76, 0); ghost.level:SetJustifyH("RIGHT")
-    ghost.class = ghost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    ghost.class = MOS.UI.Components.CreateLabel(ghost, nil, "OVERLAY", "GameFontHighlightSmall")
     ghost.class:SetPoint("RIGHT", ghost, "RIGHT", -6, 0); ghost.class:SetWidth(64); ghost.class:SetJustifyH("RIGHT")
-    ghost.offline = ghost:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    ghost.offline = MOS.UI.Components.CreateLabel(ghost, nil, "OVERLAY", "GameFontDisableSmall")
     ghost.offline:SetPoint("RIGHT", ghost, "RIGHT", -6, 0); ghost.offline:SetWidth(42); ghost.offline:SetJustifyH("RIGHT"); ghost.offline:SetText("Offline"); ghost.offline:Hide(); ghost:Hide()
     page.dragGhost = ghost
     page.updateDragGhost = function() RaidManagement.UpdateDragGhost(page) end
@@ -1958,30 +1958,30 @@ function RaidManagement.CreateGroupGrid(page)
     page.groupVacantSlots = { {}, {}, {}, {}, {}, {}, {}, {} }
     local groupIndex
     for groupIndex = 1, 8 do
-        local panel = CreateFrame("Frame", nil, page.groupCanvas)
+        local panel = MOS.UI.Components.CreateContainer(nil, page.groupCanvas)
         panel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }); panel:SetBackdropColor(0, 0, 0, 0); panel:SetBackdropBorderColor(0, 0, 0, 0)
-        MOS.UI.RegisterSkinnedSurface(panel, "panel", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
+        MOS.UI.Components.RegisterSkinnedSurface(panel, "panel", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
         page.groupPanels[groupIndex] = panel
-        local header = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        local header = MOS.UI.Components.CreateLabel(panel, nil, "OVERLAY", "GameFontNormalSmall")
         header:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, -4)
         header:SetText("Group " .. groupIndex); header:SetJustifyH("CENTER"); page.groupHeaders[groupIndex] = header
         page.groupSlots[groupIndex] = {}
         local slotIndex
         for slotIndex = 1, 5 do
-            local slot = CreateFrame("Button", nil, page.groupCanvas)
+            local slot = MOS.UI.Components.CreateControl(nil, page.groupCanvas)
             slot:SetHeight(18)
             slot:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
             slot:SetBackdropColor(0.025, 0.025, 0.025, 0.98); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
-            MOS.UI.RegisterSkinnedSurface(slot, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0.025, 0.025, 0.025, 0.98 }, { 0.42, 0.42, 0.42, 1 })
-            slot.topEdge = slot:CreateTexture(nil, "BORDER"); slot.topEdge:SetPoint("TOPLEFT", slot, "TOPLEFT", 3, -2); slot.topEdge:SetPoint("TOPRIGHT", slot, "TOPRIGHT", -3, -2); slot.topEdge:SetHeight(1); slot.topEdge:SetTexture(0.42, 0.42, 0.42, 0.8)
-            slot.bottomEdge = slot:CreateTexture(nil, "BORDER"); slot.bottomEdge:SetPoint("BOTTOMLEFT", slot, "BOTTOMLEFT", 3, 2); slot.bottomEdge:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", -3, 2); slot.bottomEdge:SetHeight(1); slot.bottomEdge:SetTexture(0, 0, 0, 1)
-            slot.name = slot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); slot.name:SetPoint("LEFT", slot, "LEFT", 6, 0); slot.name:SetJustifyH("LEFT")
-            slot.crown = slot:CreateTexture(nil, "OVERLAY"); slot.crown:SetPoint("LEFT", slot, "LEFT", 5, 0); slot.crown:SetWidth(13); slot.crown:SetHeight(13); slot.crown:Hide()
-            slot.lootMasterIcon = slot:CreateTexture(nil, "OVERLAY"); slot.lootMasterIcon:SetPoint("RIGHT", slot, "RIGHT", -4, 0); slot.lootMasterIcon:SetWidth(13); slot.lootMasterIcon:SetHeight(13); slot.lootMasterIcon:SetTexture("Interface\\GroupFrame\\UI-Group-MasterLooter"); slot.lootMasterIcon:Hide()
-            slot.level = slot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); slot.level:SetPoint("RIGHT", slot, "RIGHT", -76, 0); slot.level:SetWidth(24); slot.level:SetJustifyH("RIGHT")
-            slot.class = slot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); slot.class:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.class:SetWidth(64); slot.class:SetJustifyH("RIGHT")
-            slot.empty = slot:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); slot.empty:SetPoint("CENTER", slot, "CENTER", 0, 0); slot.empty:SetText("Empty")
-            slot.offline = slot:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); slot.offline:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.offline:SetWidth(42); slot.offline:SetJustifyH("RIGHT"); slot.offline:SetText("Offline"); slot.offline:Hide()
+            MOS.UI.Components.RegisterSkinnedSurface(slot, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0.025, 0.025, 0.025, 0.98 }, { 0.42, 0.42, 0.42, 1 })
+            slot.topEdge = MOS.UI.Components.CreateTexture(slot, nil, "BORDER"); slot.topEdge:SetPoint("TOPLEFT", slot, "TOPLEFT", 3, -2); slot.topEdge:SetPoint("TOPRIGHT", slot, "TOPRIGHT", -3, -2); slot.topEdge:SetHeight(1); slot.topEdge:SetTexture(0.42, 0.42, 0.42, 0.8)
+            slot.bottomEdge = MOS.UI.Components.CreateTexture(slot, nil, "BORDER"); slot.bottomEdge:SetPoint("BOTTOMLEFT", slot, "BOTTOMLEFT", 3, 2); slot.bottomEdge:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", -3, 2); slot.bottomEdge:SetHeight(1); slot.bottomEdge:SetTexture(0, 0, 0, 1)
+            slot.name = MOS.UI.Components.CreateLabel(slot, nil, "OVERLAY", "GameFontHighlightSmall"); slot.name:SetPoint("LEFT", slot, "LEFT", 6, 0); slot.name:SetJustifyH("LEFT")
+            slot.crown = MOS.UI.Components.CreateTexture(slot, nil, "OVERLAY"); slot.crown:SetPoint("LEFT", slot, "LEFT", 5, 0); slot.crown:SetWidth(13); slot.crown:SetHeight(13); slot.crown:Hide()
+            slot.lootMasterIcon = MOS.UI.Components.CreateTexture(slot, nil, "OVERLAY"); slot.lootMasterIcon:SetPoint("RIGHT", slot, "RIGHT", -4, 0); slot.lootMasterIcon:SetWidth(13); slot.lootMasterIcon:SetHeight(13); slot.lootMasterIcon:SetTexture("Interface\\GroupFrame\\UI-Group-MasterLooter"); slot.lootMasterIcon:Hide()
+            slot.level = MOS.UI.Components.CreateLabel(slot, nil, "OVERLAY", "GameFontHighlightSmall"); slot.level:SetPoint("RIGHT", slot, "RIGHT", -76, 0); slot.level:SetWidth(24); slot.level:SetJustifyH("RIGHT")
+            slot.class = MOS.UI.Components.CreateLabel(slot, nil, "OVERLAY", "GameFontHighlightSmall"); slot.class:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.class:SetWidth(64); slot.class:SetJustifyH("RIGHT")
+            slot.empty = MOS.UI.Components.CreateLabel(slot, nil, "OVERLAY", "GameFontDisableSmall"); slot.empty:SetPoint("CENTER", slot, "CENTER", 0, 0); slot.empty:SetText("Empty")
+            slot.offline = MOS.UI.Components.CreateLabel(slot, nil, "OVERLAY", "GameFontDisableSmall"); slot.offline:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.offline:SetWidth(42); slot.offline:SetJustifyH("RIGHT"); slot.offline:SetText("Offline"); slot.offline:Hide()
             slot.targetGroup = groupIndex; slot.slotIndex = slotIndex; slot.displayedMember = {}; slot:RegisterForClicks("LeftButtonUp", "RightButtonUp"); slot:RegisterForDrag("LeftButton")
             RaidManagement.AttachGroupSlotHandlers(slot, page)
             page.groupSlots[groupIndex][slotIndex] = slot
@@ -1990,15 +1990,15 @@ function RaidManagement.CreateGroupGrid(page)
 end
 
 function RaidManagement.CreateMemberMenu(page, runAction, isIgnored)
-    local dismiss = CreateFrame("Button", nil, UIParent)
+    local dismiss = MOS.UI.Components.CreateControl(nil, UIParent)
     dismiss:SetAllPoints(UIParent); dismiss:SetFrameStrata("FULLSCREEN_DIALOG"); dismiss:SetFrameLevel(210); dismiss:Hide()
     page.memberMenuDismiss = dismiss
 
-    local menu = CreateFrame("Frame", nil, UIParent)
+    local menu = MOS.UI.Components.CreateContainer(nil, UIParent)
     menu:SetWidth(132); menu:SetHeight(168); menu:SetFrameStrata("FULLSCREEN_DIALOG"); menu:SetFrameLevel(220)
     menu:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     menu:SetBackdropColor(0.03, 0.03, 0.06, 0.98); menu:SetBackdropBorderColor(0.55, 0.55, 0.65, 1)
-    menu.title = menu:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    menu.title = MOS.UI.Components.CreateLabel(menu, nil, "OVERLAY", "GameFontNormalSmall")
     menu.title:SetPoint("TOPLEFT", menu, "TOPLEFT", 10, -9); menu.title:SetWidth(112); menu.title:SetJustifyH("LEFT")
     menu.buttons = {}
     page.memberMenu = menu
@@ -2006,9 +2006,9 @@ function RaidManagement.CreateMemberMenu(page, runAction, isIgnored)
     local menuSpecs = { { "New Leader", "leader" }, { "Promote", "assistant" }, { "Loot Master", "lootmaster" }, { "Remove", "remove" }, { "Report", "report" }, { "Ignore Player", "ignore" } }
     local menuIndex
     for menuIndex = 1, table.getn(menuSpecs) do
-        local button = CreateFrame("Button", nil, menu)
+        local button = MOS.UI.Components.CreateControl(nil, menu)
         button:SetPoint("TOPLEFT", menu, "TOPLEFT", 8, -24 - ((menuIndex - 1) * 20)); button:SetWidth(116); button:SetHeight(19)
-        button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        button.label = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlight")
         button.label:SetPoint("LEFT", button, "LEFT", 4, 0); button.label:SetJustifyH("LEFT"); button.label:SetText(menuSpecs[menuIndex][1])
         button.action = menuSpecs[menuIndex][2]
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
@@ -2020,9 +2020,9 @@ function RaidManagement.CreateMemberMenu(page, runAction, isIgnored)
         menu.buttons[menuIndex] = button
     end
 
-    menu.cancel = CreateFrame("Button", nil, menu)
+    menu.cancel = MOS.UI.Components.CreateControl(nil, menu)
     menu.cancel:SetPoint("TOPLEFT", menu, "TOPLEFT", 8, -144); menu.cancel:SetWidth(116); menu.cancel:SetHeight(19)
-    menu.cancel.label = menu.cancel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    menu.cancel.label = MOS.UI.Components.CreateLabel(menu.cancel, nil, "OVERLAY", "GameFontHighlight")
     menu.cancel.label:SetPoint("LEFT", menu.cancel, "LEFT", 4, 0); menu.cancel.label:SetText("Cancel")
     menu.cancel:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     menu.cancel:SetScript("OnClick", function() menu:Hide() end)
@@ -2072,20 +2072,20 @@ end
 function RaidManagement.UpdateToolSubmenu(page)
     local controls = page.refreshControls
     controls.leaderMode:Hide(); controls.mode:Hide(); controls.resetLoot:Hide(); controls.import:Hide(); controls.shareSr:Hide(); controls.lootRules:Hide(); controls.sendLootRules:Hide()
-    if MOS.UI.IsClassicSkin() then
-        MOS.UI.SetClassicButtonVariant(controls.raidLeaderTools, "dark")
-        MOS.UI.SetClassicButtonVariant(controls.lootMasterTools, "dark")
-        MOS.UI.SetClassicButtonSelected(controls.raidLeaderTools, page.activeToolMenu == "leader")
-        MOS.UI.SetClassicButtonSelected(controls.lootMasterTools, page.activeToolMenu == "loot")
+    if MOS.UI.Components.IsClassicSkin() then
+        MOS.UI.Components.SetClassicButtonVariant(controls.raidLeaderTools, "dark")
+        MOS.UI.Components.SetClassicButtonVariant(controls.lootMasterTools, "dark")
+        MOS.UI.Components.SetClassicButtonSelected(controls.raidLeaderTools, page.activeToolMenu == "leader")
+        MOS.UI.Components.SetClassicButtonSelected(controls.lootMasterTools, page.activeToolMenu == "loot")
     end
     local buttons = {}
     if page.activeToolMenu == "leader" then buttons = { controls.leaderMode }
     elseif page.activeToolMenu == "loot" then buttons = { controls.mode, controls.resetLoot, controls.import, controls.shareSr, controls.lootRules, controls.sendLootRules } end
     local x, index = 12, nil
-    local y = MOS.UI.IsClassicSkin() and (-96 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0)) or -68
+    local y = MOS.UI.Components.IsClassicSkin() and (-96 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0)) or -68
     for index = 1, table.getn(buttons) do
         local button = buttons[index]
-        if MOS.UI.IsClassicSkin() and button.mosClassicIconKey and button.label then
+        if MOS.UI.Components.IsClassicSkin() and button.mosClassicIconKey and button.label then
             local neededWidth = button.label:GetStringWidth() + 34
             if button:GetWidth() < neededWidth then button:SetWidth(neededWidth) end
         end
@@ -2096,7 +2096,7 @@ function RaidManagement.UpdateToolSubmenu(page)
 end
 
 function RaidManagement.LayoutActions(page)
-    if MOS.UI.IsClassicSkin() then
+    if MOS.UI.Components.IsClassicSkin() then
         local actionOffset = page.classicActionOffset or 0
         local toolbarOffset = page.classicToolbarOffset or 0
         local scale = page.classicActionScale or 1
@@ -2105,12 +2105,12 @@ function RaidManagement.LayoutActions(page)
         for index = 1, table.getn(topActions) do
             local button, width = topActions[index][1], topActions[index][2]
             local sizedWidth = math.floor(width * scale)
-            button:ClearAllPoints(); MOS.UI.SizeClassicButton(button, sizedWidth, math.floor(26 * math.max(0.85, scale)), scale)
+            button:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(button, sizedWidth, math.floor(26 * math.max(0.85, scale)), scale)
             button:SetPoint("TOPRIGHT", page, "TOPRIGHT", right, -9 - actionOffset)
             right = right - sizedWidth - 8
         end
-        MOS.UI.SizeClassicButton(page.classicSaved, math.floor(108 * scale), math.floor(26 * math.max(0.85, scale)), scale)
-        MOS.UI.SizeClassicButton(page.classicIssues, math.floor(96 * scale), math.floor(26 * math.max(0.85, scale)), scale)
+        MOS.UI.Components.SizeClassicButton(page.classicSaved, math.floor(108 * scale), math.floor(26 * math.max(0.85, scale)), scale)
+        MOS.UI.Components.SizeClassicButton(page.classicIssues, math.floor(96 * scale), math.floor(26 * math.max(0.85, scale)), scale)
         page.classicSaved:ClearAllPoints(); page.classicSaved:SetPoint("LEFT", page.classicMeta, "RIGHT", 8, 0); page.classicSaved:SetPoint("TOP", page, "TOP", 0, -9)
         page.classicIssues:ClearAllPoints(); page.classicIssues:SetPoint("LEFT", page.classicSaved, "RIGHT", 8, 0); page.classicIssues:SetPoint("TOP", page, "TOP", 0, -9)
         page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", -3, -48 - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 3, -48 - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
@@ -2120,8 +2120,8 @@ function RaidManagement.LayoutActions(page)
         page.classicFourButton:ClearAllPoints(); page.classicFourButton:SetPoint("LEFT", page.classicTwoButton, "RIGHT", 8, 0)
         local pageWidth = PageSpan(page)
         local groupToolsScale = page.raidView == "groups" and toolbarOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 394) / 296)) or 1
-        page.lootMasterToolsButton:ClearAllPoints(); MOS.UI.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * groupToolsScale), 24, groupToolsScale); page.lootMasterToolsButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -57 - actionOffset - toolbarOffset)
-        page.raidLeaderToolsButton:ClearAllPoints(); MOS.UI.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * groupToolsScale), 24, groupToolsScale); page.raidLeaderToolsButton:SetPoint("RIGHT", page.lootMasterToolsButton, "LEFT", -8, 0)
+        page.lootMasterToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * groupToolsScale), 24, groupToolsScale); page.lootMasterToolsButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -57 - actionOffset - toolbarOffset)
+        page.raidLeaderToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * groupToolsScale), 24, groupToolsScale); page.raidLeaderToolsButton:SetPoint("RIGHT", page.lootMasterToolsButton, "LEFT", -8, 0)
         page.classicSummary:ClearAllPoints(); page.classicSummary:SetPoint("TOPLEFT", page.classicRaidName, "BOTTOMLEFT", 0, -2)
         local toolbarLevel = page.classicToolbar:GetFrameLevel() + 2
         page.classicListButton:SetFrameLevel(toolbarLevel); page.classicGroupButton:SetFrameLevel(toolbarLevel)
@@ -2179,8 +2179,8 @@ function RaidManagement.CreateFilterController(options)
         for index = 1, table.getn(ranks) do
             if self.selectedRanks[ranks[index]] == nil then self.selectedRanks[ranks[index]] = true end
         end
-        MOS.UI.FilterPanel.Refresh(self.classPanel, classes, self.selectedClasses, self.refresh, true)
-        MOS.UI.FilterPanel.Refresh(self.rankPanel, ranks, self.selectedRanks, self.refresh, true)
+        MOS.UI.Components.FilterPanel.Refresh(self.classPanel, classes, self.selectedClasses, self.refresh, true)
+        MOS.UI.Components.FilterPanel.Refresh(self.rankPanel, ranks, self.selectedRanks, self.refresh, true)
     end
 
     function controller:Reset()
@@ -2210,11 +2210,11 @@ function RaidManagement.CreateFilterController(options)
 end
 
 function RaidManagement.CreateGroupSelector(page, getGroupCounts, moveMember, refresh)
-    local dismiss = CreateFrame("Button", nil, page)
+    local dismiss = MOS.UI.Components.CreateControl(nil, page)
     dismiss:SetAllPoints(page); dismiss:SetFrameLevel(page:GetFrameLevel() + 38); dismiss:Hide()
     page.groupSelectDismiss = dismiss
 
-    local menu = CreateFrame("Frame", nil, page)
+    local menu = MOS.UI.Components.CreateContainer(nil, page)
     menu:SetWidth(76); menu:SetHeight(164); menu:SetFrameLevel(page:GetFrameLevel() + 40)
     menu:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     menu:SetBackdropColor(0.025, 0.025, 0.025, 0.98); menu:Hide()
@@ -2224,7 +2224,7 @@ function RaidManagement.CreateGroupSelector(page, getGroupCounts, moveMember, re
     dismiss:SetScript("OnClick", function() menu:Hide(); dismiss:Hide() end)
     local index
     for index = 1, 8 do
-        local button = MOS.UI.CreateButton(menu, nil, "Group " .. index, 66, 18)
+        local button = MOS.UI.Components.CreateButton(menu, nil, "Group " .. index, 66, 18)
         button:SetPoint("TOPLEFT", menu, "TOPLEFT", 5, -5 - ((index - 1) * 19)); button.targetGroup = index
         button:SetScript("OnClick", function()
             if this.groupFull or not page.groupSelectRow or not page.groupSelectRow.displayedMember then return end
@@ -2295,7 +2295,7 @@ end
 
 function RaidManagement.CreateLifecycle(options)
     local lifecycle = {}
-    local rosterDebounce = CreateFrame("Frame", nil, options.page)
+    local rosterDebounce = MOS.UI.Components.CreateContainer(nil, options.page)
     rosterDebounce.raidLifecycle = lifecycle
     rosterDebounce.remaining = 0
     rosterDebounce:SetScript("OnUpdate", OnRosterDebounceUpdate)
@@ -2415,7 +2415,7 @@ function RaidManagement.CreateLootMasterController(options)
         panel:SetMinResize(150, 90); panel:SetMaxResize(520, 760)
         panel:SetWidth(math.max(150, math.min(520, tonumber(settings[widthKey]) or 150)))
         panel:SetHeight(math.max(90, math.min(760, tonumber(settings[heightKey]) or 210)))
-        local grip = CreateFrame("Button", nil, panel)
+        local grip = MOS.UI.Components.CreateControl(nil, panel)
         grip:SetWidth(16); grip:SetHeight(16)
         grip:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -1, 1)
         grip:SetFrameLevel(panel:GetFrameLevel() + 2)
@@ -2424,7 +2424,7 @@ function RaidManagement.CreateLootMasterController(options)
         grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
         local mark
         for mark = 1, 3 do
-            local dot = grip:CreateTexture(nil, "OVERLAY")
+            local dot = MOS.UI.Components.CreateTexture(grip, nil, "OVERLAY")
             dot:SetTexture("Interface\\Buttons\\WHITE8X8")
             dot:SetVertexColor(0.85, 0.68, 0.3, 1)
             dot:SetWidth(2); dot:SetHeight(2)
@@ -2440,7 +2440,7 @@ function RaidManagement.CreateLootMasterController(options)
     end
     SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight")
     SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight")
-    local alphaWatcher = CreateFrame("Frame", nil, options.dashboard)
+    local alphaWatcher = MOS.UI.Components.CreateContainer(nil, options.dashboard)
     alphaWatcher.elapsed = 0; alphaWatcher.lootMasterController = controller
     alphaWatcher:SetScript("OnUpdate", OnLootMasterAlphaUpdate); alphaWatcher:Hide()
     controller.alphaWatcher = alphaWatcher
@@ -2496,7 +2496,7 @@ function RaidManagement.CreateLootMasterController(options)
             if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Show() end
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 1, -1); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -1, 1)
             options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 1, -1); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -1, 1)
-            MOS.UI.SetSurfaceCompact(options.dashboard, true); MOS.UI.SetSurfaceCompact(options.contentPanel, true)
+            MOS.UI.Components.SetSurfaceCompact(options.dashboard, true); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, true)
             options.modeButton:SetText("X")
         else
             if MOS.lootMasterMinimized then
@@ -2516,7 +2516,7 @@ function RaidManagement.CreateLootMasterController(options)
             options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 3, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -3, 3)
             options.modeButton:SetText("LM Mode")
             if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Show() end
-            MOS.UI.SetSurfaceCompact(options.dashboard, false); MOS.UI.SetSurfaceCompact(options.contentPanel, false)
+            MOS.UI.Components.SetSurfaceCompact(options.dashboard, false); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, false)
             options.applyNavigationLayout()
         end
         options.refresh()
@@ -2533,7 +2533,7 @@ function RaidManagement.CreateLootMasterController(options)
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 1, -1); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -1, 1)
             options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 1, -1); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -1, 1)
             if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Show() end
-            MOS.UI.SetSurfaceCompact(options.dashboard, true); MOS.UI.SetSurfaceCompact(options.contentPanel, true)
+            MOS.UI.Components.SetSurfaceCompact(options.dashboard, true); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, true)
         else
             MOS.lootMasterWidthBeforeMinimize = options.dashboard:GetWidth(); MOS.lootMasterHeightBeforeMinimize = options.dashboard:GetHeight()
             settings.lootMasterWidth = MOS.lootMasterWidthBeforeMinimize; settings.lootMasterHeight = MOS.lootMasterHeightBeforeMinimize
@@ -2543,7 +2543,7 @@ function RaidManagement.CreateLootMasterController(options)
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 2, -2); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -2, 2)
             options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 1, -1); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -1, 1)
             if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Hide() end
-            MOS.UI.SetSurfaceCompact(options.dashboard, true); MOS.UI.SetSurfaceCompact(options.contentPanel, true)
+            MOS.UI.Components.SetSurfaceCompact(options.dashboard, true); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, true)
         end
         options.page.lmConfigPanel:ClearAllPoints()
         options.page.lmConfigPanel:SetPoint("TOPLEFT", options.dashboard, "TOPRIGHT", 0, 0)
@@ -2564,7 +2564,7 @@ function RaidManagement.AttachActionHandlers(options)
     local importDialog = RaidManagement.CreateSoftReserveImportDialog(options)
     local lootRulesDialog = RaidManagement.CreateLootRulesDialog(options)
     local selectedRaidName = "Molten Core"
-    local newRaidDialog = MOS.UI.CreateTextPrompt("MuklaOfficerSuiteNewRaidDialog", "Start New Raid", "Unique raid ID", "Start", function(value)
+    local newRaidDialog = MOS.UI.Components.CreateTextPrompt("MuklaOfficerSuiteNewRaidDialog", "Start New Raid", "Unique raid ID", "Start", function(value)
         value = string.gsub(tostring(value or ""), "^%s+", ""); value = string.gsub(value, "%s+$", "")
         if value == "" then return false, "Raid ID is required." end
         if options.raidIdExists(value) then return false, "This raid ID already exists." end
@@ -2574,21 +2574,21 @@ function RaidManagement.AttachActionHandlers(options)
         return true
     end)
     newRaidDialog:SetHeight(190)
-    newRaidDialog.raidLabel = newRaidDialog:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    newRaidDialog.raidLabel = MOS.UI.Components.CreateLabel(newRaidDialog, nil, "OVERLAY", "GameFontHighlightSmall")
     newRaidDialog.raidLabel:SetPoint("TOPLEFT", newRaidDialog, "TOPLEFT", 18, -91); newRaidDialog.raidLabel:SetText("Raid")
-    newRaidDialog.raidSelect = MOS.UI.CreateDropdownButton(newRaidDialog, nil, selectedRaidName, 180)
+    newRaidDialog.raidSelect = MOS.UI.Components.CreateDropdownButton(newRaidDialog, nil, selectedRaidName, 180)
     newRaidDialog.raidSelect:SetPoint("TOPLEFT", newRaidDialog, "TOPLEFT", 18, -108)
-    newRaidDialog.raidPanel = MOS.UI.CreateDropdownPanel(newRaidDialog, newRaidDialog.raidSelect, 180, 148, 10)
+    newRaidDialog.raidPanel = MOS.UI.Components.CreateDropdownPanel(newRaidDialog, newRaidDialog.raidSelect, 180, 148, 10)
     local raidNames = MOS.Services.RaidStatistics.GetRaidNames()
     local raidNameIndex
     for raidNameIndex = 1, table.getn(raidNames) do
-        local option = MOS.UI.CreateButton(newRaidDialog.raidPanel, nil, raidNames[raidNameIndex], 164, 20)
+        local option = MOS.UI.Components.CreateButton(newRaidDialog.raidPanel, nil, raidNames[raidNameIndex], 164, 20)
         option:SetPoint("TOPLEFT", newRaidDialog.raidPanel, "TOPLEFT", 8, -8 - ((raidNameIndex - 1) * 22)); option.raidName = raidNames[raidNameIndex]
         option:SetScript("OnClick", function() selectedRaidName = this.raidName; newRaidDialog.raidSelect.label:SetText(selectedRaidName); newRaidDialog.raidPanel:Hide() end)
     end
     newRaidDialog.raidSelect:SetScript("OnClick", function() if newRaidDialog.raidPanel:IsVisible() then newRaidDialog.raidPanel:Hide() else newRaidDialog.raidPanel:Show() end end)
     local pendingShareAction = nil
-    local shareSrDialog = MOS.UI.CreateTextPrompt("MuklaOfficerSuiteShareSrDialog", "Share SR Link", "SR URL", "Save", function(value)
+    local shareSrDialog = MOS.UI.Components.CreateTextPrompt("MuklaOfficerSuiteShareSrDialog", "Share SR Link", "SR URL", "Save", function(value)
         value = string.gsub(tostring(value or ""), "^%s+", ""); value = string.gsub(value, "%s+$", "")
         if value == "" then return false, "SR URL is required." end
         if not options.setSrUrl(value) then return false, "Unable to save the SR URL." end
@@ -2646,7 +2646,7 @@ function RaidManagement.AttachActionHandlers(options)
             local snapshot = options.page.raidHistorySnapshots and options.page.raidHistorySnapshots[this.historyIndex]
             if not snapshot then return end
             pendingDeleteRaidId = snapshot.id
-            MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_DELETE_RAID_SNAPSHOT")
+            MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_DELETE_RAID_SNAPSHOT")
         end)
     end
     controls.loadRaid:SetScript("OnClick", function()
@@ -2669,18 +2669,18 @@ function RaidManagement.AttachActionHandlers(options)
     controls.testRaid:SetScript("OnClick", function()
         options.startTestRaid(); options.beginRaidSession(); options.setHistoricalLoaded(false); options.setScanReady(true); options.refresh()
     end)
-    local saveDialog = CreateFrame("Frame", "MuklaOfficerSuiteSaveRaidSessionDialog", UIParent)
+    local saveDialog = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteSaveRaidSessionDialog", UIParent)
     saveDialog:SetWidth(390); saveDialog:SetHeight(205); saveDialog:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
     saveDialog:SetFrameStrata("FULLSCREEN_DIALOG"); saveDialog:SetFrameLevel(245); saveDialog:EnableMouse(true)
     saveDialog:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
     saveDialog:SetBackdropColor(0.03, 0.025, 0.02, 1)
     if saveDialog.SetClampedToScreen then saveDialog:SetClampedToScreen(true) end
-    saveDialog.title = saveDialog:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    saveDialog.title = MOS.UI.Components.CreateLabel(saveDialog, nil, "OVERLAY", "GameFontNormalLarge")
     saveDialog.title:SetPoint("TOPLEFT", saveDialog, "TOPLEFT", 18, -17); saveDialog.title:SetText("Save Raid Session")
     local function CreateSaveCheckbox(label, y)
-        local checkbox = CreateFrame("CheckButton", nil, saveDialog, "UICheckButtonTemplate")
+        local checkbox = MOS.UI.Components.CreateCheckButton(nil, saveDialog, "UICheckButtonTemplate")
         checkbox:SetPoint("TOPLEFT", saveDialog, "TOPLEFT", 18, y); checkbox:SetWidth(22); checkbox:SetHeight(22)
-        checkbox.label = saveDialog:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        checkbox.label = MOS.UI.Components.CreateLabel(saveDialog, nil, "OVERLAY", "GameFontHighlightSmall")
         checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 3, 0); checkbox.label:SetText(label)
         return checkbox
     end
@@ -2695,9 +2695,9 @@ function RaidManagement.AttachActionHandlers(options)
         end
     end
     saveDialog.statistics:SetScript("OnClick", SyncAttendanceOption)
-    saveDialog.cancel = MOS.UI.CreateButton(saveDialog, nil, "Cancel", 90, 24)
+    saveDialog.cancel = MOS.UI.Components.CreateButton(saveDialog, nil, "Cancel", 90, 24)
     saveDialog.cancel:SetPoint("BOTTOMLEFT", saveDialog, "BOTTOMLEFT", 72, 18)
-    saveDialog.save = MOS.UI.CreateButton(saveDialog, nil, "Save Session", 112, 24)
+    saveDialog.save = MOS.UI.Components.CreateButton(saveDialog, nil, "Save Session", 112, 24)
     saveDialog.save:SetPoint("BOTTOMRIGHT", saveDialog, "BOTTOMRIGHT", -72, 18)
     saveDialog.cancel:SetScript("OnClick", function() saveDialog:Hide() end)
     saveDialog.save:SetScript("OnClick", function()
@@ -2723,26 +2723,26 @@ function RaidManagement.AttachActionHandlers(options)
         OnAccept = function() options.quitRaidSession(); options.refresh() end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    controls.quit:SetScript("OnClick", function() MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_QUIT_RAID_SESSION") end)
+    controls.quit:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_QUIT_RAID_SESSION") end)
 
-    local sessionPrompt = CreateFrame("Frame", "MuklaOfficerSuiteRaidSessionPrompt", UIParent)
+    local sessionPrompt = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteRaidSessionPrompt", UIParent)
     sessionPrompt:SetWidth(390); sessionPrompt:SetHeight(150); sessionPrompt:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
     sessionPrompt:SetFrameStrata("FULLSCREEN_DIALOG"); sessionPrompt:SetFrameLevel(240); sessionPrompt:EnableMouse(true)
     sessionPrompt:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
     sessionPrompt:SetBackdropColor(0.03, 0.025, 0.02, 1)
     if sessionPrompt.SetClampedToScreen then sessionPrompt:SetClampedToScreen(true) end
-    local promptTitle = sessionPrompt:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local promptTitle = MOS.UI.Components.CreateLabel(sessionPrompt, nil, "OVERLAY", "GameFontNormalLarge")
     promptTitle:SetPoint("TOPLEFT", sessionPrompt, "TOPLEFT", 18, -16); promptTitle:SetText("Raid session is still active")
-    local promptText = sessionPrompt:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local promptText = MOS.UI.Components.CreateLabel(sessionPrompt, nil, "OVERLAY", "GameFontHighlight")
     promptText:SetPoint("TOPLEFT", promptTitle, "BOTTOMLEFT", 0, -12); promptText:SetWidth(350); promptText:SetJustifyH("LEFT")
     promptText:SetText("You left the raid context. Do you want to continue this session or end and save it?")
-    local continueButton = MOS.UI.CreateButton(sessionPrompt, nil, "Continue Session", 132, 24)
-    local saveButton = MOS.UI.CreateButton(sessionPrompt, nil, "End & Save", 112, 24)
+    local continueButton = MOS.UI.Components.CreateButton(sessionPrompt, nil, "Continue Session", 132, 24)
+    local saveButton = MOS.UI.Components.CreateButton(sessionPrompt, nil, "End & Save", 112, 24)
     saveButton:SetPoint("BOTTOMLEFT", sessionPrompt, "BOTTOMLEFT", 48, 18)
     continueButton:SetPoint("LEFT", saveButton, "RIGHT", 18, 0)
-    local closeButton = MOS.UI.CreateButton(sessionPrompt, nil, "X", 22, 22)
+    local closeButton = MOS.UI.Components.CreateButton(sessionPrompt, nil, "X", 22, 22)
     closeButton:SetPoint("TOPRIGHT", sessionPrompt, "TOPRIGHT", -10, -10)
-    MOS.UI.AttachTooltip(closeButton, "End without saving", "Close the current raid session and discard its unsaved data.")
+    MOS.UI.Components.AttachTooltip(closeButton, "End without saving", "Close the current raid session and discard its unsaved data.")
     sessionPrompt:Hide()
     continueButton:SetScript("OnClick", function()
         sessionPrompt:Hide()
@@ -2774,7 +2774,7 @@ function RaidManagement.AttachActionHandlers(options)
     }
     options.page.ShowRaidStartReminder = function(contextKey)
         options.page.raidStartReminderContext = contextKey
-        MOS.UI.ShowOpaquePopup("MUKLA_OFFICER_SUITE_START_RAID_REMINDER")
+        MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_START_RAID_REMINDER")
     end
     options.page.HideRaidStartReminder = function()
         StaticPopup_Hide("MUKLA_OFFICER_SUITE_START_RAID_REMINDER")

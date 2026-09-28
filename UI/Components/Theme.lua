@@ -1,5 +1,5 @@
 local MOS = MuklaOfficerSuite
-local UI = MOS.UI
+local UI = MOS.UI.Components
 
 UI.Theme = {
     classColors = {
