@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0-dev.13 - 2026-09-28
+
+- Fixed dropdown bottom padding and foreground rendering of Raid Management setting labels.
+
 ## 0.4.0-dev.12 - 2026-09-28
 
 - Fixed Settings dropdown overlay, outside-click dismissal, compact options, and full-width separators.
