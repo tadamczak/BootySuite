@@ -875,6 +875,11 @@ function RaidManagement.CreateRenderer(options)
     return options
 end
 
+function RaidManagement.ClearSessionHeader(page)
+    page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide(); page.classicSummary:Hide()
+    page.refreshControls.title:SetText("Raid Management"); page.refreshControls.title:Show()
+end
+
 function RaidManagement.RefreshPage(renderer)
     local page, rows = renderer.page, renderer.rows
     renderer.countRefresh()
@@ -924,6 +929,7 @@ function RaidManagement.RefreshPage(renderer)
         return
     end
     if not renderer.isInRaid() and not renderer.isHistoricalLoaded() then
+        RaidManagement.ClearSessionHeader(page)
         renderer.setScanReady(false)
         RaidManagement.ShowNoRaidState(page, rows)
         return
