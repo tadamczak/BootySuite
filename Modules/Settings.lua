@@ -196,7 +196,7 @@ function Settings.CreatePrimarySections(page)
     page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors")
     local raidHeading = MOS.UI.Components.CreateHeading(page, "", 3, "gold")
     raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -206)
-    raidHeading:SetText("Raid management")
+    raidHeading:SetText("Raid")
     local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645)
     debugHeading:SetScript("OnClick", function()
         page.topSectionState.debug = not page.topSectionState.debug
@@ -373,7 +373,7 @@ function Settings.CreateRaidSettings(page, callbacks)
     local primarySections = Settings.CreatePrimarySections(page)
     page.primarySections = primarySections
     local general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -230)
-    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 52, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid Management is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
+    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 52, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
     page.raidLiveTrackingCheck = liveTracking
     local layout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -280)
     local shell = Settings.CreateRaidViewShell(page)
