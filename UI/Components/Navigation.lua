@@ -10,10 +10,12 @@ function Navigation.SetActive(buttons, activeName)
         button.navigationSelected = selected
         if button.navigationMode == "tabs" then
             button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", tile = true, tileSize = 8, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
-            button:SetBackdropColor(0, 0, 0, 0); button:SetBackdropBorderColor(0, 0, 0, 0)
+            button:SetBackdropColor(selected and 0 or 0.035, selected and 0 or 0.035, selected and 0 or 0.03, 1); button:SetBackdropBorderColor(0, 0, 0, 0)
+            button:SetHeight(selected and 34 or 26)
+            button:SetFrameLevel(button:GetParent():GetFrameLevel() + (selected and 24 or 20))
             if button.mosHighlight then button.mosHighlight:Hide() end
             button.label:SetTextColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.18 or 0.43)
-            button.SetTabBorderVisible(selected)
+            button.SetTabBorderVisible(true)
         elseif MOS.UI.Components.IsClassicSkin() then
             button:SetBackdrop({ bgFile = MOS.UI.Components.ClassicAsset("Surfaces\\nav-" .. (selected and "selected" or "normal") .. ".tga"), tile = false, tileSize = 0, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
             button:SetBackdropColor(1, 1, 1, 1)
@@ -65,7 +67,7 @@ function Navigation.Create(options)
         button.hoverFill = MOS.UI.Components.CreateTexture(button, nil, "HIGHLIGHT")
         button.hoverFill:SetAllPoints(button); button.hoverFill:SetTexture("Interface\\Buttons\\WHITE8X8"); button.hoverFill:SetVertexColor(0.82, 0.70, 0.43, 0.14)
         button:SetScript("OnEnter", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
-        button:SetScript("OnLeave", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(this.navigationSelected) end end)
+        button:SetScript("OnLeave", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
         MOS.UI.Components.RegisterSkinnedNavigation(button, name, iconPath)
         controller.buttons[name] = button
     end
@@ -105,7 +107,7 @@ function Navigation.Create(options)
                 button.navigationMode = iconTabs and not bottomTabs and "icons" or "tabs"
                 button.SetTabBorderVisible(false)
                 button:SetParent(options.dashboard); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
-                button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width); button:SetHeight(30)
+                button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width - (iconTabs and 0 or 4)); button:SetHeight(30)
                 button.iconBorder:Hide(); button:Show()
                 if iconTabs then
                     button.label:Hide(); button.icon:Show(); button.icon:ClearAllPoints()

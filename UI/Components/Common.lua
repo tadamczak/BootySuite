@@ -691,7 +691,7 @@ function UI.SetOpenButtonBorder(button, visible, openEdge)
     end
     viewport:SetFrameStrata(button:GetFrameStrata()); viewport:SetFrameLevel(button:GetFrameLevel() + 1)
     viewport.border:SetFrameStrata(button:GetFrameStrata()); viewport.border:SetFrameLevel(viewport:GetFrameLevel() + 1)
-    viewport.border:SetWidth(button:GetWidth()); viewport.border:SetHeight(button:GetHeight() + 8)
+    viewport.border:SetWidth(button:GetWidth()); viewport.border:SetHeight(button:GetHeight() + (openEdge and 8 or 0))
     viewport:Show()
     if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
     viewport:SetVerticalScroll(openEdge == "top" and 8 or 0)
