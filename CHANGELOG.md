@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.6 - 2026-09-29
+
+- Fixed roster name padding after refresh and Class/Rank dropdown hit testing.
+- Kept expanded rows highlighted, moved rank arrows to the top-right and matched guild action buttons to the red/gold Quit style without icons.
+
 ## 0.5.0-dev.5 - 2026-09-29
 
 - Fixed lower-row expansion, full-width member details and row text margins.

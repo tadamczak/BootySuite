@@ -54,6 +54,11 @@ function RosterManagement.CreateGuildControls(page)
     page.guildInfoButton = MOS.UI.Components.CreateButton(page, nil, "Guild Information", 108, 22)
     page.guildAddButton = MOS.UI.Components.CreateButton(page, nil, "Add Member", 84, 22)
     page.guildControlButton = MOS.UI.Components.CreateButton(page, nil, "Guild Control", 88, 22)
+    local _, button
+    for _, button in ipairs({ page.guildInfoButton, page.guildAddButton, exportButton, page.guildControlButton }) do
+        MOS.UI.Components.SetClassicButtonVariant(button, "red")
+        MOS.UI.Components.SetClassicButtonGold(button, true)
+    end
     page.guildInfoButton:Hide(); page.guildAddButton:Hide(); page.guildControlButton:Hide()
     RosterManagement.BindPermissionEvents(page)
 
@@ -159,14 +164,7 @@ function RosterManagement.CreateFilterView(page)
 
     local classPanel = MOS.UI.Components.CreateDropdownPanel(page, classToggle, 130, 230, 20)
     local rankPanel = MOS.UI.Components.CreateDropdownPanel(page, rankToggle, 130, 230, 20)
-    local dismiss = MOS.UI.Components.CreateControl(nil, page)
-    dismiss:SetAllPoints(page)
-    dismiss:SetFrameLevel(page:GetFrameLevel() + 10)
-    dismiss:Hide()
-    classPanel:SetFrameLevel(page:GetFrameLevel() + 20)
-    rankPanel:SetFrameLevel(page:GetFrameLevel() + 20)
-    classToggle:SetFrameLevel(page:GetFrameLevel() + 21)
-    rankToggle:SetFrameLevel(page:GetFrameLevel() + 21)
+    local dismiss = classPanel.dismiss
     return { sortHint = sortHint, label = label, classToggle = classToggle, rankToggle = rankToggle, classPanel = classPanel, rankPanel = rankPanel, dismiss = dismiss }
 end
 
@@ -318,12 +316,12 @@ function RosterManagement.CreateFilterController(options)
     controller.classToggle:SetScript("OnClick", function()
         local show = not controller.classPanel:IsVisible()
         controller:Hide()
-        if show then controller.classPanel:Show(); controller.dismiss:Show() end
+        if show then controller.classPanel:Show() end
     end)
     controller.rankToggle:SetScript("OnClick", function()
         local show = not controller.rankPanel:IsVisible()
         controller:Hide()
-        if show then controller.rankPanel:Show(); controller.dismiss:Show() end
+        if show then controller.rankPanel:Show() end
     end)
     options.page.filterController = controller
     return controller
@@ -402,7 +400,7 @@ local function OnRowClick()
 end
 
 local function OnRowEnter()
-    if this.displayedMember then
+    if this.displayedMember and not this.expanded then
         this.hover:Show()
     end
 end
@@ -452,9 +450,9 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
         stripe:SetAllPoints(row)
         stripe:SetTexture(1, 0.78, 0.25, 0.075)
     end
-    row.selection = MOS.UI.Components.CreateTexture(row, nil, "BACKGROUND")
+    row.selection = MOS.UI.Components.CreateTexture(row, nil, "ARTWORK")
     row.selection:SetAllPoints(row)
-    row.selection:SetTexture(0, 0, 0, 0)
+    row.selection:SetTexture(1, 0.82, 0.28, 0.16)
     row.selection:Hide()
 
     AddCell(row, "name", 7, 125)
@@ -526,7 +524,7 @@ function RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY
         for rowIndex = 1, table.getn(rows) do
             local cell = rows[rowIndex][column.key]
             cell:ClearAllPoints()
-            cell:SetPoint("TOPLEFT", rows[rowIndex], "TOPLEFT", columnX, -1)
+            cell:SetPoint("TOPLEFT", rows[rowIndex], "TOPLEFT", columnX + (column.key == "name" and 7 or 0), -1)
             cell:SetWidth(math.max(1, width - (column.key == "name" and 14 or 6)))
             cell:Show()
         end
@@ -567,7 +565,8 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
             row.class:SetTextColor(classColor.r * shade, classColor.g * shade, classColor.b * shade)
         end
     end
-    if member.name == selectedName then
+    row.expanded = member.name == selectedName
+    if row.expanded then
         row.selection:Show()
         row:SetBackdropColor(0.16, 0.20, 0.17, 0.82)
         row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
@@ -588,6 +587,7 @@ end
 
 function RosterManagement.HideRow(row)
     row.displayedMember = nil
+    row.expanded = false
     row.selection:Hide()
     row:SetBackdropColor(0, 0, 0, 0)
     row:SetBackdropBorderColor(0, 0, 0, 0)
@@ -1125,13 +1125,13 @@ function RosterManagement.BindMemberDetails(row, member)
     for _, action in ipairs({ "demote", "promote" }) do
         local button = row[action .. "Button"]
         if service.CanManage(action, member) then
-            button:ClearAllPoints(); button:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", arrowX, -44)
+            button:ClearAllPoints(); button:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", arrowX, -10)
             button:Enable(); button:Show(); arrowX = arrowX - 24
         else button:Hide() end
     end
-    row.details.rank:ClearAllPoints()
-    row.details.rank:SetPoint("TOPLEFT", row.actionPanel, "TOPLEFT", 12, -47)
-    row.details.rank:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", arrowX - 4, -47)
+    row.details.name:ClearAllPoints()
+    row.details.name:SetPoint("TOPLEFT", row.actionPanel, "TOPLEFT", 12, -10)
+    row.details.name:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", arrowX - 4, -10)
 end
 
 function RosterManagement.OpenMemberMenu(row)
