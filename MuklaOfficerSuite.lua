@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.3"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.4"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -191,7 +191,7 @@ local rosterListController = MOS.Modules.RosterManagement.MountList(rosterPage, 
         MuklaOfficerSuiteDB.rosterSortAscending = sortAscending
         RefreshRosterPage(true)
     end,
-    onAction = function(action) RequestGuildAction(action) end,
+    onAction = function(action, member) RequestGuildAction(action, member) end,
     onSelect = function(member)
         if selectedMemberName == member.name then selectedMemberName = nil else selectedMemberName = member.name end
         RefreshRosterPage(false)

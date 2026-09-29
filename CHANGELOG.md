@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.4 - 2026-09-29
+
+- Added permission-aware guild controls, member details, editable notes and rank arrows in Roster Management.
+- Added right-click Whisper, Invite, Target, Report and Ignore actions, row hover and name padding.
+- Reduced spacing between Profile labels and values.
+
 ## 0.5.0-dev.3 - 2026-09-29
 
 - Simplified Profile to three rows with compact action buttons and gold inline feedback; Save sits beside the current profile name.
