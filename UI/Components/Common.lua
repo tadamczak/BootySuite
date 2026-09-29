@@ -24,6 +24,23 @@ function UI.CreateResizeGrip(parent)
     return grip
 end
 
+function UI.CreateClippedContent(parent, contentHeight)
+    local viewport = UI.CreateScrollFrame(nil, parent)
+    local content = UI.CreateContainer(nil, viewport)
+    content:SetHeight(contentHeight); viewport:SetScrollChild(content)
+    viewport.content = content
+    viewport:EnableMouseWheel(true)
+    viewport:SetScript("OnMouseWheel", function()
+        local maximum = math.max(0, this.content:GetHeight() - this:GetHeight())
+        this:SetVerticalScroll(math.max(0, math.min(maximum, this:GetVerticalScroll() - arg1 * 24)))
+    end)
+    viewport:SetScript("OnSizeChanged", function()
+        this.content:SetWidth(math.max(1, this:GetWidth()))
+        this:SetVerticalScroll(math.min(this:GetVerticalScroll(), math.max(0, this.content:GetHeight() - this:GetHeight())))
+    end)
+    return viewport, content
+end
+
 function UI.ShortenText(text, length)
     text = tostring(text or "")
     if string.len(text) > length then return string.sub(text, 1, length - 1) .. "~" end
