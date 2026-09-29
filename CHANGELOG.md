@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.7 - 2026-09-29
+
+- Added a visible Settings resize control and a framed inner content area.
+- Changed level-1 headings to gold and made multiselect labels toggle their checkboxes across roster, CSR and raid statistics filters.
+
 ## 0.5.0-dev.6 - 2026-09-29
 
 - Fixed roster name padding after refresh and Class/Rank dropdown hit testing.

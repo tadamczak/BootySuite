@@ -26,7 +26,7 @@ end
 function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
     local controller = { page = page, getEntries = getEntries, deleteEntry = deleteEntry, updateEntry = updateEntry, selectedId = nil, raidButtons = {}, rows = {}, filteredEntries = {}, selectedRaids = {} }
     controller.itemDialog = MOS.UI.Components.CreateItemListDialog("MuklaOfficerSuiteRaidStatisticsItems")
-    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "orange"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); controller.title:SetText("Raid Statistics")
+    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); controller.title:SetText("Raid Statistics")
     local raidNames = MOS.Services.RaidStatistics.GetRaidNames(); local raidNameIndex
     for raidNameIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[raidNameIndex]] = true end
     controller.filterPanel = MOS.UI.Components.CreateContainer(nil, page); controller.filterPanel:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -40); controller.filterPanel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -40); controller.filterPanel:SetHeight(66)
@@ -39,11 +39,11 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
     local allCheck = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); allCheck:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheck:SetWidth(20); allCheck:SetHeight(20); allCheck:SetChecked(1)
     allCheck.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); allCheck.label:SetPoint("LEFT", allCheck, "RIGHT", 2, 0); allCheck.label:SetText("All")
     controller.raidChecks = {}
-    allCheck:SetScript("OnClick", function() local enabled = this:GetChecked() and true or false; local i; for i = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[i]] = enabled and true or nil; controller.raidChecks[i]:SetChecked(enabled and 1 or nil) end; controller:Refresh() end)
+    MOS.UI.Components.BindCheckboxLabel(allCheck, function(owner) local enabled = owner:GetChecked() and true or false; local i; for i = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[i]] = enabled and true or nil; controller.raidChecks[i]:SetChecked(enabled and 1 or nil) end; controller:Refresh() end)
     for raidNameIndex = 1, table.getn(raidNames) do
         local check = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); check:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6 - (raidNameIndex * 23)); check:SetWidth(20); check:SetHeight(20); check:SetChecked(1); check.raidName = raidNames[raidNameIndex]
         check.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); check.label:SetPoint("LEFT", check, "RIGHT", 2, 0); check.label:SetText(check.raidName)
-        check:SetScript("OnClick", function() controller.selectedRaids[this.raidName] = this:GetChecked() and true or nil; local allSelected, i = true, nil; for i = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[i]] then allSelected = false; break end end; allCheck:SetChecked(allSelected and 1 or nil); controller:Refresh() end)
+        MOS.UI.Components.BindCheckboxLabel(check, function(owner) controller.selectedRaids[owner.raidName] = owner:GetChecked() and true or nil; local allSelected, i = true, nil; for i = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[i]] then allSelected = false; break end end; allCheck:SetChecked(allSelected and 1 or nil); controller:Refresh() end)
         controller.raidChecks[raidNameIndex] = check
     end
     controller.listTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controller.listTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -120); controller.listTitle:SetText("Raids")
@@ -71,7 +71,7 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
     controller.fromDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.fromDate) end); controller.toDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.toDate) end)
     MOS.UI.Components.AttachTooltip(controller.fromDate, "From date", "Optional date in YYYY-MM-DD format."); MOS.UI.Components.AttachTooltip(controller.toDate, "To date", "Optional date in YYYY-MM-DD format.")
     MOS.UI.Components.AttachTooltip(controller.fromPicker, "Choose From date", "Open the calendar."); MOS.UI.Components.AttachTooltip(controller.toPicker, "Choose To date", "Open the calendar.")
-    controller.filterStatus = MOS.UI.Components.CreateHeading(page, "", 1, "orange"); controller.filterStatus:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -120); controller.filterStatus:SetPoint("TOPRIGHT", page, "TOPRIGHT", -72, -120); controller.filterStatus:SetJustifyH("LEFT"); controller.filterStatus:SetTextColor(1, 0.82, 0.28)
+    controller.filterStatus = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.filterStatus:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -120); controller.filterStatus:SetPoint("TOPRIGHT", page, "TOPRIGHT", -72, -120); controller.filterStatus:SetJustifyH("LEFT")
     controller.headerRemove = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Icons\\INV_Misc_Bag_09", 22, 2); controller.headerRemove:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -115); controller.headerRemove.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerRemove, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerRemove, "Remove raid", "Remove the selected raid from Raid Statistics and CSR history."); controller.headerRemove:Hide()
     controller.headerEdit = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Icons\\INV_Misc_Note_01", 22, 2); controller.headerEdit:SetPoint("RIGHT", controller.headerRemove, "LEFT", -5, 0); controller.headerEdit.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerEdit, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerEdit, "Edit raid", "Edit statistics options for the selected raid."); controller.headerEdit:Hide()
     controller.raidScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidStatisticsHistoryScroll", page, "FauxScrollFrameTemplate"); controller.raidScroll:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -140); controller.raidScroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", 246, 10)
@@ -93,7 +93,7 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
         dialog:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
         dialog:SetBackdropColor(0.03, 0.025, 0.02, 1)
         if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
-        dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "orange"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -17); dialog.title:SetText(title)
+        dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -17); dialog.title:SetText(title)
         dialog:Hide(); return dialog
     end
     controller.removeDialog = CreateModal("MuklaOfficerSuiteRemoveRaidStatisticDialog", "Remove raid from history?", 145)
@@ -172,13 +172,13 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
     function controller:Refresh()
         MOS.Diagnostics.Count("uiRefreshes")
         local entries, filterError = MOS.Services.RaidStatistics.FilterEntries(self.getEntries(), self.fromDate:GetText(), self.toDate:GetText(), self.filteredEntries, self.selectedRaids, self.search:GetText())
-        if not entries then self.filterStatus:SetText(filterError); self.filterStatus:SetTextColor(1, 0.25, 0.2); entries = self.filteredEntries end
+        if not entries then self.filterStatus:SetText(filterError); entries = self.filteredEntries end
         local selectedRaid = nil
         if self.selectedId then for index = 1, table.getn(entries) do if entries[index].id == self.selectedId then selectedRaid = entries[index]; break end end end
         if self.selectedId and not selectedRaid then self.selectedId = nil end
         if filterError then self.headerEdit:Hide(); self.headerRemove:Hide()
-        elseif selectedRaid then self.filterStatus:SetText(tostring(selectedRaid.id) .. " | " .. tostring(selectedRaid.raidName or "Unknown zone") .. " | " .. date("%Y-%m-%d", tonumber(selectedRaid.savedAt) or 0)); self.filterStatus:SetTextColor(1, 0.82, 0.28); self.headerEdit.raidId = selectedRaid.id; self.headerRemove.raidId = selectedRaid.id; self.headerEdit:Show(); self.headerRemove:Show()
-        else self.filterStatus:SetText("Raid Statistics"); self.filterStatus:SetTextColor(1, 0.82, 0.28); self.headerEdit:Hide(); self.headerRemove:Hide() end
+        elseif selectedRaid then self.filterStatus:SetText(tostring(selectedRaid.id) .. " | " .. tostring(selectedRaid.raidName or "Unknown zone") .. " | " .. date("%Y-%m-%d", tonumber(selectedRaid.savedAt) or 0)); self.headerEdit.raidId = selectedRaid.id; self.headerRemove.raidId = selectedRaid.id; self.headerEdit:Show(); self.headerRemove:Show()
+        else self.filterStatus:SetText("Raid Statistics"); self.headerEdit:Hide(); self.headerRemove:Hide() end
         local visibleRaids = math.max(1, math.min(table.getn(self.raidButtons), math.floor(math.max(28, self.raidScroll:GetHeight()) / 28)))
         local raidOffset = MOS.UI.Components.UpdateScrollFrame(self.raidScroll, table.getn(entries), visibleRaids, 28)
         for index = 1, table.getn(self.raidButtons) do

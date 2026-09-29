@@ -211,7 +211,7 @@ end
 
 function GuildStatistics.CreateView(page, styleButton, refresh)
     local view = { page = page }
-    view.title = MOS.UI.Components.CreateHeading(page, "", 1, "orange")
+    view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10)
     view.title:SetText("Guild Statistics")
     view.onlyLevel60 = MOS.UI.Components.CreateCheckButton(nil, page, "UICheckButtonTemplate")

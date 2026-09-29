@@ -52,9 +52,9 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth)
             checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 2, 0)
             checkbox.label:SetWidth(80)
             checkbox.label:SetJustifyH("LEFT")
-            checkbox:SetScript("OnClick", function()
-                local owner = this:GetParent()
-                owner.selected[this.value] = this:GetChecked() and true or false
+            UI.BindCheckboxLabel(checkbox, function(check)
+                local owner = check:GetParent()
+                owner.selected[check.value] = check:GetChecked() and true or false
                 if owner.onChanged then owner.onChanged(true) end
             end)
             panel.options[optionIndex] = checkbox
@@ -62,6 +62,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth)
         checkbox.value = values[optionIndex]
         checkbox.label:SetText(values[optionIndex])
         checkbox.label:SetWidth(panelWidth - 42)
+        checkbox.labelHit:SetWidth(panelWidth - 38)
         checkbox:SetChecked(selected[values[optionIndex]] and true or false)
         checkbox:Show()
     end

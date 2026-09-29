@@ -38,7 +38,7 @@ end
 function Performance.Create(parent)
     local page = MOS.UI.Components.CreateContainer(nil, parent)
     page:SetPoint("TOPLEFT", parent, "TOPLEFT", 3, -3); page:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -3, 3); page:Hide()
-    page.title = MOS.UI.Components.CreateHeading(page, "", 1, "orange")
+    page.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); page.title:SetText("Performance")
     page.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     page.description:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -48)

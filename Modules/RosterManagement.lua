@@ -4,7 +4,7 @@ MOS.Modules.RosterManagement = MOS.Modules.RosterManagement or {}
 local RosterManagement = MOS.Modules.RosterManagement
 
 function RosterManagement.CreateShell(page, contentPanel)
-    local title = MOS.UI.Components.CreateHeading(page, "", 1, "orange")
+    local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10)
     title:SetText("Roster Management")
 

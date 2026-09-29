@@ -18,13 +18,13 @@ local function CreateTestLab(onChanged, onExit)
         if this:GetWidth() < 590 then this:SetWidth(590) end
         if this:GetHeight() < 420 then this:SetHeight(420) end
     end)
-    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "orange"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -16); dialog.title:SetText("CSR Test Lab")
+    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -16); dialog.title:SetText("CSR Test Lab")
     dialog.help = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.help:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -47); dialog.help:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.help:SetJustifyH("LEFT")
     dialog.help:SetText("Transient simulation only. Add players and independent item reservations, award items, change rank, or advance beyond the 60-day window.")
     dialog.state = MOS.Services.CSRTest.Create(); dialog.summary = { players = {} }
     dialog.status = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.status:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -88); dialog.status:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.status:SetJustifyH("LEFT")
     dialog.item = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlight"); dialog.item:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -116); dialog.item:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.item:SetJustifyH("LEFT")
-    dialog.result = MOS.UI.Components.CreateHeading(dialog, "", 1, "orange"); dialog.result:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -148); dialog.result:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.result:SetJustifyH("LEFT")
+    dialog.result = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.result:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -148); dialog.result:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.result:SetJustifyH("LEFT")
     dialog.logTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.logTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -262); dialog.logTitle:SetText("Simulation log")
     dialog.logLines = {}
     local index
@@ -74,7 +74,7 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
     local raidFilterIndex
     for raidFilterIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[raidFilterIndex]] = true end
     controller.testLab = CreateTestLab(function() controller.testMode = true; controller:Refresh() end, function() controller.testMode = false; controller:Refresh() end)
-    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "orange"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); controller.title:SetText("CSR")
+    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); controller.title:SetText("CSR")
     controller.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.description:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -40); controller.description:SetPoint("RIGHT", page, "RIGHT", -12, 0); controller.description:SetJustifyH("LEFT")
     controller.description:SetText("Unsuccessful Soft Reserves from the last 60 days. Each player-item pair accumulates independently. Each miss grants 10 CSR.")
     controller.testButton = MOS.UI.Components.CreateButton(page, nil, "CSR Test Lab", 96, 22); controller.testButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -10); controller.testButton:SetScript("OnClick", function() controller.testLab:Open() end)
@@ -91,8 +91,8 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
     local allCheckbox = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); allCheckbox:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheckbox:SetWidth(20); allCheckbox:SetHeight(20); allCheckbox:SetChecked(1)
     allCheckbox.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); allCheckbox.label:SetPoint("LEFT", allCheckbox, "RIGHT", 2, 0); allCheckbox.label:SetText("All")
     controller.raidChecks = {}
-    allCheckbox:SetScript("OnClick", function()
-        local enabled = this:GetChecked() and true or false
+    MOS.UI.Components.BindCheckboxLabel(allCheckbox, function(owner)
+        local enabled = owner:GetChecked() and true or false
         local optionIndex
         for optionIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[optionIndex]] = enabled and true or nil; controller.raidChecks[optionIndex]:SetChecked(enabled and 1 or nil) end
         controller:Refresh()
@@ -100,8 +100,8 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
     for raidFilterIndex = 1, table.getn(raidNames) do
         local checkbox = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); checkbox:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6 - (raidFilterIndex * 23)); checkbox:SetWidth(20); checkbox:SetHeight(20); checkbox.raidName = raidNames[raidFilterIndex]; checkbox:SetChecked(1)
         checkbox.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 2, 0); checkbox.label:SetText(raidNames[raidFilterIndex])
-        checkbox:SetScript("OnClick", function()
-            controller.selectedRaids[this.raidName] = this:GetChecked() and true or nil
+        MOS.UI.Components.BindCheckboxLabel(checkbox, function(owner)
+            controller.selectedRaids[owner.raidName] = owner:GetChecked() and true or nil
             local allSelected, optionIndex = true, nil
             for optionIndex = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[optionIndex]] then allSelected = false; break end end
             allCheckbox:SetChecked(allSelected and 1 or nil); controller:Refresh()

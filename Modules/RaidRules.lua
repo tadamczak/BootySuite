@@ -13,7 +13,7 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 7, right = 7, top = 7, bottom = 7 } })
     MOS.UI.Components.RegisterDialogSurface(frame, "panel")
     frame:SetBackdropColor(0.018, 0.018, 0.016, 1)
-    frame.title = MOS.UI.Components.CreateHeading(frame, "", 1, "orange"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -17); frame.title:SetText("Set Loot Rules")
+    frame.title = MOS.UI.Components.CreateHeading(frame, "", 1, "gold"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -17); frame.title:SetText("Set Loot Rules")
     frame.close = MOS.UI.Components.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
     local headers = { { "Guild rank", 22, 190 }, { "SR", 224, 66 }, { "Reycoin", 310, 92 }, { "CSR", 422, 66 }, { "Highly Contested Items", 508, 158 } }
     local index
