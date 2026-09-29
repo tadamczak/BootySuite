@@ -20,7 +20,7 @@ function Commands.Attach(options)
         elseif command == "scan" then
             if not options.dashboard:IsVisible() then options.dashboard:Show() end
             options.showPage("roster")
-            options.printMessage("Use Scan Guild Data or Export Roster in Roster Management.")
+            options.printMessage("Use Scan Guild Data or Export Roster in Roster.")
         elseif command == "show" or command == "open" or command == "" then
             options.toggleDashboard()
         elseif command == "hide" then

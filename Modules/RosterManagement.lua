@@ -6,7 +6,7 @@ local RosterManagement = MOS.Modules.RosterManagement
 function RosterManagement.CreateShell(page, contentPanel)
     local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10)
-    title:SetText("Roster Management")
+    title:SetText("Roster"); page.sectionTitle = title
 
     local searchLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
     searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -87)
@@ -207,7 +207,6 @@ function RosterManagement.BuildLayoutControls(page, shell, filterView, guildCont
             { button = page.guildInfoButton, width = 118 },
             { button = page.guildAddButton, width = 90, permission = "invite" },
             { button = page.guildControlButton, width = 100, permission = "control" },
-            { button = guildControls.exportButton, width = 120 },
         },
     }
     return page.layoutControls
@@ -727,15 +726,9 @@ function RosterManagement.SetDataVisible(controller, visible)
         page.listHeaderUI.zone:Hide()
         page.listHeaderUI.lastOnline:Hide()
         page.officerHeader:Hide()
-        controller.scanSaveButton:Hide()
+        -- Export belongs to Guild Statistics.
         page.filterController:Hide()
         for i = 1, table.getn(page.listController.rows) do page.listController.rows[i]:Hide() end
-    else
-        controller.scanSaveButton:ClearAllPoints()
-        controller.scanSaveButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -128, -48)
-        controller.scanSaveButton:SetWidth(120)
-        controller.scanSaveButton:SetHeight(22)
-        controller.scanSaveButton:Show()
     end
 end
 
@@ -745,17 +738,23 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     controller.rendering = true
     local rows = controller.rows
     local rowHeight = controller.rowHeight
-    local tableWidth = math.max(1, page:GetWidth() - 42)
-    RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY)
+    local tableWidth
     page.tableViewport:ClearAllPoints()
     page.tableViewport:SetPoint("TOPLEFT", page, "TOPLEFT", 12, headerY - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24))
-    page.tableViewport:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -30, 32)
+    page.tableViewport:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(controller.viewportRightInset or 30), 32)
     if resetScroll == true then
         controller.scrollFrame.offset = 0
         controller.scrollFrame:SetVerticalScroll(0)
     end
     local availableHeight = math.max(0, page.tableViewport:GetHeight())
     local visibleRowCount = RosterManagement.CalculateVisibleRows(availableHeight, rowHeight, selectedName ~= nil)
+    local rightInset = table.getn(visibleMembers) > visibleRowCount and 30 or 12
+    controller.viewportRightInset = rightInset
+    tableWidth = math.max(1, page:GetWidth() - 12 - rightInset)
+    page.tableViewport:ClearAllPoints()
+    page.tableViewport:SetPoint("TOPLEFT", page, "TOPLEFT", 12, headerY - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24))
+    page.tableViewport:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -rightInset, 32)
+    RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY)
     RosterManagement.EnsureRowPool(controller, visibleRowCount, columns, tableWidth)
     controller.scrollFrame:ClearAllPoints()
     controller.scrollFrame:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", -8, 9)
@@ -864,6 +863,7 @@ end
 
 function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, sortKey, selectedMemberName)
     local page = renderer.page
+    RosterManagement.UpdateSectionHeader(page)
     if not RosterManagement.IsReady(page.dataController) then
         RosterManagement.SetDataVisible(page.visibilityController, false)
         renderer.scanButton:Show()
@@ -899,7 +899,7 @@ function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, so
     if not guildName then
         renderer.statusText:SetText("No guild found.")
     elseif not data then
-        renderer.statusText:SetText(guildName .. " - no saved roster. Use Export Roster to scan.")
+        renderer.statusText:SetText(guildName .. " - no saved roster. Use Refresh Data to scan.")
     elseif query ~= "" or table.getn(renderer.visibleMembers) ~= memberCount then
         renderer.statusText:SetText(guildName .. " - showing " .. table.getn(renderer.visibleMembers) .. " of " .. memberCount .. " members")
     else
@@ -1031,8 +1031,15 @@ local function PlaceRosterFilter(page, control, visible, controlWidth, x, y)
     return x + (controlWidth or control:GetWidth()) + 8
 end
 
+function RosterManagement.UpdateSectionHeader(page)
+    local shift = MuklaOfficerSuiteDB.rosterHideSectionHeader and 32 or 0
+    if page.sectionTitle then if shift > 0 then page.sectionTitle:Hide() else page.sectionTitle:Show() end end
+    return shift
+end
+
 function RosterManagement.LayoutChrome(page, controls, motdText)
     local width = page:GetWidth()
+    local headerShift = RosterManagement.UpdateSectionHeader(page)
     controls.footer.guild:SetText("Guild Message Of The Day:")
     controls.footer.guild:SetWidth(math.max(1, width - 40))
     controls.footer.guild:SetJustifyH("LEFT")
@@ -1043,22 +1050,24 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.footer.motd:SetHeight(0)
     controls.footer.motd:SetText(motdText or "Guild Message of the Day")
     controls.footer:ClearAllPoints()
-    controls.footer:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -42)
-    controls.footer:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -42)
+    controls.footer:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -42 + headerShift)
+    controls.footer:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -42 + headerShift)
     controls.footer:SetHeight(20 + controls.footer.guild:GetStringHeight() + controls.footer.motd:GetStringHeight())
 
     if controls.footer.rule then
         controls.footer.rule:ClearAllPoints()
-        controls.footer.rule:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -82 - controls.footer:GetHeight())
-        controls.footer.rule:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -82 - controls.footer:GetHeight())
+        controls.footer.rule:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -82 - controls.footer:GetHeight() + headerShift)
+        controls.footer.rule:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -82 - controls.footer:GetHeight() + headerShift)
     end
-    local shift = controls.footer:GetHeight() - 10
+    local shift = controls.footer:GetHeight() - 10 - headerShift
     local settings = MuklaOfficerSuiteDB or {}
     local x, y = 12, -106 - shift
     local hasFilters = settings.rosterShowClassFilter ~= false or settings.rosterShowRankFilter ~= false
     x = PlaceRosterFilter(page, controls.filtersLabel, hasFilters, 30, x, y)
     x = PlaceRosterFilter(page, controls.classFilter, settings.rosterShowClassFilter ~= false, width < 650 and 60 or 84, x, y)
     x = PlaceRosterFilter(page, controls.rankFilter, settings.rosterShowRankFilter ~= false, width < 650 and 60 or 84, x, y)
+    local filterWrap = hasFilters and (settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false) and x + (settings.rosterShowSearch ~= false and 110 or 0) + (settings.rosterShowOffline ~= false and 118 or 0) > width - 12
+    if filterWrap then x = 12; y = y - 28; shift = shift + 28 end
     x = PlaceRosterFilter(page, controls.searchLabel, settings.rosterShowSearch ~= false, 40, x, y)
     x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, width - x - (settings.rosterShowOffline ~= false and 170 or 50))), x, y)
     x = PlaceRosterFilter(page, controls.showOffline.label, settings.rosterShowOffline ~= false, 76, x, y)
@@ -1088,7 +1097,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     end
     baseWidth = math.max(1, baseWidth + math.max(0, visibleCount - 1) * 6)
     local availableWidth = math.max(1, width - 24 - 28)
-    local widthScale = availableWidth / baseWidth
+    local widthScale = math.max(0.01, (availableWidth - math.max(0, visibleCount - 1) * 6) / math.max(1, baseWidth - math.max(0, visibleCount - 1) * 6))
     local actionX = 12
     for actionIndex = 1, actionCount do
         local action = controls.actions[actionIndex]
@@ -1099,13 +1108,13 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
             action.button:SetWidth(math.floor(action.width * widthScale))
             action.button:SetHeight(22)
             MOS.UI.Components.FitButtonLabel(action.button, action.button:GetWidth() - 16)
-            action.button:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight())
+            action.button:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight() + headerShift)
             actionX = actionX + math.floor(action.width * widthScale) + 6
         else action.button:Hide() end
     end
     controls.refreshButton:Show(); controls.refreshButton:ClearAllPoints()
     controls.refreshButton:SetWidth(22); controls.refreshButton:SetHeight(22)
-    controls.refreshButton:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight())
+    controls.refreshButton:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight() + headerShift)
     local hasFilterRow = hasFilters or settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false
     return shift - (hasFilterRow and 0 or 28)
 end

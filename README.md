@@ -11,7 +11,7 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - [Installation](#installation)
 - [Basic Usage](#basic-usage)
 - [Commands](#commands)
-- [Roster Management](#roster-management)
+- [Roster](#roster)
 - [Guild Statistics](#guild-statistics)
 - [Raid Management](#raid-management)
 - [Loot Master Mode](#loot-master-mode)
@@ -46,12 +46,12 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 - **Open or close -** Use `/mos`, `/mukla`, `/mos show`, or `/mos open`.
 - **Hide -** Use `/mos hide` to close the main window.
 - **Manual item roll -** Use `/mos roll [linked item]` to start Loot Master rolling for an item from chat or a bag.
-- **Roster shortcut -** Use `/mos scan` to open Roster Management and access its scan controls.
+- **Roster shortcut -** Use `/mos scan` to open Roster and access its scan controls.
 - **Saved roster status -** Use `/mos status` to print the number of saved guild members.
 - **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
 - **Layout diagnostics -** Use `/mos layout` when diagnosing window-layout problems.
 
-### Roster Management
+### Roster
 
 - **Guild roster -** Browse saved guild members with class, rank, level, zone, notes, online status, and last-online information.
 - **Search and filters -** Narrow the roster by text, class, rank, level, and online state.
@@ -64,6 +64,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 
 ### Guild Statistics
 
+- **Export Roster -** Scan the guild roster and confirm a reload to save it to disk.
 - **Class overview -** Review the saved roster grouped by class.
 - **Rank overview -** Review the saved roster grouped by guild rank.
 - **Level 60 filter -** Limit statistics to max-level characters.
@@ -121,7 +122,9 @@ In **LM Config**, set **LM Auto Loot** to **Auto Loot**, **Shift Loot** (hold Sh
 
 **UI > General** can hide the status/version bar, guild logo, or addon name and ornaments. All three options default to off. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. These preferences are saved in profiles under **Profile > General**. Hiding every roster filter also removes its empty row.
 
-Under **UI > Roster management > Layout**, choose visible columns, filters and column headers. Officer notes require guild permission. Hidden class, rank and search filters do not restrict results. These preferences are saved in profiles. Show Player Status switches to the player-status columns; Officer note remains permission-gated. Refresh Data is beside Export Roster. The main window can be narrowed to 350 pixels. Resize Settings by dragging its unmarked bottom-right corner; UI General and Layout expand independently, and its single-line options adapt to up to three measured columns, down to a 350-pixel window.
+Both **UI > Roster > Layout** and **UI > Raid Management > Layout** offer **Hide section header**.
+
+Under **UI > Roster > Layout**, choose visible columns, filters and column headers. Officer notes require guild permission. Hidden class, rank and search filters do not restrict results. These preferences are saved in profiles. Show Player Status switches to the player-status columns; Officer note remains permission-gated. Export Roster is in Guild Statistics; Refresh Data stays in Roster. The main window can be narrowed to 350 pixels. Resize Settings by dragging its unmarked bottom-right corner; UI General and Layout expand independently, and its single-line options adapt to up to four measured columns, down to a 350-pixel window.
 
 Under **UI > Layout**, choose **Tab view** or **Bottom Tab view** to reveal **Use Icon Tabs**. Bottom Tab view places navigation below the content. Text and icon tabs join the content frame; the selected tab keeps its gold outline and highlight while inactive tabs are recessed. Enable it to replace tab captions with the sidebar icons and matching highlights.
 

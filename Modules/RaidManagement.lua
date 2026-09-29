@@ -877,7 +877,7 @@ end
 
 function RaidManagement.ClearSessionHeader(page)
     page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide(); page.classicSummary:Hide()
-    page.refreshControls.title:SetText("Raid Management"); page.refreshControls.title:Show()
+    page.refreshControls.title:SetText("Raid Management"); if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.raidHideSectionHeader then page.refreshControls.title:Hide() else page.refreshControls.title:Show() end
 end
 
 function RaidManagement.RefreshPage(renderer)
@@ -919,6 +919,7 @@ function RaidManagement.RefreshPage(renderer)
         page.refreshControls.title:SetText("Loot Master Mode")
         if renderer.isLootMasterMinimized() then page.refreshControls.title:Hide() else page.refreshControls.title:Show() end
     end
+    if not lootMasterMode and MuklaOfficerSuiteDB.raidHideSectionHeader then page.refreshControls.title:Hide(); page.classicRaidName:Hide() end
     if MOS.UI.Components.IsClassicSkin() and attendance and attendance.members then
         local memberCount, onlineCount, memberIndex = table.getn(attendance.members), 0, nil
         for memberIndex = 1, memberCount do if attendance.members[memberIndex].online then onlineCount = onlineCount + 1 end end
@@ -1556,6 +1557,7 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
     row.lootMasterIcon:ClearAllPoints(); row.lootMasterIcon:SetPoint("TOPLEFT", row, "TOPLEFT", showRole and 16 or 1, -2)
     if showLootMaster then row.lootMasterIcon:Show() else row.lootMasterIcon:Hide() end
     local nameInset = (showRole and 17 or 0) + (showLootMaster and 14 or 0)
+    if nameInset == 0 then local _, fontSize = row.name:GetFont(); nameInset = math.max(2, (row:GetHeight() - (fontSize or 12)) / 2) end
     row.name:ClearAllPoints()
     row.name:SetPoint("TOPLEFT", row, "TOPLEFT", (lootMasterMode and 0 or page.listPositions[1] - tableLeft) + nameInset, 0)
     row.name:SetWidth(math.max(1, (lootMasterMode and 90 or page.listWidths[1]) - nameInset))

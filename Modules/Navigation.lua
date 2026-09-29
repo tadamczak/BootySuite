@@ -6,7 +6,7 @@ Navigation.SetActive = MOS.UI.Components.Navigation.SetActive
 function Navigation.Create(options)
     options.order = { "roster", "raid", "statistics", "raidStatistics", "csr", "performance", "about" }
     options.items = {
-        { key = "roster", text = "Roster Management", icon = "Interface\\Icons\\INV_Misc_Book_09" },
+        { key = "roster", text = "Roster", icon = "Interface\\Icons\\INV_Misc_Book_09" },
         { key = "raid", text = "Raid Management", icon = "Interface\\Icons\\INV_Banner_03" },
         { key = "statistics", text = "Guild Statistics", icon = "Interface\\Icons\\INV_Misc_Book_11" },
         { key = "raidStatistics", text = "Raid Statistics", icon = "Interface\\Icons\\INV_Misc_Note_06" },
