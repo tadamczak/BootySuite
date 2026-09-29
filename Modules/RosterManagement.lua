@@ -245,7 +245,7 @@ function RosterManagement.MatchesFilters(member, selectedClasses, selectedRanks,
     if className == "" then className = "Unknown" end
     if rankName == "" then rankName = "Unknown" end
     if not showOffline and not member.online then return false end
-    return selectedClasses[className] and selectedRanks[rankName]
+    return (not selectedClasses or selectedClasses[className]) and (not selectedRanks or selectedRanks[rankName])
 end
 
 function RosterManagement.MatchesSearch(member, query)
@@ -509,7 +509,6 @@ function RosterManagement.ApplyRowColumns(row, columns, tableWidth)
     end
 end
 
-local emptyRosterFilter = {}
 local rosterColumnSettings = { class = "Class", level = "Level", zone = "Zone", rank = "Rank", notes = "PublicNote", officer = "OfficerNote", lastOnline = "LastOnline" }
 function RosterManagement.GetVisibleColumns(page, settings)
     local visible = page.visibleColumns or {}; page.visibleColumns = visible
@@ -894,7 +893,7 @@ function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, so
     if MuklaOfficerSuiteDB.rosterShowSearch == false then query = "" end
 
     page.filterController:Build(data)
-    RosterManagement.FilterMembers(renderer.visibleMembers, data, query, MuklaOfficerSuiteDB.rosterShowClassFilter ~= false and renderer.selectedClasses or emptyRosterFilter, MuklaOfficerSuiteDB.rosterShowRankFilter ~= false and renderer.selectedRanks or emptyRosterFilter, MuklaOfficerSuiteDB.showOfflineMembers)
+    RosterManagement.FilterMembers(renderer.visibleMembers, data, query, MuklaOfficerSuiteDB.rosterShowClassFilter ~= false and renderer.selectedClasses or nil, MuklaOfficerSuiteDB.rosterShowRankFilter ~= false and renderer.selectedRanks or nil, MuklaOfficerSuiteDB.showOfflineMembers)
     table.sort(renderer.visibleMembers, renderer.sortMembers)
 
     if not guildName then
@@ -1064,8 +1063,12 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, width - x - (settings.rosterShowOffline ~= false and 170 or 50))), x, y)
     x = PlaceRosterFilter(page, controls.showOffline.label, settings.rosterShowOffline ~= false, 76, x, y)
     x = PlaceRosterFilter(page, controls.showOffline, settings.rosterShowOffline ~= false, nil, x, y)
-    x = PlaceRosterFilter(page, controls.refreshButton, true, nil, x, y)
-    if page.filterController and (settings.rosterShowClassFilter == false or settings.rosterShowRankFilter == false) then page.filterController:Hide() end
+    controls.searchLabel:SetTextColor(1, 1, 1)
+    controls.searchLabel:SetHeight(22); controls.searchLabel:SetJustifyV("MIDDLE")
+    controls.showOffline.label:SetTextColor(1, 1, 1)
+    controls.showOffline.label:SetHeight(22); controls.showOffline.label:SetJustifyV("MIDDLE")
+    controls.filtersLabel:SetHeight(22); controls.filtersLabel:SetJustifyV("MIDDLE")
+    if page.filterController and ((settings.rosterShowClassFilter == false and page.filterController.classPanel:IsVisible()) or (settings.rosterShowRankFilter == false and page.filterController.rankPanel:IsVisible())) then page.filterController:Hide() end
     controls.status:ClearAllPoints()
     controls.status:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 12, 12)
     controls.status:SetHeight(14)
@@ -1084,7 +1087,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
         if action.available then baseWidth = baseWidth + action.width; visibleCount = visibleCount + 1 end
     end
     baseWidth = math.max(1, baseWidth + math.max(0, visibleCount - 1) * 6)
-    local availableWidth = math.max(1, width - 24)
+    local availableWidth = math.max(1, width - 24 - 28)
     local widthScale = math.min(1, availableWidth / baseWidth)
     local actionX = 12
     for actionIndex = 1, actionCount do
@@ -1099,6 +1102,9 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
             actionX = actionX + math.floor(action.width * widthScale) + 6
         else action.button:Hide() end
     end
+    controls.refreshButton:Show(); controls.refreshButton:ClearAllPoints()
+    controls.refreshButton:SetWidth(22); controls.refreshButton:SetHeight(22)
+    controls.refreshButton:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight())
     return shift
 end
 

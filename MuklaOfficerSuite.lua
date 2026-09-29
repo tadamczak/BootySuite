@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.24"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.25"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -844,8 +844,8 @@ MOS.Core.EventDispatcher.Attach(MOS, {
             MuklaOfficerSuiteDB.windowLeft = nil; MuklaOfficerSuiteDB.windowBottom = nil
         end
         dashboard:SetScale(1)
-        dashboard:SetMinResize(700, 380); dashboard:SetMaxResize(1100, 760)
-        dashboard:SetWidth(math.max(700, math.min(1100, savedWindowWidth)))
+        dashboard:SetMinResize(350, 380); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(math.max(350, math.min(1100, savedWindowWidth)))
         dashboard:SetHeight(math.max(380, math.min(760, savedWindowHeight)))
         if tonumber(MuklaOfficerSuiteDB.windowLeft) and tonumber(MuklaOfficerSuiteDB.windowBottom) then
             dashboard:ClearAllPoints(); dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", MuklaOfficerSuiteDB.windowLeft, MuklaOfficerSuiteDB.windowBottom)
