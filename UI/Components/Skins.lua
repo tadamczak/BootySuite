@@ -130,12 +130,13 @@ local function ApplySolidButton(entry)
     -- Keep custom regions independent of native texture ownership on the 1.12 client.
     entry.solidHover:Show()
     button:SetHighlightTexture(nil)
-    button:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
-    button:SetDisabledTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+    button:SetPushedTexture(nil)
+    button:SetDisabledTexture(nil)
 end
 
 local function ApplyControl(entry)
     local button = entry.frame
+    if Skins.current ~= "classic" or button.mosClassicVariant ~= "red" then entry.hovered = nil end
     local solid = button.mosClassicKeepNormalSurface
     if not solid and entry.solidFill then
         entry.solidFill:Hide(); entry.solidHover:Hide()
@@ -173,7 +174,16 @@ local function ApplyControl(entry)
             if state == "selected" and not button.mosClassicCompactControl then entry.classicRedFill:Show() else entry.classicRedFill:Hide() end
         end
         if button.mosClassicVariant == "red" and not button.mosClassicCompactControl then
-            if not entry.redHover then entry.redHover = SolidTexture(button, "HIGHLIGHT", 1, 0.72, 0.25, 0.22) end
+            SetNineSliceShown(entry.classicHoverBorder, false)
+            if not entry.redHover then
+                entry.redHover = button:CreateTexture(nil, "HIGHLIGHT")
+                entry.redHover:SetTexture("Interface\\Buttons\\UI-Panel-Button-Highlight")
+                entry.redHover:SetTexCoord(0.1, 0.9, 0.2, 0.8)
+                entry.redHover:SetBlendMode("ADD")
+                entry.redHover:SetVertexColor(1, 0.65, 0.45, 0.65)
+                entry.redHover:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -5)
+                entry.redHover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 5)
+            end
             entry.redHover:Show()
         elseif entry.redHover then entry.redHover:Hide() end
         local disabled = button.mosClassicDisabled
@@ -254,6 +264,10 @@ local function ApplyControl(entry)
     if solid then
         ApplySolidButton(entry)
 
+    end
+    if button.label and entry.hovered and Skins.current == "classic" and button.mosClassicVariant == "red" and not button.mosClassicDisabled then
+        entry.restR, entry.restG, entry.restB, entry.restA = button.label:GetTextColor()
+        button.label:SetTextColor(1, 1, 1)
     end
     if button.label and button.mosLabelInsets then
         button.label:ClearAllPoints()
@@ -361,6 +375,26 @@ local function ApplyScrollBar(entry)
     if entry.downIcon then entry.downIcon:Hide() end
 end
 
+local function RedHoverEnter()
+    local entry = this.mosSkinEntry
+    if entry.onEnter then entry.onEnter() end
+    local enabled = not this.IsEnabled or this:IsEnabled()
+    if Skins.current ~= "classic" or this.mosClassicVariant ~= "red" or this.mosClassicCompactControl or this.mosClassicDisabled or enabled == false or enabled == 0 then return end
+    if not entry.hovered then entry.restR, entry.restG, entry.restB, entry.restA = this.label:GetTextColor() end
+    entry.hovered = true
+    this.label:SetTextColor(1, 1, 1)
+end
+
+local function RedHoverLeave()
+    local entry = this.mosSkinEntry
+    if entry.hovered then
+        entry.hovered = nil
+        if this.mosClassicDisabled then this.label:SetTextColor(0.48, 0.48, 0.46)
+        else this.label:SetTextColor(entry.restR, entry.restG, entry.restB, entry.restA) end
+    end
+    if entry.onLeave then entry.onLeave() end
+end
+
 function UI.RegisterSkinnedControl(frame, backdrop, background, border, highlight)
     local labelColor = nil
     local labelPoints = nil
@@ -371,6 +405,17 @@ function UI.RegisterSkinnedControl(frame, backdrop, background, border, highligh
         for pointIndex = 1, frame.label:GetNumPoints() do labelPoints[pointIndex] = { frame.label:GetPoint(pointIndex) } end
     end
     local entry = { frame = frame, backdrop = backdrop, background = background, border = border, highlight = highlight, labelColor = labelColor, labelPoints = labelPoints }
+    entry.onEnter, entry.onLeave = frame:GetScript("OnEnter"), frame:GetScript("OnLeave")
+    frame.mosSkinEntry = entry
+    frame:SetScript("OnEnter", RedHoverEnter); frame:SetScript("OnLeave", RedHoverLeave)
+    local onHide = frame:GetScript("OnHide")
+    frame:SetScript("OnHide", function()
+        if entry.hovered then
+            entry.hovered = nil
+            frame.label:SetTextColor(entry.restR, entry.restG, entry.restB, entry.restA)
+        end
+        if onHide then onHide() end
+    end)
     Skins.controls[table.getn(Skins.controls) + 1] = entry
     ApplyControl(entry)
 end
