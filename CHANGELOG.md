@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.5 - 2026-09-29
+
+- Fixed lower-row expansion, full-width member details and row text margins.
+- Hid unavailable guild actions without gaps and made the context menu compact and cursor-relative.
+- Reworked member information, rank arrows and permission-aware note panels with Accept/Cancel editors; removed extra member buttons.
+
 ## 0.5.0-dev.4 - 2026-09-29
 
 - Added permission-aware guild controls, member details, editable notes and rank arrows in Roster Management.

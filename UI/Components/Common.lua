@@ -523,13 +523,13 @@ function UI.CreateTextArea(parent, width, height, maxLetters)
 end
 
 function UI.CreateArrowButton(parent, direction)
-    local icon = direction == "up" and "Interface\\Buttons\\UI-Panel-ScrollUpButton-Up" or "Interface\\Buttons\\UI-Panel-ScrollDownButton-Up"
+    local icon = direction == "up" and "Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Up" or "Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Up"
     local button = UI.CreateIconButton(parent, nil, icon, 20)
     return button
 end
 
 function UI.CreateContextMenu(parent, specs, onAction)
-    local menu = UI.CreateDropdownPanel(parent, parent, 156, 36 + table.getn(specs) * 23, 50)
+    local menu = UI.CreateDropdownPanel(parent, parent, 138, 28 + table.getn(specs) * 18, 50)
     menu:SetFrameStrata("FULLSCREEN_DIALOG"); menu.dismiss:SetFrameStrata("FULLSCREEN_DIALOG")
     menu.dismiss:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     menu:SetClampedToScreen(true); menu.buttons = {}
@@ -538,14 +538,42 @@ function UI.CreateContextMenu(parent, specs, onAction)
     local index
     for index = 1, table.getn(specs) do
         local spec = specs[index]
-        local button = UI.CreateButton(menu, nil, spec[1], 140, 21)
-        button:SetPoint("TOPLEFT", menu, "TOPLEFT", 8, -28 - (index - 1) * 23)
+        local button = UI.CreateMenuItem(menu, spec[1], 126, 18)
+        button:SetPoint("TOPLEFT", menu, "TOPLEFT", 6, -24 - (index - 1) * 18)
         button.action = spec[2]
         button:SetScript("OnClick", function() local action = this.action; menu:Hide(); onAction(action) end)
         menu.buttons[index] = button
     end
     function menu:Open(anchor)
-        self:ClearAllPoints(); self:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 8, 0); self:Show()
+        local x, y = GetCursorPosition()
+        local scale = UIParent:GetEffectiveScale() or 1
+        self:ClearAllPoints(); self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / scale + 10, y / scale); self:Show()
     end
     return menu
+end
+
+function UI.CreateMenuItem(parent, text, width, height)
+    local button = UI.CreateControl(nil, parent)
+    button:SetWidth(width); button:SetHeight(height)
+    button.label = UI.CreateColumnLabel(button, text, "white")
+    button.label:SetPoint("LEFT", button, "LEFT", 6, 0)
+    button.label:SetPoint("RIGHT", button, "RIGHT", -6, 0)
+    button.label:SetJustifyH("LEFT")
+    local hover = UI.CreateTexture(button, nil, "HIGHLIGHT")
+    hover:SetAllPoints(button); hover:SetTexture(1, 0.82, 0.28, 0.12)
+    return button
+end
+
+function UI.CreateNoteDisplay(parent, height)
+    local button = UI.CreateControl(nil, parent)
+    button:SetHeight(height or 76)
+    button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+    button:SetBackdropColor(0.025, 0.025, 0.022, 1); button:SetBackdropBorderColor(0.45, 0.40, 0.28, 1)
+    button.label = UI.CreateComponentLabel(button, "", "white")
+    button.label:SetPoint("TOPLEFT", button, "TOPLEFT", 10, -10)
+    button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -10, 10)
+    button.label:SetJustifyH("LEFT"); button.label:SetJustifyV("TOP")
+    button.SetText = function(self, value) self.label:SetText(value) end
+    button.GetText = function(self) return self.label:GetText() end
+    return button
 end

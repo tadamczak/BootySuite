@@ -206,8 +206,8 @@ function RosterManagement.BuildLayoutControls(page, shell, filterView, guildCont
         modeButton = page.modeButton,
         actions = {
             { button = page.guildInfoButton, width = 118 },
-            { button = page.guildAddButton, width = 90 },
-            { button = page.guildControlButton, width = 100 },
+            { button = page.guildAddButton, width = 90, permission = "invite" },
+            { button = page.guildControlButton, width = 100, permission = "control" },
             { button = guildControls.exportButton, width = 120 },
         },
     }
@@ -230,8 +230,8 @@ end
 function RosterManagement.CalculateVisibleRows(viewportHeight, rowHeight, hasExpandedRow)
     local height = math.max(0, tonumber(viewportHeight) or 0)
     local step = math.max(1, tonumber(rowHeight) or 1)
-    local expandedReserve = hasExpandedRow and 180 or 0
-    return math.max(0, math.floor((height - expandedReserve) / step))
+    local expandedReserve = hasExpandedRow and 208 or 0
+    return math.max(hasExpandedRow and height >= step and 1 or 0, math.floor((height - expandedReserve) / step))
 end
 
 function RosterManagement.NeedsLayout(width, height, previousWidth, previousHeight, forced)
@@ -470,15 +470,15 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
 
     row.actionPanel = MOS.UI.Components.CreateContainer(nil, row)
     row.actionPanel:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -20)
-    row.actionPanel:SetWidth(552)
-    row.actionPanel:SetHeight(176)
+    row.actionPanel:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, -20)
+    row.actionPanel:SetHeight(204)
     row.actionPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     row.actionPanel:SetBackdropColor(0.07, 0.08, 0.07, 0.92)
     row.actionPanel:SetBackdropBorderColor(0.30, 0.34, 0.30, 1)
     row.actionPanel:Hide()
     row.promoteButton = CreateActionButton(row, "Promote", "promote", -28)
     row.demoteButton = CreateActionButton(row, "Demote", "demote", -4)
-    row:SetScript("OnHide", function() this.hover:Hide(); if this.removeConfirm then this.removeConfirm:Hide() end end)
+    row:SetScript("OnHide", function() this.hover:Hide() end)
     row:SetScript("OnClick", OnRowClick)
     row:SetScript("OnEnter", OnRowEnter)
     row:SetScript("OnLeave", OnRowLeave)
@@ -504,11 +504,10 @@ function RosterManagement.ApplyRowColumns(row, columns, tableWidth)
         local cell = row[column.key]
         cell:ClearAllPoints()
         cell:SetPoint("TOPLEFT", row, "TOPLEFT", columnX + (column.key == "name" and 7 or 0), -1)
-        cell:SetWidth(math.max(1, width - 6))
+        cell:SetWidth(math.max(1, width - (column.key == "name" and 14 or 6)))
         cell:Show()
         columnX = columnX + width
     end
-    row.actionPanel:SetWidth(tableWidth - 8)
 end
 
 function RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY)
@@ -528,13 +527,11 @@ function RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY
             local cell = rows[rowIndex][column.key]
             cell:ClearAllPoints()
             cell:SetPoint("TOPLEFT", rows[rowIndex], "TOPLEFT", columnX, -1)
-            cell:SetWidth(math.max(1, width - 6))
+            cell:SetWidth(math.max(1, width - (column.key == "name" and 14 or 6)))
             cell:Show()
         end
         columnX = columnX + width
     end
-    local rowIndex
-    for rowIndex = 1, table.getn(rows) do rows[rowIndex].actionPanel:SetWidth(tableWidth - 8) end
 end
 
 local function SetRowTextColor(row, shade)
@@ -575,16 +572,15 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
         row:SetBackdropColor(0.16, 0.20, 0.17, 0.82)
         row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
         row.actionPanel:Show()
-        row:SetHeight(rowHeight + 180)
+        row:SetHeight(rowHeight + 208)
         RosterManagement.BindMemberDetails(row, member)
         row:Show()
-        return rowHeight + 180
+        return rowHeight + 208
     end
     row.selection:Hide()
     row:SetBackdropColor(0, 0, 0, 0)
     row:SetBackdropBorderColor(0, 0, 0, 0)
     row.actionPanel:Hide()
-    if row.removeConfirm then row.removeConfirm:Hide() end
     row:SetHeight(rowHeight)
     row:Show()
     return rowHeight
@@ -686,8 +682,8 @@ function RosterManagement.SetDataVisible(controller, visible)
     controller.infoButton[method](controller.infoButton)
     controller.addButton[method](controller.addButton)
     controller.controlButton[method](controller.controlButton)
-    MOS.UI.Components.SetButtonEnabled(controller.addButton, MOS.Services.Roster.CanManage("invite"))
-    MOS.UI.Components.SetButtonEnabled(controller.controlButton, MOS.Services.Roster.CanManage("control"))
+    if not MOS.Services.Roster.CanManage("invite") then controller.addButton:Hide() end
+    if not MOS.Services.Roster.CanManage("control") then controller.controlButton:Hide() end
     controls.footer[method](controls.footer)
     local i
     for i = 1, table.getn(page.listHeaderUI.buttons) do
@@ -727,6 +723,20 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     controller.scrollFrame:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", -8, 9)
     controller.scrollFrame:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, 9)
     controller.scrollFrame:SetHeight((visibleRowCount * rowHeight) + 8)
+    if selectedName and selectedName ~= controller.lastSelectedName then
+        local memberIndex
+        for memberIndex = 1, table.getn(visibleMembers) do
+            if visibleMembers[memberIndex].name == selectedName then
+                local current = controller.scrollFrame.offset or 0
+                controller.scrollFrame.offset = math.max(0, math.min(current, memberIndex - 1))
+                if memberIndex > controller.scrollFrame.offset + visibleRowCount then
+                    controller.scrollFrame.offset = math.max(0, memberIndex - visibleRowCount)
+                end
+                break
+            end
+        end
+    end
+    controller.lastSelectedName = selectedName
     local offset = MOS.UI.Components.UpdateScrollFrame(controller.scrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
     page.measuredCapacity = visibleRowCount
     page.measuredOffset = offset
@@ -961,6 +971,7 @@ function RosterManagement.AttachInteractions(options)
         this:SetScript("OnUpdate", nil); this.fittedPanel:Hide()
         if this.memberMenu then this.memberMenu:Hide() end
         if this.memberReport then this.memberReport:Hide() end
+        if this.noteEditor then this.noteEditor:Hide() end
         options.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90)
         options.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
         options.contentShade:Show()
@@ -1012,95 +1023,115 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.modeButton.label:SetPoint("RIGHT", controls.modeButton, "LEFT", -4, 0)
 
     local actionCount = table.getn(controls.actions)
-    local baseWidth = math.max(1, (actionCount - 1) * 6)
+    local baseWidth, visibleCount = 0, 0
     local actionIndex
-    for actionIndex = 1, actionCount do baseWidth = baseWidth + controls.actions[actionIndex].width end
+    for actionIndex = 1, actionCount do
+        local action = controls.actions[actionIndex]
+        action.available = not action.permission or MOS.Services.Roster.CanManage(action.permission)
+        if action.available then baseWidth = baseWidth + action.width; visibleCount = visibleCount + 1 end
+    end
+    baseWidth = math.max(1, baseWidth + math.max(0, visibleCount - 1) * 6)
     local availableWidth = math.max(1, width - 24)
     local widthScale = math.min(1, availableWidth / baseWidth)
     local actionX = 12
     for actionIndex = 1, actionCount do
         local action = controls.actions[actionIndex]
-        action.button:ClearAllPoints()
-        action.button:SetScale(1)
-        action.button:SetWidth(math.floor(action.width * widthScale))
-        action.button:SetHeight(22)
-        action.button:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -42)
-        actionX = actionX + math.floor(action.width * widthScale) + 6
+        if action.available then
+            action.button:Show()
+            action.button:ClearAllPoints()
+            action.button:SetScale(1)
+            action.button:SetWidth(math.floor(action.width * widthScale))
+            action.button:SetHeight(22)
+            action.button:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -42)
+            actionX = actionX + math.floor(action.width * widthScale) + 6
+        else action.button:Hide() end
     end
     return shift
 end
 
 function RosterManagement.CreateMemberDetails(row)
-    local C = MOS.UI.Components
-    row.details = C.CreateComponentLabel(row.actionPanel, "", "white")
-    row.details:SetPoint("TOPLEFT", row.actionPanel, "TOPLEFT", 8, -6)
-    row.details:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", -190, -6)
-    row.details:SetHeight(48); row.details:SetJustifyH("LEFT")
-    local function Note(key, title, left)
-        local field = C.CreateTextArea(row.actionPanel, 240, 54, 31)
-        field:SetPoint("TOPLEFT", row.actionPanel, left and "TOPLEFT" or "TOP", left and 8 or 4, -76)
-        field:SetPoint("TOPRIGHT", row.actionPanel, left and "TOP" or "TOPRIGHT", left and -4 or -8, -76)
-        local label = C.CreateComponentLabel(row.actionPanel, title, "gold")
-        label:SetPoint("BOTTOMLEFT", field, "TOPLEFT", 0, 4)
-        local save = C.CreateButton(row.actionPanel, nil, "Save", 52, 20)
-        save:SetPoint("TOPLEFT", field, "BOTTOMLEFT", 0, -4)
-        local status = C.CreateColumnLabel(row.actionPanel, "", "gold")
-        status:SetPoint("LEFT", save, "RIGHT", 6, 0)
-        save:SetScript("OnClick", function()
-            local member = row.displayedMember
-            if not member then return end
-            local value = field:GetText()
-            if MOS.Services.Roster.PerformMemberAction(key, member.name, value) then
-                member[key] = value; field.savedValue = value; status:SetText("Saved")
-                if row.controller.onAction then row.controller.onAction("refresh") end
-                if key == "publicNote" then row.notes:SetText(value) else row.officer:SetText(value) end
-            else status:SetText("Not permitted") end
-            field:ClearFocus()
-        end)
-        field.save = save; field.status = status; row[key .. "Field"] = field
+    local C, panel = MOS.UI.Components, row.actionPanel
+    row.details = {}
+    local function Text(key, y, color, small)
+        local label = small and C.CreateColumnLabel(panel, "", color) or C.CreateComponentLabel(panel, "", color)
+        label:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, y)
+        label:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -12, y); label:SetJustifyH("LEFT")
+        row.details[key] = label
+        return label
     end
-    Note("publicNote", "Public Note:", true)
-    Note("officerNote", "Officer's Note:", false)
-    row.removeButton = C.CreateButton(row.actionPanel, nil, "Remove", 76, 20)
-    row.removeButton:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", -8, -30)
-    row.removeButton:SetScript("OnClick", function()
-        local name = row.displayedMember and row.displayedMember.name
-        if not name then return end
-        if not row.removeConfirm then row.removeConfirm = C.CreateConfirmation(nil) end
-        row.removeConfirm:Open("Remove " .. name .. " from the guild?", function()
-            if MOS.Services.Roster.PerformMemberAction("remove", name) and row.controller.onAction then row.controller.onAction("refresh") end
+    Text("name", -10, "orange")
+    Text("level", -29, "white", true)
+    Text("rank", -47, "orange")
+    Text("lastOnline", -67, "orange")
+    local function Note(key, title)
+        local field = C.CreateNoteDisplay(panel, 82)
+        field.title = C.CreateComponentLabel(panel, title, "orange")
+        field.title:SetPoint("BOTTOMLEFT", field, "TOPLEFT", 0, 6)
+        field:SetScript("OnClick", function() RosterManagement.OpenNoteEditor(row, key) end)
+        row[key .. "Field"] = field
+    end
+    Note("publicNote", "Public Note:")
+    Note("officerNote", "Officer's Note:")
+end
+
+function RosterManagement.OpenNoteEditor(row, key)
+    local page, C, service = row:GetParent(), MOS.UI.Components, MOS.Services.Roster
+    local member = row.displayedMember
+    if not member or not service.CanManage(key) then return end
+    if not page.noteEditor then
+        page.noteEditor = C.CreateTextEditor("MuklaOfficerSuiteRosterNoteEditor", "", 31, function(value)
+            local target = page.noteTarget
+            if not target or not service.PerformMemberAction(target.key, target.name, value) then
+                page.noteEditor:SetMessage("You cannot edit this note.", true); return false
+            end
+            target.member[target.key] = value
+            if target.row.displayedMember == target.member then
+                RosterManagement.BindMemberDetails(target.row, target.member)
+                target.row.notes:SetText(target.member.publicNote or "")
+            end
+            if target.row.controller.onAction then target.row.controller.onAction("refresh") end
+            return true
         end)
-    end)
-    row.groupButton = C.CreateButton(row.actionPanel, nil, "Group Invite", 88, 20)
-    row.groupButton:SetPoint("RIGHT", row.removeButton, "LEFT", -6, 0)
-    row.groupButton:SetScript("OnClick", function()
-        if row.displayedMember then MOS.Services.Roster.PerformMemberAction("group", row.displayedMember.name) end
-    end)
+        page.noteEditor.save:SetText("Accept")
+    end
+    page.noteTarget = { name = member.name, member = member, row = row, key = key }
+    page.noteEditor.title:SetText(key == "publicNote" and "Set Player Note" or "Set Officer Note")
+    page.noteEditor:Open(member[key] or ""); page.noteEditor:BringToFront(600)
 end
 
 function RosterManagement.BindMemberDetails(row, member)
     local C, service = MOS.UI.Components, MOS.Services.Roster
     if not row.details then RosterManagement.CreateMemberDetails(row) end
-    row.officer:SetText(service.CanManage("viewOfficerNote") and (member.officerNote or "") or "")
-    row.details:SetText((member.name or "") .. " - Level " .. tostring(member.level or 0) .. " " .. (member.class or "") .. "\nZone: " .. (member.zone or "Unknown") .. "\nRank: " .. (member.rank or "Unknown") .. "   Last Online: " .. RosterManagement.FormatLastOnline(member))
-    local _, key
-    for _, key in ipairs({ "publicNote", "officerNote" }) do
-        local field = row[key .. "Field"]
-        local canRead = key == "publicNote" or service.CanManage("viewOfficerNote")
-        local value = canRead and (member[key] or "") or ""
-        if field.memberName ~= member.name or field:GetText() == field.savedValue or not canRead then
-            field:SetText(value); field.savedValue = value; field.status:SetText("")
-        end
-        field.memberName = member.name
-        local allowed = service.CanManage(key)
-        field:EnableMouse(allowed); field:EnableKeyboard(allowed)
-        if not allowed then field:ClearFocus() end
-        C.SetButtonEnabled(field.save, allowed)
+    local officerVisible = service.CanManage("viewOfficerNote")
+    row.officer:SetText(officerVisible and (member.officerNote or "") or "")
+    row.details.name:SetText(member.name or "")
+    row.details.level:SetText("Level " .. tostring(member.level or 0) .. " " .. (member.class or ""))
+    row.details.rank:SetText("Rank: |cffffffff" .. (member.rank or "Unknown") .. "|r")
+    row.details.lastOnline:SetText("Last online: " .. (member.online and "|cffffffffOnline|r" or "|cff808080" .. RosterManagement.FormatLastOnline(member) .. " ago|r"))
+    local public, officer = row.publicNoteField, row.officerNoteField
+    public:ClearAllPoints(); public:SetPoint("TOPLEFT", row.actionPanel, "TOPLEFT", 12, -110)
+    public:SetPoint("TOPRIGHT", row.actionPanel, officerVisible and "TOP" or "TOPRIGHT", officerVisible and -6 or -12, -110)
+    public:SetText(member.publicNote and member.publicNote ~= "" and member.publicNote or "Click to set a public note.")
+    public:EnableMouse(service.CanManage("publicNote"))
+    officer:ClearAllPoints(); officer:SetPoint("TOPLEFT", row.actionPanel, "TOP", 6, -110)
+    officer:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", -12, -110)
+    if officerVisible then
+        officer:Show(); officer.title:Show()
+        officer:SetText(member.officerNote and member.officerNote ~= "" and member.officerNote or "Click to set an officer note.")
+        officer:EnableMouse(service.CanManage("officerNote"))
+    else officer:SetText(""); officer:Hide(); officer.title:Hide() end
+    local arrowX = -12
+    local _, action
+    for _, action in ipairs({ "demote", "promote" }) do
+        local button = row[action .. "Button"]
+        if service.CanManage(action, member) then
+            button:ClearAllPoints(); button:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", arrowX, -44)
+            button:Enable(); button:Show(); arrowX = arrowX - 24
+        else button:Hide() end
     end
-    if service.CanManage("promote", member) then row.promoteButton:Enable() else row.promoteButton:Disable() end
-    if service.CanManage("demote", member) then row.demoteButton:Enable() else row.demoteButton:Disable() end
-    C.SetButtonEnabled(row.removeButton, service.CanManage("remove", member))
-    C.SetButtonEnabled(row.groupButton, service.CanManage("group", member))
+    row.details.rank:ClearAllPoints()
+    row.details.rank:SetPoint("TOPLEFT", row.actionPanel, "TOPLEFT", 12, -47)
+    row.details.rank:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", arrowX - 4, -47)
 end
 
 function RosterManagement.OpenMemberMenu(row)
@@ -1133,8 +1164,9 @@ function RosterManagement.BindPermissionEvents(page)
     local watcher = MOS.UI.Components.CreateContainer(nil, page)
     local function Refresh()
         local C, service = MOS.UI.Components, MOS.Services.Roster
-        C.SetButtonEnabled(page.guildAddButton, service.CanManage("invite"))
-        C.SetButtonEnabled(page.guildControlButton, service.CanManage("control"))
+        if service.CanManage("invite") then page.guildAddButton:Show() else page.guildAddButton:Hide() end
+        if service.CanManage("control") then page.guildControlButton:Show() else page.guildControlButton:Hide() end
+        if page.layoutControls then RosterManagement.LayoutChrome(page, page.layoutControls, page.footer.motd:GetText()) end
         if page.listController then
             local _, row
             for _, row in ipairs(page.listController.rows) do
