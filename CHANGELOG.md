@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.39 - 2026-09-30
+
+- Let GMOTD text track the full native section width instead of a sampled width.
+- Use a compact controls strip for top tabs and allow tabs to overlap it and protrude above the window.
+- Align header/content right edges and replace thick outer section edges with thin gold lines while preserving horizontal separators.
+
 ## 0.5.0-dev.38 - 2026-09-30
 
 - Prevent stacked content borders when leaving Roster and suppress legacy tab hover outlines.

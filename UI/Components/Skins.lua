@@ -282,7 +282,7 @@ local SURFACE_STYLES = {
 
 local function ApplySurface(entry)
     local frame = entry.frame
-    if Skins.current == "classic" or frame.mosJoinedTop ~= nil then
+    if Skins.current == "classic" or frame.mosJoinedTop ~= nil or frame.mosThinOutline then
         local style = SURFACE_STYLES[entry.kind] or SURFACE_STYLES.panel
         if entry.kind == "row" and not entry.classicFill then
             -- Rows have a fixed height and a horizontally authored surface.
@@ -318,6 +318,18 @@ local function ApplySurface(entry)
         if frame.mosJoinedBottom then
             t[7]:SetTexCoord(0, 6/32, 6/32, 26/32); t[9]:SetTexCoord(26/32, 1, 6/32, 26/32); t[8]:Hide()
         end
+    end
+    if frame.mosThinOutline and entry.classicSkin then
+        local t = entry.classicSkin.textures
+        t[1]:Hide(); t[3]:Hide(); t[7]:Hide(); t[9]:Hide()
+        t[4]:SetTexture(0.68,0.54,0.27,1); t[4]:ClearAllPoints(); t[4]:SetWidth(1)
+        t[4]:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0); t[4]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0)
+        t[6]:SetTexture(0.68,0.54,0.27,1); t[6]:ClearAllPoints(); t[6]:SetWidth(1)
+        t[6]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0); t[6]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
+        t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
+        if not frame.mosKeepTopSeparator then t[2]:SetTexture(0.68,0.54,0.27,1); t[2]:SetHeight(1) end
+        t[8]:ClearAllPoints(); t[8]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0); t[8]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
+        if not frame.mosKeepBottomSeparator then t[8]:SetTexture(0.68,0.54,0.27,1); t[8]:SetHeight(1) end
     end
     if frame.mosSurfaceBorderHidden then
         SetNineSliceShown(entry.classicSkin, false); frame:SetBackdropBorderColor(0,0,0,0)
@@ -608,7 +620,13 @@ function UI.SetSurfaceBorderVisible(frame, visible)
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
 
+function UI.SetSurfaceThinOutline(frame, keepTop, keepBottom)
+    frame.mosThinOutline = true; frame.mosKeepTopSeparator = keepTop; frame.mosKeepBottomSeparator = keepBottom
+    if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
+end
+
 function UI.JoinSurfaceEdges(frame, top, bottom)
     frame.mosJoinedTop = top; frame.mosJoinedBottom = bottom
+    frame.mosThinOutline = true; frame.mosKeepTopSeparator = top
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
