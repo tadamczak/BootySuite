@@ -735,3 +735,8 @@ function UI.FitButtonLabel(button, available)
     local fitted = math.max(1, button.mosFitFontSize * math.min(1, math.max(1, available) / width))
     label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH("CENTER")
 end
+
+function UI.ApplyGoldRadialHighlight(texture)
+    texture:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Buttons\\red-hover-radial.tga")
+    texture:SetVertexColor(1, 0.8742857, 0.17, 0.42)
+end
