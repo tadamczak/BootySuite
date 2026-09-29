@@ -78,35 +78,103 @@ local function CreateClassicHoverOutline(frame, path, fullEdges)
     return outline
 end
 
+local function SolidTexture(button, layer, r, g, b, a)
+    local texture = button:CreateTexture(nil, layer)
+    texture:SetTexture("Interface\\Buttons\\WHITE8X8")
+    texture:SetVertexColor(r, g, b, a); texture:SetAllPoints(button)
+    return texture
+end
+
+local function SolidOutline(button, layer)
+    local edges, index = {}, nil
+    for index = 1, 4 do
+        local edge = SolidTexture(button, layer, 0.82, 0.70, 0.43, 1)
+        edge:ClearAllPoints()
+        if index <= 2 then
+            local side = index == 1 and "TOP" or "BOTTOM"
+            edge:SetPoint(side .. "LEFT", button, side .. "LEFT", 0, 0)
+            edge:SetPoint(side .. "RIGHT", button, side .. "RIGHT", 0, 0); edge:SetHeight(1)
+        else
+            local side = index == 3 and "LEFT" or "RIGHT"
+            edge:SetPoint("TOP" .. side, button, "TOP" .. side, 0, -1)
+            edge:SetPoint("BOTTOM" .. side, button, "BOTTOM" .. side, 0, 1); edge:SetWidth(1)
+        end
+        edges[index] = edge
+    end
+    return edges
+end
+
+local function ApplySolidButton(entry, red)
+    local button = entry.frame
+    if not entry.solidFill then
+        entry.solidFill = SolidTexture(button, "BACKGROUND", 0.08, 0.07, 0.05, 1)
+        entry.solidBorder = SolidOutline(button, "BORDER")
+        entry.selectionOutline = SolidOutline(button, "OVERLAY")
+        entry.solidHover = SolidTexture(button, "HIGHLIGHT", 1, 0.82, 0.28, 0.18)
+        entry.solidHoverBorder = SolidOutline(button, "HIGHLIGHT")
+        entry.solidPressed = SolidTexture(button, "ARTWORK", 0, 0, 0, 0.30)
+        entry.solidDisabled = SolidTexture(button, "ARTWORK", 0.12, 0.12, 0.12, 0.70)
+    end
+    button:EnableMouse(true)
+    button:SetBackdrop(nil); button:SetNormalTexture(nil)
+    if button.mosHighlight then button.mosHighlight:Hide() end
+    SetNineSliceShown(entry.classicSkin, false); SetNineSliceShown(entry.classicHoverBorder, false)
+    SetNineSliceShown(entry.classicSelectedBorder, false)
+    if entry.classicRedFill then entry.classicRedFill:Hide() end
+    entry.solidFill:Show()
+    if red then entry.solidFill:SetVertexColor(0.38, 0.035, 0.035, 1)
+    else entry.solidFill:SetVertexColor(0.045, 0.045, 0.04, 1) end
+    local index
+    for index = 1, 4 do
+        entry.solidBorder[index]:SetVertexColor(0.35, 0.35, 0.32, 1); entry.solidBorder[index]:Show()
+        entry.solidHoverBorder[index]:Show()
+        if button.mosClassicSelected then entry.selectionOutline[index]:Show() else entry.selectionOutline[index]:Hide() end
+    end
+    -- Native button states own these textures from the first display, without click hooks.
+    entry.solidHover:Show(); entry.solidPressed:Show(); entry.solidDisabled:Show()
+    button:SetHighlightTexture(entry.solidHover)
+    button:SetPushedTexture(entry.solidPressed)
+    button:SetDisabledTexture(entry.solidDisabled)
+end
+
 local function ApplyControl(entry)
     local button = entry.frame
+    local solid = button.mosClassicKeepNormalSurface or (Skins.current == "classic" and button.mosClassicVariant == "red" and not button.mosClassicCompactControl)
+    if not solid and entry.solidFill then
+        entry.solidFill:Hide(); entry.solidHover:Hide(); entry.solidPressed:Hide(); entry.solidDisabled:Hide()
+        local index
+        for index = 1, 4 do entry.solidBorder[index]:Hide(); entry.solidHoverBorder[index]:Hide(); entry.selectionOutline[index]:Hide() end
+        button:SetHighlightTexture(nil); button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
+    end
     if Skins.current == "classic" then
         local useSelectedSurface = button.mosClassicSelected and not button.mosClassicKeepNormalSurface
         local variant = useSelectedSurface and "red" or (button.mosClassicVariant or "dark")
         local state = (useSelectedSurface or variant == "red" or button.mosClassicPersistentRed) and "selected" or "normal"
-        if not entry.classicSkin then entry.classicSkin = CreateNineSlice(button, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga"), 128, 32, 6, "BACKGROUND")
-        else SetNineSliceTexture(entry.classicSkin, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga")) end
-        button:SetBackdropColor(0, 0, 0, 0); button:SetBackdropBorderColor(0, 0, 0, 0); SetNineSliceShown(entry.classicSkin, true)
-        button:SetHighlightTexture(nil)
-        if button.mosHighlight then button.mosHighlight:Hide() end
-        if not entry.classicHoverBorder then entry.classicHoverBorder = CreateClassicHoverOutline(button, ClassicPath("Buttons\\" .. variant .. "-selected.tga"), true)
-        else SetNineSliceTexture(entry.classicHoverBorder, ClassicPath("Buttons\\" .. variant .. "-selected.tga")) end
-        SetNineSliceShown(entry.classicHoverBorder, true); entry.classicHoverBorder.textures[5]:Hide()
-        if not entry.classicSelectedBorder then entry.classicSelectedBorder = CreateNineSlice(button, ClassicPath("Buttons\\" .. variant .. "-selected.tga"), 128, 32, 6, "OVERLAY")
-        else SetNineSliceTexture(entry.classicSelectedBorder, ClassicPath("Buttons\\" .. variant .. "-selected.tga")) end
-        -- The selected surface keeps its thin outline; only hover adds the stronger outline.
-        SetNineSliceShown(entry.classicSelectedBorder, false)
-        entry.classicSelectedBorder.textures[5]:Hide()
-        button:SetPushedTexture(ClassicPath("Buttons\\" .. variant .. (state == "selected" and "-selected.tga" or "-pressed.tga")))
-        button:SetDisabledTexture(ClassicPath("Buttons\\" .. variant .. "-disabled.tga"))
-        if not entry.classicRedFill then
-            entry.classicRedFill = button:CreateTexture(nil, "ARTWORK")
-            entry.classicRedFill:SetTexture("Interface\\Buttons\\WHITE8X8")
-            entry.classicRedFill:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -5)
-            entry.classicRedFill:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 5)
-            entry.classicRedFill:SetVertexColor(0.55, 0.04, 0.04, 0.27)
+        if not button.mosClassicKeepNormalSurface and button.mosClassicVariant ~= "red" then
+            if not entry.classicSkin then entry.classicSkin = CreateNineSlice(button, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga"), 128, 32, 6, "BACKGROUND")
+            else SetNineSliceTexture(entry.classicSkin, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga")) end
+            button:SetBackdropColor(0, 0, 0, 0); button:SetBackdropBorderColor(0, 0, 0, 0); SetNineSliceShown(entry.classicSkin, true)
+            button:SetHighlightTexture(nil)
+            if button.mosHighlight then button.mosHighlight:Hide() end
+            if not entry.classicHoverBorder then entry.classicHoverBorder = CreateClassicHoverOutline(button, ClassicPath("Buttons\\" .. variant .. "-selected.tga"), true)
+            else SetNineSliceTexture(entry.classicHoverBorder, ClassicPath("Buttons\\" .. variant .. "-selected.tga")) end
+            SetNineSliceShown(entry.classicHoverBorder, true); entry.classicHoverBorder.textures[5]:Hide()
+            if not entry.classicSelectedBorder then entry.classicSelectedBorder = CreateNineSlice(button, ClassicPath("Buttons\\" .. variant .. "-selected.tga"), 128, 32, 6, "OVERLAY")
+            else SetNineSliceTexture(entry.classicSelectedBorder, ClassicPath("Buttons\\" .. variant .. "-selected.tga")) end
+            -- The selected surface keeps its thin outline; only hover adds the stronger outline.
+            SetNineSliceShown(entry.classicSelectedBorder, false)
+            entry.classicSelectedBorder.textures[5]:Hide()
+            button:SetPushedTexture(ClassicPath("Buttons\\" .. variant .. (state == "selected" and "-selected.tga" or "-pressed.tga")))
+            button:SetDisabledTexture(ClassicPath("Buttons\\" .. variant .. "-disabled.tga"))
+            if not entry.classicRedFill then
+                entry.classicRedFill = button:CreateTexture(nil, "ARTWORK")
+                entry.classicRedFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+                entry.classicRedFill:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -5)
+                entry.classicRedFill:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 5)
+                entry.classicRedFill:SetVertexColor(0.55, 0.04, 0.04, 0.27)
+            end
+            if state == "selected" and not button.mosClassicCompactControl then entry.classicRedFill:Show() else entry.classicRedFill:Hide() end
         end
-        if state == "selected" and not button.mosClassicCompactControl then entry.classicRedFill:Show() else entry.classicRedFill:Hide() end
         local disabled = button.mosClassicDisabled
         local gold = not disabled and (button.mosClassicGold or button.mosClassicSelected)
         local red, green, blue = 1, 1, 1
@@ -181,44 +249,9 @@ local function ApplyControl(entry)
         if button.mosHighlight then button.mosHighlight:Show(); button.mosHighlight:SetAlpha(1); button.mosHighlight:SetTexture(unpack(entry.highlight)); button.mosHighlight:SetVertexColor(1, 1, 1, 1) end
     end
     if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosTextColor)) end
-    if button.mosClassicKeepNormalSurface then
-        button:SetBackdropBorderColor(0, 0, 0, 0)
-        if not entry.selectionOutline then
-            entry.selectionOutline = {}
-            local index
-            for index = 1, 4 do
-                local edge = button:CreateTexture(nil, "OVERLAY")
-                edge:SetTexture("Interface\\Buttons\\WHITE8X8")
-                edge:SetVertexColor(0.85, 0.68, 0.22, 1)
-                if index <= 2 then
-                    local side = index == 1 and "TOP" or "BOTTOM"
-                    edge:SetPoint(side .. "LEFT", button, side .. "LEFT", 1, 0)
-                    edge:SetPoint(side .. "RIGHT", button, side .. "RIGHT", -1, 0); edge:SetHeight(1)
-                else
-                    local side = index == 3 and "LEFT" or "RIGHT"
-                    edge:SetPoint("TOP" .. side, button, "TOP" .. side, 0, -1)
-                    edge:SetPoint("BOTTOM" .. side, button, "BOTTOM" .. side, 0, 1); edge:SetWidth(1)
-                end
-                entry.selectionOutline[index] = edge
-            end
-        end
-        local index
-        for index = 1, 4 do
-            if button.mosClassicSelected then entry.selectionOutline[index]:Show() else entry.selectionOutline[index]:Hide() end
-        end
-        if not entry.flatHoverOutline then
-            entry.flatHoverOutline = {}
-            for index = 1, 4 do
-                local edge = button:CreateTexture(nil, "HIGHLIGHT")
-                edge:SetAllPoints(entry.selectionOutline[index])
-                edge:SetTexture("Interface\\Buttons\\WHITE8X8")
-                edge:SetVertexColor(1, 0.78, 0.2, 1)
-                entry.flatHoverOutline[index] = edge
-            end
-        end
-        SetNineSliceShown(entry.classicHoverBorder, false)
-        if button.mosHighlight then button.mosHighlight:Hide() end
-        if entry.classicRedFill then entry.classicRedFill:Hide() end
+    if solid then
+        ApplySolidButton(entry, not button.mosClassicKeepNormalSurface)
+
     end
     if button.label and button.mosLabelInsets then
         button.label:ClearAllPoints()

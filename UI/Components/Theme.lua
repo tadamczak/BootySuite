@@ -64,6 +64,13 @@ function UI.CreateButton(parent, name, text, width, height)
     return UI.StyleButton(button, text)
 end
 
+function UI.CreateSelectionButton(parent, name, text, width, height)
+    local button = CreateFrame("Button", name, parent)
+    button.mosClassicKeepNormalSurface = true
+    button:SetWidth(width or 120); button:SetHeight(height or UI.Theme.sizes.buttonHeight)
+    return UI.StyleButton(button, text)
+end
+
 function UI.SetButtonLabelInsets(button, left, right)
     button.mosLabelInsets = { left, right }
     button.label:ClearAllPoints()

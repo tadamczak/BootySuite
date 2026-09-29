@@ -31,6 +31,7 @@ panelBorder:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
 
 local title = MOS.UI.Components.CreateLabel(panel, nil, "OVERLAY", "GameFontNormalSmall")
 title:SetPoint("TOPLEFT", panel, "TOPLEFT", 14, -12); title:SetText("Master Loot")
+title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
 local close = MOS.UI.Components.CreateWindowButton(panel, nil, "close")
 close:SetPoint("RIGHT", panel, "TOPRIGHT", -8, -17)
 close:SetScript("OnClick", function()
