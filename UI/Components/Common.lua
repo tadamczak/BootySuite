@@ -24,10 +24,17 @@ function UI.CreateResizeGrip(parent)
     return grip
 end
 
-function UI.RefreshClippedContent(viewport)
+local function FinishClippedLayout()
+    local viewport = this
+    viewport:SetScript("OnUpdate", nil)
+    UI.RefreshClippedContent(viewport, true)
+end
+
+function UI.RefreshClippedContent(viewport, settled)
     viewport.content:SetWidth(math.max(1, viewport:GetWidth()))
     if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
     viewport:SetVerticalScroll(math.max(0, math.min(viewport:GetVerticalScroll(), math.max(0, viewport.content:GetHeight() - viewport:GetHeight()))))
+    if not settled and viewport:IsVisible() then viewport:SetScript("OnUpdate", FinishClippedLayout) end
 end
 
 function UI.CreateClippedContent(parent, contentHeight)
@@ -40,6 +47,8 @@ function UI.CreateClippedContent(parent, contentHeight)
         local maximum = math.max(0, this.content:GetHeight() - this:GetHeight())
         this:SetVerticalScroll(math.max(0, math.min(maximum, this:GetVerticalScroll() - arg1 * 24)))
     end)
+    viewport:SetScript("OnShow", function() UI.RefreshClippedContent(this) end)
+    viewport:SetScript("OnHide", function() this:SetScript("OnUpdate", nil) end)
     viewport:SetScript("OnSizeChanged", function()
         UI.RefreshClippedContent(this)
     end)

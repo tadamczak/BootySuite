@@ -49,11 +49,11 @@ function VersionCheck.Create(options)
     }
 
     local function Notify(remoteVersion)
-        if shownVersions[remoteVersion] then return end
-        shownVersions[remoteVersion] = true
         MOS.Database.Ensure()
         MuklaOfficerSuiteDB.latestKnownVersion = MOS.Services.Version.SelectLatest(MuklaOfficerSuiteDB.latestKnownVersion, remoteVersion)
         SetStatus("New version available!", true)
+        if shownVersions[remoteVersion] then return end
+        shownVersions[remoteVersion] = true
         DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite:|r New version " .. remoteVersion .. " is available. Installed version: " .. peerVersion .. ".")
         StaticPopup_Show("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE", remoteVersion, peerVersion)
     end
@@ -74,11 +74,16 @@ function VersionCheck.Create(options)
                 if checkDeadline and GetTime() >= checkDeadline then
                     checkDeadline = nil
                     this:SetScript("OnUpdate", nil)
-                    if status ~= "New version available!" then SetStatus("Up to date!", true) end
+                    if MOS.Services.Version.IsNewer(MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.latestKnownVersion, peerVersion) then
+                        SetStatus("New version available!", false)
+                    elseif status ~= "New version available!" then SetStatus("Up to date!", true) end
                 end
             end)
         else
-            SetStatus("Failed to check for update. Check GitHub for latest version.", false)
+            checkDeadline = nil; frame:SetScript("OnUpdate", nil)
+            if MOS.Services.Version.IsNewer(MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.latestKnownVersion, peerVersion) then
+                SetStatus("New version available!", false)
+            else SetStatus("Failed to check for update. Check GitHub for latest version.", false) end
         end
         return table.getn(channels)
     end

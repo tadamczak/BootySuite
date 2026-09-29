@@ -135,6 +135,8 @@ Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can 
 
 ### About
 
+Repeated update checks retain a known newer version until your installed version catches up; repeat responses do not show duplicate notifications.
+
 - **Update notification -** MOS checks once when entering the game and provides **Check for updates!** in About. About shows the current version, checking progress, result, and last successful check. Detection compares complete running versions through private addon traffic with online MOS users and shows a GitHub Releases link for newer builds.
 
 - **Addon information -** Review the installed version and basic project information.
