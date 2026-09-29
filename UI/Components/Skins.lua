@@ -434,20 +434,11 @@ function UI.RegisterSkinnedNavigation(frame, key, defaultIcon)
 end
 
 function UI.SetNavigationTabBorder(frame, visible)
-    local entry = frame and frame.mosNavigationSkinEntry
-    if not frame then return end
-    if Skins.current == "classic" and entry then
-        if entry.classicHoverBorder then SetNineSliceShown(entry.classicHoverBorder, false) end
-        if not entry.classicTabBorder then entry.classicTabBorder = CreateNineSlice(frame, ClassicPath("Buttons\\dark-selected.tga"), 128, 32, 6, "OVERLAY") end
-        SetNineSliceShown(entry.classicTabBorder, visible and true or false)
-        entry.classicTabBorder.textures[5]:Hide()
-        entry.classicTabBorder.textures[7]:Hide(); entry.classicTabBorder.textures[8]:Hide(); entry.classicTabBorder.textures[9]:Hide()
-        if frame.tabBorderLeft then frame.tabBorderLeft:Hide(); frame.tabBorderRight:Hide(); frame.tabBorderTop:Hide() end
-    elseif frame.tabBorderLeft then
-        if entry and entry.classicTabBorder then SetNineSliceShown(entry.classicTabBorder, false) end
-        if visible then frame.tabBorderLeft:Show(); frame.tabBorderRight:Show(); frame.tabBorderTop:Show()
-        else frame.tabBorderLeft:Hide(); frame.tabBorderRight:Hide(); frame.tabBorderTop:Hide() end
-    end
+    local entry = frame.mosNavigationSkinEntry
+    if entry and entry.classicTabBorder then SetNineSliceShown(entry.classicTabBorder, false) end
+    if entry and entry.classicHoverBorder then SetNineSliceShown(entry.classicHoverBorder, false) end
+    if frame.tabBorderLeft then frame.tabBorderLeft:Hide(); frame.tabBorderRight:Hide(); frame.tabBorderTop:Hide() end
+    UI.SetOpenButtonBorder(frame, visible, frame.navigationBottom and "top" or "bottom")
 end
 
 function UI.RegisterSkinCallback(callback)

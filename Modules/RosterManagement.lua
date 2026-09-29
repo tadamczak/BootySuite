@@ -1000,19 +1000,24 @@ end
 function RosterManagement.LayoutChrome(page, controls, motdText)
     local width = page:GetWidth()
     controls.footer.guild:SetText("Guild Message Of The Day:")
-    controls.footer.guild:SetWidth(math.max(1, width - 24))
+    controls.footer.guild:SetWidth(math.max(1, width - 40))
     controls.footer.guild:SetJustifyH("LEFT")
     controls.footer.guild:SetHeight(0)
     controls.footer.motd:ClearAllPoints()
     controls.footer.motd:SetPoint("TOPLEFT", controls.footer.guild, "BOTTOMLEFT", 0, -6)
-    controls.footer.motd:SetWidth(math.max(1, width - 24))
+    controls.footer.motd:SetWidth(math.max(1, width - 40))
     controls.footer.motd:SetHeight(0)
     controls.footer.motd:SetText(motdText or "Guild Message of the Day")
     controls.footer:ClearAllPoints()
-    controls.footer:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -78)
-    controls.footer:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -78)
+    controls.footer:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -42)
+    controls.footer:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -42)
     controls.footer:SetHeight(20 + controls.footer.guild:GetStringHeight() + controls.footer.motd:GetStringHeight())
 
+    if controls.footer.rule then
+        controls.footer.rule:ClearAllPoints()
+        controls.footer.rule:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -82 - controls.footer:GetHeight())
+        controls.footer.rule:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -82 - controls.footer:GetHeight())
+    end
     local shift = controls.footer:GetHeight() - 10
     controls.filtersLabel:ClearAllPoints()
     controls.filtersLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -112 - shift)
@@ -1061,7 +1066,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
             action.button:SetScale(1)
             action.button:SetWidth(math.floor(action.width * widthScale))
             action.button:SetHeight(22)
-            action.button:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -42)
+            action.button:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight())
             actionX = actionX + math.floor(action.width * widthScale) + 6
         else action.button:Hide() end
     end

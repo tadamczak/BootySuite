@@ -676,3 +676,23 @@ function UI.BindCheckboxLabel(checkbox, onChanged, width)
     checkbox.labelHit:SetWidth(width or math.max(20, checkbox.label:GetStringWidth() + 4))
     return checkbox
 end
+
+function UI.SetOpenButtonBorder(button, visible, openEdge)
+    local viewport = button.openBorder
+    if not visible then if viewport then viewport:Hide() end; return end
+    if not viewport then
+        viewport = UI.CreateScrollFrame(nil, button)
+        viewport:SetAllPoints(button); viewport:EnableMouse(false)
+        viewport.border = UI.CreateContainer(nil, viewport); viewport.border:EnableMouse(false)
+        UI.ApplyDropdownChoiceSurface(viewport.border)
+        viewport.border:SetBackdropColor(0, 0, 0, 0)
+        viewport.border:SetBackdropBorderColor(1, 0.78, 0.2, 1)
+        viewport:SetScrollChild(viewport.border); button.openBorder = viewport
+    end
+    viewport:SetFrameStrata(button:GetFrameStrata()); viewport:SetFrameLevel(button:GetFrameLevel() + 1)
+    viewport.border:SetFrameStrata(button:GetFrameStrata()); viewport.border:SetFrameLevel(viewport:GetFrameLevel() + 1)
+    viewport.border:SetWidth(button:GetWidth()); viewport.border:SetHeight(button:GetHeight() + 8)
+    viewport:Show()
+    if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
+    viewport:SetVerticalScroll(openEdge == "top" and 8 or 0)
+end

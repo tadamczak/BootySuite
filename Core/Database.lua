@@ -31,7 +31,7 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.rosterLiveTrackingEnabled == nil then MuklaOfficerSuiteDB.rosterLiveTrackingEnabled = false end
     if MuklaOfficerSuiteDB.raidLiveTrackingEnabled == nil then MuklaOfficerSuiteDB.raidLiveTrackingEnabled = false end
     if MuklaOfficerSuiteDB.showOfflineMembers == nil then MuklaOfficerSuiteDB.showOfflineMembers = true end
-    if MuklaOfficerSuiteDB.menuStyle ~= "tabs" and MuklaOfficerSuiteDB.menuStyle ~= "buttons" then MuklaOfficerSuiteDB.menuStyle = "buttons" end
+    if MuklaOfficerSuiteDB.menuStyle ~= "tabs" and MuklaOfficerSuiteDB.menuStyle ~= "bottomTabs" and MuklaOfficerSuiteDB.menuStyle ~= "buttons" then MuklaOfficerSuiteDB.menuStyle = "buttons" end
     if MuklaOfficerSuiteDB.uiSkin ~= "classic" and MuklaOfficerSuiteDB.uiSkin ~= "default" then MuklaOfficerSuiteDB.uiSkin = "classic" end
     if MuklaOfficerSuiteDB.useIconTabs == nil then MuklaOfficerSuiteDB.useIconTabs = false end
     if MuklaOfficerSuiteDB.sidebarCollapsed == nil then MuklaOfficerSuiteDB.sidebarCollapsed = false end

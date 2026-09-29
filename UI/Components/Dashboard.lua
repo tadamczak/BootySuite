@@ -44,7 +44,7 @@ function Dashboard.CreateWindow(version)
     frame:SetFrameStrata("DIALOG")
     frame:SetMovable(true); frame:SetResizable(true)
     if frame.SetClampedToScreen then frame:SetClampedToScreen(true) end
-    frame:SetMinResize(760, 420); frame:SetMaxResize(1100, 760)
+    frame:SetMinResize(700, 380); frame:SetMaxResize(1100, 760)
     frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
     frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     frame:SetBackdropColor(0.02, 0.02, 0.02, 0.98); frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
@@ -257,7 +257,7 @@ function Dashboard.BindWindow(view, options)
         if view.minimized then
             view.minimizedLeft, view.minimizedBottom = frame:GetLeft(), frame:GetBottom()
             view.minimized = false
-            frame:SetMinResize(760, 420); frame:SetMaxResize(1100, 760)
+            frame:SetMinResize(700, 380); frame:SetMaxResize(1100, 760)
             frame:SetWidth(view.widthBeforeMinimize or 840); frame:SetHeight(view.heightBeforeMinimize or 540)
             frame:ClearAllPoints()
             if view.leftBeforeMinimize and view.bottomBeforeMinimize then frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.leftBeforeMinimize, view.bottomBeforeMinimize) else frame:SetPoint("CENTER", UIParent, "CENTER", 0, 10) end
