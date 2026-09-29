@@ -83,7 +83,7 @@ local function ApplyControl(entry)
     if Skins.current == "classic" then
         local useSelectedSurface = button.mosClassicSelected and not button.mosClassicKeepNormalSurface
         local variant = useSelectedSurface and "red" or (button.mosClassicVariant or "dark")
-        local state = (useSelectedSurface or button.mosClassicPersistentRed) and "selected" or "normal"
+        local state = (useSelectedSurface or variant == "red" or button.mosClassicPersistentRed) and "selected" or "normal"
         if not entry.classicSkin then entry.classicSkin = CreateNineSlice(button, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga"), 128, 32, 6, "BACKGROUND")
         else SetNineSliceTexture(entry.classicSkin, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga")) end
         button:SetBackdropColor(0, 0, 0, 0); button:SetBackdropBorderColor(0, 0, 0, 0); SetNineSliceShown(entry.classicSkin, true)

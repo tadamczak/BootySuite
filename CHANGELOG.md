@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.8 - 2026-09-29
+
+- Matched Settings frame spacing and resize grip to dashboard chrome; aligned General and Layout controls.
+- Kept red button surfaces persistent and changed roster hover/expanded highlights to neutral gray.
+
 ## 0.5.0-dev.7 - 2026-09-29
 
 - Added a visible Settings resize control and a framed inner content area.
