@@ -58,6 +58,8 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 - **Guild information -** Review or edit Guild Information and Message of the Day.
 - **Roster scan -** Refresh and save current guild data when you explicitly request it.
 
+Roster rows expand with level/class, zone, rank, last online, public and officer notes, rank arrows, Remove and Group Invite. Note editing and guild administration follow your guild permissions. Right-click a member for Whisper, Invite, Target, Report or Ignore Player; click outside to close. Report opens a reason form and Submit sends a GM ticket.
+
 ### Guild Statistics
 
 - **Class overview -** Review the saved roster grouped by class.

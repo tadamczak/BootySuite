@@ -514,3 +514,38 @@ function UI.CreateReadOnlyDialog(name, titleText, width, height, backgroundColor
     frame:Hide()
     return frame
 end
+
+function UI.CreateTextArea(parent, width, height, maxLetters)
+    local field = UI.CreateFramedEditBox(parent, nil, width)
+    field:SetHeight(height); field:SetMultiLine(true); field:SetMaxLetters(maxLetters or 255)
+    field:SetScript("OnEnterPressed", nil)
+    return field
+end
+
+function UI.CreateArrowButton(parent, direction)
+    local icon = direction == "up" and "Interface\\Buttons\\UI-Panel-ScrollUpButton-Up" or "Interface\\Buttons\\UI-Panel-ScrollDownButton-Up"
+    local button = UI.CreateIconButton(parent, nil, icon, 20)
+    return button
+end
+
+function UI.CreateContextMenu(parent, specs, onAction)
+    local menu = UI.CreateDropdownPanel(parent, parent, 156, 36 + table.getn(specs) * 23, 50)
+    menu:SetFrameStrata("FULLSCREEN_DIALOG"); menu.dismiss:SetFrameStrata("FULLSCREEN_DIALOG")
+    menu.dismiss:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    menu:SetClampedToScreen(true); menu.buttons = {}
+    menu.title = UI.CreateComponentLabel(menu, "", "gold")
+    menu.title:SetPoint("TOPLEFT", menu, "TOPLEFT", 12, -8)
+    local index
+    for index = 1, table.getn(specs) do
+        local spec = specs[index]
+        local button = UI.CreateButton(menu, nil, spec[1], 140, 21)
+        button:SetPoint("TOPLEFT", menu, "TOPLEFT", 8, -28 - (index - 1) * 23)
+        button.action = spec[2]
+        button:SetScript("OnClick", function() local action = this.action; menu:Hide(); onAction(action) end)
+        menu.buttons[index] = button
+    end
+    function menu:Open(anchor)
+        self:ClearAllPoints(); self:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 8, 0); self:Show()
+    end
+    return menu
+end

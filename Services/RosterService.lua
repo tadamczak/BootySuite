@@ -116,3 +116,60 @@ function RosterService.GetLowestRankIndex(data)
     end
     return lowest
 end
+local function Allowed(api)
+    if type(api) ~= "function" then return false end
+    local value = api()
+    return value ~= nil and value ~= false and value ~= 0
+end
+
+function RosterService.CanManage(action, member)
+    if action == "control" then return Allowed(IsGuildLeader) end
+    if action == "invite" then return Allowed(CanGuildInvite) end
+    if action == "publicNote" then return Allowed(CanEditPublicNote) end
+    if action == "officerNote" then return Allowed(CanEditOfficerNote) and Allowed(CanViewOfficerNote) end
+    if action == "viewOfficerNote" then return Allowed(CanViewOfficerNote) end
+    if not member or not member.name then return false end
+    if action == "whisper" or action == "group" then return member.online and member.name ~= UnitName("player") end
+    local _, _, playerRank = GetGuildInfo("player")
+    local rank = tonumber(member.rankIndex)
+    if not rank or not playerRank or rank <= playerRank or member.name == UnitName("player") then return false end
+    if action == "promote" then return Allowed(CanGuildPromote) and rank > playerRank + 1 end
+    if action == "demote" then return Allowed(CanGuildDemote) and type(GuildControlGetNumRanks) == "function" and rank < GuildControlGetNumRanks() - 1 end
+    if action == "remove" then return Allowed(CanGuildRemove) end
+    return false
+end
+
+function RosterService.FindLiveMember(name)
+    if type(GetNumGuildMembers) ~= "function" then return nil end
+    local index
+    for index = 1, GetNumGuildMembers(true) do
+        local current, rank, rankIndex, level, class, zone, publicNote, officerNote, online = GetGuildRosterInfo(index)
+        if current == name then return index, { name = current, rankIndex = rankIndex, online = online and true or false } end
+    end
+end
+
+function RosterService.PerformMemberAction(action, name, value)
+    local index, member = RosterService.FindLiveMember(name)
+    if not index or not RosterService.CanManage(action, member) then return false end
+    if action == "publicNote" and type(GuildRosterSetPublicNote) == "function" then GuildRosterSetPublicNote(index, string.sub(value or "", 1, 31))
+    elseif action == "officerNote" and type(GuildRosterSetOfficerNote) == "function" then GuildRosterSetOfficerNote(index, string.sub(value or "", 1, 31))
+    elseif action == "promote" and type(GuildPromoteByName) == "function" then GuildPromoteByName(name)
+    elseif action == "demote" and type(GuildDemoteByName) == "function" then GuildDemoteByName(name)
+    elseif action == "remove" and type(GuildUninvite) == "function" then GuildUninvite(name)
+    elseif action == "group" and type(InviteByName) == "function" then InviteByName(name)
+    elseif action == "whisper" and type(ChatFrame_SendTell) == "function" then ChatFrame_SendTell(name)
+    else return false end
+    return true
+end
+
+function RosterService.PerformSocialAction(action, name, reason)
+    if not name or name == "" or (name == UnitName("player") and action ~= "target") then return false end
+    if action == "whisper" and type(ChatFrame_SendTell) == "function" then ChatFrame_SendTell(name)
+    elseif action == "group" and type(InviteByName) == "function" then InviteByName(name)
+    elseif action == "target" and type(TargetByName) == "function" then TargetByName(name, true)
+    elseif action == "ignore" and type(AddIgnore) == "function" then AddIgnore(name)
+    elseif action == "report" and reason and string.find(reason, "%S") and type(NewGMTicket) == "function" then
+        NewGMTicket("Player report: " .. name .. "\n" .. reason)
+    else return false end
+    return true
+end
