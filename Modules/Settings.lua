@@ -49,13 +49,20 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     local layoutHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
     layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -122)
     layoutHeading:SetText("Layout")
-    local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 24, -150, onNavigationLayout)
+    local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 24, -150, function()
+        page.RefreshGeneralSettings()
+        if onNavigationLayout then onNavigationLayout() end
+    end)
+    local iconTabsCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteUseIconTabs", 330, -148, "Use Icon Tabs", "useIconTabs", nil, nil, onNavigationLayout)
+    page.iconTabsCheck = iconTabsCheck
     page.skinControl = skinControl
     page.menuStyleControl = menuStyleControl
     page.RefreshGeneralSettings = function()
         MOS.Database.Ensure()
         skinControl:SetText(MOS.UI.Components.IsClassicSkin() and "Classic" or "Default")
         menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or "Button view")
+        iconTabsCheck:SetChecked(MuklaOfficerSuiteDB.useIconTabs and 1 or nil)
+        if MuklaOfficerSuiteDB.menuStyle == "tabs" then iconTabsCheck:Show() else iconTabsCheck:Hide() end
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
     end
@@ -66,6 +73,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         if page.RefreshAllSettings then page.RefreshAllSettings() else page.RefreshGeneralSettings() end
         if options.profileLoaded then options.profileLoaded() end
     end)
+    page.RefreshGeneralSettings()
     return { viewport = viewport, page = page, scrollBar = scrollBar }
 end
 

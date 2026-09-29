@@ -117,6 +117,8 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 
 ### Settings
 
+Under **UI > Layout**, choose **Tab view** to reveal **Use Icon Tabs**. Enable it to replace tab captions with the sidebar icons and matching highlights.
+
 Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can be toggled by clicking either the checkbox or its label.
 
 - **Profiles -** Current profile shows the active configuration as text, with Save beside it. Select a saved profile under Load profile to enable Load, Delete and Export. New profile + Add creates and activates a copy of your current settings; Save updates the current profile, including pending percentage edits. Gold feedback appears beside the action buttons. Only the latest action remains visible; saving before Add or Load shows both results. Load and Add ask whether to save changed settings first. Delete requires confirmation; deleting the current snapshot leaves your live settings available to save again. Export opens saved settings for copying. Profiles exclude guild, raid and loot records.

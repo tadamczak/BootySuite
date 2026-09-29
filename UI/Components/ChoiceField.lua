@@ -17,11 +17,11 @@ local function RefreshChoice()
 end
 
 local function SelectChoice()
-    local owner = this.choiceOwner
-    owner.onSelect(this.choiceValue)
-    if owner.labelValue then owner.label:SetText(this.choiceText) else owner:SetText(this.choiceText) end
+    local owner, value, text = this.choiceOwner, this.choiceValue, this.choiceText
+    owner.onSelect(value)
+    if owner.labelValue then owner.label:SetText(text) else owner:SetText(text) end
     owner.panel:Hide()
-    if owner.onChanged then owner.onChanged(this.choiceValue) end
+    if owner.onChanged then owner.onChanged(value) end
 end
 
 function UI.CreateChoiceField(options)
