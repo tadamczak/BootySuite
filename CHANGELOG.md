@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.9 - 2026-09-29
+
+- Fixed Raid Settings accordion spacing and profile feedback for save-before-switch actions.
+- Reduced Settings text and checkbox sizes, with compact Reset to default buttons.
+
 ## 0.5.0-dev.8 - 2026-09-29
 
 - Matched Settings frame spacing and resize grip to dashboard chrome; aligned General and Layout controls.

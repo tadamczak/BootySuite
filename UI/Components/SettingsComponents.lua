@@ -38,7 +38,7 @@ function Settings.CreateSectionAccordion(parent, text, y)
     local button = Settings.CreateAccordion(parent, text, y)
     button:SetWidth(200); button:SetHeight(20)
     local font, _, flags = button.label:GetFont()
-    button.label:SetFont(font, MOS.UI.Components.HeadingSizes[2], flags)
+    button.label:SetFont(font, MOS.UI.Components.HeadingSizes[2] + MOS.UI.Components.GetTextSizeDelta(parent), flags)
     button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
     button.rule:ClearAllPoints()
     button.rule:SetPoint("LEFT", button.label, "RIGHT", 10, 0)
@@ -50,8 +50,9 @@ end
 function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
     local button = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    button:SetWidth(22)
-    button:SetHeight(22)
+    local size = MOS.UI.Components.GetTextSizeDelta(parent) < 0 and 20 or 22
+    button:SetWidth(size)
+    button:SetHeight(size)
     button.settingKey = key
     button.onChanged = onChanged
     button.label = MOS.UI.Components.CreateComponentLabel(button, "", "white")
@@ -70,7 +71,7 @@ function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
     button.labelHit = CreateFrame("Button", nil, button)
     button.labelHit:SetPoint("LEFT", button, "RIGHT", 1, 0)
     button.labelHit:SetWidth(math.max(18, button.label:GetStringWidth() + 5))
-    button.labelHit:SetHeight(22)
+    button.labelHit:SetHeight(size)
     button.labelHit.owner = button
     button.labelHit:SetScript("OnClick", function()
         local owner = this.owner
@@ -216,8 +217,9 @@ end
 function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tooltipTitle, tooltipText, onChanged, binding)
     local check = MOS.UI.Components.CreateCheckButton(name, parent, "UICheckButtonTemplate")
     check:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    check:SetWidth(24)
-    check:SetHeight(24)
+    local size = MOS.UI.Components.GetTextSizeDelta(parent) < 0 and 22 or 24
+    check:SetWidth(size)
+    check:SetHeight(size)
     check.settingKey = settingKey
     check.label = MOS.UI.Components.CreateComponentLabel(check, "", "white")
     check.label:SetPoint("LEFT", check, "RIGHT", 4, 0)
@@ -235,7 +237,7 @@ function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tool
     check.labelHit = MOS.UI.Components.CreateControl(nil, check)
     check.labelHit:SetPoint("LEFT", check, "RIGHT", 2, 0)
     check.labelHit:SetWidth(math.max(18, check.label:GetStringWidth() + 8))
-    check.labelHit:SetHeight(24)
+    check.labelHit:SetHeight(size)
     check.labelHit.owner = check
     check.labelHit:SetScript("OnClick", function()
         local owner = this.owner
@@ -252,8 +254,10 @@ end
 function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback, binding)
     local label = MOS.UI.Components.CreateLabel(parent, name .. "Label", "OVERLAY", "GameFontDisableSmall")
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    MOS.UI.Components.ApplyTextSizeDelta(label, parent)
     label:SetText(labelText)
     local field = MOS.UI.Components.CreateEditField(name, parent, "InputBoxTemplate")
+    MOS.UI.Components.ApplyTextSizeDelta(field, parent)
     field:SetWidth(34)
     field:SetHeight(18)
     field:SetPoint("LEFT", label, "RIGHT", 8, 0)

@@ -173,6 +173,7 @@ end
 function UI.CreateFramedEditBox(parent, name, width)
     local box = CreateFrame("EditBox", name, parent)
     box:SetWidth(width or 92); box:SetHeight(24); box:SetAutoFocus(false); box:SetFontObject(GameFontHighlightSmall)
+    UI.ApplyTextSizeDelta(box, parent)
     box:SetTextInsets(7, 7, 2, 2)
     box:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 10, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     box:SetBackdropColor(0.018, 0.018, 0.016, 1); box:SetBackdropBorderColor(0.48, 0.34, 0.10, 1)

@@ -40,6 +40,9 @@ function Settings.CreateProfiles(page, onLoaded)
     view.saveStatus = Status(view.Save)
     view.loadStatus = Status(view.Export)
     view.addStatus = Status(view.Add)
+    local function ClearStatus()
+        view.saveStatus:SetText(""); view.loadStatus:SetText(""); view.addStatus:SetText("")
+    end
     local function CommitPending()
         local controls = page.raidAccordionControls
         if not controls then return end
@@ -83,11 +86,12 @@ function Settings.CreateProfiles(page, onLoaded)
         view.panel:Hide(); view.confirm:Open(message, yes, no)
     end
     local function Switch(action, target)
+        ClearStatus()
         CommitPending()
         local status = action == "Add" and view.addStatus or view.loadStatus
         local function Apply()
             local ok, message = api[action](target)
-            status:SetText(message)
+            status:SetText(ok and action == "Add" and ("Added new profile: " .. api.GetCurrent()) or message)
             if ok then
                 if action == "Add" then view.name:SetText(""); view.selected = api.GetCurrent() end
                 RefreshState(); onLoaded()
@@ -96,23 +100,27 @@ function Settings.CreateProfiles(page, onLoaded)
         if api.IsDirty() then
             Confirm("Do you want to save current profile " .. api.GetCurrent() .. "?", function()
                 local ok, message = api.SaveCurrent()
-                if ok then Apply() else status:SetText(message) end
+                view.saveStatus:SetText(message)
+                if ok then Apply() end
             end, Apply)
         else Apply() end
     end
     view.Load:SetScript("OnClick", function() if view.selected then Switch("Load", view.selected) end end)
     view.Add:SetScript("OnClick", function()
+        ClearStatus()
         local name = view.name:GetText()
         local ok, message = api.CanAdd(name)
         if ok then Switch("Add", name) else view.addStatus:SetText(message) end
     end)
     view.Save:SetScript("OnClick", function()
+        ClearStatus()
         CommitPending()
         local _, message = api.SaveCurrent(); view.saveStatus:SetText(message); RefreshState()
     end)
     view.Delete:SetScript("OnClick", function()
         local selected = view.selected
         if not selected then return end
+        ClearStatus()
         Confirm("Delete profile " .. selected .. "?", function()
             local _, message = api.Delete(selected)
             view.loadStatus:SetText(message); view.selected = nil; RefreshState()
@@ -120,6 +128,7 @@ function Settings.CreateProfiles(page, onLoaded)
     end)
     view.Export:SetScript("OnClick", function()
         if not view.selected then return end
+        ClearStatus()
         local text, message = api.Export(view.selected)
         if not text then view.loadStatus:SetText(message); return end
         if not view.export then
