@@ -34,6 +34,49 @@ local function OnSettingsMouseWheel()
     if scrollBar then scrollBar:SetValue(value) else this:SetVerticalScroll(value) end
 end
 
+function Settings.LayoutGeneral(page)
+    if not page.generalGrid then return 0 end
+    local height = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.generalGrid, 20, -94, page:GetWidth() - 56, 28)
+    local headingY = -94 - height - 8
+    page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
+    local menu = page.menuStyleControl
+    menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 28)
+    local menuWidth = menu.fieldLabel:GetStringWidth() + 10 + menu:GetWidth()
+    local check = page.iconTabsCheck
+    local checkWidth = check:GetWidth() + 4 + check.label:GetStringWidth()
+    local wrap = (menuWidth + 14 + checkWidth > page:GetWidth() - 60) and check:IsVisible()
+    check:ClearAllPoints(); check:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", wrap and 20 or 24 + menuWidth + 14, headingY - 28 - (wrap and 28 or 0))
+    local extent = -headingY + 56 + (wrap and 28 or 0)
+    page.uiContent:SetHeight(extent)
+    return extent - 224
+end
+
+function Settings.LayoutRaidGrid(page, offset)
+    local data, C = page.responsiveRaid, MOS.UI.Components.Settings
+    local group, list, shell = data.group, data.list, data.shell
+    local width = math.max(1, page:GetWidth() - 64)
+    local function At(control, x, y)
+        control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
+    end
+    local y = -318 + offset
+    At(shell.groupHeading, 48, y); y = y - 38
+    At(group.displayHeading, 52, y); y = y - 26
+    At(group.columnsLabel, 52, y - 6); At(group.columnsButton, 104, y); y = y - 28
+    y = y - C.LayoutGrid(page, group.displayChecks, 52, y, width, 26) - 8
+    At(group.sizeHeading, 52, y); y = y - 24
+    y = y - C.LayoutGrid(page, group.autoChecks, 52, y, width, 26) - 22
+    y = y - C.LayoutGrid(page, group.sliders, 52, y, width, 56, true)
+    At(group.colorHeading, 52, y); y = y - 24
+    y = y - C.LayoutGrid(page, group.colorChecks, 52, y, width, 26)
+    y = y - C.LayoutGrid(page, group.colors, 52, y, width, 28) - 16
+    At(shell.listHeading, 48, y); At(shell.listDivider, 48, y - 20); shell.listDivider:SetWidth(math.max(1, page:GetWidth() - 84)); y = y - 44
+    y = y - C.LayoutGrid(page, list.checks, 52, y, width, 26) - 24
+    y = y - C.LayoutGrid(page, list.sliders, 52, y, width, 56, true)
+    y = y - C.LayoutGrid(page, list.colors, 52, y, width, 28) - 16
+    shell.panel:ClearAllPoints(); shell.panel:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -306 + offset); shell.panel:SetPoint("BOTTOMRIGHT", page, "TOPLEFT", page:GetWidth() - 12, y + 8)
+    return y - (-1126 + offset)
+end
+
 function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     options = options or {}
     local viewport = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteSettingsScroll", parent, "UIPanelScrollFrameTemplate")
@@ -77,6 +120,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         if onNavigationLayout then onNavigationLayout() end
     end)
     local iconTabsCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteUseIconTabs", 330, -204, "Use Icon Tabs", "useIconTabs", nil, nil, onNavigationLayout)
+    page.generalGrid = { minimapCheck, loginMessageCheck, page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3] }
+    page.uiLayoutHeading = layoutHeading
     page.iconTabsCheck = iconTabsCheck
     page.skinControl = skinControl
     page.menuStyleControl = menuStyleControl
@@ -90,6 +135,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         for index = 1, table.getn(page.chromeChecks) do local check = page.chromeChecks[index]; check:SetChecked(MOS.Database.GetSetting(check.settingKey) and 1 or nil) end
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
+        if page.topSectionState then Settings.ApplyTopSections(page) end
     end
     Settings.BindTopSections(page, function()
         MOS.UI.Components.SetSkin(MOS.Database.GetSetting("uiSkin"), false)
@@ -98,6 +144,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         if page.RefreshAllSettings then page.RefreshAllSettings() else page.RefreshGeneralSettings() end
         if options.profileLoaded then options.profileLoaded() end
     end)
+    page.ReflowSettings = function() Settings.ApplyTopSections(page) end
     page.RefreshGeneralSettings()
     return { viewport = viewport, page = page, scrollBar = scrollBar }
 end
@@ -258,6 +305,9 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local hover = factory.Color(40, -802, "Hover color", "raidGroupHoverColor")
     local pressed = factory.Color(230, -802, "On press color", "raidGroupPressedColor")
     return {
+        displayHeading = displayHeading, sizeHeading = sizeHeading, colorHeading = colorHeading,
+        displayChecks = { showClass, showLevel, showHeader, showLootMaster, showRole },
+        autoChecks = {autoWidth}, colorChecks = {classColors}, sliders = {width, height, headerHeight, margin, tileTextSize, headerTextSize},
         columnsLabel = columnsLabel, columnsButton = columnsButton, columnsPanel = columnsPanel,
         checks = { showClass, showLevel, showHeader, showLootMaster, showRole, autoWidth, classColors },
         width = width, height = height, headerHeight = headerHeight, margin = margin, tileTextSize = tileTextSize, headerTextSize = headerTextSize, autoWidth = autoWidth, colors = { background, text, hover, pressed },
@@ -286,6 +336,7 @@ function Settings.CreateRaidListViewControls(page, shell, factory)
     local hover = factory.Color(40, -1078, "Hover color", "raidListHoverColor")
     local pressed = factory.Color(230, -1078, "On press color", "raidListPressedColor")
     return {
+        sliders = {width, height},
         checks = { showName, showLevel, showStatus, showGroup, showClass, showRank, showSoftReserve, showLootMaster, showRole, showFilters, showSearch },
         width = width, height = height, colors = { background, text, hover, pressed },
         layoutControls = { shell.listDivider, shell.listHeading, shell.listReset, showName, showLevel, showStatus, showGroup, showClass, showRank, showSoftReserve, showLootMaster, showRole, showFilters, showSearch, width, height, background, text, hover, pressed },
@@ -311,10 +362,11 @@ function Settings.CreateRaidSettings(page, callbacks)
     local listControls = Settings.CreateRaidListViewControls(page, shell, factory)
     local leader = MOS.UI.Components.Settings.CreateAccordion(page, "Raid Leader Mode", -1126)
     local loot = MOS.UI.Components.Settings.CreateAccordion(page, "Loot Master Mode", -1154)
+    page.responsiveRaid = { shell = shell, group = groupControls, list = listControls }
     local layoutControls = Settings.MergeControls(groupControls.layoutControls, listControls.layoutControls)
     local viewControls = {
         columnsButton = groupControls.columnsButton,
-        checks = Settings.MergeControls(groupControls.checks, listControls.checks),
+        checks = Settings.MergeControls(Settings.MergeControls({}, groupControls.checks), listControls.checks),
         groupWidth = groupControls.width,
         groupHeight = groupControls.height,
         groupHeaderHeight = groupControls.headerHeight,
@@ -324,7 +376,7 @@ function Settings.CreateRaidSettings(page, callbacks)
         groupAutoWidth = groupControls.autoWidth,
         listWidth = listControls.width,
         listHeight = listControls.height,
-        colors = Settings.MergeControls(groupControls.colors, listControls.colors),
+        colors = Settings.MergeControls(Settings.MergeControls({}, groupControls.colors), listControls.colors),
     }
     Settings.BindRaidViewControls(page, viewControls, shell.groupReset, shell.listReset, callbacks)
     Settings.BindRaidAccordions(page, { page = page, layout = layout, general = general, generalControls = { liveTracking }, leader = leader, loot = loot, debugHeading = primarySections.debugHeading, layoutControls = layoutControls, columnsPanel = groupControls.columnsPanel })
@@ -481,6 +533,7 @@ function Settings.ApplyRaidAccordions(controls)
 
     local layoutOffset = offset + (state.general and 0 or 22)
     Settings.OffsetRaidLayoutControls(controls, layoutOffset)
+    if expanded and controls.page.responsiveRaid then layoutOffset = layoutOffset + Settings.LayoutRaidGrid(controls.page, layoutOffset) end
     local leaderY, lootY, opacityY, debugY, chatY
     if expanded then
         leaderY, lootY = -1126 + layoutOffset, -1154 + layoutOffset
@@ -507,6 +560,7 @@ function Settings.ApplyRaidAccordions(controls)
     end
     controls.debugHeading:ClearAllPoints()
     controls.debugHeading:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 12, debugY)
+    controls.debugHeading:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", -12, debugY)
 
     if controls.opacityLabel then
         controls.opacityLabel:ClearAllPoints()
@@ -529,6 +583,7 @@ function Settings.ApplyRaidAccordions(controls)
         if controls.page.topSectionState then
             local debugExpanded = controls.page.topSectionState.debug
             controls.debugHeading.label:SetText((debugExpanded and "-  " or "+  ") .. "Debug")
+            if controls.debugHeading.SetExpanded then controls.debugHeading:SetExpanded(debugExpanded) end
             if debugExpanded then controls.chatLogsCheck:Show() else controls.chatLogsCheck:Hide() end
         end
     end
@@ -616,7 +671,15 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
         check:ClearAllPoints(); check:SetPoint("TOPLEFT", page, "TOPLEFT", 52 + math.mod(index - 1, 2) * 260, layoutY - 56 - math.floor((index - 1) / 2) * 26)
         if state.layout and uiVisible then check:Show() else check:Hide() end
     end
-    local raidHeadingY = layoutY - (state.layout and 222 or 38)
+    local gridHeight = 0
+    if page.rosterLayoutChecks then
+        if not page.rosterGrid then
+            page.rosterGrid = {page.rosterClassColorsCheck}
+            for index = 1, table.getn(page.rosterLayoutChecks) do table.insert(page.rosterGrid, page.rosterLayoutChecks[index]) end
+        end
+        gridHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterGrid, 52, layoutY - 28, page:GetWidth() - 64, 26)
+    end
+    local raidHeadingY = layoutY - (state.layout and (40 + gridHeight) or 38)
     sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, raidHeadingY)
     raidControls.raidOffset = raidHeadingY - (-206)
     Settings.ApplyRaidAccordions(raidControls)
