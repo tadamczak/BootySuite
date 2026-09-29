@@ -9,7 +9,7 @@ function Window.Create(options)
     window:SetPoint("CENTER", UIParent, "CENTER", 40, 10)
     window:SetFrameStrata("FULLSCREEN_DIALOG"); window:SetFrameLevel(200); window:SetMovable(true); window:SetResizable(true)
     if window.SetClampedToScreen then window:SetClampedToScreen(true) end
-    window:SetMinResize(700, 420); window:SetMaxResize(1100, 760)
+    window:SetMinResize(350, 420); window:SetMaxResize(1100, 760)
     window:EnableMouse(true); window:RegisterForDrag("LeftButton")
     window:SetScript("OnDragStart", function() this:StartMoving() end)
     window:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
@@ -47,7 +47,7 @@ function Window.Create(options)
         local screenHeight = (UIParent.GetHeight and UIParent:GetHeight()) or 760
         local maximumWidth = math.max(320, math.min(1100, screenWidth - 32))
         local maximumHeight = math.max(260, math.min(760, screenHeight - 32))
-        local minimumWidth = math.min(700, maximumWidth)
+        local minimumWidth = math.min(350, maximumWidth)
         local minimumHeight = math.min(420, maximumHeight)
         window:SetMinResize(minimumWidth, minimumHeight); window:SetMaxResize(maximumWidth, maximumHeight)
         if window:GetWidth() > maximumWidth then window:SetWidth(maximumWidth) end

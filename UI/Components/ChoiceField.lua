@@ -34,6 +34,7 @@ function UI.CreateChoiceField(options)
     local button = UI.CreateDropdownButton(parent, nil, options.initialText, options.width)
     if options.buttonOffset then button:SetPoint("TOPLEFT", parent, "TOPLEFT", options.x + options.buttonOffset, options.y)
     else button:SetPoint("LEFT", label, "RIGHT", 10, 0) end
+    button.fieldLabel = label
     button.choices = options.choices; button.getValue = options.getValue
     button.labelValue = options.labelValue
     button.onSelect = options.onSelect; button.onChanged = options.onChanged

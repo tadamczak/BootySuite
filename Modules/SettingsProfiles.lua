@@ -157,18 +157,20 @@ function Settings.ApplyTopSections(page)
     local uiY = -10 - profileHeight
     page.uiHeadingY = uiY
     page.profiles.heading.label:SetText((state.profile and "-  " or "+  ") .. "Profile")
+    page.profiles.heading:SetExpanded(state.profile); page.uiHeading:SetExpanded(state.ui)
     page.profiles.general.label:SetText((state.profileGeneral and "-  " or "+  ") .. "General")
     if state.profile then page.profiles.general:Show() else page.profiles.general:Hide() end
     if state.profile and state.profileGeneral then page.profiles.content:Show() else page.profiles.content:Hide() end
     page.uiHeading.label:SetText((state.ui and "-  " or "+  ") .. "UI")
-    page.uiHeading:ClearAllPoints(); page.uiHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, uiY)
+    page.uiHeading:ClearAllPoints(); page.uiHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, uiY); page.uiHeading:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, uiY)
     page.uiContent:ClearAllPoints()
     page.uiContent:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -profileHeight)
     page.uiContent:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -profileHeight)
     if state.ui then page.uiContent:Show() else
         page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide()
     end
-    page.settingsTopOffset = -profileHeight - 28 - 56
+    local extra = Settings.LayoutGeneral and Settings.LayoutGeneral(page) or 0
+    page.settingsTopOffset = -profileHeight - 28 - 56 - extra
     if page.primarySections and page.raidAccordionControls then
         Settings.ApplyRosterAccordions(page, page.primarySections, page.raidAccordionControls)
     end

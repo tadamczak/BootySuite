@@ -36,14 +36,34 @@ end
 
 function Settings.CreateSectionAccordion(parent, text, y)
     local button = Settings.CreateAccordion(parent, text, y)
-    button:SetWidth(200); button:SetHeight(20)
+    button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -12, y)
+    button:SetHeight(20)
+    button.label:SetTextColor(unpack(MOS.UI.Components.TextColors.gold))
+    button:SetHighlightTexture(nil)
+    button.sectionFill = button:CreateTexture(nil, "BACKGROUND")
+    button.sectionFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+    button.sectionFill:SetVertexColor(0.82, 0.70, 0.43, 0.24)
+    button.sectionFill:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.sectionFill:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
+    button.sectionFade = button:CreateTexture(nil, "BACKGROUND")
+    button.sectionFade:SetTexture("Interface\\Buttons\\WHITE8X8")
+    button.sectionFade:SetGradientAlpha("HORIZONTAL", 0.82, 0.70, 0.43, 0.24, 0.82, 0.70, 0.43, 0)
+    button.sectionFade:SetPoint("TOPLEFT", button.sectionFill, "TOPRIGHT", 0, 0); button.sectionFade:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
+    button.SetExpanded = function(self, expanded)
+        self.sectionExpanded = expanded
+        if expanded or self.sectionHovered then self.sectionFill:Show(); self.sectionFade:Show()
+        else self.sectionFill:Hide(); self.sectionFade:Hide() end
+    end
+    button:SetScript("OnEnter", function() this.sectionHovered = true; this:SetExpanded(this.sectionExpanded) end)
+    button:SetScript("OnLeave", function() this.sectionHovered = false; this:SetExpanded(this.sectionExpanded) end)
+    button:SetScript("OnSizeChanged", function() this.sectionFill:SetWidth(math.min(200, math.max(1, this:GetWidth() - 1))) end)
+    button.sectionFill:SetWidth(200); button:SetExpanded(false)
     local font, _, flags = button.label:GetFont()
     button.label:SetFont(font, MOS.UI.Components.HeadingSizes[2] + MOS.UI.Components.GetTextSizeDelta(parent), flags)
-    button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
+    button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -12, y)
     button.rule:ClearAllPoints()
     button.rule:SetPoint("LEFT", button.label, "RIGHT", 10, 0)
     button.rule:SetPoint("RIGHT", parent, "RIGHT", -12, 0)
-    button.rule:SetHeight(1); button.rule:SetTexture(0.55, 0.42, 0.16, 0.75); button.rule:Show()
+    button.rule:SetHeight(1); button.rule:SetTexture(unpack(MOS.UI.Components.TextColors.gold)); button.rule:Show()
     return button
 end
 
@@ -287,7 +307,13 @@ end
 
 function Settings.UpdateScroll(viewport, page, pageHeight)
     if not viewport or not page then return end
-    page:SetWidth(math.max(640, viewport:GetWidth() - 4))
+    local width = math.max(1, viewport:GetWidth() - 4)
+    local changed = math.abs(page:GetWidth() - width) > 0.5
+    page:SetWidth(width)
+    if changed and page.ReflowSettings and not page.mosReflowing then
+        page.mosReflowing = true; page.ReflowSettings(); page.mosReflowing = nil
+        pageHeight = page.settingsContentHeight or pageHeight
+    end
     page:SetHeight(pageHeight or 960)
     local scrollBar = getglobal(viewport:GetName() .. "ScrollBar")
     local maximum = math.max(0, page:GetHeight() - viewport:GetHeight())
@@ -317,4 +343,50 @@ function Settings.CreateFactory(binding)
         return Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback, binding)
     end
     return factory
+end
+
+-- Measure each column from its widest item; only reflow on explicit layout/resize.
+function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
+    local count = table.getn(items)
+    if count == 0 then return 0 end
+    available = math.max(1, available)
+    local widths = items.mosColumnWidths or {}; items.mosColumnWidths = widths
+    local cols, index, col, total = math.min(3, count), nil, nil, nil
+    for index = 1, count do
+        local item = items[index]
+        local label = sliders and getglobal(item:GetName() .. "Text") or item.label
+        if not item.mosGridWidth then
+            item.mosGridWidth = sliders and math.max(170, label:GetStringWidth()) or ((item.swatchBorder and 24 or item:GetWidth() + 4) + (label and label:GetStringWidth() or 0))
+        end
+    end
+    while cols > 0 do
+        for col = 1, cols do widths[col] = 0 end
+        for index = 1, count do col = math.mod(index - 1, cols) + 1; widths[col] = math.max(widths[col], items[index].mosGridWidth) end
+        total = (cols - 1) * 14
+        for col = 1, cols do total = total + widths[col] end
+        if total <= available or cols == 1 then break end
+        cols = cols - 1
+    end
+    if cols == 1 then widths[1] = math.min(widths[1], available) end
+    local offsetX, rowHeight, used = 0, step, 0
+    for index = 1, count do
+        col = math.mod(index - 1, cols) + 1
+        if col == 1 and index > 1 then used = used + rowHeight; rowHeight = step; offsetX = 0 end
+        local item = items[index]
+        item:ClearAllPoints(); item:SetPoint("TOPLEFT", parent, "TOPLEFT", x + offsetX, y - used)
+        local label = sliders and getglobal(item:GetName() .. "Text") or item.label
+        local labelWidth = math.max(1, widths[col] - (sliders and 0 or (item.swatchBorder and 24 or item:GetWidth() + 4)))
+        if label then label:SetWidth(labelWidth); label:SetHeight(0); rowHeight = math.max(rowHeight, label:GetStringHeight() + (sliders and 32 or 8)) end
+        if sliders or item.swatchBorder then item:SetWidth(widths[col]) end
+        if label and not sliders then
+            label:ClearAllPoints(); label:SetPoint("TOPLEFT", item, "TOPLEFT", item.swatchBorder and 26 or item:GetWidth() + 4, -3)
+        end
+        if item.labelHit then
+            item.labelHit:SetWidth(labelWidth); item.labelHit:SetHeight(math.max(item:GetHeight(), label:GetStringHeight() + 6))
+            item.labelHit:ClearAllPoints(); item.labelHit:SetPoint("TOPLEFT", item, "TOPRIGHT", 2, 0)
+        end
+        offsetX = offsetX + widths[col] + 14
+    end
+    items.mosColumns = cols
+    return used + rowHeight
 end

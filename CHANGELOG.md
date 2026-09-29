@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.27 - 2026-09-29
+
+- Make Settings grids adapt from three columns to two or one using measured label widths; lower minimum width to 350.
+- Add full-width gold main accordion highlights retained while expanded, with a long fading tail.
+
 ## 0.5.0-dev.26 - 2026-09-29
 
 - Remove empty filter-row spacing and fix main-window width limits after Loot Master transitions.
