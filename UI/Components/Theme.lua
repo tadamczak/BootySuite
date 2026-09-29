@@ -78,12 +78,28 @@ UI.TextColors = {
 }
 UI.HeadingSizes = { 18, 16, 14 }
 
+function UI.GetTextSizeDelta(parent)
+    while parent do
+        if parent.mosTextSizeDelta then return parent.mosTextSizeDelta end
+        parent = parent.GetParent and parent:GetParent()
+    end
+    return 0
+end
+
+function UI.ApplyTextSizeDelta(label, parent)
+    local delta = UI.GetTextSizeDelta(parent)
+    if delta == 0 then return end
+    local font, size, flags = label:GetFont()
+    if font and size then label:SetFont(font, math.max(1, size + delta), flags) end
+end
+
 local function CreateTextPreset(parent, text, template, color, size)
     local label = UI.CreateLabel(parent, nil, "OVERLAY", template)
     if size then
         local font, _, flags = label:GetFont()
         label:SetFont(font, size, flags)
     end
+    UI.ApplyTextSizeDelta(label, parent)
     label:SetTextColor(unpack(UI.TextColors[color or "white"] or UI.TextColors.white))
     label:SetText(text or "")
     return label

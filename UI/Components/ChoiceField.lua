@@ -27,7 +27,7 @@ end
 function UI.CreateChoiceField(options)
     local parent = options.parent
     local label = UI.CreateComponentLabel(options.labelOwner or parent, "", "white")
-    if options.font then label:SetFontObject(options.font) end
+    if options.font then label:SetFontObject(options.font); UI.ApplyTextSizeDelta(label, options.labelOwner or parent) end
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", options.x, options.y + (options.labelOffset or 0))
     label:SetText(options.label)
     if options.color then label:SetTextColor(unpack(options.color)); label:SetAlpha(1) end

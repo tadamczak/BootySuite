@@ -24,6 +24,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     viewport:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -36, 8)
     viewport:EnableMouseWheel(true)
     local page = MOS.UI.Components.CreateContainer(nil, viewport)
+    page.mosTextSizeDelta = -1
     page:SetWidth(1000); page:SetHeight(960)
     viewport:SetScrollChild(page)
     viewport.settingsPage = page
@@ -123,6 +124,7 @@ function Settings.CreateRaidViewShell(page)
     groupHeading:SetText("Group View")
     groupHeading:SetTextColor(1, 0.82, 0)
     local groupReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
+    MOS.UI.Components.SizeClassicButton(groupReset, 100, 18, 0.8)
     groupReset:SetPoint("LEFT", groupHeading, "RIGHT", 12, 0)
     local groupDivider = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
     groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -336)
@@ -140,6 +142,7 @@ function Settings.CreateRaidViewShell(page)
     listHeading:SetText("List View")
     listHeading:SetTextColor(1, 0.82, 0)
     local listReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
+    MOS.UI.Components.SizeClassicButton(listReset, 100, 18, 0.8)
     listReset:SetPoint("LEFT", listHeading, "RIGHT", 12, 0)
 
     return { panel = panel, groupHeading = groupHeading, groupReset = groupReset, groupDivider = groupDivider, listDivider = listDivider, listHeading = listHeading, listReset = listReset }
@@ -429,17 +432,19 @@ function Settings.ApplyRaidAccordions(controls)
     if controls.generalControls and controls.generalControls[1] then
         controls.generalControls[1]:ClearAllPoints(); controls.generalControls[1]:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 40, -252 + offset)
     end
-    local layoutY = ((state.general or expanded) and -280 or -258) + offset
+    local layoutY = (state.general and -280 or -258) + offset
     controls.layout:ClearAllPoints()
     controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, layoutY)
 
+    local layoutOffset = offset + (state.general and 0 or 22)
+    Settings.OffsetRaidLayoutControls(controls, layoutOffset)
     local leaderY, lootY, opacityY, debugY, chatY
     if expanded then
-        leaderY, lootY = -1126 + offset, -1154 + offset
+        leaderY, lootY = -1126 + layoutOffset, -1154 + layoutOffset
         if state.loot then
-            opacityY, debugY, chatY = -1182 + offset, -1214 + offset, -1244 + offset
+            opacityY, debugY, chatY = -1182 + layoutOffset, -1214 + layoutOffset, -1244 + layoutOffset
         else
-            opacityY, debugY, chatY = -1182 + offset, -1194 + offset, -1224 + offset
+            opacityY, debugY, chatY = -1182 + layoutOffset, -1194 + layoutOffset, -1224 + layoutOffset
         end
     else
         leaderY, lootY = layoutY - 30, layoutY - 58
@@ -564,7 +569,6 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local raidHeadingY = layoutY - (state.layout and 66 or 38)
     sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, raidHeadingY)
     raidControls.raidOffset = raidHeadingY - (-206)
-    Settings.OffsetRaidLayoutControls(raidControls, raidControls.raidOffset)
     Settings.ApplyRaidAccordions(raidControls)
 end
 
