@@ -4,6 +4,7 @@ local Profiles = MOS.Core.SettingsProfiles
 
 -- Explicit allowlist excludes roster, raid history, loot and derived UI state.
 local keys = {
+    "rosterShowClass", "rosterShowLevel", "rosterShowZone", "rosterShowRank", "rosterShowPublicNote", "rosterShowOfficerNote", "rosterShowLastOnline", "rosterShowClassFilter", "rosterShowRankFilter", "rosterShowSearch", "rosterShowOffline", "rosterShowColumnHeaders",
     "hideMinimapIcon", "hideStatusVersionBar", "hideHeaderLogo", "hideHeaderName", "suppressLoginMessage", "lootMasterOpacity", "lmAutoLoot", "lmAutoLootMode", "lmAutoLootRarities", "lmAutoLootExceptions", "lmAutoLootPresets", "outOfFocusOpacity", "chatActionLogs",
     "raidClassColors", "rosterClassColors", "rosterLiveTrackingEnabled", "raidLiveTrackingEnabled", "showOfflineMembers", "menuStyle", "useIconTabs", "uiSkin",
     "raidGroupColumns", "raidGroupShowClass", "raidGroupShowLevel", "raidGroupShowHeader", "raidGroupShowLootMaster", "raidGroupShowRoleIcon",

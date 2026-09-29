@@ -28,6 +28,18 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.chatActionLogs == nil then MuklaOfficerSuiteDB.chatActionLogs = false end
     if MuklaOfficerSuiteDB.raidClassColors == nil then MuklaOfficerSuiteDB.raidClassColors = true end
     if MuklaOfficerSuiteDB.rosterClassColors == nil then MuklaOfficerSuiteDB.rosterClassColors = true end
+    if MuklaOfficerSuiteDB.rosterShowClass == nil then MuklaOfficerSuiteDB.rosterShowClass = true end
+    if MuklaOfficerSuiteDB.rosterShowLevel == nil then MuklaOfficerSuiteDB.rosterShowLevel = true end
+    if MuklaOfficerSuiteDB.rosterShowZone == nil then MuklaOfficerSuiteDB.rosterShowZone = true end
+    if MuklaOfficerSuiteDB.rosterShowRank == nil then MuklaOfficerSuiteDB.rosterShowRank = false end
+    if MuklaOfficerSuiteDB.rosterShowPublicNote == nil then MuklaOfficerSuiteDB.rosterShowPublicNote = false end
+    if MuklaOfficerSuiteDB.rosterShowOfficerNote == nil then MuklaOfficerSuiteDB.rosterShowOfficerNote = false end
+    if MuklaOfficerSuiteDB.rosterShowLastOnline == nil then MuklaOfficerSuiteDB.rosterShowLastOnline = false end
+    if MuklaOfficerSuiteDB.rosterShowClassFilter == nil then MuklaOfficerSuiteDB.rosterShowClassFilter = true end
+    if MuklaOfficerSuiteDB.rosterShowRankFilter == nil then MuklaOfficerSuiteDB.rosterShowRankFilter = true end
+    if MuklaOfficerSuiteDB.rosterShowSearch == nil then MuklaOfficerSuiteDB.rosterShowSearch = true end
+    if MuklaOfficerSuiteDB.rosterShowOffline == nil then MuklaOfficerSuiteDB.rosterShowOffline = true end
+    if MuklaOfficerSuiteDB.rosterShowColumnHeaders == nil then MuklaOfficerSuiteDB.rosterShowColumnHeaders = true end
     if MuklaOfficerSuiteDB.rosterLiveTrackingEnabled == nil then MuklaOfficerSuiteDB.rosterLiveTrackingEnabled = false end
     if MuklaOfficerSuiteDB.raidLiveTrackingEnabled == nil then MuklaOfficerSuiteDB.raidLiveTrackingEnabled = false end
     if MuklaOfficerSuiteDB.showOfflineMembers == nil then MuklaOfficerSuiteDB.showOfflineMembers = true end
