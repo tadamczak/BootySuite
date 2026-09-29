@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.31 - 2026-09-29
+
+- Restore capped roster actions and separate Guild/Player Status columns; respect Officer note preferences and permissions.
+- Keep navigation frames in one hierarchy and finalize Settings scroll geometry after opening.
+- Pad raid icons and move the raid header visibility option to General.
+
 ## 0.5.0-dev.30 - 2026-09-29
 
 - Rename Roster, move Export Roster to Guild Statistics, reclaim scrollbar space and wrap narrow-window filters.

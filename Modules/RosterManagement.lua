@@ -517,7 +517,7 @@ function RosterManagement.GetVisibleColumns(page, settings)
         local source = group == 1 and page.guildColumns or page.playerColumns
         for index = 1, table.getn(source) do
             local column = source[index]
-            if ((page.statusMode and group == 2) or (not page.statusMode and (group == 1 or column.key ~= "name"))) and (page.statusMode or column.key == "name" or settings["rosterShow" .. rosterColumnSettings[column.key]]) and (column.key ~= "officer" or MOS.Services.Roster.CanManage("viewOfficerNote")) then
+            if ((page.statusMode and group == 2) or (not page.statusMode and group == 1)) and (column.key == "name" or settings["rosterShow" .. rosterColumnSettings[column.key]] ~= false) and (column.key ~= "officer" or MOS.Services.Roster.CanManage("viewOfficerNote")) then
                 count = count + 1
                 local target = visible[count] or {}; visible[count] = target
                 target.key = column.key; target.header = column.header; target.fraction = column.fraction
@@ -1097,7 +1097,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     end
     baseWidth = math.max(1, baseWidth + math.max(0, visibleCount - 1) * 6)
     local availableWidth = math.max(1, width - 24 - 28)
-    local widthScale = math.max(0.01, (availableWidth - math.max(0, visibleCount - 1) * 6) / math.max(1, baseWidth - math.max(0, visibleCount - 1) * 6))
+    local widthScale = math.min(1, math.max(0.01, (availableWidth - math.max(0, visibleCount - 1) * 6) / math.max(1, baseWidth - math.max(0, visibleCount - 1) * 6)))
     local actionX = 12
     for actionIndex = 1, actionCount do
         local action = controls.actions[actionIndex]

@@ -73,7 +73,6 @@ function Settings.LayoutRaidGrid(page, offset)
         control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
     end
     local y = -318 + offset
-    At(page.raidHideHeaderCheck, 52, y); y = y - 28
     At(shell.groupHeading, 48, y); y = y - 38
     At(group.displayHeading, 52, y); y = y - 26
     At(group.columnsLabel, 52, y - 6); At(group.columnsButton, 104, y); y = y - 28
@@ -161,6 +160,11 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         if options.profileLoaded then options.profileLoaded() end
     end)
     page.ReflowSettings = function() Settings.ApplyTopSections(page) end
+    page:SetScript("OnShow", function() page:RegisterEvent("GUILD_ROSTER_UPDATE") end)
+    page:SetScript("OnHide", function() page:UnregisterEvent("GUILD_ROSTER_UPDATE") end)
+    page:SetScript("OnEvent", function()
+        if page:IsVisible() and page.primarySections and page.canShowOfficerOption ~= Settings.CanShowOfficerOption() then Settings.ApplyTopSections(page) end
+    end)
     page.RefreshGeneralSettings()
     return { viewport = viewport, page = page, scrollBar = scrollBar }
 end
@@ -377,7 +381,6 @@ function Settings.CreateRaidSettings(page, callbacks)
     local groupControls = Settings.CreateRaidGroupViewControls(page, shell, factory, callbacks.refreshGroup)
     page.raidHideHeaderCheck = Settings.CreateSavedCheckbox(page, nil, 52, -318, "Hide section header", "raidHideSectionHeader", nil, nil, callbacks.refreshList)
     table.insert(groupControls.checks, page.raidHideHeaderCheck)
-    table.insert(groupControls.layoutControls, page.raidHideHeaderCheck)
     local listControls = Settings.CreateRaidListViewControls(page, shell, factory)
     local leader = MOS.UI.Components.Settings.CreateAccordion(page, "Raid Leader Mode", -1126)
     local loot = MOS.UI.Components.Settings.CreateAccordion(page, "Loot Master Mode", -1154)
@@ -398,7 +401,7 @@ function Settings.CreateRaidSettings(page, callbacks)
         colors = Settings.MergeControls(Settings.MergeControls({}, groupControls.colors), listControls.colors),
     }
     Settings.BindRaidViewControls(page, viewControls, shell.groupReset, shell.listReset, callbacks)
-    Settings.BindRaidAccordions(page, { page = page, layout = layout, general = general, generalControls = { liveTracking }, leader = leader, loot = loot, debugHeading = primarySections.debugHeading, layoutControls = layoutControls, columnsPanel = groupControls.columnsPanel })
+    Settings.BindRaidAccordions(page, { page = page, layout = layout, general = general, generalControls = { liveTracking, page.raidHideHeaderCheck }, leader = leader, loot = loot, debugHeading = primarySections.debugHeading, layoutControls = layoutControls, columnsPanel = groupControls.columnsPanel })
     Settings.BindRosterAccordions(page, primarySections, page.raidAccordionControls)
     page.chatLogsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteChatLogs", 22, -675, "Chat action logs", "chatActionLogs", "Chat action logs", "Show routine Mukla Officer Suite action messages in chat. Disabled by default.")
     page.raidAccordionControls.chatLogsCheck = page.chatLogsCheck
@@ -546,11 +549,16 @@ function Settings.ApplyRaidAccordions(controls)
     if controls.generalControls and controls.generalControls[1] then
         controls.generalControls[1]:ClearAllPoints(); controls.generalControls[1]:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 52, -252 + offset)
     end
-    local layoutY = (state.general and -280 or -258) + offset
+    local generalHeight = 26
+    if controls.generalControls and table.getn(controls.generalControls) > 1 then
+        generalHeight = MOS.UI.Components.Settings.LayoutGrid(controls.page, controls.generalControls, 52, -252 + offset, controls.page:GetWidth() - 64, 26)
+    end
+    local generalExtra = state.general and math.max(0, generalHeight - 26) or 0
+    local layoutY = (state.general and -280 or -258) + offset - generalExtra
     controls.layout:ClearAllPoints()
     controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, layoutY)
 
-    local layoutOffset = offset + (state.general and 0 or 22)
+    local layoutOffset = offset + (state.general and 0 or 22) - generalExtra
     Settings.OffsetRaidLayoutControls(controls, layoutOffset)
     if expanded and controls.page.responsiveRaid then layoutOffset = layoutOffset + Settings.LayoutRaidGrid(controls.page, layoutOffset) end
     local leaderY, lootY, opacityY, debugY, chatY
@@ -668,6 +676,10 @@ function Settings.OffsetRaidLayoutControls(controls, offset)
     end
 end
 
+function Settings.CanShowOfficerOption()
+    return MOS.Services and MOS.Services.Roster and MOS.Services.Roster.CanManage("viewOfficerNote") and true or false
+end
+
 function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local state = page.rosterAccordionState
     local uiVisible = not page.topSectionState or page.topSectionState.ui
@@ -685,16 +697,20 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
     page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, layoutY - 28)
     local index
+    page.canShowOfficerOption = Settings.CanShowOfficerOption()
     for index = 1, table.getn(page.rosterLayoutChecks or {}) do
         local check = page.rosterLayoutChecks[index]
         check:ClearAllPoints(); check:SetPoint("TOPLEFT", page, "TOPLEFT", 52 + math.mod(index - 1, 2) * 260, layoutY - 56 - math.floor((index - 1) / 2) * 26)
-        if state.layout and uiVisible then check:Show() else check:Hide() end
+        if state.layout and uiVisible and (check.settingKey ~= "rosterShowOfficerNote" or page.canShowOfficerOption) then check:Show() else check:Hide() end
     end
     local gridHeight = 0
     if page.rosterLayoutChecks then
-        if not page.rosterGrid then
-            page.rosterGrid = {page.rosterClassColorsCheck}
-            for index = 1, table.getn(page.rosterLayoutChecks) do table.insert(page.rosterGrid, page.rosterLayoutChecks[index]) end
+        page.rosterGrid = page.rosterGrid or {}
+        for index = table.getn(page.rosterGrid), 1, -1 do page.rosterGrid[index] = nil end
+        table.insert(page.rosterGrid, page.rosterClassColorsCheck)
+        for index = 1, table.getn(page.rosterLayoutChecks) do
+            local check = page.rosterLayoutChecks[index]
+            if check.settingKey ~= "rosterShowOfficerNote" or page.canShowOfficerOption then table.insert(page.rosterGrid, check) end
         end
         gridHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterGrid, 52, layoutY - 28, page:GetWidth() - 64, 26)
     end
@@ -736,7 +752,7 @@ function Settings.BindRaidAccordions(page, controls)
 end
 
 function Settings.AttachShell(view, parent, anchor, detached)
-    view.viewport:SetParent(parent)
+    if view.viewport:GetParent() ~= parent then view.viewport:SetParent(parent) end
     view.viewport:SetFrameStrata(parent:GetFrameStrata()); view.viewport:SetFrameLevel(parent:GetFrameLevel() + 2)
     view.page:SetFrameStrata(parent:GetFrameStrata()); view.page:SetFrameLevel(view.viewport:GetFrameLevel() + 2)
     view.viewport:ClearAllPoints()
