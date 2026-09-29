@@ -8,8 +8,8 @@ local function SortText(a, b)
     return string.lower(a) < string.lower(b)
 end
 
-function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth)
-    table.sort(values, SortText)
+function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, preserveOrder)
+    if not preserveOrder then table.sort(values, SortText) end
     panel.values = values
     panel.selected = selected
     panel.onChanged = onChanged

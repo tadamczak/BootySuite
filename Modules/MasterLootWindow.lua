@@ -279,13 +279,18 @@ local function FindCandidate(name)
     end
 end
 
+local shiftAtLootOpen = false
+local function AutoLootEnabled()
+    return not panel.manualSession and MOS.Services.AutoLoot.IsEnabled(MOS.Database.GetSetting("lmAutoLootMode"), shiftAtLootOpen)
+end
+
 local autoLootPendingSlot
 local autoLootFailedSlots = {}
 local autoLootTimeout = MOS.UI.Components.CreateContainer(nil, panel)
 autoLootTimeout:Hide()
 local function IsAutoLootQuality(slot)
-    local _, _, _, quality = GetLootSlotInfo(slot)
-    return quality ~= nil and quality >= 0 and quality <= 2
+    local _, name, _, quality = GetLootSlotInfo(slot)
+    return MOS.Services.AutoLoot.Allows(name, quality, MOS.Database.GetSetting("lmAutoLootRarities"), MOS.Database.GetSetting("lmAutoLootExceptions"))
 end
 
 local function AutoLootRoute(slot, candidate)
@@ -298,7 +303,7 @@ local function AutoLootRoute(slot, candidate)
 end
 
 local function AutoLootNext()
-    if autoLootPendingSlot or not panel:IsShown() or not RaidService.IsPlayerLootMaster() or not MOS.Database.GetSetting("lmAutoLoot") then return end
+    if autoLootPendingSlot or not panel:IsShown() or not RaidService.IsPlayerLootMaster() or not AutoLootEnabled() then return end
     local candidate = FindCandidate(UnitName("player"))
     local slot
     for slot = 1, GetNumLootItems() or 0 do
@@ -817,7 +822,7 @@ end
 
 local function Refresh()
     local count = GetNumLootItems() or 0
-    local autoEnabled = MOS.Database.GetSetting("lmAutoLoot") and RaidService.IsPlayerLootMaster()
+    local autoEnabled = AutoLootEnabled() and RaidService.IsPlayerLootMaster()
     local autoCandidate = autoEnabled and FindCandidate(UnitName("player"))
     local index, slot
     for index = table.getn(itemSlots), 1, -1 do itemSlots[index] = nil end
@@ -1663,6 +1668,8 @@ function MasterLootWindow.ShowHistory(itemLink, lines, itemId, itemName)
 end
 
 function MasterLootWindow.Open()
+    local shift = type(IsShiftKeyDown) == "function" and IsShiftKeyDown()
+    shiftAtLootOpen = shift == true or shift == 1
     panel.manualSession = nil; manualRollLink = nil
     autoLootPendingSlot = nil; autoLootTimeout:Hide()
     local failedSlot
@@ -1773,6 +1780,7 @@ end)
 
 events:SetScript("OnEvent", function()
     if event == "LOOT_CLOSED" then
+        shiftAtLootOpen = false
         autoLootPendingSlot = nil; autoLootTimeout:Hide()
         panel:Hide(); candidateMenu:Hide(); restorePicker:Hide()
         events:UnregisterEvent("LOOT_CLOSED"); events:UnregisterEvent("RAID_ROSTER_UPDATE"); events:UnregisterEvent("UI_ERROR_MESSAGE")

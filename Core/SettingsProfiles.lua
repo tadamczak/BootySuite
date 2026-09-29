@@ -4,7 +4,7 @@ local Profiles = MOS.Core.SettingsProfiles
 
 -- Explicit allowlist excludes roster, raid history, loot and derived UI state.
 local keys = {
-    "hideMinimapIcon", "suppressLoginMessage", "lootMasterOpacity", "lmAutoLoot", "outOfFocusOpacity", "chatActionLogs",
+    "hideMinimapIcon", "suppressLoginMessage", "lootMasterOpacity", "lmAutoLoot", "lmAutoLootMode", "lmAutoLootRarities", "lmAutoLootExceptions", "outOfFocusOpacity", "chatActionLogs",
     "raidClassColors", "rosterClassColors", "rosterLiveTrackingEnabled", "raidLiveTrackingEnabled", "showOfflineMembers", "menuStyle", "useIconTabs", "uiSkin",
     "raidGroupColumns", "raidGroupShowClass", "raidGroupShowLevel", "raidGroupShowHeader", "raidGroupShowLootMaster", "raidGroupShowRoleIcon",
     "raidGroupClassColors", "raidGroupAutoTileWidth", "raidGroupTileWidth", "raidGroupTileHeight", "raidGroupHeaderHeight", "raidGroupMargin",
@@ -112,6 +112,9 @@ function Profiles.Load(name)
         local key = keys[index]
         if profile.settings[key] ~= nil then MuklaOfficerSuiteDB[key] = Copy(profile.settings[key]) end
     end
+    if profile.settings.lmAutoLootMode == nil then MuklaOfficerSuiteDB.lmAutoLootMode = profile.settings.lmAutoLoot and "auto" or "off" end
+    if profile.settings.lmAutoLootRarities == nil then MuklaOfficerSuiteDB.lmAutoLootRarities = 7 end
+    if profile.settings.lmAutoLootExceptions == nil then MuklaOfficerSuiteDB.lmAutoLootExceptions = "" end
     MOS.Database.Ensure()
     MuklaOfficerSuiteDB.currentSettingsProfile = Name(name)
     return true, "Loaded profile: " .. Name(name)

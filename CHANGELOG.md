@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.17 - 2026-09-29
+
+- Add Auto Loot, Shift Loot and Off modes to LM Config.
+- Add exact rarity selection and case/whitespace-insensitive item-name exceptions, including profile support.
+
 ## 0.5.0-dev.16 - 2026-09-29
 
 - Preserve known update availability across repeated checks without duplicate notifications.
