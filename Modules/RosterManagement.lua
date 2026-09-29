@@ -605,6 +605,7 @@ function RosterManagement.HideRow(row)
 end
 
 local function OnListScroll()
+    if this.listController and this.listController.rendering then return end
     FauxScrollFrame_OnVerticalScroll(this.rowHeight, this.refreshCallback)
 end
 
@@ -620,6 +621,7 @@ function RosterManagement.CreateListController(page, rowHeight, rowController)
     controller.scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", -4, -145)
     controller.scrollFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -12, 18)
     controller.scrollFrame.rowHeight = rowHeight
+    controller.scrollFrame.listController = controller
     controller.scrollFrame:SetScript("OnVerticalScroll", OnListScroll)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRosterScrollFrameScrollBar"))
     page.listController = controller
@@ -755,6 +757,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     page.measuredOffset = offset
     page.measuredCount = table.getn(visibleMembers)
     page.measuredHeight = availableHeight
+    page.measuredWidth = page.tableViewport:GetWidth()
     page.measuredShown = 0
     local rowY = 0
     local i
@@ -966,7 +969,7 @@ function RosterManagement.AttachInteractions(options)
 
     page.layoutElapsed = 0; page.layoutWidth = 0; page.layoutHeight = 0
     page.tableViewport:SetScript("OnSizeChanged", function()
-        if page:IsVisible() and math.abs(this:GetHeight() - (page.measuredHeight or 0)) > 0.5 then
+        if page:IsVisible() and (math.abs(this:GetHeight() - (page.measuredHeight or 0)) > 0.5 or math.abs(this:GetWidth() - (page.measuredWidth or 0)) > 0.5) then
             page.viewportChanged = true
             page:SetScript("OnUpdate", page.finishLayout)
         end

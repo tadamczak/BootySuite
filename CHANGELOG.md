@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.16 - 2026-09-29
+
+- Preserve known update availability across repeated checks without duplicate notifications.
+- Refresh roster detail clipping after resize settles and ignore programmatic scrollbar callbacks during layout.
+
 ## 0.5.0-dev.15 - 2026-09-29
 
 - Keep expanded roster details and scrolling stable during window resize.
