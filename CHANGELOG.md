@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.22 - 2026-09-29
+
+- Connect the selected navigation tab to the content frame and recess inactive tabs with darker borders and spacing.
+
 ## 0.5.0-dev.21 - 2026-09-29
 
 - Move roster actions below the aligned guild MOTD frame and lower window minimum sizes.
