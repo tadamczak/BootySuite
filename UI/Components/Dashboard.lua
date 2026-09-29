@@ -3,6 +3,38 @@ local MOS = MuklaOfficerSuite
 MOS.UI.Components.Dashboard = MOS.UI.Components.Dashboard or {}
 local Dashboard = MOS.UI.Components.Dashboard
 
+function Dashboard.GetChromeLayout(get, classic)
+    local compact = get("hideHeaderLogo") and get("hideHeaderName")
+    local normalHeight = classic and 44 or 32
+    local headerHeight = compact and 30 or normalHeight
+    local delta = normalHeight - headerHeight
+    local bottom = get("hideStatusVersionBar") and (classic and 8 or 18) or (classic and 34 or 42)
+    return headerHeight, (classic and -56 or -52) + delta, bottom, -70 + delta
+end
+
+local function SetChromeVisible(region, shown) if shown then region:Show() else region:Hide() end end
+
+function Dashboard.ApplyChrome(view, get)
+    if view.minimized then return end
+    local classic = MOS.UI.Components.IsClassicSkin()
+    local height = Dashboard.GetChromeLayout(get, classic)
+    view.titleBar:ClearAllPoints()
+    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 8 or 18, classic and -8 or -14)
+    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", classic and -8 or -18, classic and -8 or -14)
+    view.titleBar:SetHeight(height)
+    SetChromeVisible(view.title, not classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo"))
+    local footer = not get("hideStatusVersionBar")
+    if view.frame.mosStatusBar then SetChromeVisible(view.frame.mosStatusBar, footer) end
+    SetChromeVisible(view.versionText, footer)
+    SetChromeVisible(view.resizeGrip.texture, footer)
+    view.resizeGrip:ClearAllPoints()
+    view.resizeGrip:SetPoint("BOTTOMRIGHT", view.frame, "BOTTOMRIGHT", footer and -7 or 0, footer and 7 or 0)
+end
+
 function Dashboard.CreateWindow(version)
     local view = {}
     view.frame = CreateFrame("Frame", "MuklaOfficerSuiteDashboard", UIParent)

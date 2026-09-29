@@ -88,10 +88,11 @@ function Navigation.Create(options)
     function controller.Apply()
         options.ensure()
         local tabs = options.get("menuStyle") == "tabs"
+        local _, sectionTop, sectionBottom, tabTop = MOS.UI.Components.Dashboard.GetChromeLayout(options.get, MOS.UI.Components.IsClassicSkin())
         if tabs then
             options.sidebar:Hide(); options.toggleButton:Hide()
             local margin = MOS.UI.Components.IsClassicSkin() and 8 or 18
-            options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, -98); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -margin, margin + 28)
+            options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, tabTop - 28); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -margin, options.get("hideStatusVersionBar") and margin or margin + 28)
             local iconTabs = options.get("useIconTabs")
             local classic = MOS.UI.Components.IsClassicSkin()
             local width = iconTabs and 38 or math.floor((options.dashboard:GetWidth() - 40) / table.getn(order))
@@ -100,7 +101,7 @@ function Navigation.Create(options)
                 local button = controller.buttons[name]
                 button.navigationMode = iconTabs and "icons" or "tabs"
                 button.SetTabBorderVisible(false)
-                button:SetParent(options.dashboard); button:ClearAllPoints(); button:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 20 + ((index - 1) * width), -70)
+                button:SetParent(options.dashboard); button:ClearAllPoints(); button:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 20 + ((index - 1) * width), tabTop)
                 button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width); button:SetHeight(30)
                 button.iconBorder:Hide(); button:Show()
                 if iconTabs then
@@ -121,13 +122,13 @@ function Navigation.Create(options)
             end
             options.sidebar:ClearAllPoints()
             if classic then
-                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 8, -56); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 8, 34); options.sidebar:SetWidth(collapsed and 44 or 148)
+                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 8, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 8, sectionBottom); options.sidebar:SetWidth(collapsed and 44 or 148)
             else
-                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 18, -52); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 18, 42); options.sidebar:SetWidth(collapsed and 54 or 174)
+                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 18, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 18, sectionBottom); options.sidebar:SetWidth(collapsed and 54 or 174)
             end
             options.contentPanel:ClearAllPoints()
-            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 53 or 157, -56); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -8, 34)
-            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 73 or 193, -52); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -18, 42) end
+            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 53 or 157, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -8, sectionBottom)
+            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 73 or 193, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -18, sectionBottom) end
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
@@ -145,6 +146,7 @@ function Navigation.Create(options)
                 options.toggleButtonClassicIcon:Show()
             else options.toggleButton:SetText(collapsed and ">>" or "<<") end
         end
+        if options.applyChrome then options.applyChrome() end
         Navigation.SetActive(controller.buttons, controller.activeName or options.order[1])
         if options.refreshLayout then options.refreshLayout() end
     end

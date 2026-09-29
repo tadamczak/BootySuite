@@ -11,6 +11,9 @@ function Database.Ensure()
         MuklaOfficerSuiteDB.minimap = { angle = 220, hidden = false }
     end
     if MuklaOfficerSuiteDB.hideMinimapIcon == nil then MuklaOfficerSuiteDB.hideMinimapIcon = MuklaOfficerSuiteDB.minimap.hidden and true or false end
+    if MuklaOfficerSuiteDB.hideStatusVersionBar == nil then MuklaOfficerSuiteDB.hideStatusVersionBar = false end
+    if MuklaOfficerSuiteDB.hideHeaderLogo == nil then MuklaOfficerSuiteDB.hideHeaderLogo = false end
+    if MuklaOfficerSuiteDB.hideHeaderName == nil then MuklaOfficerSuiteDB.hideHeaderName = false end
     if MuklaOfficerSuiteDB.suppressLoginMessage == nil then MuklaOfficerSuiteDB.suppressLoginMessage = false end
     MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
     if tonumber(MuklaOfficerSuiteDB.lootMasterOpacity) == nil then MuklaOfficerSuiteDB.lootMasterOpacity = 100 end

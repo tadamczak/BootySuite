@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.19"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.20"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -480,6 +480,7 @@ MOS.ModuleRegistry.Register("configuration", MOS.Modules.Settings.CreateLifecycl
 MOS.ModuleRegistry.Register("performance", performanceModule)
 
 navigation = MOS.Modules.Navigation.Create({
+    applyChrome = function() if not MOS.lootMasterMode then MOS.UI.Components.Dashboard.ApplyChrome(dashboardView, MOS.Database.GetSetting) end end,
     dashboard = dashboard,
     sidebar = sidebar,
     toggleButton = sidebarToggleButton,

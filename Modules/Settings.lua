@@ -39,21 +39,26 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     viewport:Hide()
     page.uiHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "UI", -10)
     local uiContent = MOS.UI.Components.CreateContainer(nil, page)
-    uiContent:SetHeight(168); page.uiContent = uiContent
+    uiContent:SetHeight(224); page.uiContent = uiContent
     local generalHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
     generalHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -38)
     generalHeading:SetText("General")
     local skinControl = Settings.CreateSkinControl(uiContent, 24, -66)
     local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 224, -94, "Turn off addon login message", "suppressLoginMessage")
     local minimapCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideMinimapIcon", 20, -94, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
+    page.chromeChecks = {
+        Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideStatusBar", 20, -122, "Hide status and version bar", "hideStatusVersionBar", nil, nil, onNavigationLayout),
+        Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderLogo", 20, -150, "Hide header logo", "hideHeaderLogo", nil, nil, onNavigationLayout),
+        Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderName", 224, -150, "Hide header name", "hideHeaderName", nil, nil, onNavigationLayout),
+    }
     local layoutHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
-    layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -122)
+    layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -178)
     layoutHeading:SetText("Layout")
-    local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 24, -150, function()
+    local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 24, -206, function()
         page.RefreshGeneralSettings()
         if onNavigationLayout then onNavigationLayout() end
     end)
-    local iconTabsCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteUseIconTabs", 330, -148, "Use Icon Tabs", "useIconTabs", nil, nil, onNavigationLayout)
+    local iconTabsCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteUseIconTabs", 330, -204, "Use Icon Tabs", "useIconTabs", nil, nil, onNavigationLayout)
     page.iconTabsCheck = iconTabsCheck
     page.skinControl = skinControl
     page.menuStyleControl = menuStyleControl
@@ -63,6 +68,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or "Button view")
         iconTabsCheck:SetChecked(MuklaOfficerSuiteDB.useIconTabs and 1 or nil)
         if MuklaOfficerSuiteDB.menuStyle == "tabs" then iconTabsCheck:Show() else iconTabsCheck:Hide() end
+        local index
+        for index = 1, table.getn(page.chromeChecks) do local check = page.chromeChecks[index]; check:SetChecked(MOS.Database.GetSetting(check.settingKey) and 1 or nil) end
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
     end
