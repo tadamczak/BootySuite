@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.41 - 2026-09-30
+
+- Replace the improvised Settings border with the existing project gold window frame, shared unchanged across skins.
+
 ## 0.5.0-dev.40 - 2026-09-30
 
 - Restore the previous main-window frame and share the same stable content border across Roster and Raid.
