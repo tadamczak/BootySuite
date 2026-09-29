@@ -28,7 +28,7 @@ function Navigation.SetActive(buttons, activeName)
             if button.icon then button.icon:SetVertexColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43) end
             button:SetFrameLevel(button:GetParent():GetFrameLevel() + (selected and 24 or 20))
             if button.mosHighlight then button.mosHighlight:Hide() end
-            button.label:SetTextColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.18 or 0.43)
+            button.label:SetTextColor(selected and 1 or 0.82, selected and 1 or 0.70, selected and 1 or 0.43)
             button.SetTabBorderVisible(true)
         elseif MOS.UI.Components.IsClassicSkin() then
             button:SetBackdrop({ bgFile = MOS.UI.Components.ClassicAsset("Surfaces\\nav-" .. (selected and "selected" or "normal") .. ".tga"), tile = false, tileSize = 0, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
@@ -111,19 +111,19 @@ function Navigation.Create(options)
         local _, sectionTop, sectionBottom, tabTop = MOS.UI.Components.Dashboard.GetChromeLayout(options.get, MOS.UI.Components.IsClassicSkin())
         if tabs then
             options.sidebar:Hide(); options.toggleButton:Hide()
-            local margin = MOS.UI.Components.IsClassicSkin() and 8 or 18
+            local margin = MOS.UI.Components.IsClassicSkin() and 4 or 9
             local bottom = options.get("hideStatusVersionBar") and margin or margin + 28
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, bottomTabs and sectionTop or tabTop - 28); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -margin, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
             local classic = MOS.UI.Components.IsClassicSkin()
-            local width = iconTabs and 38 or math.floor((options.dashboard:GetWidth() - 2 * margin - 24) / table.getn(order))
+            local width = iconTabs and 38 or ((options.dashboard:GetWidth() - 2 * margin - 12 + 4) / table.getn(order))
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
                 button.navigationBottom = bottomTabs
                 button.navigationMode = "tabs"
                 button.navigationContent = options.contentPanel
-                button.navigationX = 12 + ((index - 1) * width)
+                button.navigationX = 6 + ((index - 1) * width)
                 button.SetTabBorderVisible(false)
                 button:SetScale(1); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
                 button:SetFrameStrata(options.dashboard:GetFrameStrata()); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width - (iconTabs and 0 or 4)); button:SetHeight(30)
@@ -147,13 +147,13 @@ function Navigation.Create(options)
             end
             options.sidebar:ClearAllPoints()
             if classic then
-                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 8, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 8, sectionBottom); options.sidebar:SetWidth(collapsed and 44 or 148)
+                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 4, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 4, sectionBottom); options.sidebar:SetWidth(collapsed and 44 or 148)
             else
-                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 18, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 18, sectionBottom); options.sidebar:SetWidth(collapsed and 54 or 174)
+                options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 9, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 9, sectionBottom); options.sidebar:SetWidth(collapsed and 54 or 174)
             end
             options.contentPanel:ClearAllPoints()
-            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 53 or 157, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -8, sectionBottom)
-            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 73 or 193, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -18, sectionBottom) end
+            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 49 or 153, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, sectionBottom)
+            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 64 or 184, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -9, sectionBottom) end
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]

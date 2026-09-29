@@ -8,7 +8,7 @@ function Dashboard.GetChromeLayout(get, classic)
     local normalHeight = classic and 44 or 32
     local headerHeight = compact and 30 or normalHeight
     local delta = normalHeight - headerHeight
-    local bottom = get("hideStatusVersionBar") and (classic and 8 or 18) or (classic and 34 or 42)
+    local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 30 or 33)
     return headerHeight, (classic and -56 or -52) + delta, bottom, -70 + delta
 end
 
@@ -39,7 +39,7 @@ function Dashboard.ApplyChrome(view, get)
     local classic = MOS.UI.Components.IsClassicSkin()
     local height = Dashboard.GetChromeLayout(get, classic)
     view.titleBar:ClearAllPoints()
-    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 8 or 18, classic and -8 or -14)
+    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, classic and -8 or -14)
     view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", classic and -8 or -18, classic and -8 or -14)
     view.titleBar:SetHeight(height)
     SetChromeVisible(view.title, not classic and not get("hideHeaderName"))
@@ -83,8 +83,8 @@ function Dashboard.CreateWindow(version)
     frame.mosResizeGrip = view.resizeGrip
 
     view.titleBar = CreateFrame("Frame", nil, frame)
-    view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14)
-    view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -14)
+    view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -14)
+    view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -9, -14)
     view.titleBar:SetHeight(32)
     view.titleBar:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     view.titleBar:SetBackdropColor(0.025, 0.022, 0.018, 0.98); view.titleBar:SetBackdropBorderColor(0.42, 0.42, 0.40, 1)
@@ -167,9 +167,9 @@ function Dashboard.CreateWindow(version)
         if classic and not view.minimized then view.classicLogo:Show(); view.classicTitleLeft:Show(); view.classicTitleRight:Show(); view.classicMenuTitle:Show()
         else view.classicLogo:Hide(); view.classicTitleLeft:Hide(); view.classicTitleRight:Hide(); view.classicMenuTitle:Hide() end
         view.titleBar:ClearAllPoints()
-        if classic then view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8); view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8); view.titleBar:SetHeight(44)
-        else view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14); view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -14); view.titleBar:SetHeight(32) end
-        local margin = classic and 8 or 18
+        if classic then view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -8); view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -8); view.titleBar:SetHeight(44)
+        else view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -14); view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -9, -14); view.titleBar:SetHeight(32) end
+        local margin = classic and 4 or 9
         local sectionGap = classic and 4 or 6
         local sectionTop = -(classic and 52 or 46) - sectionGap
         local footerBottom = margin
@@ -178,7 +178,7 @@ function Dashboard.CreateWindow(version)
         view.sidebar:SetPoint("TOPLEFT", frame, "TOPLEFT", margin, sectionTop)
         view.sidebar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", margin, sectionBottom)
         view.contentPanel:ClearAllPoints()
-        view.contentPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", classic and 157 or 193, sectionTop)
+        view.contentPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", classic and 153 or 184, sectionTop)
         view.contentPanel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -margin, sectionBottom)
         view.versionText:ClearAllPoints()
         view.versionText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -32, footerBottom + 5)
@@ -202,7 +202,7 @@ end
 function Dashboard.CreateStatusBar(parent)
     local bar = CreateFrame("Frame", nil, parent)
     parent.mosStatusBar = bar
-    local margin = MOS.UI.Components.IsClassicSkin() and 8 or 18
+    local margin = MOS.UI.Components.IsClassicSkin() and 4 or 9
     bar:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", margin, margin)
     bar:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -126, margin)
     bar:SetHeight(22)
@@ -233,8 +233,8 @@ function Dashboard.CreatePages(contentPanel, definitions)
         local page = CreateFrame("Frame", nil, contentPanel)
         if definition.anchor then page:SetAllPoints(pages[definition.anchor])
         else
-            page:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 3, -3)
-            page:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -3, 3)
+            page:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 1.5, -3)
+            page:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -1.5, 1.5)
         end
         if definition.hidden then page:Hide() end
         pages[definition.key] = page
