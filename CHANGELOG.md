@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.11 - 2026-09-29
+
+- Fixed WoW 1.12 texture ownership errors interrupting Raid Management and skin refresh.
+- Restored textured red action buttons with independent first-display hover.
+- Kept expanded roster details within short windows with scrollable note content.
+
 ## 0.5.0-dev.10 - 2026-09-29
 
 - Rebuilt red action and saved-raid button visuals with solid borders and native hover/pressed states.

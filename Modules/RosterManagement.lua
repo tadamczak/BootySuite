@@ -466,10 +466,10 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
     row.zone:Hide()
     row.lastOnline:Hide()
 
-    row.actionPanel = MOS.UI.Components.CreateContainer(nil, row)
-    row.actionPanel:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -20)
-    row.actionPanel:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, -20)
-    row.actionPanel:SetHeight(204)
+    row.actionViewport, row.actionPanel = MOS.UI.Components.CreateClippedContent(row, 204)
+    row.actionViewport:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -20)
+    row.actionViewport:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, -20)
+    row.actionViewport:SetHeight(204)
     row.actionPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     row.actionPanel:SetBackdropColor(0.07, 0.08, 0.07, 0.92)
     row.actionPanel:SetBackdropBorderColor(0.30, 0.34, 0.30, 1)
@@ -571,15 +571,21 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
         row:SetBackdropColor(0.16, 0.20, 0.17, 0.82)
         row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
         row.actionPanel:Show()
-        row:SetHeight(rowHeight + 208)
+        local expandedHeight = math.min(rowHeight + 208, row.availableHeight or (rowHeight + 208))
+        row.actionViewport:SetHeight(math.max(1, expandedHeight - rowHeight - 4))
+        row.actionPanel:SetWidth(math.max(1, row:GetWidth() - 8))
+        if row.actionViewport.memberName ~= member.name then row.actionViewport:SetVerticalScroll(0) end
+        row.actionViewport.memberName = member.name
+        row.actionViewport:Show()
+        row:SetHeight(expandedHeight)
         RosterManagement.BindMemberDetails(row, member)
         row:Show()
-        return rowHeight + 208
+        return expandedHeight
     end
     row.selection:Hide()
     row:SetBackdropColor(0, 0, 0, 0)
     row:SetBackdropBorderColor(0, 0, 0, 0)
-    row.actionPanel:Hide()
+    row.actionPanel:Hide(); row.actionViewport:Hide()
     row:SetHeight(rowHeight)
     row:Show()
     return rowHeight
@@ -723,7 +729,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     controller.scrollFrame:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", -8, 9)
     controller.scrollFrame:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, 9)
     controller.scrollFrame:SetHeight((visibleRowCount * rowHeight) + 8)
-    if selectedName and selectedName ~= controller.lastSelectedName then
+    if selectedName and (selectedName ~= controller.lastSelectedName or visibleRowCount ~= controller.lastVisibleRowCount) then
         local memberIndex
         for memberIndex = 1, table.getn(visibleMembers) do
             if visibleMembers[memberIndex].name == selectedName then
@@ -737,6 +743,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
         end
     end
     controller.lastSelectedName = selectedName
+    controller.lastVisibleRowCount = visibleRowCount
     local offset = MOS.UI.Components.UpdateScrollFrame(controller.scrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
     page.measuredCapacity = visibleRowCount
     page.measuredOffset = offset
@@ -751,7 +758,8 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", 0, rowY)
         row:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, rowY)
-        if member and i <= visibleRowCount then
+        row.availableHeight = math.max(rowHeight, availableHeight + rowY)
+        if member and i <= visibleRowCount and -rowY + rowHeight <= availableHeight then
             page.measuredShown = page.measuredShown + 1
             rowY = rowY - RosterManagement.BindRow(row, member, offset + i, selectedName, rowHeight, lowestRankIndex, useClassColors)
         else

@@ -104,7 +104,7 @@ local function SolidOutline(button, layer)
     return edges
 end
 
-local function ApplySolidButton(entry, red)
+local function ApplySolidButton(entry)
     local button = entry.frame
     if not entry.solidFill then
         entry.solidFill = SolidTexture(button, "BACKGROUND", 0.08, 0.07, 0.05, 1)
@@ -112,8 +112,6 @@ local function ApplySolidButton(entry, red)
         entry.selectionOutline = SolidOutline(button, "OVERLAY")
         entry.solidHover = SolidTexture(button, "HIGHLIGHT", 1, 0.82, 0.28, 0.18)
         entry.solidHoverBorder = SolidOutline(button, "HIGHLIGHT")
-        entry.solidPressed = SolidTexture(button, "ARTWORK", 0, 0, 0, 0.30)
-        entry.solidDisabled = SolidTexture(button, "ARTWORK", 0.12, 0.12, 0.12, 0.70)
     end
     button:EnableMouse(true)
     button:SetBackdrop(nil); button:SetNormalTexture(nil)
@@ -122,26 +120,25 @@ local function ApplySolidButton(entry, red)
     SetNineSliceShown(entry.classicSelectedBorder, false)
     if entry.classicRedFill then entry.classicRedFill:Hide() end
     entry.solidFill:Show()
-    if red then entry.solidFill:SetVertexColor(0.38, 0.035, 0.035, 1)
-    else entry.solidFill:SetVertexColor(0.045, 0.045, 0.04, 1) end
+    entry.solidFill:SetVertexColor(0.045, 0.045, 0.04, 1)
     local index
     for index = 1, 4 do
         entry.solidBorder[index]:SetVertexColor(0.35, 0.35, 0.32, 1); entry.solidBorder[index]:Show()
         entry.solidHoverBorder[index]:Show()
         if button.mosClassicSelected then entry.selectionOutline[index]:Show() else entry.selectionOutline[index]:Hide() end
     end
-    -- Native button states own these textures from the first display, without click hooks.
-    entry.solidHover:Show(); entry.solidPressed:Show(); entry.solidDisabled:Show()
-    button:SetHighlightTexture(entry.solidHover)
-    button:SetPushedTexture(entry.solidPressed)
-    button:SetDisabledTexture(entry.solidDisabled)
+    -- Keep custom regions independent of native texture ownership on the 1.12 client.
+    entry.solidHover:Show()
+    button:SetHighlightTexture(nil)
+    button:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+    button:SetDisabledTexture("Interface\\Buttons\\UI-Quickslot-Depress")
 end
 
 local function ApplyControl(entry)
     local button = entry.frame
-    local solid = button.mosClassicKeepNormalSurface or (Skins.current == "classic" and button.mosClassicVariant == "red" and not button.mosClassicCompactControl)
+    local solid = button.mosClassicKeepNormalSurface
     if not solid and entry.solidFill then
-        entry.solidFill:Hide(); entry.solidHover:Hide(); entry.solidPressed:Hide(); entry.solidDisabled:Hide()
+        entry.solidFill:Hide(); entry.solidHover:Hide()
         local index
         for index = 1, 4 do entry.solidBorder[index]:Hide(); entry.solidHoverBorder[index]:Hide(); entry.selectionOutline[index]:Hide() end
         button:SetHighlightTexture(nil); button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
@@ -150,7 +147,7 @@ local function ApplyControl(entry)
         local useSelectedSurface = button.mosClassicSelected and not button.mosClassicKeepNormalSurface
         local variant = useSelectedSurface and "red" or (button.mosClassicVariant or "dark")
         local state = (useSelectedSurface or variant == "red" or button.mosClassicPersistentRed) and "selected" or "normal"
-        if not button.mosClassicKeepNormalSurface and button.mosClassicVariant ~= "red" then
+        if not button.mosClassicKeepNormalSurface then
             if not entry.classicSkin then entry.classicSkin = CreateNineSlice(button, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga"), 128, 32, 6, "BACKGROUND")
             else SetNineSliceTexture(entry.classicSkin, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga")) end
             button:SetBackdropColor(0, 0, 0, 0); button:SetBackdropBorderColor(0, 0, 0, 0); SetNineSliceShown(entry.classicSkin, true)
@@ -175,6 +172,10 @@ local function ApplyControl(entry)
             end
             if state == "selected" and not button.mosClassicCompactControl then entry.classicRedFill:Show() else entry.classicRedFill:Hide() end
         end
+        if button.mosClassicVariant == "red" and not button.mosClassicCompactControl then
+            if not entry.redHover then entry.redHover = SolidTexture(button, "HIGHLIGHT", 1, 0.72, 0.25, 0.22) end
+            entry.redHover:Show()
+        elseif entry.redHover then entry.redHover:Hide() end
         local disabled = button.mosClassicDisabled
         local gold = not disabled and (button.mosClassicGold or button.mosClassicSelected)
         local red, green, blue = 1, 1, 1
@@ -233,6 +234,7 @@ local function ApplyControl(entry)
             end
         end
     else
+        if entry.redHover then entry.redHover:Hide() end
         SetNineSliceShown(entry.classicSkin, false)
         SetNineSliceShown(entry.classicHoverBorder, false)
         SetNineSliceShown(entry.classicSelectedBorder, false)
@@ -250,7 +252,7 @@ local function ApplyControl(entry)
     end
     if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosTextColor)) end
     if solid then
-        ApplySolidButton(entry, not button.mosClassicKeepNormalSurface)
+        ApplySolidButton(entry)
 
     end
     if button.label and button.mosLabelInsets then
