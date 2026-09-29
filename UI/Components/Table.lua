@@ -8,9 +8,7 @@ function Table.ApplyHeaderHover(button)
     local highlight = button.headerHighlight
     if not highlight then highlight = UI.CreateTexture(button, nil, "HIGHLIGHT"); button.headerHighlight = highlight end
     highlight:SetAllPoints(button)
-    highlight:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Buttons\\red-hover-radial.tga")
-    -- Compensate the warm RGB tint in the shared radial artwork; retain header gold.
-    highlight:SetVertexColor(1, 0.8742857, 0.17, 0.42)
+    UI.ApplyGoldRadialHighlight(highlight)
     button:SetScript("OnEnter", nil); button:SetScript("OnLeave", nil)
 end
 

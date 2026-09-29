@@ -8,7 +8,7 @@ function Navigation.Create(options)
     options.items = {
         { key = "roster", text = "Roster", icon = "Interface\\Icons\\INV_Misc_Book_09" },
         { key = "raid", text = "Raid", icon = "Interface\\Icons\\INV_Banner_03" },
-        { key = "statistics", text = "Guild Statistics", icon = "Interface\\Icons\\INV_Misc_Book_11" },
+        { key = "statistics", text = "Guild Statistics", shortText = "Stats", icon = "Interface\\Icons\\INV_Misc_Book_11" },
         { key = "raidStatistics", text = "Raid Statistics", shortText = "Stats", icon = "Interface\\Icons\\INV_Misc_Note_06" },
         { key = "csr", text = "CSR", icon = "Interface\\Icons\\INV_Misc_Coin_01" },
         { key = "performance", text = "Performance", shortText = "Perf", icon = "Interface\\Icons\\INV_Gizmo_02" },

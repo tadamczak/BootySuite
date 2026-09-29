@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.35 - 2026-09-30
+
+- Separate roster MOTD, table/status and actions into framed sections; only the table stretches vertically.
+- Keep status anchored during guild events, constrain scrollbar arrows to rows and reclaim excessive column padding.
+- Use radial tab hover/selection and shorten crowded Guild Statistics tabs to Stats.
+
 ## 0.5.0-dev.34 - 2026-09-29
 
 - Halve side/bottom page and window gutters, tighten tab end spacing and show selected captions in white.

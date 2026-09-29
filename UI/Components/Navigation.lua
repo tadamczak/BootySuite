@@ -18,6 +18,12 @@ function Navigation.SetActive(buttons, activeName)
         button.navigationSelected = selected
         button.selectedFill:Hide(); button.hoverFill:Show()
         if button.navigationMode == "tabs" then
+            MOS.UI.Components.ApplyGoldRadialHighlight(button.selectedFill)
+            MOS.UI.Components.ApplyGoldRadialHighlight(button.hoverFill)
+        else
+            button.hoverFill:SetTexture("Interface\\Buttons\\WHITE8X8"); button.hoverFill:SetVertexColor(0.82, 0.70, 0.43, 0.14)
+        end
+        if button.navigationMode == "tabs" then
             button:SetBackdrop({ bgFile = MOS.UI.Components.IsClassicSkin() and MOS.UI.Components.ClassicAsset("Surfaces\\sidebar.tga") or "Interface\\DialogFrame\\UI-DialogBox-Background", tile = true, tileSize = 16, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
             if MOS.UI.Components.IsClassicSkin() then button:SetBackdropColor(1, 1, 1, 1)
             else button:SetBackdropColor(0.04, 0.03, 0.02, 0.98) end; button:SetBackdropBorderColor(0, 0, 0, 0)
