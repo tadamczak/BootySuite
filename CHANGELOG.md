@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.29 - 2026-09-29
+
+- Restore roster player-status toggle, fit guild action labels and clear stale raid metadata in the empty state.
+- Reset tab geometry on menu transitions, initialize Settings layers before opening and keep accordion gradients short.
+
 ## 0.5.0-dev.28 - 2026-09-29
 
 - Restore left-aligned single-line Settings labels and measure independent column widths without wrapping.

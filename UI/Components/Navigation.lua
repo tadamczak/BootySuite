@@ -116,8 +116,8 @@ function Navigation.Create(options)
                 button.navigationContent = options.contentPanel
                 button.navigationX = 12 + ((index - 1) * width)
                 button.SetTabBorderVisible(false)
-                button:SetParent(options.dashboard); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
-                button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width - (iconTabs and 0 or 4)); button:SetHeight(30)
+                if button:GetParent() ~= options.dashboard then button:SetParent(options.dashboard) end; button:SetScale(1); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
+                button:SetFrameStrata(options.dashboard:GetFrameStrata()); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width - (iconTabs and 0 or 4)); button:SetHeight(30)
                 button.iconBorder:Hide(); button:Show()
                 if iconTabs then
                     button.label:Hide(); button.icon:Show(); button.icon:ClearAllPoints()
@@ -148,7 +148,7 @@ function Navigation.Create(options)
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
                 button.navigationMode = "buttons"; button.SetTabBorderVisible(false)
-                button:SetParent(options.sidebar); button:ClearAllPoints(); button:SetPoint("TOPLEFT", options.sidebar, "TOPLEFT", classic and 3 or 10, classic and (-34 - ((index - 1) * 37)) or ys[index])
+                if button:GetParent() ~= options.sidebar then button:SetParent(options.sidebar) end; button:SetScale(1); button:ClearAllPoints(); button:SetPoint("TOPLEFT", options.sidebar, "TOPLEFT", classic and 3 or 10, classic and (-34 - ((index - 1) * 37)) or ys[index])
                 button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.sidebar:GetFrameLevel() + 2); button:Show(); button:SetWidth(classic and ((collapsed and 44 or 148) - 6) or (collapsed and 38 or 154)); button:SetHeight(classic and 37 or 40)
                 button.icon:Show(); if classic then button.iconBorder:Hide() else button.iconBorder:Show() end; button.icon:ClearAllPoints(); button.icon:SetPoint(collapsed and "CENTER" or "LEFT", button, collapsed and "CENTER" or "LEFT", collapsed and 0 or (classic and 11 or 9), 0)
                 button.icon:SetWidth(classic and 20 or 28); button.icon:SetHeight(classic and 20 or 28)

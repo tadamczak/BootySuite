@@ -680,9 +680,15 @@ function UI.BindCheckboxLabel(checkbox, onChanged, width)
     return checkbox
 end
 
+local function FinishOpenBorderLayout()
+    this:SetScript("OnUpdate", nil)
+    if this.UpdateScrollChildRect then this:UpdateScrollChildRect() end
+    this:SetHorizontalScroll(0); this:SetVerticalScroll(this.mosOpenEdge == "top" and 8 or 0)
+end
+
 function UI.SetOpenButtonBorder(button, visible, openEdge)
     local viewport = button.openBorder
-    if not visible then if viewport then viewport:Hide() end; return end
+    if not visible then if viewport then viewport:SetScript("OnUpdate", nil); viewport:Hide() end; return end
     if not viewport then
         viewport = UI.CreateScrollFrame(nil, button)
         viewport:SetAllPoints(button); viewport:EnableMouse(false)
@@ -694,8 +700,24 @@ function UI.SetOpenButtonBorder(button, visible, openEdge)
     end
     viewport:SetFrameStrata(button:GetFrameStrata()); viewport:SetFrameLevel(button:GetFrameLevel() + 1)
     viewport.border:SetFrameStrata(button:GetFrameStrata()); viewport.border:SetFrameLevel(viewport:GetFrameLevel() + 1)
+    viewport:ClearAllPoints(); viewport:SetAllPoints(button)
+    viewport:SetHorizontalScroll(0)
+    viewport.border:ClearAllPoints(); viewport.border:SetPoint("TOPLEFT", viewport, "TOPLEFT", 0, 0)
     viewport.border:SetWidth(button:GetWidth()); viewport.border:SetHeight(button:GetHeight() + (openEdge and 8 or 0))
     viewport:Show()
     if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
     viewport:SetVerticalScroll(openEdge == "top" and 8 or 0)
+    viewport.mosOpenEdge = openEdge; viewport:SetScript("OnUpdate", FinishOpenBorderLayout)
+end
+
+function UI.FitButtonLabel(button, available)
+    local label = button.label
+    if not label then return end
+    local font, size, flags = label:GetFont()
+    button.mosFitFontSize = button.mosFitFontSize or size
+    label:SetFont(font, button.mosFitFontSize, flags); label:SetWidth(0)
+    label:SetHeight(button.mosFitFontSize + 3)
+    local width = math.max(1, label:GetStringWidth())
+    local fitted = math.max(1, button.mosFitFontSize * math.min(1, math.max(1, available) / width))
+    label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH("CENTER")
 end

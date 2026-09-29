@@ -518,7 +518,7 @@ function RosterManagement.GetVisibleColumns(page, settings)
         local source = group == 1 and page.guildColumns or page.playerColumns
         for index = 1, table.getn(source) do
             local column = source[index]
-            if (group == 1 or column.key ~= "name") and (column.key == "name" or settings["rosterShow" .. rosterColumnSettings[column.key]]) and (column.key ~= "officer" or MOS.Services.Roster.CanManage("viewOfficerNote")) then
+            if ((page.statusMode and group == 2) or (not page.statusMode and (group == 1 or column.key ~= "name"))) and (page.statusMode or column.key == "name" or settings["rosterShow" .. rosterColumnSettings[column.key]]) and (column.key ~= "officer" or MOS.Services.Roster.CanManage("viewOfficerNote")) then
                 count = count + 1
                 local target = visible[count] or {}; visible[count] = target
                 target.key = column.key; target.header = column.header; target.fraction = column.fraction
@@ -1077,7 +1077,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.modeButton.label:ClearAllPoints()
     controls.modeButton.label:SetPoint("RIGHT", controls.modeButton, "LEFT", -4, 0)
 
-    controls.modeButton:Hide(); controls.modeButton.label:Hide()
+    controls.modeButton:Show(); controls.modeButton.label:Show()
     local actionCount = table.getn(controls.actions)
     local baseWidth, visibleCount = 0, 0
     local actionIndex
@@ -1088,7 +1088,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     end
     baseWidth = math.max(1, baseWidth + math.max(0, visibleCount - 1) * 6)
     local availableWidth = math.max(1, width - 24 - 28)
-    local widthScale = math.min(1, availableWidth / baseWidth)
+    local widthScale = availableWidth / baseWidth
     local actionX = 12
     for actionIndex = 1, actionCount do
         local action = controls.actions[actionIndex]
@@ -1098,6 +1098,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
             action.button:SetScale(1)
             action.button:SetWidth(math.floor(action.width * widthScale))
             action.button:SetHeight(22)
+            MOS.UI.Components.FitButtonLabel(action.button, action.button:GetWidth() - 16)
             action.button:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight())
             actionX = actionX + math.floor(action.width * widthScale) + 6
         else action.button:Hide() end

@@ -732,6 +732,8 @@ end
 
 function Settings.AttachShell(view, parent, anchor, detached)
     view.viewport:SetParent(parent)
+    view.viewport:SetFrameStrata(parent:GetFrameStrata()); view.viewport:SetFrameLevel(parent:GetFrameLevel() + 2)
+    view.page:SetFrameStrata(parent:GetFrameStrata()); view.page:SetFrameLevel(view.viewport:GetFrameLevel() + 2)
     view.viewport:ClearAllPoints()
     view.viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 8, -8)
     view.viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -36, 8)
