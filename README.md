@@ -82,7 +82,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 
 ### Loot Master Mode
 
-In **LM Config**, set **LM Auto Loot** to **Auto Loot**, **Shift Loot** (hold Shift while right-clicking the loot source), or **Off**. **Auto Loot Rarity** collects only the selected qualities; none selected means no automatic item looting. Existing settings retain Poor, Common and Uncommon by default. Enter comma-separated full item names in **Auto Loot Exceptions** to always exclude them; capitalization and extra spaces are ignored. These choices are saved in Settings profiles.
+In **LM Config**, set **LM Auto Loot** to **Auto Loot**, **Shift Loot** (hold Shift while right-clicking the loot source), or **Off**. **Auto Loot Rarity** collects only the selected qualities; none selected means no automatic item looting. Existing settings retain Poor, Common and Uncommon by default. Enter comma-separated full item names in **Auto Loot Exceptions** to always exclude them; capitalization and extra spaces are ignored. These choices are saved in Settings profiles. **Exception Presets** offers ZG, Kara10, MC, Onyxia and BWL; currently these insert test placeholder names only. Deselecting a preset removes its placeholder while preserving manual exceptions.
 
 - **Compact workspace -** Keep raid members and loot tools visible in a smaller, resizable window.
 - **Loot detection -** Open the roll window from corpse loot or start it manually with `/mos roll [linked item]`.

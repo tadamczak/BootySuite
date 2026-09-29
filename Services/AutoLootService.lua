@@ -26,3 +26,23 @@ function AutoLoot.Allows(name, quality, rarities, text)
     end
     return not exceptions[Normalize(name)]
 end
+
+AutoLoot.PresetNames = { "ZG", "Kara10", "MC", "Onyxia", "BWL" }
+function AutoLoot.ApplyPresets(text, mask)
+    local entries, presetEntries = {}, {}
+    local index, entry
+    for index = 1, table.getn(AutoLoot.PresetNames) do
+        presetEntries[Normalize(AutoLoot.PresetNames[index] .. " exceptions preset test")] = true
+    end
+    for entry in string.gfind(tostring(text or ""), "[^,]+") do
+        if Normalize(entry) ~= "" and not presetEntries[Normalize(entry)] then
+            table.insert(entries, (string.gsub(entry, "^%s*(.-)%s*$", "%1")))
+        end
+    end
+    for index = 1, table.getn(AutoLoot.PresetNames) do
+        if math.mod(math.floor(mask / 2 ^ (index - 1)), 2) == 1 then
+            table.insert(entries, AutoLoot.PresetNames[index] .. " exceptions preset test")
+        end
+    end
+    return table.concat(entries, ", ")
+end

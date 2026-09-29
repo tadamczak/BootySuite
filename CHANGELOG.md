@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.19 - 2026-09-29
+
+- Add multi-select exception test presets to LM Config.
+- Match LM labels, gold titles and toolbar borders; show expanded Loot Master Mode title and label-only exception tooltip.
+
 ## 0.5.0-dev.18 - 2026-09-29
 
 - Keep LM Config fields and dropdown options above their panel backgrounds after reparenting.

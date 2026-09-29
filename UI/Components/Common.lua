@@ -588,6 +588,13 @@ function UI.CreateReadOnlyDialog(name, titleText, width, height, backgroundColor
     return frame
 end
 
+function UI.AttachLabelTooltip(parent, label, title, description)
+    local hit = UI.CreateControl(nil, parent)
+    hit:SetAllPoints(label)
+    UI.AttachTooltip(hit, title, description)
+    return hit
+end
+
 function UI.CreateTextArea(parent, width, height, maxLetters)
     local field = UI.CreateFramedEditBox(parent, nil, width)
     field:SetHeight(height); field:SetMultiLine(true); field:SetMaxLetters(maxLetters or 255)
