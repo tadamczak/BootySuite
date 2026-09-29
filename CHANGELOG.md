@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.37 - 2026-09-30
+
+- Anchor roster sections directly to page edges and each other so late client resize cannot leave a right gutter or a gap above actions.
+- Refresh roster rows after native section geometry settles and when reopening the page.
+
 ## 0.5.0-dev.36 - 2026-09-30
 
 - Add Hide header bar with content-corner controls; group window visibility options under UI > Layout.
