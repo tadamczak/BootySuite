@@ -6,10 +6,11 @@ local Dashboard = MOS.UI.Components.Dashboard
 function Dashboard.GetChromeLayout(get, classic)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
-    local headerHeight = compact and 30 or normalHeight
+    local topTabs = get("menuStyle") == "tabs"
+    local headerHeight = topTabs and 20 or (compact and 30 or normalHeight)
     local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 30 or 33)
     if get("hideHeaderBar") then return 0, -1, bottom, -1 end
-    local top = -(classic and 8 or 14) - headerHeight
+    local top = -(topTabs and 1 or (classic and 8 or 14)) - headerHeight
     return headerHeight, top, bottom, top
 end
 
@@ -48,14 +49,14 @@ function Dashboard.ApplyChrome(view, get)
     local classic = MOS.UI.Components.IsClassicSkin()
     local height = Dashboard.GetChromeLayout(get, classic)
     view.titleBar:ClearAllPoints()
-    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, classic and -8 or -14)
-    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", classic and -8 or -18, classic and -8 or -14)
+    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, get("menuStyle") == "tabs" and -1 or (classic and -8 or -14))
+    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", 0, get("menuStyle") == "tabs" and -1 or (classic and -8 or -14))
     view.titleBar:SetHeight(height)
-    SetChromeVisible(view.title, not classic and not get("hideHeaderName"))
-    SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName"))
-    SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName"))
-    SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName"))
-    SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo"))
+    SetChromeVisible(view.title, not classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
+    SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
+    SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
+    SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
+    SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo") and get("menuStyle") ~= "tabs")
     local hiddenHeader = get("hideHeaderBar")
     SetChromeVisible(view.titleBar, not hiddenHeader)
     Dashboard.PlaceWindowControls(view, hiddenHeader)
@@ -178,6 +179,9 @@ function Dashboard.CreateWindow(version)
     view.contentPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     view.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90); view.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
     MOS.UI.Components.RegisterSkinnedSurface(view.contentPanel, "content", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.02, 0.02, 0.02, 0.90 }, { 0.36, 0.36, 0.34, 1 })
+    MOS.UI.Components.SetSurfaceThinOutline(view.sidebar, true, false)
+    MOS.UI.Components.SetSurfaceThinOutline(view.titleBar, false, true)
+    MOS.UI.Components.SetSurfaceThinOutline(view.contentPanel, true, false)
     view.pageHost = MOS.UI.Components.CreateContainer(nil, view.contentPanel)
     view.pageHost:SetAllPoints(view.contentPanel); view.contentPanel.mosPageHost = view.pageHost
     local background = view.sidebar:CreateTexture(nil, "BACKGROUND")
