@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.28 - 2026-09-29
+
+- Restore left-aligned single-line Settings labels and measure independent column widths without wrapping.
+- Make all accordion highlights hover-only; add UI General/Layout accordions and match feature heading sizes.
+
 ## 0.5.0-dev.27 - 2026-09-29
 
 - Make Settings grids adapt from three columns to two or one using measured label widths; lower minimum width to 350.
