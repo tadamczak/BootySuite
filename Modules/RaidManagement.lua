@@ -563,7 +563,7 @@ function RaidManagement.CreateListHeaders(page, onSort)
         local button = MOS.UI.Components.CreateControl(nil, page)
         button:SetPoint("TOPLEFT", page, "TOPLEFT", spec[3], -106); button:SetWidth(spec[4]); button:SetHeight(22)
         button.label = label; button.baseText = spec[1]; button.sortKey = spec[2]; button.defaultAscending = true; button.headerController = ui.controller
-        local highlight = MOS.UI.Components.CreateTexture(button, nil, "HIGHLIGHT"); highlight:SetAllPoints(button); highlight:SetTexture(1, 0.72, 0.12, 0.12)
+        MOS.UI.Components.Table.ApplyHeaderHover(button)
         button:SetScript("OnClick", OnListHeaderClick); button:Hide()
         ui.buttons[index] = button
     end
@@ -575,6 +575,7 @@ function RaidManagement.CreateListHeaders(page, onSort)
     ui.onlineButton = MOS.UI.Components.CreateControl(nil, page)
     ui.onlineButton:SetWidth(62); ui.onlineButton:SetHeight(22); ui.onlineButton.label = ui.online; ui.onlineButton.baseText = "Status"
     ui.onlineButton.sortKey = "online"; ui.onlineButton.defaultAscending = false; ui.onlineButton.headerController = ui.controller
+    MOS.UI.Components.Table.ApplyHeaderHover(ui.onlineButton)
     ui.onlineButton:SetScript("OnClick", OnListHeaderClick); ui.onlineButton:Hide()
 
     page.listColumns = {
@@ -1413,7 +1414,7 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
         local header = headerButtons[headerIndex]
         if lootMasterMode and header.sortKey == "subgroup" then header:Hide() else header:Show() end
         header.label:SetText(header.baseText)
-        if sortKey == header.sortKey then header.label:SetTextColor(1, 1, 1) else header.label:SetTextColor(1, 0.82, 0) end
+        header.label:SetTextColor(1, 0.82, 0)
     end
 
     local tableLeft = lootMasterMode and 3 or 12
@@ -1465,7 +1466,7 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
                 column.header:ClearAllPoints(); column.header:SetPoint("TOPLEFT", page, "TOPLEFT", columnX, headerY); column.header:SetWidth(width); column.header:Show()
                 column.button:ClearAllPoints(); column.button:SetPoint("TOPLEFT", page, "TOPLEFT", columnX, headerY + 4); column.button:SetWidth(width); column.button:Show()
                 column.button.label:SetText(column.button.baseText)
-                if sortKey == column.button.sortKey then column.button.label:SetTextColor(1, 1, 1) else column.button.label:SetTextColor(1, 0.82, 0) end
+                column.button.label:SetTextColor(1, 0.82, 0)
                 columnX = columnX + width
             else
                 page.listPositions[headerIndex] = columnX

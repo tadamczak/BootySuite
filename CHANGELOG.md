@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.32 - 2026-09-29
+
+- Measure roster columns from content and use the complete available width.
+- Move roster actions to the bottom; keep counters and status switching directly below visible rows.
+- Use radial header hover throughout tables, remove header tooltips and keep sorted header colors unchanged.
+
 ## 0.5.0-dev.31 - 2026-09-29
 
 - Restore capped roster actions and separate Guild/Player Status columns; respect Officer note preferences and permissions.
