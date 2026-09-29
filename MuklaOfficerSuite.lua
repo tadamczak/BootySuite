@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.20"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.21"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -91,7 +91,7 @@ MOS.UI.Components.Dashboard.BindWindow(dashboardView, {
         end
     end,
     isLootMasterMode = function() return MOS.lootMasterMode end,
-    isTabLayout = function() return MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.menuStyle == "tabs" end,
+    isTabLayout = function() return MuklaOfficerSuiteDB and (MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs") end,
     applyLayout = function() if ApplyNavigationLayout then ApplyNavigationLayout() end end,
     refreshLayout = function() if RefreshCurrentPageLayout then RefreshCurrentPageLayout() end end,
     applyOrRefreshLayout = function()
@@ -844,9 +844,9 @@ MOS.Core.EventDispatcher.Attach(MOS, {
             MuklaOfficerSuiteDB.windowLeft = nil; MuklaOfficerSuiteDB.windowBottom = nil
         end
         dashboard:SetScale(1)
-        dashboard:SetMinResize(760, 420); dashboard:SetMaxResize(1100, 760)
-        dashboard:SetWidth(math.max(760, math.min(1100, savedWindowWidth)))
-        dashboard:SetHeight(math.max(420, math.min(760, savedWindowHeight)))
+        dashboard:SetMinResize(700, 380); dashboard:SetMaxResize(1100, 760)
+        dashboard:SetWidth(math.max(700, math.min(1100, savedWindowWidth)))
+        dashboard:SetHeight(math.max(380, math.min(760, savedWindowHeight)))
         if tonumber(MuklaOfficerSuiteDB.windowLeft) and tonumber(MuklaOfficerSuiteDB.windowBottom) then
             dashboard:ClearAllPoints(); dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", MuklaOfficerSuiteDB.windowLeft, MuklaOfficerSuiteDB.windowBottom)
         end

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.21 - 2026-09-29
+
+- Move roster actions below the aligned guild MOTD frame and lower window minimum sizes.
+- Add Bottom Tab view and shared gold tab borders open toward the content.
+
 ## 0.5.0-dev.20 - 2026-09-29
 
 - Add optional status/version bar, header logo and header name visibility settings.

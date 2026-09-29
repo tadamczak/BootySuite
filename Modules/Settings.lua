@@ -65,9 +65,9 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     page.RefreshGeneralSettings = function()
         MOS.Database.Ensure()
         skinControl:SetText(MOS.UI.Components.IsClassicSkin() and "Classic" or "Default")
-        menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or "Button view")
+        menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" and "Bottom Tab view" or "Button view")
         iconTabsCheck:SetChecked(MuklaOfficerSuiteDB.useIconTabs and 1 or nil)
-        if MuklaOfficerSuiteDB.menuStyle == "tabs" then iconTabsCheck:Show() else iconTabsCheck:Hide() end
+        if MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" then iconTabsCheck:Show() else iconTabsCheck:Hide() end
         local index
         for index = 1, table.getn(page.chromeChecks) do local check = page.chromeChecks[index]; check:SetChecked(MOS.Database.GetSetting(check.settingKey) and 1 or nil) end
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
@@ -323,9 +323,9 @@ end
 
 function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
     local _, button = MOS.UI.Components.CreateChoiceField({
-        parent = parent, x = x, y = y, label = "Menu type", width = 126, height = 51,
+        parent = parent, x = x, y = y, label = "Menu type", width = 126, height = 72,
         initialText = "Button view", firstY = -7, step = 19,
-        choices = { { text = "Tab view", value = "tabs" }, { text = "Button view", value = "buttons" } },
+        choices = { { text = "Tab view", value = "tabs" }, { text = "Button view", value = "buttons" }, { text = "Bottom Tab view", value = "bottomTabs" } },
         getValue = function() MOS.Database.Ensure(); return MOS.Database.GetSetting("menuStyle") end,
         onSelect = function(value) MOS.Database.Ensure(); MOS.Database.SetSetting("menuStyle", value) end,
         onChanged = onChanged,
