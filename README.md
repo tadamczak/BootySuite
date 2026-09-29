@@ -121,7 +121,7 @@ In **LM Config**, set **LM Auto Loot** to **Auto Loot**, **Shift Loot** (hold Sh
 
 **UI > General** can hide the status/version bar, guild logo, or addon name and ornaments. All three options default to off. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. These preferences are saved in profiles.
 
-Under **UI > Layout**, choose **Tab view** or **Bottom Tab view** to reveal **Use Icon Tabs**. Bottom Tab view places navigation below the content. The selected text tab joins the content frame; inactive tabs are recessed. Enable it to replace tab captions with the sidebar icons and matching highlights.
+Under **UI > Layout**, choose **Tab view** or **Bottom Tab view** to reveal **Use Icon Tabs**. Bottom Tab view places navigation below the content. Text and icon tabs join the content frame; the selected tab keeps its gold outline and highlight while inactive tabs are recessed. Enable it to replace tab captions with the sidebar icons and matching highlights.
 
 Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can be toggled by clicking either the checkbox or its label.
 
