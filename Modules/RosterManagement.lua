@@ -17,7 +17,7 @@ function RosterManagement.CreateSections(page)
     C.JoinSurfaceEdges(page.tablePanel, true, true)
     C.JoinSurfaceEdges(page.actionsPanel, true, false)
     page.actionsPanel:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 0, 0)
-    page.actionsPanel:SetWidth(page:GetWidth())
+    page.actionsPanel:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", 0, 0)
     page.actionsPanel:SetHeight(34)
 end
 
@@ -1073,9 +1073,17 @@ function RosterManagement.AttachInteractions(options)
             page:SetScript("OnUpdate", page.finishLayout)
         end
     end)
-    page:SetScript("OnSizeChanged", function()
-        if this:IsVisible() then this:SetScript("OnUpdate", this.finishLayout) end
-    end)
+    local function QueueSectionLayout()
+        if page:IsVisible() then
+            page.viewportChanged = true
+            page:SetScript("OnUpdate", page.finishLayout)
+        end
+    end
+    page:SetScript("OnSizeChanged", QueueSectionLayout)
+    page:SetScript("OnShow", QueueSectionLayout)
+    page.tablePanel:SetScript("OnSizeChanged", QueueSectionLayout)
+    page.actionsPanel:SetScript("OnSizeChanged", QueueSectionLayout)
+    page.footer:SetScript("OnSizeChanged", QueueSectionLayout)
     page.finishLayout = function()
         this:SetScript("OnUpdate", nil)
         local currentWidth, currentHeight = this:GetWidth(), this:GetHeight()
@@ -1122,20 +1130,24 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.footer.motd:SetWidth(math.max(1, width - 16))
     controls.footer.motd:SetHeight(0)
     controls.footer.motd:SetText(motdText or "Guild Message of the Day")
-    controls.footer:ClearAllPoints()
-    controls.footer:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -42 + headerShift)
-    controls.footer:SetWidth(width)
+    if controls.footer.layoutHeaderShift ~= headerShift then
+        controls.footer.layoutHeaderShift = headerShift
+        controls.footer:ClearAllPoints()
+        controls.footer:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -42 + headerShift)
+        controls.footer:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -42 + headerShift)
+    end
     controls.footer:SetHeight(20 + controls.footer.guild:GetStringHeight() + controls.footer.motd:GetStringHeight())
 
     if controls.footer.rule then controls.footer.rule:Hide() end
     if page.tablePanel then
         local top = 42 - headerShift + controls.footer:GetHeight()
-        page.tablePanel:ClearAllPoints()
-        page.tablePanel:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -top)
-        page.tablePanel:SetWidth(width)
-        page.actionsPanel:SetWidth(width)
+        if not page.sectionsAnchored then
+            page.sectionsAnchored = true
+            page.tablePanel:ClearAllPoints()
+            page.tablePanel:SetPoint("TOPLEFT", controls.footer, "BOTTOMLEFT", 0, 0)
+            page.tablePanel:SetPoint("BOTTOMRIGHT", page.actionsPanel, "TOPRIGHT", 0, 0)
+        end
         page.tablePanelHeight = math.max(0, page:GetHeight() - top - page.actionsPanel:GetHeight())
-        page.tablePanel:SetHeight(page.tablePanelHeight)
     end
     width = math.max(1, width)
     local settings = MuklaOfficerSuiteDB or {}
