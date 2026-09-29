@@ -8,6 +8,24 @@ local controls = MOS.UI.Components.Settings.CreateFactory({
     set = MOS.Database.SetSetting,
 })
 
+local rosterLayoutOptions = {
+    { "Show class", "rosterShowClass" },
+    { "Show lvl", "rosterShowLevel" },
+    { "Show zone", "rosterShowZone" },
+    { "Show rank", "rosterShowRank" },
+    { "Show public note", "rosterShowPublicNote" },
+    { "Show officer note", "rosterShowOfficerNote" },
+    { "Show last online", "rosterShowLastOnline" },
+    { "Show class filter", "rosterShowClassFilter" },
+    { "Show rank filter", "rosterShowRankFilter" },
+    { "Show search", "rosterShowSearch" },
+    { "Show offline", "rosterShowOffline" },
+    { "Show column headers", "rosterShowColumnHeaders" },
+}
+local function RefreshRosterLayout()
+    if MOS.Modules.RosterManagement and MOS.Modules.RosterManagement.RefreshLayout then MOS.Modules.RosterManagement.RefreshLayout() end
+end
+
 local function OnSettingsMouseWheel()
     local page = this.settingsPage
     local maximum = math.max(0, page:GetHeight() - this:GetHeight())
@@ -101,6 +119,12 @@ function Settings.CreatePrimarySections(page)
     rosterHeading:SetText("Roster management")
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
     page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 40, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
+    page.rosterLayoutChecks = {}
+    local index
+    for index = 1, table.getn(rosterLayoutOptions) do
+        local option = rosterLayoutOptions[index]
+        page.rosterLayoutChecks[index] = Settings.CreateSavedCheckbox(page, nil, 40, -234, option[1], option[2], nil, nil, RefreshRosterLayout)
+    end
     local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
     page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 40, -234, "Use class colors", "rosterClassColors")
     local raidHeading = MOS.UI.Components.CreateHeading(page, "", 2, "orange")
@@ -314,6 +338,10 @@ function Settings.CreateRaidSettings(page, callbacks)
         page.rosterClassColorsCheck:SetChecked(MuklaOfficerSuiteDB.rosterClassColors and 1 or nil)
         page.rosterLiveTrackingCheck:SetChecked(MuklaOfficerSuiteDB.rosterLiveTrackingEnabled and 1 or nil)
         page.raidLiveTrackingCheck:SetChecked(MuklaOfficerSuiteDB.raidLiveTrackingEnabled and 1 or nil)
+        local index
+        for index = 1, table.getn(page.rosterLayoutChecks or {}) do
+            local check = page.rosterLayoutChecks[index]; check:SetChecked(MuklaOfficerSuiteDB[check.settingKey] and 1 or nil)
+        end
         if page.RefreshRaidViewSettings then page.RefreshRaidViewSettings() end
         Settings.SyncSavedControls(page.chatLogsCheck, page.raidAccordionControls.opacityField, page.raidAccordionControls.focusField)
         page.ApplyRaidLayoutAccordion()
@@ -527,6 +555,7 @@ function Settings.ApplyUIVisibility(controls)
     if not visible then
         page.rosterLiveTrackingCheck:Hide(); page.rosterClassColorsCheck:Hide()
         local index
+        for index = 1, table.getn(page.rosterLayoutChecks or {}) do page.rosterLayoutChecks[index]:Hide() end
         for index = 1, table.getn(controls.layoutControls) do controls.layoutControls[index]:Hide() end
         for index = 1, table.getn(controls.generalControls or {}) do controls.generalControls[index]:Hide() end
         if controls.columnsPanel then controls.columnsPanel:Hide() end
@@ -581,7 +610,13 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     if state.layout and uiVisible then sections.rosterLayout:LockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
     page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, layoutY - 28)
-    local raidHeadingY = layoutY - (state.layout and 66 or 38)
+    local index
+    for index = 1, table.getn(page.rosterLayoutChecks or {}) do
+        local check = page.rosterLayoutChecks[index]
+        check:ClearAllPoints(); check:SetPoint("TOPLEFT", page, "TOPLEFT", 40 + math.mod(index - 1, 2) * 260, layoutY - 56 - math.floor((index - 1) / 2) * 26)
+        if state.layout and uiVisible then check:Show() else check:Hide() end
+    end
+    local raidHeadingY = layoutY - (state.layout and 222 or 38)
     sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, raidHeadingY)
     raidControls.raidOffset = raidHeadingY - (-206)
     Settings.ApplyRaidAccordions(raidControls)
@@ -634,7 +669,7 @@ end
 
 function Settings.CreateDetachedWindow()
     return MOS.UI.Components.Window.Create({
-        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings",
+        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings", compact = true,
         update = function(view) Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end,
         refresh = function(view) if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end end,
         attach = function(view, content) Settings.AttachShell(view, content, content, true) end,

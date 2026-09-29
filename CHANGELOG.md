@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.24 - 2026-09-29
+
+- Add roster column, filter and column-header visibility preferences with profile support.
+- Compact the Settings header and remove resize artwork and its reserved footer space.
+
 ## 0.5.0-dev.23 - 2026-09-29
 
 - Unify icon and text tab borders, anchor all tabs to the content edge, and retain hover shading on the selected tab.

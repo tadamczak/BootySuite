@@ -509,6 +509,29 @@ function RosterManagement.ApplyRowColumns(row, columns, tableWidth)
     end
 end
 
+local emptyRosterFilter = {}
+local rosterColumnSettings = { class = "Class", level = "Level", zone = "Zone", rank = "Rank", notes = "PublicNote", officer = "OfficerNote", lastOnline = "LastOnline" }
+function RosterManagement.GetVisibleColumns(page, settings)
+    local visible = page.visibleColumns or {}; page.visibleColumns = visible
+    local count, total = 0, 0
+    local group, index
+    for group = 1, 2 do
+        local source = group == 1 and page.guildColumns or page.playerColumns
+        for index = 1, table.getn(source) do
+            local column = source[index]
+            if (group == 1 or column.key ~= "name") and (column.key == "name" or settings["rosterShow" .. rosterColumnSettings[column.key]]) and (column.key ~= "officer" or MOS.Services.Roster.CanManage("viewOfficerNote")) then
+                count = count + 1
+                local target = visible[count] or {}; visible[count] = target
+                target.key = column.key; target.header = column.header; target.fraction = column.fraction
+                total = total + column.fraction
+            end
+        end
+    end
+    for index = table.getn(visible), count + 1, -1 do visible[index] = nil end
+    for index = 1, count do visible[index].fraction = visible[index].fraction / total end
+    return visible
+end
+
 function RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY)
     HideColumns(rows, page.guildColumns)
     HideColumns(rows, page.playerColumns)
@@ -520,7 +543,7 @@ function RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY
         column.header:ClearAllPoints()
         column.header:SetPoint("TOPLEFT", page, "TOPLEFT", 12 + columnX, headerY)
         column.header:SetWidth(math.max(1, width - 6))
-        column.header:Show()
+        if MuklaOfficerSuiteDB.rosterShowColumnHeaders ~= false then column.header:Show() end
         local rowIndex
         for rowIndex = 1, table.getn(rows) do
             local cell = rows[rowIndex][column.key]
@@ -725,6 +748,9 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     local rowHeight = controller.rowHeight
     local tableWidth = math.max(1, page:GetWidth() - 42)
     RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY)
+    page.tableViewport:ClearAllPoints()
+    page.tableViewport:SetPoint("TOPLEFT", page, "TOPLEFT", 12, headerY - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24))
+    page.tableViewport:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -30, 32)
     if resetScroll == true then
         controller.scrollFrame.offset = 0
         controller.scrollFrame:SetVerticalScroll(0)
@@ -865,9 +891,10 @@ function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, so
     local rosterShift = RosterManagement.LayoutChrome(page, page.layoutControls, renderer.getMotd())
     local query = string.lower(renderer.searchBox:GetText() or "")
     query = string.gsub(query, "^%s*(.-)%s*$", "%1")
+    if MuklaOfficerSuiteDB.rosterShowSearch == false then query = "" end
 
     page.filterController:Build(data)
-    RosterManagement.FilterMembers(renderer.visibleMembers, data, query, renderer.selectedClasses, renderer.selectedRanks, MuklaOfficerSuiteDB.showOfflineMembers)
+    RosterManagement.FilterMembers(renderer.visibleMembers, data, query, MuklaOfficerSuiteDB.rosterShowClassFilter ~= false and renderer.selectedClasses or emptyRosterFilter, MuklaOfficerSuiteDB.rosterShowRankFilter ~= false and renderer.selectedRanks or emptyRosterFilter, MuklaOfficerSuiteDB.showOfflineMembers)
     table.sort(renderer.visibleMembers, renderer.sortMembers)
 
     if not guildName then
@@ -881,7 +908,7 @@ function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, so
     end
 
     page.showOfflineCheck:SetChecked(MuklaOfficerSuiteDB.showOfflineMembers and 1 or nil)
-    local columns = page.statusMode and page.playerColumns or page.guildColumns
+    local columns = RosterManagement.GetVisibleColumns(page, MuklaOfficerSuiteDB)
     local lowestRankIndex = renderer.getLowestRankIndex(data)
     RosterManagement.RenderList(page, renderer.visibleMembers, columns, selectedMemberName, lowestRankIndex, MuklaOfficerSuiteDB.rosterClassColors, resetScroll, -132 - rosterShift)
     renderer.summaryText:ClearAllPoints()
@@ -934,6 +961,7 @@ function RosterManagement.ActivateDataController(controller, scanAlreadyStarted)
 end
 
 function RosterManagement.CreateLifecycle(page, dataController, refresh)
+    RosterManagement.RefreshLayout = function() if page:IsVisible() then refresh(false) end end
     return {
         Hide = function(self)
             RosterManagement.DeactivateDataController(dataController)
@@ -997,6 +1025,13 @@ function RosterManagement.AttachInteractions(options)
     end)
 end
 
+local function PlaceRosterFilter(page, control, visible, controlWidth, x, y)
+    if not visible then control:Hide(); return x end
+    control:Show(); control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
+    if controlWidth then control:SetWidth(controlWidth) end
+    return x + (controlWidth or control:GetWidth()) + 8
+end
+
 function RosterManagement.LayoutChrome(page, controls, motdText)
     local width = page:GetWidth()
     controls.footer.guild:SetText("Guild Message Of The Day:")
@@ -1019,25 +1054,18 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
         controls.footer.rule:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -82 - controls.footer:GetHeight())
     end
     local shift = controls.footer:GetHeight() - 10
-    controls.filtersLabel:ClearAllPoints()
-    controls.filtersLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -112 - shift)
-    controls.classFilter:ClearAllPoints()
-    controls.classFilter:SetPoint("TOPLEFT", page, "TOPLEFT", 50, -106 - shift)
-    controls.classFilter:SetWidth(width < 650 and 60 or 84)
-    controls.rankFilter:ClearAllPoints()
-    controls.rankFilter:SetPoint("LEFT", controls.classFilter, "RIGHT", 8, 0)
-    controls.rankFilter:SetWidth(width < 650 and 60 or 84)
-    controls.searchLabel:ClearAllPoints()
-    controls.searchLabel:SetPoint("LEFT", controls.rankFilter, "RIGHT", 10, 0)
-    controls.searchBox:ClearAllPoints()
-    controls.searchBox:SetPoint("LEFT", controls.searchLabel, "RIGHT", 8, 0)
-    controls.searchBox:SetWidth(math.max(40, math.min(178, width - (width < 650 and 470 or 520))))
-    controls.showOffline.label:ClearAllPoints()
-    controls.showOffline.label:SetPoint("LEFT", controls.searchBox, "RIGHT", 10, 0)
-    controls.showOffline:ClearAllPoints()
-    controls.showOffline:SetPoint("LEFT", controls.showOffline.label, "RIGHT", 4, 0)
-    controls.refreshButton:ClearAllPoints()
-    controls.refreshButton:SetPoint("LEFT", controls.showOffline, "RIGHT", 4, 0)
+    local settings = MuklaOfficerSuiteDB or {}
+    local x, y = 12, -106 - shift
+    local hasFilters = settings.rosterShowClassFilter ~= false or settings.rosterShowRankFilter ~= false
+    x = PlaceRosterFilter(page, controls.filtersLabel, hasFilters, 30, x, y)
+    x = PlaceRosterFilter(page, controls.classFilter, settings.rosterShowClassFilter ~= false, width < 650 and 60 or 84, x, y)
+    x = PlaceRosterFilter(page, controls.rankFilter, settings.rosterShowRankFilter ~= false, width < 650 and 60 or 84, x, y)
+    x = PlaceRosterFilter(page, controls.searchLabel, settings.rosterShowSearch ~= false, 40, x, y)
+    x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, width - x - (settings.rosterShowOffline ~= false and 170 or 50))), x, y)
+    x = PlaceRosterFilter(page, controls.showOffline.label, settings.rosterShowOffline ~= false, 76, x, y)
+    x = PlaceRosterFilter(page, controls.showOffline, settings.rosterShowOffline ~= false, nil, x, y)
+    x = PlaceRosterFilter(page, controls.refreshButton, true, nil, x, y)
+    if page.filterController and (settings.rosterShowClassFilter == false or settings.rosterShowRankFilter == false) then page.filterController:Hide() end
     controls.status:ClearAllPoints()
     controls.status:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 12, 12)
     controls.status:SetHeight(14)
@@ -1046,6 +1074,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.modeButton.label:ClearAllPoints()
     controls.modeButton.label:SetPoint("RIGHT", controls.modeButton, "LEFT", -4, 0)
 
+    controls.modeButton:Hide(); controls.modeButton.label:Hide()
     local actionCount = table.getn(controls.actions)
     local baseWidth, visibleCount = 0, 0
     local actionIndex
