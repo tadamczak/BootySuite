@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.25 - 2026-09-29
+
+- Fix hidden roster filters excluding every member; restore white centered filter labels.
+- Move Refresh Data after Export Roster and reduce the main window minimum width to 350.
+
 ## 0.5.0-dev.24 - 2026-09-29
 
 - Add roster column, filter and column-header visibility preferences with profile support.
