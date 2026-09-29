@@ -4,14 +4,16 @@ local UI = MOS.UI.Components
 UI.Table = UI.Table or {}
 local Table = UI.Table
 
-local function OnHeaderEnter()
-    UI.AnchorTooltipRightOfCursor(this)
-    GameTooltip:AddLine("Sort by " .. this.baseText)
-    GameTooltip:AddLine("Click again to reverse the order", 1, 1, 1)
-    GameTooltip:Show()
+function Table.ApplyHeaderHover(button)
+    local highlight = button.headerHighlight
+    if not highlight then highlight = UI.CreateTexture(button, nil, "HIGHLIGHT"); button.headerHighlight = highlight end
+    highlight:SetAllPoints(button)
+    highlight:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Buttons\\red-hover-radial.tga")
+    -- Compensate the warm RGB tint in the shared radial artwork; retain header gold.
+    highlight:SetVertexColor(1, 0.8742857, 0.17, 0.171)
+    button:SetScript("OnEnter", nil); button:SetScript("OnLeave", nil)
 end
 
-local function OnHeaderLeave() GameTooltip:Hide() end
 local function OnHeaderClick() this.headerController.onSort(this.sortKey) end
 
 function Table.CreateHeader(parent, controller, text, x, y, width, key, sortable)
@@ -20,11 +22,28 @@ function Table.CreateHeader(parent, controller, text, x, y, width, key, sortable
     button.baseText = text; button.sortKey = key; button.headerController = controller
     button.label = UI.CreateColumnLabel(button, "", "orange")
     button.label:SetAllPoints(button); button.label:SetJustifyH("LEFT"); button.label:SetText(text)
-    local highlight = UI.CreateTexture(button, nil, "HIGHLIGHT")
-    highlight:SetAllPoints(button); highlight:SetTexture(1, 0.72, 0.12, 0.12)
-    button:SetScript("OnEnter", OnHeaderEnter); button:SetScript("OnLeave", OnHeaderLeave)
+    Table.ApplyHeaderHover(button)
     if sortable then button:SetScript("OnClick", OnHeaderClick) end
     return button
+end
+
+-- Consume the full width while borrowing unused space from short columns.
+function Table.AllocateColumnWidths(columns, available)
+    local total, minimum, index = 0, 0, nil
+    for index = 1, table.getn(columns) do
+        total = total + columns[index].desiredWidth
+        minimum = minimum + columns[index].minimumWidth
+    end
+    local used = 0
+    for index = 1, table.getn(columns) do
+        local column = columns[index]
+        local width
+        if available >= total then width = column.desiredWidth + (available - total) * column.fraction
+        elseif available >= minimum then width = column.minimumWidth + (available - minimum) * (column.desiredWidth - column.minimumWidth) / math.max(1, total - minimum)
+        else width = available * column.minimumWidth / math.max(1, minimum) end
+        column.width = index == table.getn(columns) and math.max(1, available - used) or math.max(1, math.floor(width))
+        used = used + column.width
+    end
 end
 
 function Table.Create(options)

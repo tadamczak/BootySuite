@@ -109,9 +109,11 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
         controller.raidChecks[raidFilterIndex] = checkbox
     end
     controller.search:SetScript("OnTextChanged", function() controller:Refresh() end)
-    controller.playerHeader = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall"); controller.playerHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 16, -108); controller.playerHeader:SetText("Player name")
-    controller.itemsHeader = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall"); controller.itemsHeader:SetPoint("TOPLEFT", page, "TOPLEFT", 180, -108); controller.itemsHeader:SetText("Item")
-    controller.csrHeader = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall"); controller.csrHeader:SetPoint("TOPRIGHT", page, "TOPRIGHT", -24, -108); controller.csrHeader:SetWidth(60); controller.csrHeader:SetText("CSR")
+    controller.playerHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Player name", 16, -108, 154, nil, false)
+    controller.itemsHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Item", 180, -108, 140, nil, false)
+    controller.csrHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "CSR", 0, -108, 60, nil, false)
+    controller.csrHeader:ClearAllPoints(); controller.csrHeader:SetPoint("TOPRIGHT", page, "TOPRIGHT", -24, -108)
+    controller.playerHeader:SetHeight(16); controller.itemsHeader:SetHeight(16); controller.csrHeader:SetHeight(16)
     controller.scroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteCSRScroll", page, "FauxScrollFrameTemplate"); controller.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -124); controller.scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -28, 10)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteCSRScrollScrollBar"))
     local index
