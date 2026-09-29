@@ -37,18 +37,18 @@ end
 
 function Performance.Create(parent)
     local page = MOS.UI.Components.CreateContainer(nil, parent)
-    page:SetPoint("TOPLEFT", parent, "TOPLEFT", 3, -3); page:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -3, 3); page:Hide()
+    page:SetPoint("TOPLEFT", parent, "TOPLEFT", 1.5, -3); page:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -1.5, 1.5); page:Hide()
     page.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
-    page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); page.title:SetText("Performance")
+    page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); page.title:SetText("Performance")
     page.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
-    page.description:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -48)
+    page.description:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -48)
     page.description:SetText("Lightweight diagnostics sampled only while Performance or Live Monitor is visible.")
 
     local function Section(title, y)
         local heading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
-        heading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, y); heading:SetText(title)
+        heading:SetPoint("TOPLEFT", page, "TOPLEFT", 6, y); heading:SetText(title)
         local rule = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
-        rule:SetPoint("LEFT", heading, "RIGHT", 10, 0); rule:SetPoint("RIGHT", page, "RIGHT", -12, 0)
+        rule:SetPoint("LEFT", heading, "RIGHT", 10, 0); rule:SetPoint("RIGHT", page, "RIGHT", -6, 0)
         rule:SetHeight(1); rule:SetTexture(0.55, 0.42, 0.16, 0.75)
         return heading, rule
     end
@@ -98,7 +98,7 @@ function Performance.Create(parent)
     page.labels[13]:SetText("Current Lua memory  <>")
 
     page.resetButton = UI.CreateButton(page, nil, "Reset measurements", 145, 22)
-    page.resetButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -10)
+    page.resetButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -10)
     UI.AttachTooltip(page.resetButton, "Reset measurements", "Clear memory peaks, cleanup history, and measured Mukla Officer Suite operations.")
     page.monitorButton = UI.CreateButton(page, nil, "Open Live Monitor", 145, 22)
     page.monitorButton:SetPoint("RIGHT", page.resetButton, "LEFT", -8, 0)
@@ -389,19 +389,19 @@ function Performance.Create(parent)
         local columns = width >= 510 and 3 or 2
         if width < 360 then columns = 1 end
         local rowGap = height < 430 and 20 or 28
-        local columnWidth = math.floor((width - 24) / columns); local labelWidth = math.max(120, math.floor(columnWidth * 0.58)); local valueWidth = math.max(70, columnWidth - labelWidth - 8)
+        local columnWidth = math.floor((width - 12) / columns); local labelWidth = math.max(120, math.floor(columnWidth * 0.58)); local valueWidth = math.max(70, columnWidth - labelWidth - 8)
         local addonRows = math.ceil(12 / columns); local globalY = -102 - addonRows * rowGap - (height < 430 and 8 or 12)
-        page.globalHeading:ClearAllPoints(); page.globalHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, globalY)
-        page.globalRule:ClearAllPoints(); page.globalRule:SetPoint("LEFT", page.globalHeading, "RIGHT", 10, 0); page.globalRule:SetPoint("RIGHT", page, "RIGHT", -12, 0)
+        page.globalHeading:ClearAllPoints(); page.globalHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 6, globalY)
+        page.globalRule:ClearAllPoints(); page.globalRule:SetPoint("LEFT", page.globalHeading, "RIGHT", 10, 0); page.globalRule:SetPoint("RIGHT", page, "RIGHT", -6, 0)
         for index = 1, 19 do
             local localIndex, startY
             if index <= 12 then localIndex, startY = index - 1, -102 else localIndex, startY = index - 13, globalY - 26 end
-            local column = math.mod(localIndex, columns); local row = math.floor(localIndex / columns); local x, y = 12 + column * columnWidth, startY - row * rowGap
+            local column = math.mod(localIndex, columns); local row = math.floor(localIndex / columns); local x, y = 6 + column * columnWidth, startY - row * rowGap
             page.labels[index]:ClearAllPoints(); page.labels[index]:SetPoint("TOPLEFT", page, "TOPLEFT", x, y); page.labels[index]:SetWidth(labelWidth)
             page.values[index]:ClearAllPoints(); page.values[index]:SetPoint("TOPLEFT", page, "TOPLEFT", x + labelWidth + 4, y); page.values[index]:SetWidth(valueWidth)
             page.targets[index]:ClearAllPoints(); page.targets[index]:SetPoint("TOPLEFT", page, "TOPLEFT", x, y + 4); page.targets[index]:SetWidth(columnWidth - 6)
         end
-        page.resetButton:ClearAllPoints(); page.resetButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -10)
+        page.resetButton:ClearAllPoints(); page.resetButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -10)
         page.monitorButton:ClearAllPoints(); page.monitorButton:SetPoint("RIGHT", page.resetButton, "LEFT", -8, 0)
         page.diagnosticButton:ClearAllPoints(); page.diagnosticButton:SetPoint("RIGHT", page.monitorButton, "LEFT", -8, 0)
     end

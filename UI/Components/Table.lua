@@ -10,7 +10,7 @@ function Table.ApplyHeaderHover(button)
     highlight:SetAllPoints(button)
     highlight:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Buttons\\red-hover-radial.tga")
     -- Compensate the warm RGB tint in the shared radial artwork; retain header gold.
-    highlight:SetVertexColor(1, 0.8742857, 0.17, 0.171)
+    highlight:SetVertexColor(1, 0.8742857, 0.17, 0.42)
     button:SetScript("OnEnter", nil); button:SetScript("OnLeave", nil)
 end
 
@@ -29,16 +29,17 @@ end
 
 -- Consume the full width while borrowing unused space from short columns.
 function Table.AllocateColumnWidths(columns, available)
-    local total, minimum, index = 0, 0, nil
+    local total, minimum, growth, index = 0, 0, 0, nil
     for index = 1, table.getn(columns) do
         total = total + columns[index].desiredWidth
         minimum = minimum + columns[index].minimumWidth
+        growth = growth + (columns[index].growthWeight or columns[index].fraction)
     end
     local used = 0
     for index = 1, table.getn(columns) do
         local column = columns[index]
         local width
-        if available >= total then width = column.desiredWidth + (available - total) * column.fraction
+        if available >= total then width = column.desiredWidth + (available - total) * (column.growthWeight or column.fraction) / math.max(0.001, growth)
         elseif available >= minimum then width = column.minimumWidth + (available - minimum) * (column.desiredWidth - column.minimumWidth) / math.max(1, total - minimum)
         else width = available * column.minimumWidth / math.max(1, minimum) end
         column.width = index == table.getn(columns) and math.max(1, available - used) or math.max(1, math.floor(width))

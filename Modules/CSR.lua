@@ -74,11 +74,11 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
     local raidFilterIndex
     for raidFilterIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[raidFilterIndex]] = true end
     controller.testLab = CreateTestLab(function() controller.testMode = true; controller:Refresh() end, function() controller.testMode = false; controller:Refresh() end)
-    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); controller.title:SetText("CSR")
-    controller.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.description:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -40); controller.description:SetPoint("RIGHT", page, "RIGHT", -12, 0); controller.description:SetJustifyH("LEFT")
+    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); controller.title:SetText("CSR")
+    controller.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.description:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -40); controller.description:SetPoint("RIGHT", page, "RIGHT", -6, 0); controller.description:SetJustifyH("LEFT")
     controller.description:SetText("Unsuccessful Soft Reserves from the last 60 days. Each player-item pair accumulates independently. Each miss grants 10 CSR.")
-    controller.testButton = MOS.UI.Components.CreateButton(page, nil, "CSR Test Lab", 96, 22); controller.testButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -10); controller.testButton:SetScript("OnClick", function() controller.testLab:Open() end)
-    controller.filterLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -75); controller.filterLabel:SetText("Filters")
+    controller.testButton = MOS.UI.Components.CreateButton(page, nil, "CSR Test Lab", 96, 22); controller.testButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -10); controller.testButton:SetScript("OnClick", function() controller.testLab:Open() end)
+    controller.filterLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -75); controller.filterLabel:SetText("Filters")
     controller.raidFilter = MOS.UI.Components.CreateDropdownButton(page, nil, "Raid", 150); controller.raidFilter:SetPoint("LEFT", controller.filterLabel, "RIGHT", 10, 0)
     controller.raidPanel = MOS.UI.Components.CreateDropdownPanel(page, controller.raidFilter, 190, 178, 20)
     controller.searchLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.searchLabel:SetPoint("LEFT", controller.raidFilter, "RIGHT", 18, 0); controller.searchLabel:SetText("Search")
@@ -114,11 +114,11 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
     controller.csrHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "CSR", 0, -108, 60, nil, false)
     controller.csrHeader:ClearAllPoints(); controller.csrHeader:SetPoint("TOPRIGHT", page, "TOPRIGHT", -24, -108)
     controller.playerHeader:SetHeight(16); controller.itemsHeader:SetHeight(16); controller.csrHeader:SetHeight(16)
-    controller.scroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteCSRScroll", page, "FauxScrollFrameTemplate"); controller.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -124); controller.scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -28, 10)
+    controller.scroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteCSRScroll", page, "FauxScrollFrameTemplate"); controller.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 2, -124); controller.scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -22, 5)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteCSRScrollScrollBar"))
     local index
     for index = 1, 30 do
-        local row = MOS.UI.Components.CreateControl(nil, page); row:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -98 - ((index - 1) * 24)); row:SetPoint("RIGHT", page, "RIGHT", -32, 0); row:SetHeight(23)
+        local row = MOS.UI.Components.CreateControl(nil, page); row:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -98 - ((index - 1) * 24)); row:SetPoint("RIGHT", page, "RIGHT", -26, 0); row:SetHeight(23)
         row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" }); row:SetBackdropColor(0.035, 0.035, 0.032, math.mod(index, 2) == 0 and 0.82 or 0.58)
         MOS.UI.Components.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8" }, { 0.035, 0.035, 0.032, math.mod(index, 2) == 0 and 0.82 or 0.58 }, { 0, 0, 0, 0 })
         row.name = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall"); row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 5, -4); row.name:SetWidth(150); row.name:SetJustifyH("LEFT")
@@ -166,7 +166,7 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
                 local key = string.lower(player.name or "") .. ":" .. tostring(player.itemId or "")
                 local expanded = self.expandedKey == key
                 local detailCount = expanded and math.min(8, table.getn(player.raids or {})) or 0
-                row:ClearAllPoints(); row:SetPoint("TOPLEFT", page, "TOPLEFT", 12, nextY); row:SetPoint("RIGHT", page, "RIGHT", -32, 0); row:SetHeight(23 + (detailCount > 0 and 12 or 0) + (detailCount * 22))
+                row:ClearAllPoints(); row:SetPoint("TOPLEFT", page, "TOPLEFT", 6, nextY); row:SetPoint("RIGHT", page, "RIGHT", -26, 0); row:SetHeight(23 + (detailCount > 0 and 12 or 0) + (detailCount * 22))
                 local detailIndex
                 for detailIndex = 1, 8 do
                     local raid = player.raids and player.raids[detailIndex]

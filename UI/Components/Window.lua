@@ -18,7 +18,7 @@ function Window.Create(options)
 
     local titleBar = MOS.UI.Components.CreateContainer(nil, window)
     titleBar:SetFrameLevel(window:GetFrameLevel() + 1)
-    titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 8, -8); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -8, -8); titleBar:SetHeight(options.compact and 28 or 36)
+    titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 4, -8); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -4, -8); titleBar:SetHeight(options.compact and 28 or 36)
     MOS.UI.Components.RegisterSkinnedSurface(titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
     local title = MOS.UI.Components.CreateHeading(titleBar, "", options.compact and 3 or 1, "gold")
     if options.compact then local font, size, flags = title:GetFont(); title:SetFont(font, size - 1, flags) end
@@ -29,7 +29,7 @@ function Window.Create(options)
     minimize:SetPoint("RIGHT", close, "LEFT", -4, 0)
     local content = MOS.UI.Components.CreateContainer(nil, window)
     content:SetFrameLevel(window:GetFrameLevel() + 1)
-    content:SetPoint("TOPLEFT", titleBar, "BOTTOMLEFT", 0, 0); content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -8, options.compact and 8 or 28)
+    content:SetPoint("TOPLEFT", titleBar, "BOTTOMLEFT", 0, 0); content:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -4, options.compact and 4 or 14)
     MOS.UI.Components.RegisterSkinnedSurface(content, "content", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.02, 0.02, 0.02, 1 }, { 0.36, 0.36, 0.34, 1 })
     local resize = MOS.UI.Components.CreateResizeGrip(window)
     if options.compact then

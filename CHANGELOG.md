@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.34 - 2026-09-29
+
+- Halve side/bottom page and window gutters, tighten tab end spacing and show selected captions in white.
+- Align roster status captions, reduce the status arrow and reserve a smaller consistent toolbar gap.
+- Give long roster fields spare column width and strengthen table header hover.
+
 ## 0.5.0-dev.33 - 2026-09-29
 
 - Stabilize three-sided tab borders, retain active highlights and use sidebar backgrounds.
