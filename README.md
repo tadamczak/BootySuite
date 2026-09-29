@@ -119,7 +119,7 @@ In **LM Config**, set **LM Auto Loot** to **Auto Loot**, **Shift Loot** (hold Sh
 
 ### Settings
 
-**UI > General** can hide the status/version bar, guild logo, or addon name and ornaments. All three options default to off. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. These preferences are saved in profiles.
+**UI > General** can hide the status/version bar, guild logo, or addon name and ornaments. All three options default to off. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. These preferences are saved in profiles under **Profile > General**. Hiding every roster filter also removes its empty row.
 
 Under **UI > Roster management > Layout**, choose visible columns, filters and column headers. Officer notes require guild permission. Hidden class, rank and search filters do not restrict results. These preferences are saved in profiles. Refresh Data is beside Export Roster. The main window can be narrowed to 350 pixels. Resize Settings by dragging its unmarked bottom-right corner.
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.26 - 2026-09-29
+
+- Remove empty filter-row spacing and fix main-window width limits after Loot Master transitions.
+- Nest profile options under General; align Settings indentation, reduce text/checkbox sizes and correct current-profile colors.
+
 ## 0.5.0-dev.25 - 2026-09-29
 
 - Fix hidden roster filters excluding every member; restore white centered filter labels.

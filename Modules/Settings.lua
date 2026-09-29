@@ -42,7 +42,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     viewport:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -36, 8)
     viewport:EnableMouseWheel(true)
     local page = MOS.UI.Components.CreateContainer(nil, viewport)
-    page.mosTextSizeDelta = -1
+    page.mosTextSizeDelta = -2
     page:SetWidth(1000); page:SetHeight(960)
     viewport:SetScrollChild(page)
     viewport.settingsPage = page
@@ -115,20 +115,20 @@ end
 
 function Settings.CreatePrimarySections(page)
     local rosterHeading = MOS.UI.Components.CreateHeading(page, "", 2, "orange")
-    rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -150)
+    rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150)
     rosterHeading:SetText("Roster management")
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
-    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 40, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
+    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
     page.rosterLayoutChecks = {}
     local index
     for index = 1, table.getn(rosterLayoutOptions) do
         local option = rosterLayoutOptions[index]
-        page.rosterLayoutChecks[index] = Settings.CreateSavedCheckbox(page, nil, 40, -234, option[1], option[2], nil, nil, RefreshRosterLayout)
+        page.rosterLayoutChecks[index] = Settings.CreateSavedCheckbox(page, nil, 52, -234, option[1], option[2], nil, nil, RefreshRosterLayout)
     end
     local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
-    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 40, -234, "Use class colors", "rosterClassColors")
+    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors")
     local raidHeading = MOS.UI.Components.CreateHeading(page, "", 2, "orange")
-    raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -206)
+    raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -206)
     raidHeading:SetText("Raid management")
     local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645)
     debugHeading:SetScript("OnClick", function()
@@ -140,7 +140,7 @@ end
 
 function Settings.CreateRaidColumnControl(page, x, y, onChanged, labelOwner)
     return MOS.UI.Components.CreateChoiceField({
-        parent = page, labelOwner = labelOwner, x = x, y = y, label = "Columns",
+        parent = page, labelOwner = labelOwner, x = x + 12, y = y, label = "Columns",
         font = "GameFontHighlightSmall", color = { 1, 1, 1 }, labelOffset = -6, buttonOffset = 52,
         width = 52, height = 86, initialText = "2", firstY = -5, step = 20, labelValue = true,
         choices = { { text = "1", value = 1 }, { text = "2", value = 2 }, { text = "3", value = 3 }, { text = "4", value = 4 } },
@@ -152,32 +152,32 @@ end
 
 function Settings.CreateRaidViewShell(page)
     local panel = MOS.UI.Components.CreateContainer(nil, page)
-    panel:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -306)
+    panel:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -306)
     panel:SetPoint("BOTTOMRIGHT", page, "TOPRIGHT", -12, -1110)
     panel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     panel:SetBackdropColor(0.025, 0.025, 0.025, 0.48)
     panel:SetBackdropBorderColor(0, 0, 0, 0)
 
     local groupHeading = MOS.UI.Components.CreateHeading(panel, "", 3, "orange")
-    groupHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -318)
+    groupHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 48, -318)
     groupHeading:SetText("Group View")
     groupHeading:SetTextColor(1, 0.82, 0)
     local groupReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
     MOS.UI.Components.SizeClassicButton(groupReset, 100, 18, 0.8)
     groupReset:SetPoint("LEFT", groupHeading, "RIGHT", 12, 0)
     local groupDivider = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
-    groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -336)
+    groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 48, -336)
     groupDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -336)
     groupDivider:SetHeight(1)
     groupDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
 
     local listDivider = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
-    listDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -866)
+    listDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 48, -866)
     listDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -866)
     listDivider:SetHeight(1)
     listDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
     local listHeading = MOS.UI.Components.CreateHeading(panel, "", 3, "orange")
-    listHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -846)
+    listHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 48, -846)
     listHeading:SetText("List View")
     listHeading:SetTextColor(1, 0.82, 0)
     local listReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
@@ -197,13 +197,13 @@ function Settings.CreateRaidControlFactory(page, callbacks)
     end
     return {
         Checkbox = function(x, y, text, key)
-            return controls.CreateCheckbox(page, x, y, text, key, Refresh)
+            return controls.CreateCheckbox(page, x + 12, y, text, key, Refresh)
         end,
         Slider = function(name, x, y, label, key, minimum, maximum)
-            return controls.CreateSlider(page, name, x, y, label, key, minimum, maximum, Refresh)
+            return controls.CreateSlider(page, name, x + 12, y, label, key, minimum, maximum, Refresh)
         end,
         Color = function(x, y, label, key)
-            return controls.CreateColor(page, x, y, label, key, Refresh)
+            return controls.CreateColor(page, x + 12, y, label, key, Refresh)
         end,
     }
 end
@@ -218,7 +218,7 @@ end
 function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsChanged)
     local function Heading(text, y)
         local heading = MOS.UI.Components.CreateHeading(shell.panel, "", 3, "orange")
-        heading:SetPoint("TOPLEFT", page, "TOPLEFT", 40, y)
+        heading:SetPoint("TOPLEFT", page, "TOPLEFT", 52, y)
         heading:SetText(text)
         heading:SetTextColor(1, 0.82, 0)
         heading:SetAlpha(1)
@@ -302,7 +302,7 @@ function Settings.CreateRaidSettings(page, callbacks)
     local primarySections = Settings.CreatePrimarySections(page)
     page.primarySections = primarySections
     local general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -230)
-    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 40, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid Management is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
+    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 52, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid Management is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
     page.raidLiveTrackingCheck = liveTracking
     local layout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -280)
     local shell = Settings.CreateRaidViewShell(page)
@@ -329,7 +329,7 @@ function Settings.CreateRaidSettings(page, callbacks)
     Settings.BindRaidViewControls(page, viewControls, shell.groupReset, shell.listReset, callbacks)
     Settings.BindRaidAccordions(page, { page = page, layout = layout, general = general, generalControls = { liveTracking }, leader = leader, loot = loot, debugHeading = primarySections.debugHeading, layoutControls = layoutControls, columnsPanel = groupControls.columnsPanel })
     Settings.BindRosterAccordions(page, primarySections, page.raidAccordionControls)
-    page.chatLogsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteChatLogs", 10, -675, "Chat action logs", "chatActionLogs", "Chat action logs", "Show routine Mukla Officer Suite action messages in chat. Disabled by default.")
+    page.chatLogsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteChatLogs", 22, -675, "Chat action logs", "chatActionLogs", "Chat action logs", "Show routine Mukla Officer Suite action messages in chat. Disabled by default.")
     page.raidAccordionControls.chatLogsCheck = page.chatLogsCheck
     page.RefreshAllSettings = function()
         MOS.Database.Ensure()
@@ -471,13 +471,13 @@ function Settings.ApplyRaidAccordions(controls)
     controls.columnsPanel:Hide()
 
     local offset = controls.raidOffset or 0
-    controls.general:ClearAllPoints(); controls.general:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, -230 + offset)
+    controls.general:ClearAllPoints(); controls.general:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, -230 + offset)
     if controls.generalControls and controls.generalControls[1] then
-        controls.generalControls[1]:ClearAllPoints(); controls.generalControls[1]:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 40, -252 + offset)
+        controls.generalControls[1]:ClearAllPoints(); controls.generalControls[1]:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 52, -252 + offset)
     end
     local layoutY = (state.general and -280 or -258) + offset
     controls.layout:ClearAllPoints()
-    controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, layoutY)
+    controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, layoutY)
 
     local layoutOffset = offset + (state.general and 0 or 22)
     Settings.OffsetRaidLayoutControls(controls, layoutOffset)
@@ -498,9 +498,9 @@ function Settings.ApplyRaidAccordions(controls)
         end
     end
     controls.leader:ClearAllPoints()
-    controls.leader:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, leaderY)
+    controls.leader:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, leaderY)
     controls.loot:ClearAllPoints()
-    controls.loot:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, lootY)
+    controls.loot:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, lootY)
     if controls.page.topSectionState and not controls.page.topSectionState.ui then
         debugY = (controls.page.uiHeadingY or -38) - 28
         chatY = debugY - 30
@@ -510,11 +510,11 @@ function Settings.ApplyRaidAccordions(controls)
 
     if controls.opacityLabel then
         controls.opacityLabel:ClearAllPoints()
-        controls.opacityLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 40, opacityY)
+        controls.opacityLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 52, opacityY)
         controls.opacityField:ClearAllPoints()
         controls.opacityField:SetPoint("LEFT", controls.opacityLabel, "RIGHT", 8, 0)
         controls.focusLabel:ClearAllPoints()
-        controls.focusLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 210, opacityY)
+        controls.focusLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 222, opacityY)
         controls.focusField:ClearAllPoints()
         controls.focusField:SetPoint("LEFT", controls.focusLabel, "RIGHT", 8, 0)
         if state.loot and uiVisible then
@@ -525,7 +525,7 @@ function Settings.ApplyRaidAccordions(controls)
     end
     if controls.chatLogsCheck then
         controls.chatLogsCheck:ClearAllPoints()
-        controls.chatLogsCheck:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 10, chatY)
+        controls.chatLogsCheck:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 22, chatY)
         if controls.page.topSectionState then
             local debugExpanded = controls.page.topSectionState.debug
             controls.debugHeading.label:SetText((debugExpanded and "-  " or "+  ") .. "Debug")
@@ -598,26 +598,26 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local state = page.rosterAccordionState
     local uiVisible = not page.topSectionState or page.topSectionState.ui
     local topOffset = page.settingsTopOffset or 0
-    sections.rosterHeading:ClearAllPoints(); sections.rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -150 + topOffset)
-    sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -178 + topOffset)
-    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, -206 + topOffset)
+    sections.rosterHeading:ClearAllPoints(); sections.rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150 + topOffset)
+    sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -178 + topOffset)
+    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, -206 + topOffset)
     sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
     if state.general and uiVisible then sections.rosterGeneral:LockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
     local layoutY = (state.general and -234 or -206) + topOffset
-    sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 24, layoutY)
+    sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 36, layoutY)
     if state.layout and uiVisible then sections.rosterLayout:LockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
-    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, layoutY - 28)
+    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, layoutY - 28)
     local index
     for index = 1, table.getn(page.rosterLayoutChecks or {}) do
         local check = page.rosterLayoutChecks[index]
-        check:ClearAllPoints(); check:SetPoint("TOPLEFT", page, "TOPLEFT", 40 + math.mod(index - 1, 2) * 260, layoutY - 56 - math.floor((index - 1) / 2) * 26)
+        check:ClearAllPoints(); check:SetPoint("TOPLEFT", page, "TOPLEFT", 52 + math.mod(index - 1, 2) * 260, layoutY - 56 - math.floor((index - 1) / 2) * 26)
         if state.layout and uiVisible then check:Show() else check:Hide() end
     end
     local raidHeadingY = layoutY - (state.layout and 222 or 38)
-    sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, raidHeadingY)
+    sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, raidHeadingY)
     raidControls.raidOffset = raidHeadingY - (-206)
     Settings.ApplyRaidAccordions(raidControls)
 end
