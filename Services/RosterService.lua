@@ -126,8 +126,8 @@ function RosterService.CanManage(action, member)
     if action == "control" then return Allowed(IsGuildLeader) end
     if action == "invite" then return Allowed(CanGuildInvite) end
     if action == "publicNote" then return Allowed(CanEditPublicNote) end
-    if action == "officerNote" then return Allowed(CanEditOfficerNote) and Allowed(CanViewOfficerNote) end
-    if action == "viewOfficerNote" then return Allowed(CanViewOfficerNote) end
+    if action == "officerNote" then return Allowed(CanEditOfficerNote) end
+    if action == "viewOfficerNote" then return Allowed(CanViewOfficerNote) or Allowed(CanEditOfficerNote) end
     if not member or not member.name then return false end
     if action == "whisper" or action == "group" then return member.online and member.name ~= UnitName("player") end
     local _, _, playerRank = GetGuildInfo("player")
