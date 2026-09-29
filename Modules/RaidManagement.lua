@@ -2849,15 +2849,11 @@ function RaidManagement.CreateAutoLootControls(page, view)
         for index = 1, table.getn(names) do if selected[names[index]] then mask = mask + 2 ^ (index - 1) end end
         MOS.Database.SetSetting("lmAutoLootRarities", mask); RefreshRarity(); Apply()
     end
-    local function PrepareDropdown(dropdown, toggle)
-        dropdown:SetFrameStrata("FULLSCREEN_DIALOG"); dropdown.dismiss:SetFrameStrata("FULLSCREEN_DIALOG")
-        dropdown:SetFrameLevel(panel:GetFrameLevel() + 100); dropdown.dismiss:SetFrameLevel(panel:GetFrameLevel() + 99)
-    end
     local showMode = mode:GetScript("OnClick")
-    mode:SetScript("OnClick", function() PrepareDropdown(mode.panel, mode); choices:Hide(); showMode() end)
+    mode:SetScript("OnClick", function() choices:Hide(); showMode() end)
     rarity:SetScript("OnClick", function()
         if choices:IsVisible() then choices:Hide() else
-            mode.panel:Hide(); PrepareDropdown(choices, rarity); RefreshRarity()
+            mode.panel:Hide(); RefreshRarity()
             UI.FilterPanel.Refresh(choices, names, selected, SaveRarity, false, true); choices:Show()
         end
     end)
@@ -2873,6 +2869,10 @@ function RaidManagement.CreateAutoLootControls(page, view)
     exceptions:SetScript("OnEditFocusLost", Apply)
     view.lmAutoLootExceptions = exceptions
     panel:SetScript("OnShow", function()
+        local strata, level = panel:GetFrameStrata(), panel:GetFrameLevel() + 1
+        mode:SetFrameStrata(strata); mode:SetFrameLevel(level)
+        rarity:SetFrameStrata(strata); rarity:SetFrameLevel(level)
+        exceptions:SetFrameStrata(strata); exceptions:SetFrameLevel(level)
         local value = MOS.Database.GetSetting("lmAutoLootMode")
         mode:SetText(value == "auto" and "Auto Loot" or value == "shift" and "Shift Loot" or "Off")
         RefreshRarity(); exceptions:SetText(MOS.Database.GetSetting("lmAutoLootExceptions"))
