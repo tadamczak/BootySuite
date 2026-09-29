@@ -36,17 +36,30 @@ end
 
 function Settings.LayoutGeneral(page)
     if not page.generalGrid then return 0 end
+    local state = page.uiSectionState
+    page.uiGeneralHeading.label:SetText((state.general and "-  " or "+  ") .. "General")
+    page.uiLayoutHeading.label:SetText((state.layout and "-  " or "+  ") .. "Layout")
+    local index
+    for index = 1, table.getn(page.generalGrid) do
+        if state.general then page.generalGrid[index]:Show() else page.generalGrid[index]:Hide() end
+    end
+    if state.general then page.skinControl:Show(); page.skinControl.fieldLabel:Show()
+    else page.skinControl:Hide(); page.skinControl.fieldLabel:Hide(); page.skinControl.panel:Hide() end
     local height = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.generalGrid, 20, -94, page:GetWidth() - 56, 28)
-    local headingY = -94 - height - 8
+    local headingY = state.general and (-94 - height - 8) or -66
     page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
     local menu = page.menuStyleControl
     menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 28)
     local menuWidth = menu.fieldLabel:GetStringWidth() + 10 + menu:GetWidth()
     local check = page.iconTabsCheck
+    local iconVisible = state.layout and (MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs")
+    if iconVisible then check:Show() else check:Hide() end
+    if state.layout then menu:Show(); menu.fieldLabel:Show()
+    else menu:Hide(); menu.fieldLabel:Hide(); menu.panel:Hide() end
     local checkWidth = check:GetWidth() + 4 + check.label:GetStringWidth()
     local wrap = (menuWidth + 14 + checkWidth > page:GetWidth() - 60) and check:IsVisible()
     check:ClearAllPoints(); check:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", wrap and 20 or 24 + menuWidth + 14, headingY - 28 - (wrap and 28 or 0))
-    local extent = -headingY + 56 + (wrap and 28 or 0)
+    local extent = -headingY + (state.layout and (56 + (wrap and 28 or 0)) or 28)
     page.uiContent:SetHeight(extent)
     return extent - 224
 end
@@ -101,9 +114,10 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     page.uiHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "UI", -10)
     local uiContent = MOS.UI.Components.CreateContainer(nil, page)
     uiContent:SetHeight(224); page.uiContent = uiContent
-    local generalHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
+    local generalHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "General", -38)
     generalHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -38)
-    generalHeading:SetText("General")
+    page.uiGeneralHeading = generalHeading; page.uiSectionState = { general = true, layout = true }
+    generalHeading:SetScript("OnClick", function() page.uiSectionState.general = not page.uiSectionState.general; Settings.ApplyTopSections(page) end)
     local skinControl = Settings.CreateSkinControl(uiContent, 24, -66)
     local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 224, -94, "Turn off addon login message", "suppressLoginMessage")
     local minimapCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideMinimapIcon", 20, -94, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
@@ -112,9 +126,9 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderLogo", 20, -150, "Hide header logo", "hideHeaderLogo", nil, nil, onNavigationLayout),
         Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderName", 224, -150, "Hide header name", "hideHeaderName", nil, nil, onNavigationLayout),
     }
-    local layoutHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange")
+    local layoutHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "Layout", -178)
     layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -178)
-    layoutHeading:SetText("Layout")
+    layoutHeading:SetScript("OnClick", function() page.uiSectionState.layout = not page.uiSectionState.layout; Settings.ApplyTopSections(page) end)
     local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 24, -206, function()
         page.RefreshGeneralSettings()
         if onNavigationLayout then onNavigationLayout() end
@@ -161,7 +175,7 @@ function Settings.CreateSkinControl(parent, x, y)
 end
 
 function Settings.CreatePrimarySections(page)
-    local rosterHeading = MOS.UI.Components.CreateHeading(page, "", 2, "orange")
+    local rosterHeading = MOS.UI.Components.CreateHeading(page, "", 3, "orange")
     rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150)
     rosterHeading:SetText("Roster management")
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
@@ -174,7 +188,7 @@ function Settings.CreatePrimarySections(page)
     end
     local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
     page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors")
-    local raidHeading = MOS.UI.Components.CreateHeading(page, "", 2, "orange")
+    local raidHeading = MOS.UI.Components.CreateHeading(page, "", 3, "orange")
     raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -206)
     raidHeading:SetText("Raid management")
     local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645)
@@ -508,10 +522,10 @@ function Settings.ApplyRaidAccordions(controls)
     controls.general.label:SetTextColor(1, 0.82, 0)
     controls.leader.label:SetTextColor(1, 0.82, 0)
     controls.loot.label:SetTextColor(1, 0.82, 0)
-    if expanded then controls.layout:LockHighlight() else controls.layout:UnlockHighlight() end
-    if state.general then controls.general:LockHighlight() else controls.general:UnlockHighlight() end
-    if state.leader then controls.leader:LockHighlight() else controls.leader:UnlockHighlight() end
-    if state.loot then controls.loot:LockHighlight() else controls.loot:UnlockHighlight() end
+    if expanded then controls.layout:UnlockHighlight() else controls.layout:UnlockHighlight() end
+    if state.general then controls.general:UnlockHighlight() else controls.general:UnlockHighlight() end
+    if state.leader then controls.leader:UnlockHighlight() else controls.leader:UnlockHighlight() end
+    if state.loot then controls.loot:UnlockHighlight() else controls.loot:UnlockHighlight() end
 
     local controlIndex
     for controlIndex = 1, table.getn(controls.layoutControls) do
@@ -658,11 +672,11 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, -206 + topOffset)
     sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
-    if state.general and uiVisible then sections.rosterGeneral:LockHighlight(); page.rosterLiveTrackingCheck:Show()
+    if state.general and uiVisible then sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
     local layoutY = (state.general and -234 or -206) + topOffset
     sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 36, layoutY)
-    if state.layout and uiVisible then sections.rosterLayout:LockHighlight(); page.rosterClassColorsCheck:Show()
+    if state.layout and uiVisible then sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
     page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, layoutY - 28)
     local index

@@ -41,16 +41,17 @@ function Settings.CreateSectionAccordion(parent, text, y)
     button.label:SetTextColor(unpack(MOS.UI.Components.TextColors.gold))
     button:SetHighlightTexture(nil)
     button.sectionFill = button:CreateTexture(nil, "BACKGROUND")
-    button.sectionFill:SetTexture("Interface\\Buttons\\WHITE8X8")
-    button.sectionFill:SetVertexColor(0.82, 0.70, 0.43, 0.24)
+    button.sectionFill:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+    button.sectionFill:SetTexCoord(0, 0.5, 0, 1)
+    button.sectionFill:SetVertexColor(1, 1, 1, 1)
     button.sectionFill:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.sectionFill:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
     button.sectionFade = button:CreateTexture(nil, "BACKGROUND")
-    button.sectionFade:SetTexture("Interface\\Buttons\\WHITE8X8")
-    button.sectionFade:SetGradientAlpha("HORIZONTAL", 0.82, 0.70, 0.43, 0.24, 0.82, 0.70, 0.43, 0)
+    button.sectionFade:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+    button.sectionFade:SetTexCoord(0.5, 1, 0, 1)
     button.sectionFade:SetPoint("TOPLEFT", button.sectionFill, "TOPRIGHT", 0, 0); button.sectionFade:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
     button.SetExpanded = function(self, expanded)
         self.sectionExpanded = expanded
-        if expanded or self.sectionHovered then self.sectionFill:Show(); self.sectionFade:Show()
+        if self.sectionHovered then self.sectionFill:Show(); self.sectionFade:Show()
         else self.sectionFill:Hide(); self.sectionFade:Hide() end
     end
     button:SetScript("OnEnter", function() this.sectionHovered = true; this:SetExpanded(this.sectionExpanded) end)
@@ -77,7 +78,7 @@ function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
     button.onChanged = onChanged
     button.label = MOS.UI.Components.CreateComponentLabel(button, "", "white")
     button.label:SetPoint("LEFT", button, "RIGHT", 2, 0)
-    button.label:SetText(text)
+    button.label:SetJustifyH("LEFT"); button.label:SetText(text)
     button.SaveSetting = function(owner)
         binding.ensure()
         binding.set(owner.settingKey, owner:GetChecked() and true or false)
@@ -250,7 +251,7 @@ function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tool
     check.settingKey = settingKey
     check.label = MOS.UI.Components.CreateComponentLabel(check, "", "white")
     check.label:SetPoint("LEFT", check, "RIGHT", 4, 0)
-    check.label:SetText(text)
+    check.label:SetJustifyH("LEFT"); check.label:SetText(text)
     check:SetScript("OnShow", function()
         binding.ensure()
         this:SetChecked(binding.get(this.settingKey) and 1 or nil)
@@ -355,9 +356,11 @@ function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
     for index = 1, count do
         local item = items[index]
         local label = sliders and getglobal(item:GetName() .. "Text") or item.label
-        if not item.mosGridWidth then
-            item.mosGridWidth = sliders and math.max(170, label:GetStringWidth()) or ((item.swatchBorder and 24 or item:GetWidth() + 4) + (label and label:GetStringWidth() or 0))
+        if label then
+            label:SetWidth(0); label:SetJustifyH("LEFT")
+            local _, size = label:GetFont(); label:SetHeight((size or 10) + 4)
         end
+        item.mosGridWidth = sliders and math.max(170, label:GetStringWidth() + 8) or ((item.swatchBorder and 26 or item:GetWidth() + 4) + (label and label:GetStringWidth() + 8 or 0))
     end
     while cols > 0 do
         for col = 1, cols do widths[col] = 0 end
@@ -367,7 +370,6 @@ function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
         if total <= available or cols == 1 then break end
         cols = cols - 1
     end
-    if cols == 1 then widths[1] = math.min(widths[1], available) end
     local offsetX, rowHeight, used = 0, step, 0
     for index = 1, count do
         col = math.mod(index - 1, cols) + 1
@@ -375,8 +377,8 @@ function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
         local item = items[index]
         item:ClearAllPoints(); item:SetPoint("TOPLEFT", parent, "TOPLEFT", x + offsetX, y - used)
         local label = sliders and getglobal(item:GetName() .. "Text") or item.label
-        local labelWidth = math.max(1, widths[col] - (sliders and 0 or (item.swatchBorder and 24 or item:GetWidth() + 4)))
-        if label then label:SetWidth(labelWidth); label:SetHeight(0); rowHeight = math.max(rowHeight, label:GetStringHeight() + (sliders and 32 or 8)) end
+        local labelWidth = math.max(1, widths[col] - (sliders and 0 or (item.swatchBorder and 26 or item:GetWidth() + 4)))
+        if label then label:SetWidth(labelWidth); label:SetJustifyH("LEFT"); rowHeight = math.max(rowHeight, label:GetStringHeight() + (sliders and 32 or 8)) end
         if sliders or item.swatchBorder then item:SetWidth(widths[col]) end
         if label and not sliders then
             label:ClearAllPoints(); label:SetPoint("TOPLEFT", item, "TOPLEFT", item.swatchBorder and 26 or item:GetWidth() + 4, -3)
