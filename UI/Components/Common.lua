@@ -151,6 +151,8 @@ function UI.CreateDropdownButton(parent, name, text, width)
     button:SetBackdropColor(0.08, 0.07, 0.05, 0.95)
     button:SetBackdropBorderColor(0.42, 0.35, 0.20, 1)
     button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local font, size, flags = button.label:GetFont()
+    if font then button.label:SetFont(font, size + math.min(0, UI.GetTextSizeDelta(parent) + 1), flags) end
     button.label:SetPoint("LEFT", button, "LEFT", 8, 0); button.label:SetText(text)
     button.SetText = function(self, value) self.label:SetText(value) end
     button.GetText = function(self) return self.label:GetText() end
@@ -177,6 +179,7 @@ end
 
 function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     local panel = CreateFrame("Frame", nil, UIParent)
+    panel.mosTextSizeDelta = UI.GetTextSizeDelta(parent)
     panel:SetPoint("TOPLEFT", toggle, "BOTTOMLEFT", 0, -2)
     panel:SetWidth(width or 130); panel:SetHeight(height or 230)
     if panel.SetFrameStrata and toggle.GetFrameStrata then panel:SetFrameStrata(toggle:GetFrameStrata()) end
@@ -206,7 +209,7 @@ function UI.StyleDropdownChoice(button)
     if UI.AttachGoldHoverBorder then UI.AttachGoldHoverBorder(button, 0.35, 0.35, 0.35, 1) end
     if button.label and button.label.GetFont then
         local font, _, flags = button.label:GetFont()
-        if font then button.label:SetFont(font, 9, flags) end
+        if font then button.label:SetFont(font, 9 + math.min(0, UI.GetTextSizeDelta(button) + 1), flags) end
     end
     return button
 end

@@ -2455,8 +2455,8 @@ function RaidManagement.CreateLootMasterController(options)
         MOS.lootMasterMode = false; MOS.lootMasterMinimized = false
         MOS.lootMasterWidthBeforeMinimize = nil; MOS.lootMasterHeightBeforeMinimize = nil
         alphaWatcher:Hide(); options.dashboard:SetAlpha(1); controller.closePanels()
-        options.dashboard:SetMinResize(700, 380); options.dashboard:SetMaxResize(1100, 760)
-        options.dashboard:SetWidth(math.max(700, math.min(1100, tonumber(settings.windowWidth) or 840)))
+        options.dashboard:SetMinResize(350, 380); options.dashboard:SetMaxResize(1100, 760)
+        options.dashboard:SetWidth(math.max(350, math.min(1100, tonumber(settings.windowWidth) or 840)))
         options.dashboard:SetHeight(math.max(380, math.min(760, tonumber(settings.windowHeight) or 540)))
         options.dashboard:ClearAllPoints()
         if tonumber(settings.windowLeft) and tonumber(settings.windowBottom) then
@@ -2505,8 +2505,8 @@ function RaidManagement.CreateLootMasterController(options)
             end
             MOS.lootMasterMinimized = false
             controller.closePanels()
-            alphaWatcher:Hide(); options.dashboard:SetAlpha(1); options.dashboard:SetMinResize(700, 380); options.dashboard:SetMaxResize(1100, 760)
-            options.dashboard:SetWidth(math.max(700, tonumber(settings.windowWidth) or 840)); options.dashboard:SetHeight(math.max(380, tonumber(settings.windowHeight) or 540))
+            alphaWatcher:Hide(); options.dashboard:SetAlpha(1); options.dashboard:SetMinResize(350, 380); options.dashboard:SetMaxResize(1100, 760)
+            options.dashboard:SetWidth(math.max(350, tonumber(settings.windowWidth) or 840)); options.dashboard:SetHeight(math.max(380, tonumber(settings.windowHeight) or 540))
             options.dashboard:ClearAllPoints()
             if tonumber(settings.windowLeft) and tonumber(settings.windowBottom) then options.dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", settings.windowLeft, settings.windowBottom)
             else options.dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10) end

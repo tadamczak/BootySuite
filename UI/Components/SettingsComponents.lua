@@ -50,7 +50,7 @@ end
 function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
     local button = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    local size = MOS.UI.Components.GetTextSizeDelta(parent) < 0 and 20 or 22
+    local size = math.max(16, 22 + 2 * MOS.UI.Components.GetTextSizeDelta(parent))
     button:SetWidth(size)
     button:SetHeight(size)
     button.settingKey = key
@@ -88,6 +88,13 @@ function Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum,
     slider:SetHeight(16)
     slider:SetMinMaxValues(minimum, maximum)
     slider:SetValueStep(1)
+    local delta = math.min(0, MOS.UI.Components.GetTextSizeDelta(parent) + 1)
+    local _, suffix
+    for _, suffix in ipairs({"Low", "High", "Text"}) do
+        local text = getglobal(name .. suffix)
+        local font, size, flags = text:GetFont()
+        if font and size then text:SetFont(font, size + delta, flags) end
+    end
     slider.settingKey = key
     slider.settingLabel = label
     slider.onChanged = onChanged
@@ -217,7 +224,7 @@ end
 function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tooltipTitle, tooltipText, onChanged, binding)
     local check = MOS.UI.Components.CreateCheckButton(name, parent, "UICheckButtonTemplate")
     check:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    local size = MOS.UI.Components.GetTextSizeDelta(parent) < 0 and 22 or 24
+    local size = math.max(16, 24 + 2 * MOS.UI.Components.GetTextSizeDelta(parent))
     check:SetWidth(size)
     check:SetHeight(size)
     check.settingKey = settingKey

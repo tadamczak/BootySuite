@@ -7,14 +7,15 @@ function Settings.CreateProfiles(page, onLoaded)
     local view = { rows = {}, first = 1 }
     view.heading = C.Settings.CreateSectionAccordion(page, "Profile", -10)
     view.content = C.CreateContainer(nil, page)
-    view.content:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -36)
-    view.content:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -36); view.content:SetHeight(82)
+    view.general = C.Settings.CreateAccordion(page, "General", -38)
+    view.content:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -64)
+    view.content:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -64); view.content:SetHeight(82)
     local function Label(text, y, color)
         local label = C.CreateComponentLabel(view.content, text, color or "white")
         label:SetPoint("TOPLEFT", view.content, "TOPLEFT", 24, y); return label
     end
-    view.currentLabel = Label("Current profile", -4, "gold")
-    view.current = C.CreateComponentLabel(view.content, "", "white")
+    view.currentLabel = Label("Current profile", -4, "white")
+    view.current = C.CreateComponentLabel(view.content, "", "gold")
     view.current:SetWidth(180); view.current:SetHeight(20); view.current:SetJustifyH("LEFT"); view.current:SetPoint("TOPLEFT", view.content, "TOPLEFT", 126, 0)
     Label("Load profile", -32)
     view.select = C.CreateDropdownButton(view.content, nil, "Select profile", 180)
@@ -152,16 +153,18 @@ end
 function Settings.ApplyTopSections(page)
     local state = page.topSectionState
     if not state then return end
-    local profileHeight = state.profile and 108 or 28
+    local profileHeight = state.profile and (state.profileGeneral and 136 or 56) or 28
     local uiY = -10 - profileHeight
     page.uiHeadingY = uiY
     page.profiles.heading.label:SetText((state.profile and "-  " or "+  ") .. "Profile")
-    if state.profile then page.profiles.content:Show() else page.profiles.content:Hide() end
+    page.profiles.general.label:SetText((state.profileGeneral and "-  " or "+  ") .. "General")
+    if state.profile then page.profiles.general:Show() else page.profiles.general:Hide() end
+    if state.profile and state.profileGeneral then page.profiles.content:Show() else page.profiles.content:Hide() end
     page.uiHeading.label:SetText((state.ui and "-  " or "+  ") .. "UI")
     page.uiHeading:ClearAllPoints(); page.uiHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, uiY)
     page.uiContent:ClearAllPoints()
-    page.uiContent:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -profileHeight)
-    page.uiContent:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -profileHeight)
+    page.uiContent:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -profileHeight)
+    page.uiContent:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -profileHeight)
     if state.ui then page.uiContent:Show() else
         page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide()
     end
@@ -172,8 +175,11 @@ function Settings.ApplyTopSections(page)
 end
 
 function Settings.BindTopSections(page, onLoaded)
-    page.topSectionState = { profile = false, ui = false, debug = false }
+    page.topSectionState = { profile = false, profileGeneral = true, ui = false, debug = false }
     Settings.CreateProfiles(page, onLoaded)
+    page.profiles.general:SetScript("OnClick", function()
+        page.topSectionState.profileGeneral = not page.topSectionState.profileGeneral; Settings.ApplyTopSections(page)
+    end)
     page.profiles.heading:SetScript("OnClick", function()
         page.topSectionState.profile = not page.topSectionState.profile; Settings.ApplyTopSections(page)
     end)

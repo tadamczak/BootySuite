@@ -1105,7 +1105,8 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.refreshButton:Show(); controls.refreshButton:ClearAllPoints()
     controls.refreshButton:SetWidth(22); controls.refreshButton:SetHeight(22)
     controls.refreshButton:SetPoint("TOPLEFT", page, "TOPLEFT", actionX, -50 - controls.footer:GetHeight())
-    return shift
+    local hasFilterRow = hasFilters or settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false
+    return shift - (hasFilterRow and 0 or 28)
 end
 
 function RosterManagement.CreateMemberDetails(row)
