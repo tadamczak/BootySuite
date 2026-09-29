@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.38 - 2026-09-30
+
+- Prevent stacked content borders when leaving Roster and suppress legacy tab hover outlines.
+- Remove the Settings header inner frame; tighten hidden-header controls to 1px margins and join visible header to roster content.
+- Anchor roster rows and scrollbar to section edges and measure columns from the settled viewport.
+
 ## 0.5.0-dev.37 - 2026-09-30
 
 - Anchor roster sections directly to page edges and each other so late client resize cannot leave a right gutter or a gap above actions.

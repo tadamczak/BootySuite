@@ -19,7 +19,9 @@ function Window.Create(options)
     local titleBar = MOS.UI.Components.CreateContainer(nil, window)
     titleBar:SetFrameLevel(window:GetFrameLevel() + 1)
     titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 4, -8); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -4, -8); titleBar:SetHeight(options.compact and 28 or 36)
-    MOS.UI.Components.RegisterSkinnedSurface(titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
+    if not options.plainHeader then
+        MOS.UI.Components.RegisterSkinnedSurface(titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
+    end
     local title = MOS.UI.Components.CreateHeading(titleBar, "", options.compact and 3 or 1, "gold")
     if options.compact then local font, size, flags = title:GetFont(); title:SetFont(font, size - 1, flags) end
     title:SetPoint("LEFT", titleBar, "LEFT", 8, 0); title:SetText(options.title)

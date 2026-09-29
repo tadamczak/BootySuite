@@ -7,10 +7,10 @@ function Dashboard.GetChromeLayout(get, classic)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
     local headerHeight = compact and 30 or normalHeight
-    local delta = normalHeight - headerHeight
     local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 30 or 33)
-    if get("hideHeaderBar") then local top = classic and -4 or -9; return 0, top, bottom, top end
-    return headerHeight, (classic and -56 or -52) + delta, bottom, -70 + delta
+    if get("hideHeaderBar") then return 0, -1, bottom, -1 end
+    local top = -(classic and 8 or 14) - headerHeight
+    return headerHeight, top, bottom, top
 end
 
 local function SetChromeVisible(region, shown) if shown then region:Show() else region:Hide() end end
@@ -38,7 +38,7 @@ end
 function Dashboard.PlaceWindowControls(view, inContent)
     local controls = view.windowControls
     controls:ClearAllPoints()
-    if inContent then controls:SetPoint("TOPRIGHT", view.contentPanel, "TOPRIGHT", -6, -6)
+    if inContent then controls:SetPoint("TOPRIGHT", view.contentPanel, "TOPRIGHT", -1, -1)
     else controls:SetPoint("RIGHT", view.titleBar, "RIGHT", -6, 0) end
     controls:Show()
 end
@@ -60,7 +60,7 @@ function Dashboard.ApplyChrome(view, get)
     SetChromeVisible(view.titleBar, not hiddenHeader)
     Dashboard.PlaceWindowControls(view, hiddenHeader)
     if view.pageHost then
-        view.pageHost:ClearAllPoints(); view.pageHost:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 0, hiddenHeader and -30 or 0)
+        view.pageHost:ClearAllPoints(); view.pageHost:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 0, hiddenHeader and -20 or 0)
         view.pageHost:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 0, 0)
     end
     if not classic then
@@ -260,6 +260,7 @@ function Dashboard.CreatePages(contentPanel, definitions)
         local definition = definitions[index]
         local page = CreateFrame("Frame", nil, contentPanel)
         if definition.anchor then page:SetAllPoints(pages[definition.anchor])
+        elseif definition.key == "roster" then page:SetAllPoints(contentPanel)
         else
             page:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 1.5, -3)
             page:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -1.5, 1.5)

@@ -331,6 +331,7 @@ local function ApplyNavigation(entry)
         icon:SetTexture(ClassicPath("Icons\\" .. (CLASSIC_ICONS[entry.key] or "about") .. ".tga"))
         if not entry.classicHoverBorder then entry.classicHoverBorder = CreateClassicHoverOutline(entry.frame, ClassicPath("Buttons\\dark-selected.tga"), true)
         else SetNineSliceShown(entry.classicHoverBorder, true); entry.classicHoverBorder.textures[5]:Hide() end
+        if entry.frame.navigationMode == "tabs" then SetNineSliceShown(entry.classicHoverBorder, false) end
         if entry.frame.iconBorder then entry.frame.iconBorder:Hide() end
     else
         if entry.classicHoverBorder then SetNineSliceShown(entry.classicHoverBorder, false) end
@@ -602,6 +603,7 @@ function UI.SetSkinPersistence(callback)
 end
 
 function UI.SetSurfaceBorderVisible(frame, visible)
+    if frame.mosSurfaceBorderHidden == not visible then return end
     frame.mosSurfaceBorderHidden = not visible
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
