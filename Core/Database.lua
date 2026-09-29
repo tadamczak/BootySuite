@@ -14,7 +14,12 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.suppressLoginMessage == nil then MuklaOfficerSuiteDB.suppressLoginMessage = false end
     MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
     if tonumber(MuklaOfficerSuiteDB.lootMasterOpacity) == nil then MuklaOfficerSuiteDB.lootMasterOpacity = 100 end
+    if MuklaOfficerSuiteDB.lmAutoLootMode ~= "auto" and MuklaOfficerSuiteDB.lmAutoLootMode ~= "shift" and MuklaOfficerSuiteDB.lmAutoLootMode ~= "off" then
+        MuklaOfficerSuiteDB.lmAutoLootMode = MuklaOfficerSuiteDB.lmAutoLoot and "auto" or "off"
+    end
     if MuklaOfficerSuiteDB.lmAutoLoot == nil then MuklaOfficerSuiteDB.lmAutoLoot = false end
+    if type(MuklaOfficerSuiteDB.lmAutoLootRarities) ~= "number" or MuklaOfficerSuiteDB.lmAutoLootRarities < 0 or MuklaOfficerSuiteDB.lmAutoLootRarities > 31 then MuklaOfficerSuiteDB.lmAutoLootRarities = 7 end
+    if type(MuklaOfficerSuiteDB.lmAutoLootExceptions) ~= "string" then MuklaOfficerSuiteDB.lmAutoLootExceptions = "" end
     if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 30 end
     if MuklaOfficerSuiteDB.chatActionLogs == nil then MuklaOfficerSuiteDB.chatActionLogs = false end
     if MuklaOfficerSuiteDB.raidClassColors == nil then MuklaOfficerSuiteDB.raidClassColors = true end

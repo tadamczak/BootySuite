@@ -43,7 +43,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.minimizeButton:SetScript("OnClick", callbacks.toggleMinimize); view.minimizeButton:Hide()
     page.lmConfigOpen = false
     view.lmConfigPanel = MOS.UI.Components.CreateContainer(nil, page)
-    view.lmConfigPanel:SetWidth(150)
+    view.lmConfigPanel:SetWidth(340)
     view.lmConfigPanel:SetPoint("TOPLEFT", page, "TOPRIGHT", 0, 0)
     view.lmConfigPanel:SetPoint("BOTTOMLEFT", page, "BOTTOMRIGHT", 0, 0)
     view.lmConfigPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
@@ -54,13 +54,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.lmConfigTitle = MOS.UI.Components.CreateLabel(view.lmConfigPanel, nil, "OVERLAY", "GameFontNormalSmall")
     view.lmConfigTitle:SetPoint("TOPLEFT", view.lmConfigPanel, "TOPLEFT", 8, -8)
     view.lmConfigTitle:SetText("LM config")
-    local settingsControls = MOS.UI.Components.Settings.CreateFactory({
-        ensure = MOS.Database.Ensure, get = MOS.Database.GetSetting, set = MOS.Database.SetSetting,
-    })
-    view.lmAutoLoot = settingsControls.CreateCheckbox(view.lmConfigPanel, 8, -30, "LM auto loot", "lmAutoLoot", function()
-        if MOS.Modules.MasterLootWindow and MOS.Modules.MasterLootWindow.ApplyAutoLootSetting then MOS.Modules.MasterLootWindow.ApplyAutoLootSetting() end
-    end)
-    page.lmAutoLoot = view.lmAutoLoot
+    RaidManagement.CreateAutoLootControls(page, view)
     view.lmConfigToggle = MOS.UI.Components.CreateButton(page, nil, "", 18, 18)
     MOS.UI.Components.SetClassicButtonCompact(view.lmConfigToggle, true)
     MOS.UI.Components.AttachGoldHoverBorder(view.lmConfigToggle, 0.35, 0.35, 0.35, 1)
@@ -2411,12 +2405,13 @@ function RaidManagement.CreateLootMasterController(options)
     end
     options.page.reyCoinInput:SetFrameLevel(303)
     options.page.reyCoinAdd:SetFrameLevel(303)
-    local function SetupSidePanelResize(panel, widthKey, heightKey)
+    local function SetupSidePanelResize(panel, widthKey, heightKey, minimumWidth, minimumHeight)
+        minimumWidth = minimumWidth or 150; minimumHeight = minimumHeight or 90
         local settings = options.getSettings()
         panel:SetResizable(true)
-        panel:SetMinResize(150, 90); panel:SetMaxResize(520, 760)
-        panel:SetWidth(math.max(150, math.min(520, tonumber(settings[widthKey]) or 150)))
-        panel:SetHeight(math.max(90, math.min(760, tonumber(settings[heightKey]) or 210)))
+        panel:SetMinResize(minimumWidth, minimumHeight); panel:SetMaxResize(520, 760)
+        panel:SetWidth(math.max(minimumWidth, math.min(520, tonumber(settings[widthKey]) or minimumWidth)))
+        panel:SetHeight(math.max(minimumHeight, math.min(760, tonumber(settings[heightKey]) or 210)))
         local grip = MOS.UI.Components.CreateResizeGrip(panel)
         panel.resizeGrip = grip
         grip:SetScript("OnMouseDown", function() panel:StartSizing("BOTTOMRIGHT") end)
@@ -2427,7 +2422,7 @@ function RaidManagement.CreateLootMasterController(options)
         end)
         grip:SetScript("OnHide", function() panel:StopMovingOrSizing() end)
     end
-    SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight")
+    SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 340, 220)
     SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight")
     local alphaWatcher = MOS.UI.Components.CreateContainer(nil, options.dashboard)
     alphaWatcher.elapsed = 0; alphaWatcher.lootMasterController = controller
@@ -2814,4 +2809,73 @@ function RaidManagement.AttachActionHandlers(options)
             options.printMessage("Raid live tracking stopped.")
         end
     end)
+end
+
+function RaidManagement.CreateAutoLootControls(page, view)
+    local UI = MOS.UI.Components
+    local panel = view.lmConfigPanel
+    local names = { "Poor", "Common", "Uncommon", "Rare", "Epic" }
+    local selected = {}
+    local function Apply()
+        if MOS.Modules.MasterLootWindow and MOS.Modules.MasterLootWindow.ApplyAutoLootSetting then MOS.Modules.MasterLootWindow.ApplyAutoLootSetting() end
+    end
+    local _, mode = UI.CreateChoiceField({ parent = panel, x = 8, y = -34,
+        label = "LM Auto Loot:", buttonOffset = 134, width = 184, height = 76,
+        initialText = "Off", firstY = -8, step = 20,
+        choices = { { text = "Auto Loot", value = "auto" }, { text = "Shift Loot", value = "shift" }, { text = "Off", value = "off" } },
+        getValue = function() return MOS.Database.GetSetting("lmAutoLootMode") end,
+        onSelect = function(value)
+            MOS.Database.SetSetting("lmAutoLootMode", value)
+            MOS.Database.SetSetting("lmAutoLoot", value == "auto")
+        end, onChanged = Apply,
+    })
+    view.lmAutoLoot = mode; page.lmAutoLoot = mode
+    local label = UI.CreateComponentLabel(panel, "Auto Loot Rarity:", "white")
+    label:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -64)
+    local rarity = UI.CreateDropdownButton(panel, nil, "", 184)
+    rarity:SetPoint("TOPLEFT", panel, "TOPLEFT", 142, -64)
+    local choices = UI.CreateDropdownPanel(panel, rarity, 184, 138, 20)
+    local function RefreshRarity()
+        local mask = MOS.Database.GetSetting("lmAutoLootRarities")
+        local captions, index = {}, nil
+        for index = 1, table.getn(names) do
+            selected[names[index]] = math.mod(math.floor(mask / (2 ^ (index - 1))), 2) == 1
+            if selected[names[index]] then table.insert(captions, names[index]) end
+        end
+        rarity:SetText(table.getn(captions) == 0 and "None" or (table.getn(captions) > 2 and (table.getn(captions) .. " selected") or table.concat(captions, ", ")))
+    end
+    local function SaveRarity()
+        local mask, index = 0, nil
+        for index = 1, table.getn(names) do if selected[names[index]] then mask = mask + 2 ^ (index - 1) end end
+        MOS.Database.SetSetting("lmAutoLootRarities", mask); RefreshRarity(); Apply()
+    end
+    local function PrepareDropdown(dropdown, toggle)
+        dropdown:SetFrameStrata("FULLSCREEN_DIALOG"); dropdown.dismiss:SetFrameStrata("FULLSCREEN_DIALOG")
+        dropdown:SetFrameLevel(panel:GetFrameLevel() + 100); dropdown.dismiss:SetFrameLevel(panel:GetFrameLevel() + 99)
+    end
+    local showMode = mode:GetScript("OnClick")
+    mode:SetScript("OnClick", function() PrepareDropdown(mode.panel, mode); choices:Hide(); showMode() end)
+    rarity:SetScript("OnClick", function()
+        if choices:IsVisible() then choices:Hide() else
+            mode.panel:Hide(); PrepareDropdown(choices, rarity); RefreshRarity()
+            UI.FilterPanel.Refresh(choices, names, selected, SaveRarity, false, true); choices:Show()
+        end
+    end)
+    view.lmAutoLootRarity = rarity; rarity.panel = choices
+    local exceptionsLabel = UI.CreateComponentLabel(panel, "Auto Loot Exceptions", "white")
+    exceptionsLabel:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -96)
+    local exceptions = UI.CreateTextArea(panel, 324, 76, 2048)
+    exceptions:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -116)
+    exceptions:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -8, 24)
+    exceptions:SetTextInsets(8, 8, 8, 8)
+    UI.AttachTooltip(exceptions, "Auto Loot Exceptions", "Item names separated by commas are never auto looted, regardless of other settings. Ignores letter case and extra spaces.")
+    exceptions:SetScript("OnTextChanged", function() MOS.Database.SetSetting("lmAutoLootExceptions", this:GetText()) end)
+    exceptions:SetScript("OnEditFocusLost", Apply)
+    view.lmAutoLootExceptions = exceptions
+    panel:SetScript("OnShow", function()
+        local value = MOS.Database.GetSetting("lmAutoLootMode")
+        mode:SetText(value == "auto" and "Auto Loot" or value == "shift" and "Shift Loot" or "Off")
+        RefreshRarity(); exceptions:SetText(MOS.Database.GetSetting("lmAutoLootExceptions"))
+    end)
+    panel:SetScript("OnHide", function() mode.panel:Hide(); choices:Hide(); exceptions:ClearFocus() end)
 end
