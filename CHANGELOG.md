@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.12 - 2026-09-29
+
+- Red action buttons now use white hover text and an inset gradient highlight while keeping their resting border unchanged.
+- Removed native stretched press/disabled artwork from saved-raid selection rows.
+
 ## 0.5.0-dev.11 - 2026-09-29
 
 - Fixed WoW 1.12 texture ownership errors interrupting Raid Management and skin refresh.
