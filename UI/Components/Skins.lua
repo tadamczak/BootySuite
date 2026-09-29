@@ -282,7 +282,7 @@ local SURFACE_STYLES = {
 
 local function ApplySurface(entry)
     local frame = entry.frame
-    if Skins.current == "classic" then
+    if Skins.current == "classic" or frame.mosJoinedTop ~= nil then
         local style = SURFACE_STYLES[entry.kind] or SURFACE_STYLES.panel
         if entry.kind == "row" and not entry.classicFill then
             -- Rows have a fixed height and a horizontally authored surface.
@@ -309,6 +309,18 @@ local function ApplySurface(entry)
         frame:SetBackdrop(entry.backdrop)
         frame:SetBackdropColor(unpack(entry.background)); frame:SetBackdropBorderColor(unpack(entry.border))
         if frame.mosCompactBorder then frame:SetBackdropBorderColor(entry.border[1], entry.border[2], entry.border[3], 0.2) end
+    end
+    if entry.classicSkin and frame.mosJoinedTop ~= nil then
+        local t = entry.classicSkin.textures
+        if frame.mosJoinedTop then
+            t[1]:SetTexCoord(0, 6/32, 6/32, 26/32); t[3]:SetTexCoord(26/32, 1, 6/32, 26/32)
+        end
+        if frame.mosJoinedBottom then
+            t[7]:SetTexCoord(0, 6/32, 6/32, 26/32); t[9]:SetTexCoord(26/32, 1, 6/32, 26/32); t[8]:Hide()
+        end
+    end
+    if frame.mosSurfaceBorderHidden then
+        SetNineSliceShown(entry.classicSkin, false); frame:SetBackdropBorderColor(0,0,0,0)
     end
 end
 
@@ -392,6 +404,7 @@ end
 
 function UI.RegisterSkinnedSurface(frame, kind, backdrop, background, border)
     local entry = { frame = frame, kind = kind, backdrop = backdrop, background = background, border = border }
+    frame.mosSurfaceEntry = entry
     Skins.surfaces[table.getn(Skins.surfaces) + 1] = entry
     ApplySurface(entry)
 end
@@ -586,4 +599,14 @@ end
 
 function UI.SetSkinPersistence(callback)
     Skins.persist = callback
+end
+
+function UI.SetSurfaceBorderVisible(frame, visible)
+    frame.mosSurfaceBorderHidden = not visible
+    if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
+end
+
+function UI.JoinSurfaceEdges(frame, top, bottom)
+    frame.mosJoinedTop = top; frame.mosJoinedBottom = bottom
+    if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end

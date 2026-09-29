@@ -9,6 +9,7 @@ function Dashboard.GetChromeLayout(get, classic)
     local headerHeight = compact and 30 or normalHeight
     local delta = normalHeight - headerHeight
     local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 30 or 33)
+    if get("hideHeaderBar") then local top = classic and -4 or -9; return 0, top, bottom, top end
     return headerHeight, (classic and -56 or -52) + delta, bottom, -70 + delta
 end
 
@@ -34,6 +35,14 @@ function Dashboard.SetTabBody(view, protruding)
     view.tabsProtruding = protruding
 end
 
+function Dashboard.PlaceWindowControls(view, inContent)
+    local controls = view.windowControls
+    controls:ClearAllPoints()
+    if inContent then controls:SetPoint("TOPRIGHT", view.contentPanel, "TOPRIGHT", -6, -6)
+    else controls:SetPoint("RIGHT", view.titleBar, "RIGHT", -6, 0) end
+    controls:Show()
+end
+
 function Dashboard.ApplyChrome(view, get)
     if view.minimized then return end
     local classic = MOS.UI.Components.IsClassicSkin()
@@ -47,6 +56,18 @@ function Dashboard.ApplyChrome(view, get)
     SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo"))
+    local hiddenHeader = get("hideHeaderBar")
+    SetChromeVisible(view.titleBar, not hiddenHeader)
+    Dashboard.PlaceWindowControls(view, hiddenHeader)
+    if view.pageHost then
+        view.pageHost:ClearAllPoints(); view.pageHost:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 0, hiddenHeader and -30 or 0)
+        view.pageHost:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 0, 0)
+    end
+    if not classic then
+        view.sidebarToggle:SetParent(hiddenHeader and view.sidebar or view.titleBar); view.sidebarToggle:ClearAllPoints()
+        if hiddenHeader then view.sidebarToggle:SetPoint("TOPRIGHT", view.sidebar, "TOPRIGHT", -6, -6)
+        else view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 5, 0) end
+    end
     local footer = not get("hideStatusVersionBar")
     Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()))
     if view.frame.mosStatusBar then SetChromeVisible(view.frame.mosStatusBar, footer) end
@@ -100,12 +121,16 @@ function Dashboard.CreateWindow(version)
     view.classicLogo:SetWidth(100); view.classicLogo:SetHeight(40); view.classicLogo:SetPoint("LEFT", view.titleBar, "LEFT", 18, 0); view.classicLogo:Hide()
     view.classicTitleLeft = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleLeft:SetTexture(MOS.UI.Components.ClassicAsset("Decor\\title-left.tga")); view.classicTitleLeft:SetWidth(65); view.classicTitleLeft:SetHeight(8); view.classicTitleLeft:SetPoint("RIGHT", view.classicTitle, "LEFT", -12, 0); view.classicTitleLeft:Hide()
     view.classicTitleRight = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleRight:SetTexture(MOS.UI.Components.ClassicAsset("Decor\\title-right.tga")); view.classicTitleRight:SetWidth(65); view.classicTitleRight:SetHeight(8); view.classicTitleRight:SetPoint("LEFT", view.classicTitle, "RIGHT", 12, 0); view.classicTitleRight:Hide()
-    view.closeButton = MOS.UI.Components.CreateWindowButton(view.titleBar, nil, "close")
-    view.closeButton:SetPoint("RIGHT", view.titleBar, "RIGHT", -6, 0)
+    view.windowControls = MOS.UI.Components.CreateContainer(nil, frame)
+    view.windowControls:SetWidth(62); view.windowControls:SetHeight(18); view.windowControls:SetFrameLevel(frame:GetFrameLevel() + 60)
+    frame.mosWindowControls = view.windowControls
+    view.windowControls:SetPoint("RIGHT", view.titleBar, "RIGHT", -6, 0)
+    view.closeButton = MOS.UI.Components.CreateWindowButton(view.windowControls, nil, "close")
+    view.closeButton:SetPoint("RIGHT", view.windowControls, "RIGHT", 0, 0)
     view.closeButton:SetScript("OnClick", function() frame:Hide() end)
-    view.minimizeButton = MOS.UI.Components.CreateWindowButton(view.titleBar, nil, "minimize")
+    view.minimizeButton = MOS.UI.Components.CreateWindowButton(view.windowControls, nil, "minimize")
     view.minimizeButton:SetPoint("RIGHT", view.closeButton, "LEFT", -4, 0)
-    view.settingsButton = MOS.UI.Components.CreateButton(view.titleBar, nil, "", 18, 18)
+    view.settingsButton = MOS.UI.Components.CreateButton(view.windowControls, nil, "", 18, 18)
     MOS.UI.Components.SetClassicButtonCompact(view.settingsButton, true)
     view.settingsButton:SetPoint("RIGHT", view.minimizeButton, "LEFT", -4, 0)
     view.settingsButton.icon = view.settingsButton:CreateTexture(nil, "OVERLAY")
@@ -153,6 +178,8 @@ function Dashboard.CreateWindow(version)
     view.contentPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     view.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90); view.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
     MOS.UI.Components.RegisterSkinnedSurface(view.contentPanel, "content", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.02, 0.02, 0.02, 0.90 }, { 0.36, 0.36, 0.34, 1 })
+    view.pageHost = MOS.UI.Components.CreateContainer(nil, view.contentPanel)
+    view.pageHost:SetAllPoints(view.contentPanel); view.contentPanel.mosPageHost = view.pageHost
     local background = view.sidebar:CreateTexture(nil, "BACKGROUND")
     background:SetPoint("TOPLEFT", view.sidebar, "TOPLEFT", 5, -5); background:SetPoint("BOTTOMRIGHT", view.sidebar, "BOTTOMRIGHT", -5, 5)
     background:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\DashboardBackground"); background:SetTexCoord(0.22, 0.58, 0, 1); background:SetAlpha(0.72)
@@ -226,6 +253,7 @@ function Dashboard.SetStatus(bar, message, kind)
 end
 
 function Dashboard.CreatePages(contentPanel, definitions)
+    contentPanel = contentPanel.mosPageHost or contentPanel
     local pages = {}
     local index
     for index = 1, table.getn(definitions) do
@@ -299,6 +327,7 @@ function Dashboard.BindWindow(view, options)
             view.widthBeforeMinimize = frame:GetWidth(); view.heightBeforeMinimize = frame:GetHeight(); view.leftBeforeMinimize = frame:GetLeft(); view.bottomBeforeMinimize = frame:GetBottom()
             options.saveGeometry()
             Dashboard.SetTabBody(view, false)
+            view.titleBar:Show(); Dashboard.PlaceWindowControls(view, false)
             view.minimized = true
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end

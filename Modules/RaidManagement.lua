@@ -2477,7 +2477,7 @@ function RaidManagement.CreateLootMasterController(options)
         options.sidebar:Show(); options.titleBar:Show(); options.closeButton:Show(); options.versionText:Show(); options.raidTitle:Show(); options.statusBar:Show()
         if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Hide() end
         options.applyNavigationLayout()
-        options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 3, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -3, 3)
+        options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel.mosPageHost or options.contentPanel, "TOPLEFT", 1.5, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel.mosPageHost or options.contentPanel, "BOTTOMRIGHT", -1.5, 1.5)
         RestoreModeButton()
     end
 
@@ -2501,6 +2501,7 @@ function RaidManagement.CreateLootMasterController(options)
             options.dashboard:SetAlpha(0.3)
             alphaWatcher.elapsed = 0; alphaWatcher:Show()
             options.statusBar:Hide()
+            if options.dashboard.mosWindowControls then options.dashboard.mosWindowControls:Hide() end
             options.sidebar:Hide(); options.titleBar:Hide(); options.closeButton:Hide(); options.versionText:Hide(); options.raidTitle:Hide()
             if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Show() end
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 1, -1); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -1, 1)
@@ -2523,7 +2524,7 @@ function RaidManagement.CreateLootMasterController(options)
             options.sidebar:Show(); options.titleBar:Show(); options.closeButton:Show(); options.versionText:Show(); options.raidTitle:Show(); options.statusBar:Show()
             if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Hide() end
             options.applyNavigationLayout()
-            options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 3, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -3, 3)
+            options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel.mosPageHost or options.contentPanel, "TOPLEFT", 1.5, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel.mosPageHost or options.contentPanel, "BOTTOMRIGHT", -1.5, 1.5)
             RestoreModeButton()
             if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Show() end
             MOS.UI.Components.SetSurfaceCompact(options.dashboard, false); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, false)

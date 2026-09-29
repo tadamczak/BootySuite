@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.36 - 2026-09-30
+
+- Add Hide header bar with content-corner controls; group window visibility options under UI > Layout.
+- Join roster sections without gaps or an enclosing border, reduce the MOTD label and explicitly size table rows/status geometry.
+- Replace trash actions with a transparent gray bin texture.
+
 ## 0.5.0-dev.35 - 2026-09-30
 
 - Separate roster MOTD, table/status and actions into framed sections; only the table stretches vertically.
