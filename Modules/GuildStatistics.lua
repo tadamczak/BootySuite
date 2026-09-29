@@ -209,6 +209,13 @@ function GuildStatistics.PopulateTable(statsTable, summaries, statsType, data, o
     end
 end
 
+function GuildStatistics.AttachExport(view, button)
+    button:SetParent(view.page); button:ClearAllPoints()
+    button:SetPoint("TOPRIGHT", view.page, "TOPRIGHT", -12, -10)
+    button:SetWidth(120); button:SetHeight(22); button:Show()
+    view.exportButton = button
+end
+
 function GuildStatistics.CreateView(page, styleButton, refresh)
     local view = { page = page }
     view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")

@@ -9,6 +9,7 @@ local controls = MOS.UI.Components.Settings.CreateFactory({
 })
 
 local rosterLayoutOptions = {
+    { "Hide section header", "rosterHideSectionHeader" },
     { "Show class", "rosterShowClass" },
     { "Show lvl", "rosterShowLevel" },
     { "Show zone", "rosterShowZone" },
@@ -72,6 +73,7 @@ function Settings.LayoutRaidGrid(page, offset)
         control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
     end
     local y = -318 + offset
+    At(page.raidHideHeaderCheck, 52, y); y = y - 28
     At(shell.groupHeading, 48, y); y = y - 38
     At(group.displayHeading, 52, y); y = y - 26
     At(group.columnsLabel, 52, y - 6); At(group.columnsButton, 104, y); y = y - 28
@@ -175,11 +177,11 @@ function Settings.CreateSkinControl(parent, x, y)
 end
 
 function Settings.CreatePrimarySections(page)
-    local rosterHeading = MOS.UI.Components.CreateHeading(page, "", 3, "orange")
+    local rosterHeading = MOS.UI.Components.CreateHeading(page, "", 3, "gold")
     rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150)
-    rosterHeading:SetText("Roster management")
+    rosterHeading:SetText("Roster")
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
-    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster Management is open. This may have a small performance impact in large guilds.")
+    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster is open. This may have a small performance impact in large guilds.")
     page.rosterLayoutChecks = {}
     local index
     for index = 1, table.getn(rosterLayoutOptions) do
@@ -188,7 +190,7 @@ function Settings.CreatePrimarySections(page)
     end
     local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
     page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors")
-    local raidHeading = MOS.UI.Components.CreateHeading(page, "", 3, "orange")
+    local raidHeading = MOS.UI.Components.CreateHeading(page, "", 3, "gold")
     raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -206)
     raidHeading:SetText("Raid management")
     local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645)
@@ -373,6 +375,9 @@ function Settings.CreateRaidSettings(page, callbacks)
     local shell = Settings.CreateRaidViewShell(page)
     local factory = Settings.CreateRaidControlFactory(page, callbacks)
     local groupControls = Settings.CreateRaidGroupViewControls(page, shell, factory, callbacks.refreshGroup)
+    page.raidHideHeaderCheck = Settings.CreateSavedCheckbox(page, nil, 52, -318, "Hide section header", "raidHideSectionHeader", nil, nil, callbacks.refreshList)
+    table.insert(groupControls.checks, page.raidHideHeaderCheck)
+    table.insert(groupControls.layoutControls, page.raidHideHeaderCheck)
     local listControls = Settings.CreateRaidListViewControls(page, shell, factory)
     local leader = MOS.UI.Components.Settings.CreateAccordion(page, "Raid Leader Mode", -1126)
     local loot = MOS.UI.Components.Settings.CreateAccordion(page, "Loot Master Mode", -1154)

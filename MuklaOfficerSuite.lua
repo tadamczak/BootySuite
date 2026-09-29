@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.29"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.30"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -202,6 +202,7 @@ local rows = rosterListController.rows
 local rosterScrollFrame = rosterListController.scrollFrame
 
 local statisticsView = MOS.Modules.GuildStatistics.CreateView(statisticsPage, MOS.UI.Components.StyleButton, function() RefreshStatisticsPage() end)
+MOS.Modules.GuildStatistics.AttachExport(statisticsView, scanSaveButton)
 dashboardPages.raidStatistics.module = MOS.Modules.RaidStatistics.Create(dashboardPages.raidStatistics, MOS.Database.GetRaidStatistics, MOS.Database.DeleteRaidStatistic, MOS.Database.UpdateRaidStatisticFlags)
 dashboardPages.csr.module = MOS.Modules.CSR.Create(dashboardPages.csr, MOS.Database.GetRaidStatistics, MOS.Database.GetLootRules, MOS.Database.GetRosterData, function(raidId)
     if MOS.OpenRaidStatistics then MOS.OpenRaidStatistics(raidId) end

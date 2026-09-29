@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.30 - 2026-09-29
+
+- Rename Roster, move Export Roster to Guild Statistics, reclaim scrollbar space and wrap narrow-window filters.
+- Restore translucent gold accordion gradients, support four Settings columns and optional section headers.
+- Add raid player-name padding without doubling icon spacing.
+
 ## 0.5.0-dev.29 - 2026-09-29
 
 - Restore roster player-status toggle, fit guild action labels and clear stale raid metadata in the empty state.

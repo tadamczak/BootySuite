@@ -41,14 +41,13 @@ function Settings.CreateSectionAccordion(parent, text, y)
     button.label:SetTextColor(unpack(MOS.UI.Components.TextColors.gold))
     button:SetHighlightTexture(nil)
     button.sectionFill = button:CreateTexture(nil, "BACKGROUND")
-    button.sectionFill:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-    button.sectionFill:SetTexCoord(0, 0.5, 0, 1)
-    button.sectionFill:SetVertexColor(1, 1, 1, 1)
+    button.sectionFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+    button.sectionFill:SetGradientAlpha("HORIZONTAL", 0.82, 0.70, 0.43, 0, 0.82, 0.70, 0.43, 0.24)
     button.sectionFill:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.sectionFill:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
     button.sectionFade = button:CreateTexture(nil, "BACKGROUND")
-    button.sectionFade:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-    button.sectionFade:SetTexCoord(0.5, 1, 0, 1)
-    button.sectionFade:SetPoint("TOPLEFT", button.sectionFill, "TOPRIGHT", 0, 0); button.sectionFade:SetPoint("BOTTOMLEFT", button.sectionFill, "BOTTOMRIGHT", 0, 0); button.sectionFade:SetWidth(20)
+    button.sectionFade:SetTexture("Interface\\Buttons\\WHITE8X8")
+    button.sectionFade:SetGradientAlpha("HORIZONTAL", 0.82, 0.70, 0.43, 0.24, 0.82, 0.70, 0.43, 0)
+    button.sectionFade:SetPoint("TOPLEFT", button.sectionFill, "TOPRIGHT", 0, 0); button.sectionFade:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
     button.SetExpanded = function(self, expanded)
         self.sectionExpanded = expanded
         if self.sectionHovered then self.sectionFill:Show(); self.sectionFade:Show()
@@ -352,7 +351,7 @@ function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
     if count == 0 then return 0 end
     available = math.max(1, available)
     local widths = items.mosColumnWidths or {}; items.mosColumnWidths = widths
-    local cols, index, col, total = math.min(3, count), nil, nil, nil
+    local cols, index, col, total = math.min(4, count), nil, nil, nil
     for index = 1, count do
         local item = items[index]
         local label = sliders and getglobal(item:GetName() .. "Text") or item.label

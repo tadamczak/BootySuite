@@ -28,6 +28,8 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.chatActionLogs == nil then MuklaOfficerSuiteDB.chatActionLogs = false end
     if MuklaOfficerSuiteDB.raidClassColors == nil then MuklaOfficerSuiteDB.raidClassColors = true end
     if MuklaOfficerSuiteDB.rosterClassColors == nil then MuklaOfficerSuiteDB.rosterClassColors = true end
+    if MuklaOfficerSuiteDB.rosterHideSectionHeader == nil then MuklaOfficerSuiteDB.rosterHideSectionHeader = false end
+    if MuklaOfficerSuiteDB.raidHideSectionHeader == nil then MuklaOfficerSuiteDB.raidHideSectionHeader = false end
     if MuklaOfficerSuiteDB.rosterShowClass == nil then MuklaOfficerSuiteDB.rosterShowClass = true end
     if MuklaOfficerSuiteDB.rosterShowLevel == nil then MuklaOfficerSuiteDB.rosterShowLevel = true end
     if MuklaOfficerSuiteDB.rosterShowZone == nil then MuklaOfficerSuiteDB.rosterShowZone = true end
