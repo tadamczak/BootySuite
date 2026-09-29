@@ -136,7 +136,7 @@ local function ApplyControl(entry)
                 entry.redHover:SetTexture(ClassicPath("Buttons\\red-hover-radial.tga"))
                 entry.redHover:SetTexCoord(0, 1, 0, 1)
                 entry.redHover:SetBlendMode("ADD")
-                entry.redHover:SetVertexColor(1, 1, 1, 1)
+                entry.redHover:SetVertexColor(1, 1, 1, 0.30)
                 entry.redHover:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -5)
                 entry.redHover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 5)
             end
@@ -217,11 +217,21 @@ local function ApplyControl(entry)
     if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosTextColor)) end
     if solid then
         ApplySolidButton(entry)
-
+    elseif Skins.current == "classic" and not button.mosClassicCompactControl then
+        UI.ApplyDropdownChoiceSurface(button)
+        SetNineSliceShown(entry.classicSkin, false)
+        if entry.classicSkin then
+            local center = entry.classicSkin.textures[5]
+            center:ClearAllPoints(); center:SetPoint("TOPLEFT", button, "TOPLEFT", 3, -3); center:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 3); center:Show()
+        end
+        SetNineSliceShown(entry.classicHoverBorder, false)
+        SetNineSliceShown(entry.classicSelectedBorder, false)
+        button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
+        if button.mosClassicVariant == "red" or button.mosClassicSelected then button:SetBackdropBorderColor(1, 0.78, 0.2, 1) end
     end
     if button.label and entry.hovered and Skins.current == "classic" and button.mosClassicVariant == "red" and not button.mosClassicDisabled then
         entry.restR, entry.restG, entry.restB, entry.restA = button.label:GetTextColor()
-        button.label:SetTextColor(1, 1, 1)
+        button.label:SetTextColor(0.82, 0.82, 0.78)
     end
     if button.label and button.mosLabelInsets then
         button.label:ClearAllPoints()
@@ -333,11 +343,12 @@ end
 local function RedHoverEnter()
     local entry = this.mosSkinEntry
     if entry.onEnter then entry.onEnter() end
+    if Skins.current == "classic" and not this.mosClassicDisabled then this:SetBackdropBorderColor(1, 0.78, 0.2, 1) end
     local enabled = not this.IsEnabled or this:IsEnabled()
     if Skins.current ~= "classic" or this.mosClassicVariant ~= "red" or this.mosClassicCompactControl or this.mosClassicDisabled or enabled == false or enabled == 0 then return end
     if not entry.hovered then entry.restR, entry.restG, entry.restB, entry.restA = this.label:GetTextColor() end
     entry.hovered = true
-    this.label:SetTextColor(1, 1, 1)
+    this.label:SetTextColor(0.82, 0.82, 0.78)
 end
 
 local function RedHoverLeave()
@@ -348,6 +359,10 @@ local function RedHoverLeave()
         else this.label:SetTextColor(entry.restR, entry.restG, entry.restB, entry.restA) end
     end
     if entry.onLeave then entry.onLeave() end
+    if Skins.current == "classic" then
+        if this.mosClassicVariant == "red" or this.mosClassicSelected then this:SetBackdropBorderColor(1, 0.78, 0.2, 1)
+        else this:SetBackdropBorderColor(0.35, 0.35, 0.35, 1) end
+    end
 end
 
 function UI.RegisterSkinnedControl(frame, backdrop, background, border, highlight)

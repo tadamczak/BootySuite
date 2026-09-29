@@ -48,6 +48,7 @@ function RosterManagement.CreateGuildControls(page)
     page.guildInfoEditor = MOS.UI.Components.CreateTextEditor("MuklaOfficerSuiteGuildInfoEditor", "Guild Information", 500, function(value)
         if type(SetGuildInfoText) == "function" then SetGuildInfoText(value) end
     end)
+    page.guildInfoEditor.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
     page.guildMotdEditor = MOS.UI.Components.CreateTextEditor("MuklaOfficerSuiteGuildMotdEditor", "Guild Message of the Day", 128, function(value)
         if type(GuildSetMOTD) == "function" then GuildSetMOTD(value) end
     end)
@@ -468,7 +469,7 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
 
     row.actionViewport, row.actionPanel = MOS.UI.Components.CreateClippedContent(row, 204)
     row.actionViewport:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -20)
-    row.actionViewport:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, -20)
+    row.actionViewport:SetWidth(640)
     row.actionViewport:SetHeight(204)
     row.actionPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     row.actionPanel:SetBackdropColor(0.07, 0.08, 0.07, 0.92)
@@ -573,7 +574,8 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
         row.actionPanel:Show()
         local expandedHeight = math.min(rowHeight + 208, row.availableHeight or (rowHeight + 208))
         row.actionViewport:SetHeight(math.max(1, expandedHeight - rowHeight - 4))
-        row.actionPanel:SetWidth(math.max(1, row:GetWidth() - 8))
+        local detailWidth = row.detailWidth or math.max(1, math.min(640, row:GetWidth() - 8))
+        row.actionViewport:SetWidth(detailWidth); row.actionPanel:SetWidth(detailWidth)
         if row.actionViewport.memberName ~= member.name then row.actionViewport:SetVerticalScroll(0) end
         row.actionViewport.memberName = member.name
         row.actionViewport:Show()
@@ -758,6 +760,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", 0, rowY)
         row:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, rowY)
+        row.detailWidth = math.max(1, math.min(640, tableWidth - 8))
         row.availableHeight = math.max(rowHeight, availableHeight + rowY)
         if member and i <= visibleRowCount and -rowY + rowHeight <= availableHeight then
             page.measuredShown = page.measuredShown + 1
