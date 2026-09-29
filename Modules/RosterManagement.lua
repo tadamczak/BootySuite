@@ -582,6 +582,7 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
         row:SetHeight(expandedHeight)
         RosterManagement.BindMemberDetails(row, member)
         row:Show()
+        MOS.UI.Components.RefreshClippedContent(row.actionViewport)
         return expandedHeight
     end
     row.selection:Hide()
@@ -716,6 +717,8 @@ end
 
 function RosterManagement.RenderList(page, visibleMembers, columns, selectedName, lowestRankIndex, useClassColors, resetScroll, headerY)
     local controller = page.listController
+    if controller.rendering then return end
+    controller.rendering = true
     local rows = controller.rows
     local rowHeight = controller.rowHeight
     local tableWidth = math.max(1, page:GetWidth() - 42)
@@ -730,8 +733,8 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     controller.scrollFrame:ClearAllPoints()
     controller.scrollFrame:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", -8, 9)
     controller.scrollFrame:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, 9)
-    controller.scrollFrame:SetHeight((visibleRowCount * rowHeight) + 8)
-    if selectedName and (selectedName ~= controller.lastSelectedName or visibleRowCount ~= controller.lastVisibleRowCount) then
+    controller.scrollFrame:SetHeight(availableHeight + 8)
+    if selectedName and (selectedName ~= controller.lastSelectedName or visibleRowCount ~= controller.lastVisibleRowCount or availableHeight ~= controller.lastViewportHeight or tableWidth ~= controller.lastTableWidth) then
         local memberIndex
         for memberIndex = 1, table.getn(visibleMembers) do
             if visibleMembers[memberIndex].name == selectedName then
@@ -744,6 +747,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
             end
         end
     end
+    controller.lastViewportHeight = availableHeight; controller.lastTableWidth = tableWidth
     controller.lastSelectedName = selectedName
     controller.lastVisibleRowCount = visibleRowCount
     local offset = MOS.UI.Components.UpdateScrollFrame(controller.scrollFrame, table.getn(visibleMembers), visibleRowCount, rowHeight)
@@ -769,6 +773,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
             RosterManagement.HideRow(row)
         end
     end
+    controller.rendering = nil
 end
 
 function RosterManagement.UpdateSortHeaders(page, sortKey)

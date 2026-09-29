@@ -24,6 +24,12 @@ function UI.CreateResizeGrip(parent)
     return grip
 end
 
+function UI.RefreshClippedContent(viewport)
+    viewport.content:SetWidth(math.max(1, viewport:GetWidth()))
+    if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
+    viewport:SetVerticalScroll(math.max(0, math.min(viewport:GetVerticalScroll(), math.max(0, viewport.content:GetHeight() - viewport:GetHeight()))))
+end
+
 function UI.CreateClippedContent(parent, contentHeight)
     local viewport = UI.CreateScrollFrame(nil, parent)
     local content = UI.CreateContainer(nil, viewport)
@@ -35,8 +41,7 @@ function UI.CreateClippedContent(parent, contentHeight)
         this:SetVerticalScroll(math.max(0, math.min(maximum, this:GetVerticalScroll() - arg1 * 24)))
     end)
     viewport:SetScript("OnSizeChanged", function()
-        this.content:SetWidth(math.max(1, this:GetWidth()))
-        this:SetVerticalScroll(math.min(this:GetVerticalScroll(), math.max(0, this.content:GetHeight() - this:GetHeight())))
+        UI.RefreshClippedContent(this)
     end)
     return viewport, content
 end
@@ -138,6 +143,8 @@ function UI.CreateDropdownButton(parent, name, text, width)
     button:SetBackdropBorderColor(0.42, 0.35, 0.20, 1)
     button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     button.label:SetPoint("LEFT", button, "LEFT", 8, 0); button.label:SetText(text)
+    button.SetText = function(self, value) self.label:SetText(value) end
+    button.GetText = function(self) return self.label:GetText() end
     button.arrow = button:CreateTexture(nil, "OVERLAY")
     button.arrow:SetWidth(16); button.arrow:SetHeight(16); button.arrow:SetPoint("RIGHT", button, "RIGHT", -5, 0)
     button.arrow:SetTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Up")

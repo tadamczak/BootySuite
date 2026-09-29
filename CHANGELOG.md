@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.15 - 2026-09-29
+
+- Keep expanded roster details and scrolling stable during window resize.
+- Refresh selected menu layout labels and add optional icon tabs with saved profile support.
+
 ## 0.5.0-dev.14 - 2026-09-29
 
 - Softened hover captions and radial highlights; standardized Classic button borders on dropdown chrome.

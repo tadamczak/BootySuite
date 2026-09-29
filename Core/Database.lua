@@ -24,6 +24,7 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.showOfflineMembers == nil then MuklaOfficerSuiteDB.showOfflineMembers = true end
     if MuklaOfficerSuiteDB.menuStyle ~= "tabs" and MuklaOfficerSuiteDB.menuStyle ~= "buttons" then MuklaOfficerSuiteDB.menuStyle = "buttons" end
     if MuklaOfficerSuiteDB.uiSkin ~= "classic" and MuklaOfficerSuiteDB.uiSkin ~= "default" then MuklaOfficerSuiteDB.uiSkin = "classic" end
+    if MuklaOfficerSuiteDB.useIconTabs == nil then MuklaOfficerSuiteDB.useIconTabs = false end
     if MuklaOfficerSuiteDB.sidebarCollapsed == nil then MuklaOfficerSuiteDB.sidebarCollapsed = false end
     local raidGroupColumns = tonumber(MuklaOfficerSuiteDB.raidGroupColumns) or 2
     MuklaOfficerSuiteDB.raidGroupColumns = math.max(1, math.min(4, math.floor(raidGroupColumns)))

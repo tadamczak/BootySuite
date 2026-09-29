@@ -92,14 +92,25 @@ function Navigation.Create(options)
             options.sidebar:Hide(); options.toggleButton:Hide()
             local margin = MOS.UI.Components.IsClassicSkin() and 8 or 18
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, -98); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -margin, margin + 28)
-            local width = math.floor((options.dashboard:GetWidth() - 40) / table.getn(order))
+            local iconTabs = options.get("useIconTabs")
+            local classic = MOS.UI.Components.IsClassicSkin()
+            local width = iconTabs and 38 or math.floor((options.dashboard:GetWidth() - 40) / table.getn(order))
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
-                button.navigationMode = "tabs"
+                button.navigationMode = iconTabs and "icons" or "tabs"
+                button.SetTabBorderVisible(false)
                 button:SetParent(options.dashboard); button:ClearAllPoints(); button:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 20 + ((index - 1) * width), -70)
                 button:SetFrameStrata("DIALOG"); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width); button:SetHeight(30)
-                button.icon:Hide(); button.iconBorder:Hide(); button:Show(); button.label:Show(); button.label:ClearAllPoints(); button.label:SetAllPoints(button); button.label:SetWidth(width); button.label:SetJustifyH("CENTER")
+                button.iconBorder:Hide(); button:Show()
+                if iconTabs then
+                    button.label:Hide(); button.icon:Show(); button.icon:ClearAllPoints()
+                    button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+                    button.icon:SetWidth(classic and 20 or 28); button.icon:SetHeight(classic and 20 or 28)
+                    if not classic then button.iconBorder:Show() end
+                else
+                    button.icon:Hide(); button.label:Show(); button.label:ClearAllPoints(); button.label:SetAllPoints(button); button.label:SetWidth(width); button.label:SetJustifyH("CENTER")
+                end
             end
         else
             options.sidebar:Show(); options.toggleButton:Show()
