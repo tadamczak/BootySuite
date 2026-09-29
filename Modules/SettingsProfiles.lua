@@ -165,7 +165,7 @@ function Settings.ApplyTopSections(page)
     if state.ui then page.uiContent:Show() else
         page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide()
     end
-    page.settingsTopOffset = -profileHeight - 28
+    page.settingsTopOffset = -profileHeight - 28 - 56
     if page.primarySections and page.raidAccordionControls then
         Settings.ApplyRosterAccordions(page, page.primarySections, page.raidAccordionControls)
     end

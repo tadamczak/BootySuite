@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.20 - 2026-09-29
+
+- Add optional status/version bar, header logo and header name visibility settings.
+- Reclaim hidden chrome space, keep corner resizing without an icon, and compact the header when both decorations are hidden.
+
 ## 0.5.0-dev.19 - 2026-09-29
 
 - Add multi-select exception test presets to LM Config.
