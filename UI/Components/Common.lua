@@ -577,3 +577,22 @@ function UI.CreateNoteDisplay(parent, height)
     button.GetText = function(self) return self.label:GetText() end
     return button
 end
+
+function UI.BindCheckboxLabel(checkbox, onChanged, width)
+    checkbox.onLabelChanged = onChanged
+    checkbox:SetScript("OnClick", function() this.onLabelChanged(this) end)
+    if not checkbox.labelHit then
+        local hit = UI.CreateControl(nil, checkbox)
+        hit:SetPoint("LEFT", checkbox, "RIGHT", 0, 0)
+        hit:SetHeight(checkbox:GetHeight())
+        hit.owner = checkbox
+        hit:SetScript("OnClick", function()
+            local owner = this.owner
+            owner:SetChecked(not owner:GetChecked())
+            owner.onLabelChanged(owner)
+        end)
+        checkbox.labelHit = hit
+    end
+    checkbox.labelHit:SetWidth(width or math.max(20, checkbox.label:GetStringWidth() + 4))
+    return checkbox
+end
