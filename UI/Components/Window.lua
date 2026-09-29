@@ -67,6 +67,15 @@ function Window.Create(options)
             window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(options.compact and 44 or 50); MOS.UI.Components.SetWindowButtonAction(minimize, "maximize")
         end
     end)
+    local function FinishOpen()
+        window:SetScript("OnUpdate", nil)
+        if not window:IsVisible() or not view then return end
+        view.viewport:SetScrollChild(view.page)
+        view.page:Show()
+        options.update(view)
+        if view.viewport.UpdateScrollChildRect then view.viewport:UpdateScrollChildRect() end
+    end
+    window:SetScript("OnHide", function() window:SetScript("OnUpdate", nil) end)
     window.Open = function()
         if window:IsVisible() or not view then return end
         ApplyResizeBounds()
@@ -75,6 +84,7 @@ function Window.Create(options)
         if view.scrollBar then view.scrollBar:SetValue(0) end
         if options.refresh then options.refresh(view) end
         options.update(view)
+        window:SetScript("OnUpdate", FinishOpen)
     end
     window.Toggle = function() if window:IsVisible() then CloseWindow() else window.Open() end end
     window.AttachView = function(settingsView)

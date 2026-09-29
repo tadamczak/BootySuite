@@ -1553,11 +1553,12 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
         row.crown:Hide()
     end
     local showLootMaster = not lootMasterMode and MuklaOfficerSuiteDB.raidListShowLootMaster and lootMethod == "master" and tonumber(raidLootMasterIndex) == tonumber(member.raidIndex)
-    row.crown:ClearAllPoints(); row.crown:SetPoint("TOPLEFT", row, "TOPLEFT", 1, -2)
-    row.lootMasterIcon:ClearAllPoints(); row.lootMasterIcon:SetPoint("TOPLEFT", row, "TOPLEFT", showRole and 16 or 1, -2)
+    local _, fontSize = row.name:GetFont()
+    local leftPadding = math.max(2, (row:GetHeight() - (fontSize or 12)) / 2)
+    row.crown:ClearAllPoints(); row.crown:SetPoint("TOPLEFT", row, "TOPLEFT", leftPadding, -2)
+    row.lootMasterIcon:ClearAllPoints(); row.lootMasterIcon:SetPoint("TOPLEFT", row, "TOPLEFT", leftPadding + (showRole and 15 or 0), -2)
     if showLootMaster then row.lootMasterIcon:Show() else row.lootMasterIcon:Hide() end
-    local nameInset = (showRole and 17 or 0) + (showLootMaster and 14 or 0)
-    if nameInset == 0 then local _, fontSize = row.name:GetFont(); nameInset = math.max(2, (row:GetHeight() - (fontSize or 12)) / 2) end
+    local nameInset = leftPadding + (showRole and 17 or 0) + (showLootMaster and 14 or 0)
     row.name:ClearAllPoints()
     row.name:SetPoint("TOPLEFT", row, "TOPLEFT", (lootMasterMode and 0 or page.listPositions[1] - tableLeft) + nameInset, 0)
     row.name:SetWidth(math.max(1, (lootMasterMode and 90 or page.listWidths[1]) - nameInset))
