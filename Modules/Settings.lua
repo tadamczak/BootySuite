@@ -771,7 +771,7 @@ end
 
 function Settings.CreateDetachedWindow()
     return MOS.UI.Components.Window.Create({
-        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings", compact = true,
+        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings", compact = true, plainHeader = true,
         update = function(view) Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end,
         refresh = function(view) if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end end,
         attach = function(view, content) Settings.AttachShell(view, content, content, true) end,

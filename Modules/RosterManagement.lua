@@ -742,12 +742,8 @@ function RosterManagement.SetDataVisible(controller, visible)
     MOS.UI.Components.SetSurfaceBorderVisible(controller.contentPanel, not visible)
     if page.tablePanel then page.tablePanel[method](page.tablePanel); page.actionsPanel[method](page.actionsPanel) end
     if visible then
-        controller.contentPanel:SetBackdropColor(0, 0, 0, 0)
-        controller.contentPanel:SetBackdropBorderColor(0, 0, 0, 0)
         controller.contentShade:Hide()
     else
-        controller.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90)
-        controller.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
         controller.contentShade:Show()
     end
     controls.footer.rule:Hide()
@@ -800,9 +796,18 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     local rightInset = needsScroll and 24 or 6
     controller.viewportRightInset = rightInset
     local tableWidth = math.max(1, panelWidth - 6 - rightInset)
-    page.tableViewport:ClearAllPoints()
-    page.tableViewport:SetPoint("TOPLEFT", body, "TOPLEFT", 6, rowsTop)
-    page.tableViewport:SetWidth(tableWidth); page.tableViewport:SetHeight(availableHeight)
+    if page.viewportBody ~= body or page.viewportTop ~= rowsTop or page.viewportInset ~= rightInset then
+        page.viewportBody = body; page.viewportTop = rowsTop; page.viewportInset = rightInset
+        page.tableViewport:ClearAllPoints()
+        page.tableViewport:SetPoint("TOPLEFT", body, "TOPLEFT", 6, rowsTop)
+        page.tableViewport:SetPoint("TOPRIGHT", body, "TOPRIGHT", -rightInset, rowsTop)
+    end
+    page.tableViewport:SetHeight(availableHeight)
+    -- Measure settled native edges, not a width captured before parent anchors resolve.
+    if page.tableViewport.GetLeft and page.tableViewport.GetRight then
+        local left, right = page.tableViewport:GetLeft(), page.tableViewport:GetRight()
+        if left and right and right > left then tableWidth = right - left end
+    end
     if resetScroll == true then
         controller.scrollFrame.offset = 0
         controller.scrollFrame:SetVerticalScroll(0)
@@ -817,8 +822,8 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     local scrollbar = getglobal("MuklaOfficerSuiteRosterScrollFrameScrollBar")
     if scrollbar then
         scrollbar:ClearAllPoints()
-        scrollbar:SetPoint("TOPLEFT", page.tableViewport, "TOPRIGHT", 2, -16)
-        scrollbar:SetPoint("BOTTOMLEFT", page.tableViewport, "BOTTOMRIGHT", 2, 16)
+        scrollbar:SetPoint("TOPRIGHT", body, "TOPRIGHT", -6, rowsTop - 16)
+        scrollbar:SetPoint("BOTTOMRIGHT", page.tableViewport, "BOTTOMRIGHT", rightInset - 6, 16)
     end
     if selectedName and (selectedName ~= controller.lastSelectedName or visibleRowCount ~= controller.lastVisibleRowCount or availableHeight ~= controller.lastViewportHeight or tableWidth ~= controller.lastTableWidth) then
         local memberIndex
@@ -842,7 +847,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     page.measuredOffset = offset
     page.measuredCount = table.getn(visibleMembers)
     page.measuredHeight = availableHeight
-    page.measuredWidth = page.tableViewport:GetWidth()
+    page.measuredWidth = tableWidth
     page.measuredShown = 0
     local rowY = 0
     local i
@@ -851,7 +856,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
         local row = rows[i]
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", 0, rowY)
-        row:SetWidth(tableWidth)
+        row:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, rowY)
         row.detailWidth = math.max(1, math.min(640, tableWidth - 8))
         row.availableHeight = math.max(rowHeight, availableHeight + rowY)
         if member and i <= visibleRowCount and -rowY + rowHeight <= availableHeight then
@@ -1099,8 +1104,6 @@ function RosterManagement.AttachInteractions(options)
         if this.memberReport then this.memberReport:Hide() end
         if this.noteEditor then this.noteEditor:Hide() end
         MOS.UI.Components.SetSurfaceBorderVisible(options.contentPanel, true)
-        options.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90)
-        options.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
         options.contentShade:Show()
     end)
 end
@@ -1113,7 +1116,7 @@ local function PlaceRosterFilter(page, control, visible, controlWidth, x, y)
 end
 
 function RosterManagement.UpdateSectionHeader(page)
-    local shift = MuklaOfficerSuiteDB.rosterHideSectionHeader and 32 or 0
+    local shift = MuklaOfficerSuiteDB.rosterHideSectionHeader and 42 or 0
     if page.sectionTitle then if shift > 0 then page.sectionTitle:Hide() else page.sectionTitle:Show() end end
     return shift
 end

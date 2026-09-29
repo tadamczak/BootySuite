@@ -117,7 +117,7 @@ function Navigation.Create(options)
         local _, sectionTop, sectionBottom, tabTop = MOS.UI.Components.Dashboard.GetChromeLayout(options.get, MOS.UI.Components.IsClassicSkin())
         if tabs then
             options.sidebar:Hide(); options.toggleButton:Hide()
-            local margin = MOS.UI.Components.IsClassicSkin() and 4 or 9
+            local margin = options.get("hideHeaderBar") and 1 or (MOS.UI.Components.IsClassicSkin() and 4 or 9)
             local bottom = options.get("hideStatusVersionBar") and margin or margin + 28
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, bottomTabs and sectionTop or tabTop - 28); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -margin, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
@@ -158,8 +158,8 @@ function Navigation.Create(options)
                 options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 9, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 9, sectionBottom); options.sidebar:SetWidth(collapsed and 54 or 174)
             end
             options.contentPanel:ClearAllPoints()
-            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 49 or 153, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, sectionBottom)
-            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 64 or 184, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -9, sectionBottom) end
+            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 49 or 153, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", options.get("hideHeaderBar") and -1 or -4, sectionBottom)
+            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 64 or 184, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", options.get("hideHeaderBar") and -1 or -9, sectionBottom) end
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
