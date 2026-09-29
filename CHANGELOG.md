@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.13 - 2026-09-29
+
+- Added a symmetric center-out red-button hover gradient.
+- Saved-raid borders now use the same surface and gold hover as dropdown options.
+
 ## 0.5.0-dev.12 - 2026-09-29
 
 - Red action buttons now use white hover text and an inset gradient highlight while keeping their resting border unchanged.

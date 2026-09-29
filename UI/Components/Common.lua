@@ -116,13 +116,15 @@ function UI.ApplySelectionListStyle(buttons, items, selectedId, loadButton)
         if selected then selectedAvailable = true end
         local color = selected and selectedColors or normalColors
         local border = selected and { 0.85, 0.68, 0.22, 1 } or { 0.48, 0.38, 0.20, 1 }
+        if not buttons[index].mosClassicKeepNormalSurface then
         buttons[index]:SetBackdropColor(color[1], color[2], color[3], color[4])
         buttons[index]:SetBackdropBorderColor(border[1], border[2], border[3], border[4])
+        end
         if UI.SetClassicButtonSelected then UI.SetClassicButtonSelected(buttons[index], selected) end
-        if buttons[index].mosClassicKeepNormalSurface then buttons[index]:SetBackdropBorderColor(0, 0, 0, 0) end
+        if buttons[index].mosClassicKeepNormalSurface then UI.ApplyDropdownChoiceSurface(buttons[index]) end
         -- Hover handlers restore mosNormalBorder on mouse leave. Keep that
         -- persistent state aligned with the current selection style.
-        if buttons[index].mosNormalBorder then buttons[index].mosNormalBorder = border end
+        if buttons[index].mosNormalBorder and not buttons[index].mosClassicKeepNormalSurface then buttons[index].mosNormalBorder = border end
     end
     if loadButton then UI.SetButtonEnabled(loadButton, selectedAvailable) end
     return selectedAvailable

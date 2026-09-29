@@ -2,7 +2,7 @@
 ## Title: Mukla Officer Suite
 ## Notes: Guild officer dashboard and persistent guild roster.
 ## Author: Mukla
-## Version: 0.5.0-dev.12
+## Version: 0.5.0-dev.13
 ## X-Release-Version: 0.4.0
 ## SavedVariables: MuklaOfficerSuiteDB
 

@@ -78,72 +78,28 @@ local function CreateClassicHoverOutline(frame, path, fullEdges)
     return outline
 end
 
-local function SolidTexture(button, layer, r, g, b, a)
-    local texture = button:CreateTexture(nil, layer)
-    texture:SetTexture("Interface\\Buttons\\WHITE8X8")
-    texture:SetVertexColor(r, g, b, a); texture:SetAllPoints(button)
-    return texture
-end
-
-local function SolidOutline(button, layer)
-    local edges, index = {}, nil
-    for index = 1, 4 do
-        local edge = SolidTexture(button, layer, 0.82, 0.70, 0.43, 1)
-        edge:ClearAllPoints()
-        if index <= 2 then
-            local side = index == 1 and "TOP" or "BOTTOM"
-            edge:SetPoint(side .. "LEFT", button, side .. "LEFT", 0, 0)
-            edge:SetPoint(side .. "RIGHT", button, side .. "RIGHT", 0, 0); edge:SetHeight(1)
-        else
-            local side = index == 3 and "LEFT" or "RIGHT"
-            edge:SetPoint("TOP" .. side, button, "TOP" .. side, 0, -1)
-            edge:SetPoint("BOTTOM" .. side, button, "BOTTOM" .. side, 0, 1); edge:SetWidth(1)
-        end
-        edges[index] = edge
-    end
-    return edges
+function UI.ApplyDropdownChoiceSurface(button)
+    button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+    button:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
+    if button.mosClassicSelected then button:SetBackdropBorderColor(1, 0.78, 0.2, 1)
+    else button:SetBackdropBorderColor(0.35, 0.35, 0.35, 1) end
 end
 
 local function ApplySolidButton(entry)
     local button = entry.frame
-    if not entry.solidFill then
-        entry.solidFill = SolidTexture(button, "BACKGROUND", 0.08, 0.07, 0.05, 1)
-        entry.solidBorder = SolidOutline(button, "BORDER")
-        entry.selectionOutline = SolidOutline(button, "OVERLAY")
-        entry.solidHover = SolidTexture(button, "HIGHLIGHT", 1, 0.82, 0.28, 0.18)
-        entry.solidHoverBorder = SolidOutline(button, "HIGHLIGHT")
-    end
+    UI.ApplyDropdownChoiceSurface(button)
     button:EnableMouse(true)
-    button:SetBackdrop(nil); button:SetNormalTexture(nil)
     if button.mosHighlight then button.mosHighlight:Hide() end
     SetNineSliceShown(entry.classicSkin, false); SetNineSliceShown(entry.classicHoverBorder, false)
     SetNineSliceShown(entry.classicSelectedBorder, false)
     if entry.classicRedFill then entry.classicRedFill:Hide() end
-    entry.solidFill:Show()
-    entry.solidFill:SetVertexColor(0.045, 0.045, 0.04, 1)
-    local index
-    for index = 1, 4 do
-        entry.solidBorder[index]:SetVertexColor(0.35, 0.35, 0.32, 1); entry.solidBorder[index]:Show()
-        entry.solidHoverBorder[index]:Show()
-        if button.mosClassicSelected then entry.selectionOutline[index]:Show() else entry.selectionOutline[index]:Hide() end
-    end
-    -- Keep custom regions independent of native texture ownership on the 1.12 client.
-    entry.solidHover:Show()
-    button:SetHighlightTexture(nil)
-    button:SetPushedTexture(nil)
-    button:SetDisabledTexture(nil)
+    button:SetHighlightTexture(nil); button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
 end
 
 local function ApplyControl(entry)
     local button = entry.frame
     if Skins.current ~= "classic" or button.mosClassicVariant ~= "red" then entry.hovered = nil end
     local solid = button.mosClassicKeepNormalSurface
-    if not solid and entry.solidFill then
-        entry.solidFill:Hide(); entry.solidHover:Hide()
-        local index
-        for index = 1, 4 do entry.solidBorder[index]:Hide(); entry.solidHoverBorder[index]:Hide(); entry.selectionOutline[index]:Hide() end
-        button:SetHighlightTexture(nil); button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
-    end
     if Skins.current == "classic" then
         local useSelectedSurface = button.mosClassicSelected and not button.mosClassicKeepNormalSurface
         local variant = useSelectedSurface and "red" or (button.mosClassicVariant or "dark")
@@ -177,10 +133,10 @@ local function ApplyControl(entry)
             SetNineSliceShown(entry.classicHoverBorder, false)
             if not entry.redHover then
                 entry.redHover = button:CreateTexture(nil, "HIGHLIGHT")
-                entry.redHover:SetTexture("Interface\\Buttons\\UI-Panel-Button-Highlight")
-                entry.redHover:SetTexCoord(0.1, 0.9, 0.2, 0.8)
+                entry.redHover:SetTexture(ClassicPath("Buttons\\red-hover-radial.tga"))
+                entry.redHover:SetTexCoord(0, 1, 0, 1)
                 entry.redHover:SetBlendMode("ADD")
-                entry.redHover:SetVertexColor(1, 0.65, 0.45, 0.65)
+                entry.redHover:SetVertexColor(1, 1, 1, 1)
                 entry.redHover:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -5)
                 entry.redHover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 5)
             end
@@ -233,9 +189,7 @@ local function ApplyControl(entry)
             SetNineSliceShown(entry.classicSkin, false)
             SetNineSliceShown(entry.classicHoverBorder, false)
             SetNineSliceShown(entry.classicSelectedBorder, false)
-            button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
-            button:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
-            button:SetBackdropBorderColor(0.35, 0.35, 0.35, 1)
+            UI.ApplyDropdownChoiceSurface(button)
             button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
             if button.label then
                 button.label:ClearAllPoints()
@@ -294,6 +248,7 @@ local function GoldHoverEnter()
 end
 
 local function GoldHoverLeave()
+    if this.mosClassicKeepNormalSurface and this.mosClassicSelected then this:SetBackdropBorderColor(1, 0.78, 0.2, 1); return end
     local color = this.mosNormalBorder
     if color then this:SetBackdropBorderColor(color[1], color[2], color[3], color[4]) end
 end

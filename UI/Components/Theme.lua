@@ -68,7 +68,9 @@ function UI.CreateSelectionButton(parent, name, text, width, height)
     local button = CreateFrame("Button", name, parent)
     button.mosClassicKeepNormalSurface = true
     button:SetWidth(width or 120); button:SetHeight(height or UI.Theme.sizes.buttonHeight)
-    return UI.StyleButton(button, text)
+    UI.StyleButton(button, text)
+    UI.AttachGoldHoverBorder(button, 0.35, 0.35, 0.35, 1)
+    return button
 end
 
 function UI.SetButtonLabelInsets(button, left, right)
