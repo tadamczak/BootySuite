@@ -8,7 +8,7 @@ function Dashboard.GetChromeLayout(get, classic)
     local normalHeight = classic and 44 or 32
     local topTabs = get("menuStyle") == "tabs"
     local headerHeight = topTabs and 20 or (compact and 30 or normalHeight)
-    local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 30 or 33)
+    local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 26 or 31)
     if get("hideHeaderBar") then return 0, -1, bottom, -1 end
     local top = -(topTabs and 1 or (classic and 8 or 14)) - headerHeight
     return headerHeight, top, bottom, top
@@ -179,9 +179,6 @@ function Dashboard.CreateWindow(version)
     view.contentPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     view.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90); view.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)
     MOS.UI.Components.RegisterSkinnedSurface(view.contentPanel, "content", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } }, { 0.02, 0.02, 0.02, 0.90 }, { 0.36, 0.36, 0.34, 1 })
-    MOS.UI.Components.SetSurfaceThinOutline(view.sidebar, true, false)
-    MOS.UI.Components.SetSurfaceThinOutline(view.titleBar, false, true)
-    MOS.UI.Components.SetSurfaceThinOutline(view.contentPanel, true, false)
     view.pageHost = MOS.UI.Components.CreateContainer(nil, view.contentPanel)
     view.pageHost:SetAllPoints(view.contentPanel); view.contentPanel.mosPageHost = view.pageHost
     local background = view.sidebar:CreateTexture(nil, "BACKGROUND")
@@ -264,7 +261,7 @@ function Dashboard.CreatePages(contentPanel, definitions)
         local definition = definitions[index]
         local page = CreateFrame("Frame", nil, contentPanel)
         if definition.anchor then page:SetAllPoints(pages[definition.anchor])
-        elseif definition.key == "roster" then page:SetAllPoints(contentPanel)
+
         else
             page:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 1.5, -3)
             page:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -1.5, 1.5)

@@ -319,6 +319,12 @@ local function ApplySurface(entry)
             t[7]:SetTexCoord(0, 6/32, 6/32, 26/32); t[9]:SetTexCoord(26/32, 1, 6/32, 26/32); t[8]:Hide()
         end
     end
+    if frame.mosSeparatorsOnly and entry.classicSkin then
+        local t = entry.classicSkin.textures
+        local index
+        for index = 1, 9 do if index ~= 2 or not frame.mosJoinedTop then t[index]:Hide() end end
+        if entry.classicFill then entry.classicFill:Hide() end
+    end
     if frame.mosThinOutline and entry.classicSkin then
         local t = entry.classicSkin.textures
         t[1]:Hide(); t[3]:Hide(); t[7]:Hide(); t[9]:Hide()
@@ -627,6 +633,6 @@ end
 
 function UI.JoinSurfaceEdges(frame, top, bottom)
     frame.mosJoinedTop = top; frame.mosJoinedBottom = bottom
-    frame.mosThinOutline = true; frame.mosKeepTopSeparator = top
+    frame.mosSeparatorsOnly = true
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end

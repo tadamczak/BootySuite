@@ -739,13 +739,7 @@ function RosterManagement.SetDataVisible(controller, visible)
     local page = controller.page
     local controls = controller.controls
     page.fittedPanel:Hide()
-    MOS.UI.Components.SetSurfaceBorderVisible(controller.contentPanel, not visible)
     if page.tablePanel then page.tablePanel[method](page.tablePanel); page.actionsPanel[method](page.actionsPanel) end
-    if visible then
-        controller.contentShade:Hide()
-    else
-        controller.contentShade:Show()
-    end
     controls.footer.rule:Hide()
     controls.filtersLabel[method](controls.filtersLabel)
     controls.searchLabel[method](controls.searchLabel)
@@ -788,6 +782,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     local rowHeight = controller.rowHeight
     local body = page.tablePanel or page
     local panelWidth = page:GetWidth()
+    page.rowsHeaderY = headerY
     local rowsTop = headerY - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24)
     local bottom = 34 + (page.summaryWrap and 22 or 0)
     local availableHeight = page.tablePanel and math.max(0, (page.tablePanelHeight or 0) + rowsTop - bottom) or math.max(0, page.tableViewport:GetHeight())
@@ -802,7 +797,6 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
         page.tableViewport:SetPoint("TOPLEFT", body, "TOPLEFT", 6, rowsTop)
         page.tableViewport:SetPoint("TOPRIGHT", body, "TOPRIGHT", -rightInset, rowsTop)
     end
-    page.tableViewport:SetHeight(availableHeight)
     -- Measure settled native edges, not a width captured before parent anchors resolve.
     if page.tableViewport.GetLeft and page.tableViewport.GetRight then
         local left, right = page.tableViewport:GetLeft(), page.tableViewport:GetRight()
@@ -818,7 +812,6 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     controller.scrollFrame:ClearAllPoints()
     controller.scrollFrame:SetPoint("TOPLEFT", page.tableViewport, "TOPLEFT", 0, 0)
     controller.scrollFrame:SetPoint("TOPRIGHT", page.tableViewport, "TOPRIGHT", 0, 0)
-    controller.scrollFrame:SetHeight(availableHeight)
     local scrollbar = getglobal("MuklaOfficerSuiteRosterScrollFrameScrollBar")
     if scrollbar then
         scrollbar:ClearAllPoints()
@@ -846,7 +839,6 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     page.measuredCapacity = visibleRowCount
     page.measuredOffset = offset
     page.measuredCount = table.getn(visibleMembers)
-    page.measuredHeight = availableHeight
     page.measuredWidth = tableWidth
     page.measuredShown = 0
     local rowY = 0
@@ -867,6 +859,9 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
         end
     end
     page.renderedRowsHeight = -rowY
+    page.measuredHeight = page.tablePanel and -rowY or availableHeight
+    if page.tablePanel then page.tableViewport:SetHeight(-rowY) end
+    controller.scrollFrame:SetHeight(page.measuredHeight)
     controller.rendering = nil
 end
 
@@ -985,11 +980,15 @@ function RosterManagement.LayoutSummary(page, summary)
     local panel = page.tablePanel or page
     local width = page:GetWidth()
     summary:ClearAllPoints()
-    summary:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 6, 10 + (page.summaryWrap and 22 or 0))
+    if page.renderedRowsHeight then
+        summary:SetPoint("TOPLEFT", page.tableViewport, "BOTTOMLEFT", 0, -10)
+    else summary:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 6, 10 + (page.summaryWrap and 22 or 0)) end
     summary:SetHeight(14); summary:SetJustifyV("MIDDLE")
     summary:SetWidth(math.max(1, width - (page.summaryWrap and 12 or page.modeButton.label:GetStringWidth() + page.modeButton:GetWidth() + 22)))
     page.modeButton:ClearAllPoints()
-    page.modeButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -6, 6)
+    if page.renderedRowsHeight then
+        page.modeButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -6, (page.rowsHeaderY or 0) - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24) - page.renderedRowsHeight - 6 - (page.summaryWrap and 22 or 0))
+    else page.modeButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -6, 6) end
 end
 
 function RosterManagement.SetReady(controller, ready)
@@ -1103,8 +1102,6 @@ function RosterManagement.AttachInteractions(options)
         if this.memberMenu then this.memberMenu:Hide() end
         if this.memberReport then this.memberReport:Hide() end
         if this.noteEditor then this.noteEditor:Hide() end
-        MOS.UI.Components.SetSurfaceBorderVisible(options.contentPanel, true)
-        options.contentShade:Show()
     end)
 end
 

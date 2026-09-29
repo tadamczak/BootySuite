@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.40 - 2026-09-30
+
+- Restore the previous main-window frame and share the same stable content border across Roster and Raid.
+- Keep roster section separators and place member counts/status directly after visible rows.
+- Balance Settings header spacing, restrict thin gold sides to Settings and join content to the bottom status bar.
+
 ## 0.5.0-dev.39 - 2026-09-30
 
 - Let GMOTD text track the full native section width instead of a sampled width.
