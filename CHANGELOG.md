@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.10 - 2026-09-29
+
+- Rebuilt red action and saved-raid button visuals with solid borders and native hover/pressed states.
+- Matched LM and Master Loot title gold, reduced the Reycoin icon and replaced side-panel square grips with diagonal resize handles.
+
 ## 0.5.0-dev.9 - 2026-09-29
 
 - Fixed Raid Settings accordion spacing and profile feedback for save-before-switch actions.
