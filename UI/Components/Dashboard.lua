@@ -25,14 +25,8 @@ function Dashboard.CreateWindow(version)
     frame.mosLootBorder = view.lootBorder
     frame:Hide()
 
-    view.resizeGrip = CreateFrame("Button", nil, frame)
+    view.resizeGrip = MOS.UI.Components.CreateResizeGrip(frame)
     frame.mosResizeGrip = view.resizeGrip
-    view.resizeGrip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -7, 7)
-    view.resizeGrip:SetWidth(18); view.resizeGrip:SetHeight(18)
-    view.resizeGrip:SetFrameLevel(frame:GetFrameLevel() + 100)
-    view.resizeGrip.texture = view.resizeGrip:CreateTexture(nil, "OVERLAY")
-    view.resizeGrip.texture:SetAllPoints(view.resizeGrip)
-    view.resizeGrip.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
 
     view.titleBar = CreateFrame("Frame", nil, frame)
     view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14)
@@ -141,13 +135,9 @@ function Dashboard.CreateWindow(version)
         if classic then
             view.sidebarToggle:SetParent(view.sidebar); view.sidebarToggle:ClearAllPoints(); view.sidebarToggle:SetPoint("TOPRIGHT", view.sidebar, "TOPRIGHT", -7, -7); view.sidebarToggle:SetWidth(18); view.sidebarToggle:SetHeight(18)
             view.sidebarToggle.label:SetText(""); view.sidebarToggleClassicIcon:Show()
-            view.resizeGrip.texture:SetTexture(MOS.UI.Components.ClassicAsset("Icons\\resize.tga")); view.resizeGrip.texture:SetVertexColor(1, 0.78, 0.24)
-            view.resizeGrip.texture:ClearAllPoints(); view.resizeGrip.texture:SetPoint("CENTER", view.resizeGrip, "CENTER", 0, 0); view.resizeGrip.texture:SetWidth(13); view.resizeGrip.texture:SetHeight(13)
         else
             view.sidebarToggle:SetParent(view.titleBar); view.sidebarToggle:ClearAllPoints(); view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 5, 0); view.sidebarToggle:SetWidth(28); view.sidebarToggle:SetHeight(20)
             view.sidebarToggleClassicIcon:Hide()
-            view.resizeGrip.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up"); view.resizeGrip.texture:SetVertexColor(1, 1, 1)
-            view.resizeGrip.texture:ClearAllPoints(); view.resizeGrip.texture:SetAllPoints(view.resizeGrip)
         end
     end)
     return view

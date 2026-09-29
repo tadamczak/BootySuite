@@ -1,6 +1,29 @@
 local MOS = MuklaOfficerSuite
 local UI = MOS.UI.Components
 
+function UI.CreateResizeGrip(parent)
+    local grip = UI.CreateControl(nil, parent)
+    grip:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -7, 7)
+    grip:SetWidth(18); grip:SetHeight(18)
+    grip:SetFrameLevel(parent:GetFrameLevel() + 100)
+    grip.texture = grip:CreateTexture(nil, "OVERLAY")
+    local function ApplySkin(skin)
+        grip.texture:ClearAllPoints()
+        if skin == "classic" then
+            grip.texture:SetTexture(UI.ClassicAsset("Icons\\resize.tga"))
+            grip.texture:SetVertexColor(1, 0.78, 0.24)
+            grip.texture:SetPoint("CENTER", grip, "CENTER", 0, 0)
+            grip.texture:SetWidth(13); grip.texture:SetHeight(13)
+        else
+            grip.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+            grip.texture:SetVertexColor(1, 1, 1); grip.texture:SetAllPoints(grip)
+        end
+    end
+    ApplySkin(UI.IsClassicSkin() and "classic" or "default")
+    UI.RegisterSkinCallback(ApplySkin)
+    return grip
+end
+
 function UI.ShortenText(text, length)
     text = tostring(text or "")
     if string.len(text) > length then return string.sub(text, 1, length - 1) .. "~" end
