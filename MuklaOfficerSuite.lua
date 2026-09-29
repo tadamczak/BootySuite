@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.35"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.36"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -147,7 +147,7 @@ MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
 detachedSettingsWindow.AttachView(settingsView)
 dashboardView.settingsButton:SetScript("OnClick", function() detachedSettingsWindow.Toggle() end)
 
-local performanceModule = MOS.Modules.Performance.Create(contentPanel)
+local performanceModule = MOS.Modules.Performance.Create(contentPanel.mosPageHost or contentPanel)
 
 scanProgress = MOS.UI.Components.ProgressBar.Create(UIState.statusBar, 280, 16)
 scanProgress:SetPoint("LEFT", UIState.statusBar, "LEFT", 4, 0)

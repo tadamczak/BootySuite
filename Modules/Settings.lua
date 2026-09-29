@@ -51,16 +51,16 @@ function Settings.LayoutGeneral(page)
     page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
     local menu = page.menuStyleControl
     menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 28)
-    local menuWidth = menu.fieldLabel:GetStringWidth() + 10 + menu:GetWidth()
     local check = page.iconTabsCheck
     local iconVisible = state.layout and (MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs")
     if iconVisible then check:Show() else check:Hide() end
     if state.layout then menu:Show(); menu.fieldLabel:Show()
     else menu:Hide(); menu.fieldLabel:Hide(); menu.panel:Hide() end
-    local checkWidth = check:GetWidth() + 4 + check.label:GetStringWidth()
-    local wrap = (menuWidth + 14 + checkWidth > page:GetWidth() - 60) and check:IsVisible()
-    check:ClearAllPoints(); check:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", wrap and 20 or 24 + menuWidth + 14, headingY - 28 - (wrap and 28 or 0))
-    local extent = -headingY + (state.layout and (56 + (wrap and 28 or 0)) or 28)
+    for index = 1, table.getn(page.chromeChecks) do
+        if state.layout then page.chromeChecks[index]:Show() else page.chromeChecks[index]:Hide() end
+    end
+    local layoutHeight = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.layoutGrid, 20, headingY - 56, page:GetWidth() - 56, 28)
+    local extent = -headingY + (state.layout and (64 + layoutHeight) or 28)
     page.uiContent:SetHeight(extent)
     return extent - 224
 end
@@ -123,6 +123,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 224, -94, "Turn off addon login message", "suppressLoginMessage")
     local minimapCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideMinimapIcon", 20, -94, "Hide minimap icon", "hideMinimapIcon", nil, nil, options.minimapVisibilityChanged)
     page.chromeChecks = {
+        Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderBar", 20, -122, "Hide header bar", "hideHeaderBar", nil, nil, onNavigationLayout),
         Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideStatusBar", 20, -122, "Hide status and version bar", "hideStatusVersionBar", nil, nil, onNavigationLayout),
         Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderLogo", 20, -150, "Hide header logo", "hideHeaderLogo", nil, nil, onNavigationLayout),
         Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderName", 224, -150, "Hide header name", "hideHeaderName", nil, nil, onNavigationLayout),
@@ -135,7 +136,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         if onNavigationLayout then onNavigationLayout() end
     end)
     local iconTabsCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteUseIconTabs", 330, -204, "Use Icon Tabs", "useIconTabs", nil, nil, onNavigationLayout)
-    page.generalGrid = { minimapCheck, loginMessageCheck, page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3] }
+    page.generalGrid = { minimapCheck, loginMessageCheck }
+    page.layoutGrid = { page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3], page.chromeChecks[4], iconTabsCheck }
     page.uiLayoutHeading = layoutHeading
     page.iconTabsCheck = iconTabsCheck
     page.skinControl = skinControl

@@ -13,6 +13,7 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.hideMinimapIcon == nil then MuklaOfficerSuiteDB.hideMinimapIcon = MuklaOfficerSuiteDB.minimap.hidden and true or false end
     if MuklaOfficerSuiteDB.hideStatusVersionBar == nil then MuklaOfficerSuiteDB.hideStatusVersionBar = false end
     if MuklaOfficerSuiteDB.hideHeaderLogo == nil then MuklaOfficerSuiteDB.hideHeaderLogo = false end
+    if MuklaOfficerSuiteDB.hideHeaderBar == nil then MuklaOfficerSuiteDB.hideHeaderBar = false end
     if MuklaOfficerSuiteDB.hideHeaderName == nil then MuklaOfficerSuiteDB.hideHeaderName = false end
     if MuklaOfficerSuiteDB.suppressLoginMessage == nil then MuklaOfficerSuiteDB.suppressLoginMessage = false end
     MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
