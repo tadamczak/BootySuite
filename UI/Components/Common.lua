@@ -161,6 +161,20 @@ function UI.CreateDropdownButton(parent, name, text, width)
     return button
 end
 
+function UI.RefreshDropdownLayers(panel, toggle)
+    local strata = toggle:GetFrameStrata()
+    local level = math.max(toggle:GetFrameLevel(), toggle:GetParent():GetFrameLevel()) + 20
+    panel:SetFrameStrata(strata); panel:SetFrameLevel(level)
+    panel.dismiss:SetFrameStrata(strata); panel.dismiss:SetFrameLevel(level - 1)
+    local index
+    for index = 1, table.getn(panel.options) do
+        local option = panel.options[index]
+        option:SetFrameStrata(strata); option:SetFrameLevel(level + 1)
+        if option.labelHit then option.labelHit:SetFrameStrata(strata); option.labelHit:SetFrameLevel(level + 2) end
+    end
+    if panel.selectAll then panel.selectAll:SetFrameStrata(strata); panel.selectAll:SetFrameLevel(level + 1) end
+end
+
 function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     local panel = CreateFrame("Frame", nil, UIParent)
     panel:SetPoint("TOPLEFT", toggle, "BOTTOMLEFT", 0, -2)
@@ -181,7 +195,7 @@ function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     dismiss:Hide()
     panel.dismiss = dismiss
     panel.options = {}
-    panel:SetScript("OnShow", function() dismiss:Show() end)
+    panel:SetScript("OnShow", function() UI.RefreshDropdownLayers(panel, toggle); dismiss:Show() end)
     panel:SetScript("OnHide", function() dismiss:Hide() end)
     panel:Hide()
     return panel

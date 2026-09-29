@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.18 - 2026-09-29
+
+- Keep LM Config fields and dropdown options above their panel backgrounds after reparenting.
+
 ## 0.5.0-dev.17 - 2026-09-29
 
 - Add Auto Loot, Shift Loot and Off modes to LM Config.
