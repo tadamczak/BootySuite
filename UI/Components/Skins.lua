@@ -441,7 +441,7 @@ function UI.SetNavigationTabBorder(frame, visible)
     UI.SetOpenButtonBorder(frame, visible, frame.navigationBottom and "top" or "bottom")
     if visible and frame.openBorder then
         if frame.navigationSelected then frame.openBorder.border:SetBackdropBorderColor(1, 0.78, 0.2, 1)
-        else frame.openBorder.border:SetBackdropBorderColor(0.40, 0.36, 0.25, 1) end
+        else frame.openBorder.border:SetBackdropBorderColor(0.62, 0.54, 0.34, 1) end
     end
 end
 

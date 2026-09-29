@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.33 - 2026-09-29
+
+- Stabilize three-sided tab borders, retain active highlights and use sidebar backgrounds.
+- Let bottom tabs protrude when the status bar is hidden.
+- Rename Raid and shorten crowded Raid Statistics/Performance tabs to Stats/Perf.
+
 ## 0.5.0-dev.32 - 2026-09-29
 
 - Measure roster columns from content and use the complete available width.

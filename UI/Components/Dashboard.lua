@@ -14,6 +14,26 @@ end
 
 local function SetChromeVisible(region, shown) if shown then region:Show() else region:Hide() end end
 
+function Dashboard.SetTabBody(view, protruding)
+    local frame = view.frame
+    if protruding then
+        if not view.tabBody then
+            local body = MOS.UI.Components.CreateContainer(nil, frame)
+            body:EnableMouse(false); body:SetFrameLevel(frame:GetFrameLevel())
+            body:SetBackdrop(frame.mosWindowBackdrop)
+            body:SetBackdropColor(0.02, 0.02, 0.02, 0.98); body:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
+            body:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0); body:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 30)
+            view.tabBody = body
+        end
+        frame:SetBackdropColor(0, 0, 0, 0); frame:SetBackdropBorderColor(0, 0, 0, 0)
+        view.tabBody:Show()
+    elseif view.tabBody then
+        view.tabBody:Hide()
+        frame:SetBackdropColor(0.02, 0.02, 0.02, 0.98); frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
+    end
+    view.tabsProtruding = protruding
+end
+
 function Dashboard.ApplyChrome(view, get)
     if view.minimized then return end
     local classic = MOS.UI.Components.IsClassicSkin()
@@ -28,11 +48,12 @@ function Dashboard.ApplyChrome(view, get)
     SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo"))
     local footer = not get("hideStatusVersionBar")
+    Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()))
     if view.frame.mosStatusBar then SetChromeVisible(view.frame.mosStatusBar, footer) end
     SetChromeVisible(view.versionText, footer)
     SetChromeVisible(view.resizeGrip.texture, footer)
     view.resizeGrip:ClearAllPoints()
-    view.resizeGrip:SetPoint("BOTTOMRIGHT", view.frame, "BOTTOMRIGHT", footer and -7 or 0, footer and 7 or 0)
+    view.resizeGrip:SetPoint("BOTTOMRIGHT", view.tabsProtruding and view.tabBody or view.frame, "BOTTOMRIGHT", footer and -7 or 0, footer and 7 or 0)
 end
 
 function Dashboard.CreateWindow(version)
@@ -46,7 +67,8 @@ function Dashboard.CreateWindow(version)
     if frame.SetClampedToScreen then frame:SetClampedToScreen(true) end
     frame:SetMinResize(350, 380); frame:SetMaxResize(1100, 760)
     frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
-    frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+    frame.mosWindowBackdrop = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
+    frame:SetBackdrop(frame.mosWindowBackdrop)
     frame:SetBackdropColor(0.02, 0.02, 0.02, 0.98); frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
     view.lootBorder = CreateFrame("Frame", nil, frame)
     view.lootBorder:SetAllPoints(frame); view.lootBorder:EnableMouse(false)
@@ -276,6 +298,7 @@ function Dashboard.BindWindow(view, options)
         else
             view.widthBeforeMinimize = frame:GetWidth(); view.heightBeforeMinimize = frame:GetHeight(); view.leftBeforeMinimize = frame:GetLeft(); view.bottomBeforeMinimize = frame:GetBottom()
             options.saveGeometry()
+            Dashboard.SetTabBody(view, false)
             view.minimized = true
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end

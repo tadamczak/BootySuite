@@ -13,7 +13,7 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - [Commands](#commands)
 - [Roster](#roster)
 - [Guild Statistics](#guild-statistics)
-- [Raid Management](#raid-management)
+- [Raid](#raid)
 - [Loot Master Mode](#loot-master-mode)
 - [Raid Statistics](#raid-statistics)
 - [CSR](#csr)
@@ -70,7 +70,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Rank overview -** Review the saved roster grouped by guild rank.
 - **Level 60 filter -** Limit statistics to max-level characters.
 
-### Raid Management
+### Raid
 
 - **Raid sessions -** Start a new raid, continue an active session, save it, or load a saved session.
 - **Raid type -** Assign Blackwing Lair, Molten Core, Onyxia's Lair, Karazhan10, Zul'Gurub, or Other.
@@ -123,23 +123,23 @@ In **LM Config**, set **LM Auto Loot** to **Auto Loot**, **Shift Loot** (hold Sh
 
 **UI > General** can hide the status/version bar, guild logo, or addon name and ornaments. All three options default to off. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. These preferences are saved in profiles under **Profile > General**. Hiding every roster filter also removes its empty row.
 
-**Hide section header** is in **UI > Roster > Layout** and **UI > Raid Management > General**.
+**Hide section header** is in **UI > Roster > Layout** and **UI > Raid > General**.
 
 Under **UI > Roster > Layout**, choose visible columns, filters and column headers. Officer notes require guild permission. Hidden class, rank and search filters do not restrict results. These preferences are saved in profiles. Show Player Status switches between guild columns (name, zone, level, class) and player-status columns (name, rank, notes, last online). Column preferences apply within each mode; both Officer note and its Settings checkbox require permission. Export Roster is in Guild Statistics; Refresh Data and guild actions stay at the bottom of Roster. Member counts and the status switch follow the last visible row, while columns share the available width according to their contents. The main window can be narrowed to 350 pixels. Resize Settings by dragging its unmarked bottom-right corner; UI General and Layout expand independently, and its single-line options adapt to up to four measured columns, down to a 350-pixel window.
 
-Under **UI > Layout**, choose **Tab view** or **Bottom Tab view** to reveal **Use Icon Tabs**. Bottom Tab view places navigation below the content. Text and icon tabs join the content frame; the selected tab keeps its gold outline and highlight while inactive tabs are recessed. Enable it to replace tab captions with the sidebar icons and matching highlights.
+Under **UI > Layout**, choose **Tab view** or **Bottom Tab view** to reveal **Use Icon Tabs**. Bottom Tab view places navigation below the content; when the status bar is hidden, tabs extend beyond the bottom window frame. Narrow text tabs shorten Raid Statistics to Stats and Performance to Perf. Text and icon tabs join the content frame; the selected tab keeps its gold outline and highlight while inactive tabs are recessed. Enable it to replace tab captions with the sidebar icons and matching highlights.
 
 Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can be toggled by clicking either the checkbox or its label.
 
 - **Profiles -** Current profile shows the active configuration as text, with Save beside it. Select a saved profile under Load profile to enable Load, Delete and Export. New profile + Add creates and activates a copy of your current settings; Save updates the current profile, including pending percentage edits. Gold feedback appears beside the action buttons. Only the latest action remains visible; saving before Add or Load shows both results. Load and Add ask whether to save changed settings first. Delete requires confirmation; deleting the current snapshot leaves your live settings available to save again. Export opens saved settings for copying. Profiles exclude guild, raid and loot records.
-- **Collapsible sections -** Profile, UI (including Roster and Raid Management), and Debug start collapsed after reload. Expansion is remembered while playing and when reopening Settings.
+- **Collapsible sections -** Profile, UI (including Roster and Raid), and Debug start collapsed after reload. Expansion is remembered while playing and when reopening Settings.
 
 - **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live.
 - **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them.
 - **Settings window -** Settings reopen from the top with your current saved values.
 - **Resizable window -** Settings can be resized within the available game screen; long sections remain available through scrolling.
 - **Roster preferences -** General contains live tracking, while Layout contains class-color display settings.
-- **Raid Management -** Configure Loot Master opacity and related raid preferences.
+- **Raid -** Configure Loot Master opacity and related raid preferences.
 - **Logging -** Enable optional concise addon messages in chat.
 - **Reset options -** Restore supported settings to their defaults.
 
@@ -160,7 +160,7 @@ Repeated update checks retain a known newer version until your installed version
 
 1. Enter the raid instance.
 2. If no session is active, choose **Start New Raid** in the reminder.
-3. In Raid Management, enter the session name and select the raid type.
+3. In Raid, enter the session name and select the raid type.
 4. Start the raid session and confirm that the current roster is visible.
 5. If the session already exists, select it under **Saved raids** and choose **Load** instead.
 
@@ -170,7 +170,7 @@ Leaving the instance does not automatically discard the session. Choose **Contin
 
 1. Open **Raid Leader Tools** and choose **Import SR**.
 2. Paste or import the prepared Soft Reserve data.
-3. Review the warning cards in Raid Management.
+3. Review the warning cards in Raid.
 4. Use **Info** to inspect affected players.
 5. Use **Ping** when the raid must be informed.
 6. Use **Fix SR** only for reservations that should be removed.
@@ -227,7 +227,7 @@ Disabling **Save attendance** keeps the raid record but marks Attendance as Off.
 
 ### 7. Load or review a saved raid
 
-1. Open **Raid Management** to load and continue an unfinished saved session.
+1. Open **Raid** to load and continue an unfinished saved session.
 2. Select the raid under **Saved raids** and choose **Load**.
 3. Open **Raid Statistics** to review completed saved raids.
 4. Use **Edit** to change Attendance or CSR participation.

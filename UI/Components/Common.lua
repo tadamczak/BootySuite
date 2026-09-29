@@ -680,34 +680,48 @@ function UI.BindCheckboxLabel(checkbox, onChanged, width)
     return checkbox
 end
 
-local function FinishOpenBorderLayout()
-    this:SetScript("OnUpdate", nil)
-    if this.UpdateScrollChildRect then this:UpdateScrollChildRect() end
-    this:SetHorizontalScroll(0); this:SetVerticalScroll(this.mosOpenEdge == "top" and 8 or 0)
+local function SetOpenBorderColor(self, r, g, b, a)
+    local index
+    for index = 1, 8 do self.pieces[index]:SetVertexColor(r, g, b, a or 1) end
 end
 
 function UI.SetOpenButtonBorder(button, visible, openEdge)
-    local viewport = button.openBorder
-    if not visible then if viewport then viewport:SetScript("OnUpdate", nil); viewport:Hide() end; return end
-    if not viewport then
-        viewport = UI.CreateScrollFrame(nil, button)
-        viewport:SetAllPoints(button); viewport:EnableMouse(false)
-        viewport.border = UI.CreateContainer(nil, viewport); viewport.border:EnableMouse(false)
-        UI.ApplyDropdownChoiceSurface(viewport.border)
-        viewport.border:SetBackdropColor(0, 0, 0, 0)
-        viewport.border:SetBackdropBorderColor(1, 0.78, 0.2, 1)
-        viewport:SetScrollChild(viewport.border); button.openBorder = viewport
+    local border = button.openBorder
+    if not visible then if border then border:Hide() end; return end
+    if not border then
+        border = UI.CreateContainer(nil, button); border:EnableMouse(false); border:SetAllPoints(button)
+        border.pieces = {}; border.border = border
+        border.SetBackdropBorderColor = SetOpenBorderColor
+        local index
+        for index = 1, 8 do
+            local texture = border:CreateTexture(nil, "OVERLAY")
+            texture:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
+            local left, right = (index - 1) / 8 + 1 / 128, index / 8 - 1 / 128
+            if index == 3 or index == 4 then texture:SetTexCoord(left, 15/16, right, 15/16, left, 1/16, right, 1/16)
+            else texture:SetTexCoord(left, right, 1/16, 15/16) end
+            border.pieces[index] = texture
+        end
+        local corners = { "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }
+        for index = 5, 8 do
+            local texture = border.pieces[index]
+            texture:SetWidth(8); texture:SetHeight(8); texture:SetPoint(corners[index-4], border, corners[index-4], 0, 0)
+        end
+        border.pieces[3]:SetHeight(8); border.pieces[3]:SetPoint("TOPLEFT", border, "TOPLEFT", 8, 0); border.pieces[3]:SetPoint("TOPRIGHT", border, "TOPRIGHT", -8, 0)
+        border.pieces[4]:SetHeight(8); border.pieces[4]:SetPoint("BOTTOMLEFT", border, "BOTTOMLEFT", 8, 0); border.pieces[4]:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", -8, 0)
+        border:SetBackdropBorderColor(1, 0.78, 0.2, 1); button.openBorder = border
     end
-    viewport:SetFrameStrata(button:GetFrameStrata()); viewport:SetFrameLevel(button:GetFrameLevel() + 1)
-    viewport.border:SetFrameStrata(button:GetFrameStrata()); viewport.border:SetFrameLevel(viewport:GetFrameLevel() + 1)
-    viewport:ClearAllPoints(); viewport:SetAllPoints(button)
-    viewport:SetHorizontalScroll(0)
-    viewport.border:ClearAllPoints(); viewport.border:SetPoint("TOPLEFT", viewport, "TOPLEFT", 0, 0)
-    viewport.border:SetWidth(button:GetWidth()); viewport.border:SetHeight(button:GetHeight() + (openEdge and 8 or 0))
-    viewport:Show()
-    if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
-    viewport:SetVerticalScroll(openEdge == "top" and 8 or 0)
-    viewport.mosOpenEdge = openEdge; viewport:SetScript("OnUpdate", FinishOpenBorderLayout)
+    border:SetFrameStrata(button:GetFrameStrata()); border:SetFrameLevel(button:GetFrameLevel() + 1)
+    local index
+    for index = 1, 8 do border.pieces[index]:Show() end
+    if openEdge == "top" then border.pieces[3]:Hide(); border.pieces[5]:Hide(); border.pieces[6]:Hide()
+    elseif openEdge == "bottom" then border.pieces[4]:Hide(); border.pieces[7]:Hide(); border.pieces[8]:Hide() end
+    for index = 1, 2 do
+        local side = index == 1 and "LEFT" or "RIGHT"
+        local texture = border.pieces[index]; texture:ClearAllPoints(); texture:SetWidth(8)
+        texture:SetPoint("TOP"..side, border, "TOP"..side, 0, openEdge == "top" and 0 or -8)
+        texture:SetPoint("BOTTOM"..side, border, "BOTTOM"..side, 0, openEdge == "bottom" and 0 or 8)
+    end
+    border.mosOpenEdge = openEdge; border:Show()
 end
 
 function UI.FitButtonLabel(button, available)

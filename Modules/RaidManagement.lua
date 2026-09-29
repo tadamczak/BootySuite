@@ -15,7 +15,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.classicSummary:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -31); view.classicSummary:SetWidth(245); view.classicSummary:SetHeight(14); view.classicSummary:SetJustifyH("LEFT"); view.classicSummary:Hide()
     page.classicSummary = view.classicSummary
     view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
-    view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); view.title:SetText("Raid Management")
+    view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); view.title:SetText("Raid")
     view.classicRaidName = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     view.classicRaidName:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -10); view.classicRaidName:SetWidth(120); view.classicRaidName:SetJustifyH("LEFT"); view.classicRaidName:Hide()
     view.classicMeta = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
@@ -878,7 +878,7 @@ end
 
 function RaidManagement.ClearSessionHeader(page)
     page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide(); page.classicSummary:Hide()
-    page.refreshControls.title:SetText("Raid Management"); if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.raidHideSectionHeader then page.refreshControls.title:Hide() else page.refreshControls.title:Show() end
+    page.refreshControls.title:SetText("Raid"); if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.raidHideSectionHeader then page.refreshControls.title:Hide() else page.refreshControls.title:Show() end
 end
 
 function RaidManagement.RefreshPage(renderer)
@@ -907,11 +907,11 @@ function RaidManagement.RefreshPage(renderer)
             if issueCount > 0 then page.classicIssues:SetText(issueCount .. " SR issue" .. (issueCount == 1 and "" or "s")); page.classicIssues:Show() else page.classicIssues:Hide() end
         else
             page.refreshControls.title:Show(); page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide()
-            page.refreshControls.title:SetText("Raid Management - " .. tostring(raidId) .. " | " .. (attendance.raidName or "Unknown zone") .. " | " .. savedText)
+            page.refreshControls.title:SetText("Raid - " .. tostring(raidId) .. " | " .. (attendance.raidName or "Unknown zone") .. " | " .. savedText)
         end
     else
         page.refreshControls.title:Show(); page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide()
-        page.refreshControls.title:SetText("Raid Management")
+        page.refreshControls.title:SetText("Raid")
     end
     local lootMasterMode = renderer.isLootMasterMode()
     if lootMasterMode then

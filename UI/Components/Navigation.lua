@@ -3,6 +3,14 @@ local MOS = MuklaOfficerSuite
 MOS.UI.Components.Navigation = MOS.UI.Components.Navigation or {}
 local Navigation = MOS.UI.Components.Navigation
 
+function Navigation.FitTabCaption(button, available)
+    local label = button.label
+    label:ClearAllPoints(); label:SetPoint("CENTER", button, "CENTER", 0, 0)
+    label:SetText(button.navigationText); label:SetWidth(0); label:SetHeight(28)
+    if label:GetStringWidth() > available and button.navigationShortText then label:SetText(button.navigationShortText) end
+    label:SetWidth(math.max(1, available))
+end
+
 function Navigation.SetActive(buttons, activeName)
     local name, button
     for name, button in pairs(buttons) do
@@ -10,7 +18,7 @@ function Navigation.SetActive(buttons, activeName)
         button.navigationSelected = selected
         button.selectedFill:Hide(); button.hoverFill:Show()
         if button.navigationMode == "tabs" then
-            button:SetBackdrop({ bgFile = MOS.UI.Components.IsClassicSkin() and MOS.UI.Components.ClassicAsset("Surfaces\\black.tga") or "Interface\\DialogFrame\\UI-DialogBox-Background", tile = true, tileSize = 16, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
+            button:SetBackdrop({ bgFile = MOS.UI.Components.IsClassicSkin() and MOS.UI.Components.ClassicAsset("Surfaces\\sidebar.tga") or "Interface\\DialogFrame\\UI-DialogBox-Background", tile = true, tileSize = 16, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
             if MOS.UI.Components.IsClassicSkin() then button:SetBackdropColor(1, 1, 1, 1)
             else button:SetBackdropColor(0.04, 0.03, 0.02, 0.98) end; button:SetBackdropBorderColor(0, 0, 0, 0)
             button:SetHeight(selected and 30 or 26)
@@ -54,7 +62,7 @@ function Navigation.Create(options)
         button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
         local icon = MOS.UI.Components.CreateTexture(button, nil, "ARTWORK")
         icon:SetWidth(28); icon:SetHeight(28); icon:SetPoint("LEFT", button, "LEFT", 9, 0); icon:SetTexture(iconPath)
-        button.icon = icon
+        button.icon = icon; button.navigationText = text
         local iconBorder = MOS.UI.Components.CreateTexture(button, nil, "OVERLAY")
         iconBorder:SetWidth(36); iconBorder:SetHeight(36); iconBorder:SetPoint("CENTER", icon, "CENTER", 0, 0); iconBorder:SetTexture("Interface\\Buttons\\UI-Quickslot2")
         button.iconBorder = iconBorder
@@ -70,7 +78,7 @@ function Navigation.Create(options)
             MOS.UI.Components.SetNavigationTabBorder(button, visible)
         end
         button.SetTabBorderVisible(false)
-        button.selectedFill = MOS.UI.Components.CreateTexture(button, nil, "BACKGROUND")
+        button.selectedFill = MOS.UI.Components.CreateTexture(button, nil, "BORDER")
         button.selectedFill:SetAllPoints(button); button.selectedFill:SetTexture("Interface\\Buttons\\WHITE8X8"); button.selectedFill:SetVertexColor(0.82, 0.70, 0.43, 0.14); button.selectedFill:Hide()
         button.hoverFill = MOS.UI.Components.CreateTexture(button, nil, "HIGHLIGHT")
         button.hoverFill:SetAllPoints(button); button.hoverFill:SetTexture("Interface\\Buttons\\WHITE8X8"); button.hoverFill:SetVertexColor(0.82, 0.70, 0.43, 0.14)
@@ -84,6 +92,7 @@ function Navigation.Create(options)
     for itemIndex = 1, table.getn(options.items) do
         local item = options.items[itemIndex]
         CreateButton(item.key, item.text, ys[itemIndex], item.icon)
+        controller.buttons[item.key].navigationShortText = item.shortText
     end
 
     function controller.Toggle(forceState)
@@ -125,7 +134,8 @@ function Navigation.Create(options)
                     button.icon:SetWidth(classic and 20 or 28); button.icon:SetHeight(classic and 20 or 28)
                     button.iconBorder:Hide()
                 else
-                    button.icon:Hide(); button.label:Show(); button.label:ClearAllPoints(); button.label:SetAllPoints(button); button.label:SetWidth(width); button.label:SetJustifyH("CENTER")
+                    button.icon:Hide(); button.label:Show(); button.label:ClearAllPoints(); button.label:SetAllPoints(button); button.label:SetWidth(width - 12); button.label:SetJustifyH("CENTER")
+                    Navigation.FitTabCaption(button, width - 12)
                 end
             end
         else
@@ -153,6 +163,7 @@ function Navigation.Create(options)
                 button.icon:Show(); if classic then button.iconBorder:Hide() else button.iconBorder:Show() end; button.icon:ClearAllPoints(); button.icon:SetPoint(collapsed and "CENTER" or "LEFT", button, collapsed and "CENTER" or "LEFT", collapsed and 0 or (classic and 11 or 9), 0)
                 button.icon:SetWidth(classic and 20 or 28); button.icon:SetHeight(classic and 20 or 28)
                 button.label:ClearAllPoints(); button.label:SetPoint("LEFT", button, "LEFT", classic and 35 or 44, 0); button.label:SetWidth(classic and 108 or 108); button.label:SetHeight(14); button.label:SetJustifyH("LEFT")
+                button.label:SetText(button.navigationText)
                 if collapsed then button.label:Hide() else button.label:Show() end
             end
             if classic and options.toggleButtonClassicIcon then
