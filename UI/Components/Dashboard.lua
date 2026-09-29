@@ -90,6 +90,8 @@ function Dashboard.CreateWindow(version)
     view.sidebarToggleClassicIcon = view.sidebarToggle:CreateTexture(nil, "OVERLAY")
     view.sidebarToggleClassicIcon:SetWidth(11); view.sidebarToggleClassicIcon:SetHeight(11); view.sidebarToggleClassicIcon:SetPoint("CENTER", view.sidebarToggle, "CENTER", 0, 0); view.sidebarToggleClassicIcon:Hide()
     view.classicMenuTitle = view.sidebar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    view.classicMenuTitle:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
+    view.sidebarToggleClassicIcon:SetVertexColor(unpack(MOS.UI.Components.Theme.colors.goldText))
     view.classicMenuTitle:SetPoint("TOPLEFT", view.sidebar, "TOPLEFT", 10, -9); view.classicMenuTitle:SetText("Menu"); view.classicMenuTitle:Hide()
     view.sidebar.classicMenuTitle = view.classicMenuTitle
     view.contentPanel = CreateFrame("Frame", nil, frame)

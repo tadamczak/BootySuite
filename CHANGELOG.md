@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.14 - 2026-09-29
+
+- Softened hover captions and radial highlights; standardized Classic button borders on dropdown chrome.
+- Restored sidebar hover, matched menu/arrow and Guild Information title gold, and capped roster details width.
+
 ## 0.5.0-dev.13 - 2026-09-29
 
 - Added a symmetric center-out red-button hover gradient.

@@ -62,6 +62,8 @@ function Navigation.Create(options)
             MOS.UI.Components.SetNavigationTabBorder(button, visible)
         end
         button.SetTabBorderVisible(false)
+        button.hoverFill = MOS.UI.Components.CreateTexture(button, nil, "HIGHLIGHT")
+        button.hoverFill:SetAllPoints(button); button.hoverFill:SetTexture("Interface\\Buttons\\WHITE8X8"); button.hoverFill:SetVertexColor(0.82, 0.70, 0.43, 0.14)
         button:SetScript("OnEnter", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
         button:SetScript("OnLeave", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(this.navigationSelected) end end)
         MOS.UI.Components.RegisterSkinnedNavigation(button, name, iconPath)
