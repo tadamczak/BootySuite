@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.23 - 2026-09-29
+
+- Unify icon and text tab borders, anchor all tabs to the content edge, and retain hover shading on the selected tab.
+- Match dropdown panel backgrounds and limit selected tab overlap to two pixels.
+
 ## 0.5.0-dev.22 - 2026-09-29
 
 - Connect the selected navigation tab to the content frame and recess inactive tabs with darker borders and spacing.
