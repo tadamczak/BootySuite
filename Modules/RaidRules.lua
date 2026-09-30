@@ -74,7 +74,21 @@ function RaidManagement.CreateLootRulesDialog(options)
         options.refresh()
         options.printMessage(options.isTestRaid and options.isTestRaid() and "Loot rules saved for this Test Raid session." or "Loot rules saved.")
     end)
+    local function MeasureReference(width)
+        frame.rulesText:SetWidth(width)
+        return frame.rulesText:GetStringHeight()
+    end
+    frame.LayoutReference = function()
+        local width, height, overflow = UI.ResolveScrollLayout(frame:GetWidth()-16, frame.rulesPanel:GetHeight()-16, 20, MeasureReference)
+        frame.rulesScroll:ClearAllPoints()
+        frame.rulesScroll:SetPoint("TOPLEFT", frame.rulesPanel, "TOPLEFT", 4, -8)
+        frame.rulesScroll:SetPoint("BOTTOMRIGHT", frame.rulesPanel, "BOTTOMRIGHT", overflow and -24 or -4, 8)
+        frame.rulesCanvas:SetWidth(width); frame.rulesCanvas:SetHeight(math.max(1,height))
+        local slider=getglobal("MuklaOfficerSuiteLootRulesReferenceScrollScrollBar")
+        if slider then if overflow then slider:Show() else slider:Hide() end end
+    end
     frame.Open = function(self)
+        self.LayoutReference()
         self.minimized = false; self:SetHeight(560); content:Show(); UI.SetWindowButtonAction(self.minimize, "minimize")
         local ranks = {
             { index = "silverback", name = "Silverback" }, { index = "chimp", name = "Chimp" }, { index = "baboon", name = "Baboon" },

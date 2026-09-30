@@ -254,3 +254,5 @@ Raid import, save, reset and quit dialogs can be moved by dragging their backgro
 In Reycoin list, enter a player name and optionally an item, then choose Add. A name without an item creates a Manual entry.
 
 Import Soft Reserves has a close control in its header. Reycoin list remains resizable from its bottom-right corner even though the resize icon is hidden.
+
+Warning INFO windows show affected players as individual rows, colored by known class.
