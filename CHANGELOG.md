@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.51 - 2026-09-30
+
+- Balance MOTD vertical padding, close the inactive bottom-tab gap and reduce active-tab overlap by 1px.
+
 ## 0.5.0-dev.50 - 2026-09-30
 
 - Anchor narrow Search fields to the live right edge when offline controls are hidden.
