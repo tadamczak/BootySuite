@@ -69,6 +69,17 @@ function Profiles.Add(name)
 end
 function Profiles.Save(name) return Write(name, false) end
 
+function Profiles.ResetDefaults(selected)
+    MOS.Database.Ensure()
+    local index, key
+    for index = 1, table.getn(keys) do
+        key = keys[index]
+        if not selected or selected[key] then MuklaOfficerSuiteDB[key] = nil end
+    end
+    if not selected or selected.hideMinimapIcon then MuklaOfficerSuiteDB.hideMinimapIcon = false end
+    MOS.Database.Ensure()
+end
+
 function Profiles.GetCurrent()
     local profiles = Store()
     if not MuklaOfficerSuiteDB.currentSettingsProfile then

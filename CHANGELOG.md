@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.57 - 2026-09-30
+
+- Add subsection and global Settings resets; rename On press color to Collapsed color.
+- Draw record backgrounds and lightness captions on unobscured layers.
+
 ## 0.5.0-dev.56 - 2026-09-30
 
 - Refine Settings subsection layout, spacing and Roster General field order.
