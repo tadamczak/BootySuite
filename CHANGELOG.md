@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.55 - 2026-09-30
+
+- Organize Roster settings into General, Display and Member tile color, with configurable row colors and alternating lightness.
+- Rename skins to Default and Classic WIP; compact minimized Settings and clarify tracking tooltips.
+
 ## 0.5.0-dev.54 - 2026-09-30
 
 - Restore narrow window geometry, configured raid colors and raid-name visibility.

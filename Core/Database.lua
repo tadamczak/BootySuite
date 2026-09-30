@@ -29,6 +29,10 @@ function Database.Ensure()
     if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 30 end
     if MuklaOfficerSuiteDB.chatActionLogs == nil then MuklaOfficerSuiteDB.chatActionLogs = false end
     if MuklaOfficerSuiteDB.raidClassColors == nil then MuklaOfficerSuiteDB.raidClassColors = true end
+    if type(MuklaOfficerSuiteDB.rosterBackgroundColor) ~= "table" then MuklaOfficerSuiteDB.rosterBackgroundColor = {0.025,0.025,0.025} end
+    if type(MuklaOfficerSuiteDB.rosterTextColor) ~= "table" then MuklaOfficerSuiteDB.rosterTextColor = {1,1,1} end
+    if type(MuklaOfficerSuiteDB.rosterHoverColor) ~= "table" then MuklaOfficerSuiteDB.rosterHoverColor = {0.13,0.13,0.13} end
+    MuklaOfficerSuiteDB.rosterOddLightness = math.max(0,math.min(100,tonumber(MuklaOfficerSuiteDB.rosterOddLightness) or 5))
     if MuklaOfficerSuiteDB.rosterClassColors == nil then MuklaOfficerSuiteDB.rosterClassColors = true end
     if MuklaOfficerSuiteDB.rosterHideSectionHeader == nil then MuklaOfficerSuiteDB.rosterHideSectionHeader = false end
     if MuklaOfficerSuiteDB.raidHideSectionHeader == nil then MuklaOfficerSuiteDB.raidHideSectionHeader = false end

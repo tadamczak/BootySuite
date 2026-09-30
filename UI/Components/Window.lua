@@ -70,7 +70,7 @@ function Window.Create(options)
         if window.minimized then
             window.minimized = false; window:SetHeight(window.expandedHeight or 620); content:Show(); resize:Show(); view.viewport:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
         else
-            window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(options.compact and 44 or 50); MOS.UI.Components.SetWindowButtonAction(minimize, "maximize")
+            window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(options.plainHeader and 34 or (options.compact and 44 or 50)); MOS.UI.Components.SetWindowButtonAction(minimize, "maximize")
         end
     end)
     local function FinishOpen()

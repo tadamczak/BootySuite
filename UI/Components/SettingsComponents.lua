@@ -80,12 +80,16 @@ function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
     button.label:SetJustifyH("LEFT"); button.label:SetText(text)
     button.SaveSetting = function(owner)
         binding.ensure()
-        binding.set(owner.settingKey, owner:GetChecked() and true or false)
+        local value = owner:GetChecked() and true or false
+        if owner.invertSetting then value = not value end
+        binding.set(owner.settingKey, value)
         if owner.onChanged then owner.onChanged(owner.settingKey) end
     end
     button:SetScript("OnShow", function()
         binding.ensure()
-        this:SetChecked(binding.get(this.settingKey) and 1 or nil)
+        local value = binding.get(this.settingKey)
+        if this.invertSetting then value = not value end
+        this:SetChecked(value and 1 or nil)
     end)
     button:SetScript("OnClick", function() this:SaveSetting() end)
     button.labelHit = CreateFrame("Button", nil, button)
@@ -253,11 +257,15 @@ function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tool
     check.label:SetJustifyH("LEFT"); check.label:SetText(text)
     check:SetScript("OnShow", function()
         binding.ensure()
-        this:SetChecked(binding.get(this.settingKey) and 1 or nil)
+        local value = binding.get(this.settingKey)
+        if this.invertSetting then value = not value end
+        this:SetChecked(value and 1 or nil)
     end)
     check.SaveSetting = function(owner)
         binding.ensure()
-        binding.set(owner.settingKey, owner:GetChecked() and true or false)
+        local value = owner:GetChecked() and true or false
+        if owner.invertSetting then value = not value end
+        binding.set(owner.settingKey, value)
         if onChanged then onChanged(owner.settingKey) end
     end
     check:SetScript("OnClick", function() this:SaveSetting() end)
@@ -300,6 +308,7 @@ function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKe
         local value = math.max(0, math.min(100, tonumber(owner:GetText()) or owner.fallback))
         binding.set(owner.settingKey, value)
         owner:SetText(value)
+        if owner.onChanged then owner.onChanged(owner.settingKey) end
     end
     field:SetScript("OnEditFocusLost", function() this:CommitValue(); this.mosEditing = nil end)
     return label, field
