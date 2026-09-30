@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.49 - 2026-09-30
+
+- Match text/icon tab spacing and recess inactive tabs from section edges.
+- Wrap guild MOTD, keep guild status on one line, and reclaim filter-row space for Search.
+
 ## 0.5.0-dev.48 - 2026-09-30
 
 - Let Search use free space when Show offline is hidden; align Refresh Data with guild actions.

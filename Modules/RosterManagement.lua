@@ -974,7 +974,7 @@ function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, so
     end
 
     page.showOfflineCheck:SetChecked(MuklaOfficerSuiteDB.showOfflineMembers and 1 or nil)
-    page.summaryWrap = renderer.summaryText:GetStringWidth() + page.modeButton.label:GetStringWidth() + page.modeButton:GetWidth() + 22 > page:GetWidth()
+    page.summaryWrap = false
     local columns = RosterManagement.GetVisibleColumns(page, MuklaOfficerSuiteDB)
     local lowestRankIndex = renderer.getLowestRankIndex(data)
     RosterManagement.RenderList(page, renderer.visibleMembers, columns, selectedMemberName, lowestRankIndex, MuklaOfficerSuiteDB.rosterClassColors, resetScroll, rosterShift)
@@ -985,10 +985,22 @@ end
 function RosterManagement.LayoutSummary(page, summary)
     local panel = page.tablePanel or page
     local width = page:GetWidth()
+    page.summaryWrap = false
+    local label = page.modeButton.label
+    if not page.summaryFontSize then
+        local font, size, flags = summary:GetFont(); page.summaryFont = font; page.summaryFontSize = size; page.summaryFontFlags = flags
+        font, size, flags = label:GetFont(); page.statusFont = font; page.statusFontSize = size; page.statusFontFlags = flags
+    end
+    summary:SetFont(page.summaryFont, page.summaryFontSize, page.summaryFontFlags)
+    label:SetFont(page.statusFont, page.statusFontSize, page.statusFontFlags)
+    local textWidth = summary:GetStringWidth() + label:GetStringWidth()
+    local scale = math.min(1, math.max(0.01, (width - page.modeButton:GetWidth() - 16) / math.max(1, textWidth)))
+    summary:SetFont(page.summaryFont, math.max(8, page.summaryFontSize * scale), page.summaryFontFlags)
+    label:SetFont(page.statusFont, math.max(8, page.statusFontSize * scale), page.statusFontFlags)
     summary:ClearAllPoints()
     summary:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 6, 10 + (page.summaryWrap and 22 or 0))
     summary:SetHeight(14); summary:SetJustifyV("MIDDLE")
-    summary:SetWidth(math.max(1, width - (page.summaryWrap and 12 or page.modeButton.label:GetStringWidth() + page.modeButton:GetWidth() + 22)))
+    summary:SetWidth(math.max(1, width - (page.summaryWrap and 12 or page.modeButton.label:GetStringWidth() + page.modeButton:GetWidth() + 16)))
     page.modeButton:ClearAllPoints()
     page.modeButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 6)
 end
@@ -1135,7 +1147,9 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.footer.guild:SetHeight(0)
     controls.footer.motd:ClearAllPoints()
     controls.footer.motd:SetPoint("TOPLEFT", controls.footer.guild, "BOTTOMLEFT", 0, -6)
-    controls.footer.motd:SetPoint("TOPRIGHT", controls.footer.guild, "BOTTOMRIGHT", 0, -6)
+    controls.footer.motd:SetWidth(math.max(1, page:GetWidth() - 16))
+    if controls.footer.motd.SetWordWrap then controls.footer.motd:SetWordWrap(true) end
+    if controls.footer.motd.SetNonSpaceWrap then controls.footer.motd:SetNonSpaceWrap(true) end
     controls.footer.motd:SetHeight(0)
     controls.footer.motd:SetText(motdText or "Guild Message of the Day")
     if controls.footer.layoutHeaderShift ~= headerShift then
@@ -1164,10 +1178,10 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     x = PlaceRosterFilter(page, controls.filtersLabel, hasFilters, 30, x, y)
     x = PlaceRosterFilter(page, controls.classFilter, settings.rosterShowClassFilter ~= false, width < 650 and 60 or 84, x, y)
     x = PlaceRosterFilter(page, controls.rankFilter, settings.rosterShowRankFilter ~= false, width < 650 and 60 or 84, x, y)
-    local filterWrap = hasFilters and (settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false) and x + (settings.rosterShowSearch ~= false and 110 or 0) + (settings.rosterShowOffline ~= false and 118 or 0) > width - 6
+    local filterWrap = hasFilters and (settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false) and x + (settings.rosterShowSearch ~= false and 88 or 0) + (settings.rosterShowOffline ~= false and 118 or 0) > width - 6
     if filterWrap then x = 6; y = y - 28 end
     x = PlaceRosterFilter(page, controls.searchLabel, settings.rosterShowSearch ~= false, 40, x, y)
-    x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, width - x - (settings.rosterShowOffline ~= false and 170 or 6))), x, y)
+    x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, width - x - (settings.rosterShowOffline ~= false and 128 or 6))), x, y)
     x = PlaceRosterFilter(page, controls.showOffline.label, settings.rosterShowOffline ~= false, 76, x, y)
     x = PlaceRosterFilter(page, controls.showOffline, settings.rosterShowOffline ~= false, nil, x, y)
     controls.searchLabel:SetTextColor(1, 1, 1)
