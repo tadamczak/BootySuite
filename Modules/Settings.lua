@@ -102,9 +102,8 @@ function Settings.LayoutRaidGrid(page, offset)
     local y = -318 + offset
     At(shell.groupHeading, 48, y); y = y - 38
     At(group.displayHeading, 52, y); y = y - 26
-    y = y - C.LayoutGrid(page, group.memberDisplayChecks, 52, y, width, 26)
-    At(group.showHeader, 52, y); y = y - 26
-    At(group.showBorder, 52, y); y = y - 34
+    group.displayChecks.mosMaxColumns = 3
+    y = y - C.LayoutGrid(page, group.displayChecks, 52, y, width, 26) - 8
     At(group.sizeHeading, 52, y); y = y - 24
     y = y - C.LayoutGrid(page, group.autoChecks, 52, y, width, 26) - 22
     y = y - C.LayoutGrid(page, group.sliders, 52, y, width, 56, true)
@@ -404,7 +403,7 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     return {
         lightnessLabel = lightnessLabel, lightnessField = lightnessField,
         displayHeading = displayHeading, sizeHeading = sizeHeading, colorHeading = colorHeading,
-        displayChecks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole },
+        displayChecks = { showClass, showLevel, showHeader, showLootMaster, showRole, showBorder },
         memberDisplayChecks = {showClass, showLevel, showLootMaster, showRole}, showHeader = showHeader, showBorder = showBorder,
         autoChecks = {autoWidth}, colorChecks = {classColors}, sliders = {width, height, headerHeight, margin, tileTextSize, headerTextSize},
         checks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, autoWidth, classColors },

@@ -117,7 +117,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
     end)
     warning.dialog = MOS.UI.Components.CreateReadOnlyDialog(dialogName, dialogTitle, 560, 340, background)
     MOS.UI.Components.Window.StyleProjectDialog(warning.dialog)
-    warning.dialog.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
+    warning.dialog.title:SetTextColor(1, 1, 1)
     warning.dialog.icon = MOS.UI.Components.CreateTexture(warning.dialog, nil, "ARTWORK")
     warning.dialog.icon:SetTexture(MOS.UI.Components.ClassicAsset("Icons\\warning_triangle.tga"))
     warning.dialog.icon:SetVertexColor(1, 0.82, 0.28)
@@ -129,7 +129,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
     warning.info = MOS.UI.Components.CreateButton(warning, nil, "INFO", 66, 20)
     warning.info:SetPoint("BOTTOMRIGHT", warning, "BOTTOMRIGHT", -8, 6); warning.info:SetFrameLevel(warning:GetFrameLevel() + 2)
     warning.info:SetScript("OnClick", function()
-        warning.dialog.title:SetText("|cffffd147Warning|r: " .. (warning.text:GetText() or dialogTitle))
+        warning.dialog.title:SetText("|cffffd147Warning:|r " .. (warning.text:GetText() or dialogTitle))
         local attendance = page.getWarningAttendance and page.getWarningAttendance() or page.listRenderer and page.listRenderer.getData()
         local issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
         local key = warning == page.softReserveWarning and "unmatchedNames" or warning == page.missingSoftReserveWarning and "missingNames" or "invalidNames"
@@ -155,7 +155,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
             if key == "invalidNames" then
                 for _, member in ipairs(attendance and attendance.members or {}) do
                     if string.lower(member.name or "") == string.lower(names[index]) then
-                        caption = caption .. " - " .. ((member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest") .. " rank has no SR"
+                        caption = caption .. " - " .. (string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or ((member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest")) .. " rank has no SR"
                         break
                     end
                 end
@@ -216,7 +216,7 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
         end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    local confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SRDialog", "Fix Soft Reserves", "Remove")
+    local confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SRDialog", "Fix Soft Reserves", "Remove SR")
     confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:SetWidth(300)
     invalidWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_INVALID_SR; confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:Open(spec.text, spec.OnAccept) end)
     invalidWarning.ping:SetScript("OnClick", function()

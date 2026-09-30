@@ -391,7 +391,7 @@ function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
     if count == 0 then return 0 end
     available = math.max(1, available)
     local widths = items.mosColumnWidths or {}; items.mosColumnWidths = widths
-    local cols, index, col, total = math.min(4, count), nil, nil, nil
+    local cols, index, col, total = math.min(items.mosMaxColumns or 4, count), nil, nil, nil
     for index = 1, count do
         local item = items[index]
         local label = sliders and getglobal(item:GetName() .. "Text") or item.label

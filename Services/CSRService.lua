@@ -21,10 +21,7 @@ local function NormalizeLootRank(value)
 end
 
 local function HasCsrRights(member, rules, rosterLootRanks)
-    local key = NormalizeLootRank(member.lootRank)
-    if not key and Normalize(member.guildRank) == "officer wukong" then
-        key = NormalizeLootRank(member.officerNote) or rosterLootRanks[Normalize(member.name)]
-    end
+    local key = Normalize(member.guildRank) == "officer wukong" and "chimp" or NormalizeLootRank(member.lootRank)
     key = key or NormalizeLootRank(member.guildRank)
     if not key then return false end
     local rule = rules and rules[key]
@@ -77,7 +74,7 @@ function CSR.BuildSummary(entries, rules, currentTime, target, rosterData, selec
     for index = 1, table.getn(rosterData and rosterData.members or {}) do
         local rosterMember = rosterData.members[index]
         if Normalize(rosterMember.rank) == "officer wukong" then
-            local lootRank = NormalizeLootRank(rosterMember.officerNote)
+            local lootRank = "chimp"
             if lootRank then rosterLootRanks[Normalize(rosterMember.name)] = lootRank end
         end
     end

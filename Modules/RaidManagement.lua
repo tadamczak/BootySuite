@@ -771,11 +771,12 @@ function RaidManagement.MountList(page, chrome, options)
         OnCancel = function() pendingSoftReserveRemoval = nil end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
+    local removeSRDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteRemoveMemberSR", "Remove Soft Reserve", "Remove SR")
     local controller = RaidManagement.CreateListController({
         page = page, runMemberAction = options.runMemberAction, isSelected = options.isSelected,
         refresh = options.refresh, onSelect = options.onSelect, removeSoftReserve = function(memberName)
             pendingSoftReserveRemoval = memberName
-            MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_REMOVE_MEMBER_SR", memberName)
+            removeSRDialog:Open("Remove the Soft Reserve assigned to " .. memberName .. "?", StaticPopupDialogs.MUKLA_OFFICER_SUITE_REMOVE_MEMBER_SR.OnAccept, StaticPopupDialogs.MUKLA_OFFICER_SUITE_REMOVE_MEMBER_SR.OnCancel)
             return false
         end,
     })
@@ -1007,7 +1008,7 @@ function RaidManagement.RefreshPage(renderer)
             if table.getn(issues.missingNames) > 0 then issueCount = issueCount + 1 end
             if table.getn(issues.invalidNames) > 0 then issueCount = issueCount + 1 end
             page.refreshControls.title:Hide()
-            page.classicRaidName:SetText(attendance.raidName or "Unknown zone"); page.classicRaidName:Show()
+            page.classicRaidName:SetText((MuklaOfficerSuiteDB.raidHideSectionHeader and "" or "Raid - ") .. (attendance.raidName or "Unknown zone")); page.classicRaidName:Show()
             page.classicMeta:SetText("|  " .. tostring(raidId)); page.classicMeta:Show()
             page.classicSaved:SetText(savedText); page.classicSaved:Show()
             RaidManagement.UpdateIssueAttention(page.classicIssues, issues)
@@ -1208,7 +1209,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
             card:ClearAllPoints(); card:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 2 + dockIndex * (width + 2), 2)
             card:SetWidth(width); card:SetHeight(30)
             card.text:Hide(); card.info:Hide(); card.fix:Hide(); if card.ping then card.ping:Hide() end
-            if card.classicHeader then card.classicHeader:Show(); card.classicHeader.title:SetText(titles[index]); card.classicHeader.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText)) end
+            if card.classicHeader then card.classicHeader:Show(); card.classicHeader.title:SetText(titles[index]); card.classicHeader.title:SetTextColor(1, 1, 1) end
             card:Show(); dockIndex = dockIndex + 1; visible[index] = false
         end
     end
@@ -1453,7 +1454,7 @@ function RaidManagement.CalculateGroupGeometry(width, height, columns, preferred
     local preferredWidth = (columnCount * (tonumber(preferredTileWidth) or 280)) + ((columnCount - 1) * margin)
     local layoutWidth = autoTileWidth and availableWidth or math.min(availableWidth, preferredWidth)
     local headerHeight = showHeader and math.max(14, tonumber(configuredHeaderHeight) or 22) or 0
-    local groupHeight = headerHeight + ((tonumber(tileHeight) or 20) * 5)
+    local groupHeight = headerHeight + ((tonumber(tileHeight) or 20) * 5) + (showBorder == false and 0 or 4)
     local contentHeight = (groupRows * groupHeight) + ((groupRows - 1) * margin)
     return {
         columns = columnCount,
@@ -1543,8 +1544,9 @@ end
 
 function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMasterMode, configuredRowWidth, memberCount, selectedName)
     local submenuOffset = not lootMasterMode and MOS.UI.Components.IsClassicSkin() and ((page.classicActionOffset or 0) + (page.classicToolbarOffset or 0) + (page.classicSearchOffset or 0)) or 0
-    local headerY = lootMasterMode and -29 or -134 - submenuOffset
-    local rowStartY = lootMasterMode and -46 or -156 - submenuOffset
+    local filterOffset = not lootMasterMode and MuklaOfficerSuiteDB.raidListShowFilters == false and MuklaOfficerSuiteDB.raidListShowSearch == false and 34 or 0
+    local headerY = lootMasterMode and -29 or -134 - submenuOffset + filterOffset
+    local rowStartY = lootMasterMode and -46 or -156 - submenuOffset + filterOffset
     local positions = lootMasterMode and lootHeaderPositions or normalHeaderPositions
     local widths = lootMasterMode and lootHeaderWidths or normalHeaderWidths
     local headerIndex
@@ -1649,7 +1651,7 @@ function RaidManagement.PositionListRow(page, row, rowY, lootMasterMode, tableLe
         cell:ClearAllPoints()
         if column.key == "name" then cell:SetPoint("TOPLEFT", row, "TOPLEFT", page.listPositions[columnIndex] - tableLeft, 0)
         else cell:SetPoint("TOPLEFT", page, "TOPLEFT", page.listPositions[columnIndex], rowY) end
-        cell:SetWidth(page.listWidths[columnIndex])
+        cell:SetWidth(page.listWidths[columnIndex]); cell:SetHeight(tonumber(MuklaOfficerSuiteDB.raidListRowHeight) or 20); cell:SetJustifyV("MIDDLE")
         if column.key == "group" then
             row.groupHit:ClearAllPoints()
             row.groupHit:SetPoint("TOPLEFT", page, "TOPLEFT", page.listPositions[columnIndex], rowY)
@@ -1705,8 +1707,8 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
     local showLootMaster = not lootMasterMode and MuklaOfficerSuiteDB.raidListShowLootMaster and lootMethod == "master" and tonumber(raidLootMasterIndex) == tonumber(member.raidIndex)
     local _, fontSize = row.name:GetFont()
     local leftPadding = math.max(2, (row:GetHeight() - (fontSize or 12)) / 2)
-    row.crown:ClearAllPoints(); row.crown:SetPoint("TOPLEFT", row, "TOPLEFT", leftPadding, -2)
-    row.lootMasterIcon:ClearAllPoints(); row.lootMasterIcon:SetPoint("TOPLEFT", row, "TOPLEFT", leftPadding + (showRole and 15 or 0), -2)
+    row.crown:ClearAllPoints(); row.crown:SetPoint("LEFT", row, "LEFT", leftPadding, 0)
+    row.lootMasterIcon:ClearAllPoints(); row.lootMasterIcon:SetPoint("LEFT", row, "LEFT", leftPadding + (showRole and 15 or 0), 0)
     if showLootMaster then row.lootMasterIcon:Show() else row.lootMasterIcon:Hide() end
     local nameInset = leftPadding + (showRole and 17 or 0) + (showLootMaster and 14 or 0)
     row.name:ClearAllPoints()
@@ -1716,7 +1718,7 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
     row.level:SetText(tostring(member.level or ""))
     row.status:SetText(member.online and "Online" or "Offline")
     row.class:SetText(shorten(member.class, 12))
-    row.rank:SetText(shorten(member.guildRank ~= "" and member.guildRank or "Guest", 18))
+    row.rank:SetText(shorten(string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or (member.guildRank ~= "" and member.guildRank or "Guest"), 18))
     local itemId = member.srItemIds and member.srItemIds[1]
     row.sr:SetText(itemId and MOS.UI.Components.GetItemLabel(itemId) or "")
     row.srHit.itemId = itemId
@@ -3079,11 +3081,27 @@ function RaidManagement.AttachActionHandlers(options)
             MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_DELETE_RAID_SNAPSHOT")
         end)
     end
+    local liveLoadDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteLiveLoad", "Live Tracking", "Yes")
+    liveLoadDialog.no:SetText("No")
+    local function StopLoadedTracking()
+        options.setLiveTracking(false)
+        if MOS.Database.SetSetting then MOS.Database.SetSetting("raidLiveTrackingEnabled", false) end
+        options.refresh()
+    end
+    liveLoadDialog.close:SetScript("OnClick", function() liveLoadDialog:Hide(); StopLoadedTracking() end)
     local function LoadSelectedRaid()
         if not options.page.selectedRaidHistoryId then return end
+        local resumeTracking = MOS.Database.GetSetting("raidLiveTrackingEnabled")
         if options.loadRaidSnapshot(options.page.selectedRaidHistoryId) then
+            if resumeTracking then MOS.Database.SetSetting("raidLiveTrackingEnabled", false); options.setLiveTracking(false) end
             RaidManagement.ResetIssueAttention(options.page)
             options.beginRaidSession(); options.setHistoricalLoaded(true); options.setScanReady(true); options.refresh()
+            if resumeTracking then
+                options.setLiveTracking(false)
+                liveLoadDialog:Open("Refresh this saved raid with current raid changes? No turns off Live Tracking in Settings.", function()
+                    options.saveRaidRoster(); options.setHistoricalLoaded(false); MOS.Database.SetSetting("raidLiveTrackingEnabled", true); options.setLiveTracking(true); options.refresh()
+                end, StopLoadedTracking)
+            end
         end
     end
     controls.loadRaid:SetScript("OnClick", LoadSelectedRaid)
@@ -3317,7 +3335,7 @@ function RaidManagement.CreateAutoLootControls(page, view)
     exceptions:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -116)
     exceptions:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -8, -116)
     exceptions:SetTextInsets(8, 8, 8, 8)
-    local tooltipHit = UI.AttachLabelTooltip(panel, exceptionsLabel, "Auto Loot Exclusions:", "Item names separated by commas are never auto looted, regardless of other settings. Ignores letter case and extra spaces. Use * for any part of a name. Exclusions override inclusions.")
+    local tooltipHit = UI.AttachLabelTooltip(panel, exceptionsLabel, "Auto Loot Exclusions:", "Never auto loot matching items; overrides Inclusions. Comma-separated names, case-insensitive. * matches any text: Recipe *, * Coin.")
     exceptions:SetScript("OnTextChanged", function() MOS.Database.SetSetting("lmAutoLootExceptions", this:GetText()) end)
     exceptions:SetScript("OnEditFocusLost", Apply)
     local inclusionsLabel = UI.CreateComponentLabel(panel, "Auto Loot Inclusions:", "white")
@@ -3325,6 +3343,21 @@ function RaidManagement.CreateAutoLootControls(page, view)
     inclusions:SetTextInsets(8, 8, 8, 8)
     inclusions:SetScript("OnTextChanged", function() MOS.Database.SetSetting("lmAutoLootInclusions", this:GetText()) end)
     inclusions:SetScript("OnEditFocusLost", Apply)
+    local inclusionTooltip = UI.AttachLabelTooltip(panel, inclusionsLabel, "Auto Loot Inclusions", "Auto loot regardless of rarity while enabled. Exclusions win. Comma-separated names, case-insensitive; * matches any text.")
+    local exclusionsArea = UI.MakeTextAreaScrollable(exceptions, panel)
+    local inclusionsArea = UI.MakeTextAreaScrollable(inclusions, panel)
+    local focusDismiss = UI.CreateControl(nil, UIParent)
+    focusDismiss:SetAllPoints(UIParent); focusDismiss:EnableMouse(true); focusDismiss:Hide()
+    local function ClearTextFocus() exceptions:ClearFocus(); inclusions:ClearFocus(); focusDismiss:Hide() end
+    focusDismiss:SetScript("OnMouseDown", ClearTextFocus)
+    panel:SetScript("OnMouseDown", ClearTextFocus)
+    tooltipHit:SetScript("OnMouseDown", ClearTextFocus); inclusionTooltip:SetScript("OnMouseDown", ClearTextFocus)
+    local function FocusText()
+        focusDismiss:SetFrameStrata(panel:GetFrameStrata()); focusDismiss:SetFrameLevel(math.max(0, panel:GetFrameLevel()-1)); focusDismiss:Show()
+    end
+    exceptions:SetScript("OnEditFocusGained", FocusText); inclusions:SetScript("OnEditFocusGained", FocusText)
+    exceptions:SetScript("OnEditFocusLost", function() focusDismiss:Hide(); Apply() end)
+    inclusions:SetScript("OnEditFocusLost", function() focusDismiss:Hide(); Apply() end)
     view.lmAutoLootInclusions = inclusions
     view.lmAutoLootExceptions = exceptions
     view.lmExceptionsTooltip = tooltipHit
@@ -3332,7 +3365,7 @@ function RaidManagement.CreateAutoLootControls(page, view)
     modeLabel:SetFont(font, size, flags); label:SetFont(font, size, flags); exceptionsLabel:SetFont(font, size, flags)
     inclusionsLabel:SetFont(font, size, flags)
     view.lmConfigLabels = { modeLabel, label, exceptionsLabel, inclusionsLabel }
-    local presetLabel = UI.CreateComponentLabel(panel, "Exception Presets:", "white")
+    local presetLabel = UI.CreateComponentLabel(panel, "Add Exclusions Preset", "white")
     presetLabel:SetFont(font, size, flags); table.insert(view.lmConfigLabels, presetLabel)
     presetLabel:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 8, 34)
     local presets = UI.CreateDropdownButton(panel, nil, "None", 184)
@@ -3354,11 +3387,16 @@ function RaidManagement.CreateAutoLootControls(page, view)
     local function LayoutConfig()
         local width = math.max(94, panel:GetWidth() - 150)
         mode:SetWidth(width); rarity:SetWidth(width); presets:SetWidth(width)
-        local areaHeight = math.max(64, (panel:GetHeight() - 204) / 2)
-        exceptions:SetHeight(areaHeight)
-        inclusionsLabel:ClearAllPoints(); inclusionsLabel:SetPoint("TOPLEFT", exceptions, "BOTTOMLEFT", 0, -8)
-        inclusions:ClearAllPoints(); inclusions:SetPoint("TOPLEFT", inclusionsLabel, "BOTTOMLEFT", 0, -4)
-        inclusions:SetPoint("RIGHT", panel, "RIGHT", -8, 0); inclusions:SetHeight(areaHeight)
+        presetLabel:ClearAllPoints(); presetLabel:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -94)
+        presets:ClearAllPoints(); presets:SetPoint("TOPLEFT", panel, "TOPLEFT", 160, -94); presets:SetWidth(math.max(84,panel:GetWidth()-168))
+        exceptionsLabel:ClearAllPoints(); exceptionsLabel:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -124)
+        local areaHeight = math.max(64, (panel:GetHeight() - 188) / 2)
+        exclusionsArea:ClearAllPoints(); exclusionsArea:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -144)
+        exclusionsArea:SetWidth(math.max(1,panel:GetWidth()-16)); exclusionsArea:SetHeight(areaHeight)
+        inclusionsLabel:ClearAllPoints(); inclusionsLabel:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -154-areaHeight)
+        inclusionsArea:ClearAllPoints(); inclusionsArea:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -174-areaHeight)
+        inclusionsArea:SetWidth(math.max(1,panel:GetWidth()-16)); inclusionsArea:SetHeight(areaHeight)
+        exceptions.LayoutScroll(); inclusions.LayoutScroll()
     end
     panel:SetScript("OnSizeChanged", LayoutConfig)
     LayoutConfig()
@@ -3381,14 +3419,15 @@ function RaidManagement.CreateAutoLootControls(page, view)
         RefreshPresets(); Apply()
     end
     presets:SetScript("OnClick", function()
+        ClearTextFocus()
         if presetPanel:IsVisible() then presetPanel:Hide() else
             mode.panel:Hide(); choices:Hide(); RefreshPresets()
             UI.FilterPanel.Refresh(presetPanel, presetNames, presetSelected, SavePresets, false, true); presetPanel:Show()
         end
     end)
     local modeClick, rarityClick = mode:GetScript("OnClick"), rarity:GetScript("OnClick")
-    mode:SetScript("OnClick", function() presetPanel:Hide(); modeClick() end)
-    rarity:SetScript("OnClick", function() presetPanel:Hide(); rarityClick() end)
+    mode:SetScript("OnClick", function() ClearTextFocus(); presetPanel:Hide(); modeClick() end)
+    rarity:SetScript("OnClick", function() ClearTextFocus(); presetPanel:Hide(); rarityClick() end)
     panel:SetScript("OnShow", function()
         LayoutConfig()
         if page.lootMasterController then page.lootMasterController.ReanchorPanels() end
@@ -3396,7 +3435,11 @@ function RaidManagement.CreateAutoLootControls(page, view)
         mode:SetFrameStrata(strata); mode:SetFrameLevel(level)
         rarity:SetFrameStrata(strata); rarity:SetFrameLevel(level)
         exceptions:SetFrameStrata(strata); exceptions:SetFrameLevel(level)
-        inclusions:SetFrameStrata(strata); inclusions:SetFrameLevel(level)
+        inclusions:SetFrameStrata(strata); inclusions:SetFrameLevel(level + 2)
+        exceptions:SetFrameLevel(level + 2)
+        exclusionsArea:SetFrameLevel(level); inclusionsArea:SetFrameLevel(level)
+        exceptions.viewport:SetFrameLevel(level+1); inclusions.viewport:SetFrameLevel(level+1)
+        inclusionTooltip:SetFrameStrata(strata); inclusionTooltip:SetFrameLevel(level)
         tooltipHit:SetFrameStrata(strata); tooltipHit:SetFrameLevel(level)
         presets:SetFrameStrata(strata); presets:SetFrameLevel(level)
         RefreshPresets()
@@ -3405,5 +3448,5 @@ function RaidManagement.CreateAutoLootControls(page, view)
         RefreshRarity(); exceptions:SetText(MOS.Database.GetSetting("lmAutoLootExceptions"))
         inclusions:SetText(MOS.Database.GetSetting("lmAutoLootInclusions"))
     end)
-    panel:SetScript("OnHide", function() mode.panel:Hide(); choices:Hide(); presetPanel:Hide(); exceptions:ClearFocus(); inclusions:ClearFocus() end)
+    panel:SetScript("OnHide", function() mode.panel:Hide(); choices:Hide(); presetPanel:Hide(); ClearTextFocus() end)
 end
