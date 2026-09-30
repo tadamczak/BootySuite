@@ -66,9 +66,9 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 ### Guild Statistics
 
 - **Export Roster -** Scan the guild roster and confirm a reload to save it to disk.
-- **Class overview -** Review the saved roster grouped by class.
-- **Rank overview -** Review the saved roster grouped by guild rank.
-- **Level 60 filter -** Limit statistics to max-level characters.
+- **Member filters -** Filter the saved roster by rank, class, exact level, or search text.
+- **Grouping -** Display one responsive member table with no grouping, or group it by class, rank, or level.
+- **Visible count -** Review the number of members currently included by the filters beside the Export Roster and Refresh Data actions.
 
 ### Raid
 
@@ -103,9 +103,9 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 
 ### Raid Statistics
 
-- **Saved raid list -** Browse and select recorded raid sessions.
+- **Saved raid list -** Browse date-only saved raid rows using the same visual design as Raid loading, or collapse the list to give the result table the full width.
 - **Filters -** Filter by raid, date range, session name, or player.
-- **Raid details -** Review attendance, Soft Reserves, received loot, and stored roll information.
+- **Raid details -** Review class-colored players, attendance, Soft Reserves, received loot, and stored roll information.
 - **Edit -** Change whether a saved raid contributes to attendance or CSR.
 - **Remove -** Delete a saved raid and recalculate affected statistics.
 

@@ -51,6 +51,12 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         controller.raidChecks[raidNameIndex] = check
     end
     controller.listTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controller.listTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -120); controller.listTitle:SetText("Raids")
+    controller.historyToggle = MOS.UI.Components.CreateButton(page, nil, "<<", 22, 20)
+    MOS.UI.Components.SetClassicButtonCompact(controller.historyToggle, true); MOS.UI.Components.AttachGoldHoverBorder(controller.historyToggle, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.AttachTooltip(controller.historyToggle, "Saved raids", "Collapse or restore the saved raid list.")
+    controller.historyToggle:SetScript("OnClick", function() controller.historyCollapsed = not controller.historyCollapsed; controller:Refresh() end)
+    controller.historyHeaders = {}
+    for index, text in ipairs({"Name", "Raid", "Time"}) do controller.historyHeaders[index] = MOS.UI.Components.CreateColumnLabel(page, text, "gold") end
     controller.fromLabel = MOS.UI.Components.CreateLabel(controller.filterPanel, nil, "OVERLAY", "GameFontHighlightSmall"); controller.fromLabel:SetPoint("TOPLEFT", controller.filterPanel, "TOPLEFT", 10, -38); controller.fromLabel:SetText("From")
     controller.fromDate = MOS.UI.Components.CreateFramedEditBox(controller.filterPanel, nil, 80); controller.fromDate:SetPoint("TOPLEFT", controller.filterPanel, "TOPLEFT", 48, -33); controller.fromDate:SetMaxLetters(10); controller.fromDate:EnableKeyboard(false)
     controller.datePicker = MOS.UI.Components.CreateDatePicker("MuklaOfficerSuiteRaidStatisticsDatePicker")
@@ -88,7 +94,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     controller.raidScroll.refreshCallback = function() controller:Refresh() end; controller.raidScroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(28, this.refreshCallback) end)
     local index
     for index = 1, 20 do
-        local button = MOS.UI.Components.CreateButton(page, nil, "", 234, 26); button:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -144 - ((index - 1) * 28)); button.statisticsController = controller; button:SetScript("OnClick", OnRaidSelect); button.label:Hide()
+        local button = MOS.UI.Components.CreateSelectionButton(page, nil, "", 234, 26); button:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -144 - ((index - 1) * 28)); button.statisticsController = controller; button:SetScript("OnClick", OnRaidSelect); button.label:Hide()
         button.allText = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall"); button.allText:SetPoint("LEFT", button, "LEFT", 8, 0); button.allText:SetPoint("RIGHT", button, "RIGHT", -8, 0); button.allText:SetJustifyH("LEFT")
         button.idText = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall"); button.idText:SetPoint("LEFT", button, "LEFT", 8, 0); button.idText:SetWidth(42); button.idText:SetJustifyH("LEFT")
         button.zoneText = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall"); button.zoneText:SetPoint("LEFT", button, "LEFT", 51, 0); button.zoneText:SetWidth(57); button.zoneText:SetJustifyH("LEFT")
@@ -242,7 +248,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     local function LayoutContent(width,height,self)
         local available=math.max(80,width-16)
         self.title:ClearAllPoints();self.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);UI.FitButtonLabel(self.title,available)
-        self.filterPanel:ClearAllPoints();self.filterPanel:SetPoint("TOPLEFT",page,"TOPLEFT",4,-38);self.filterPanel:SetWidth(width-8)
+        self.filterPanel:ClearAllPoints();self.filterPanel:SetPoint("TOPLEFT",page,"TOPLEFT",0,-38);self.filterPanel:SetWidth(width)
         local filterBottom=UI.LayoutFlow(self.filterPanel,self.flow,4,8,available,6)+8
         self.filterPanel:SetHeight(filterBottom)
         self.search:SetWidth(math.max(24,self.searchGroup:GetWidth()-42))
@@ -253,20 +259,30 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local stacked=available<650
         local historyWidth=stacked and available or math.min(270,available*0.34)
         local remaining=math.max(96,height-top-8)
-        local historyHeight=stacked and math.max(56,math.min(84,math.floor((remaining-100)/28)*28)) or remaining-24
+        local historyHeight=stacked and math.max(56,math.min(84,math.floor((remaining-100)/28)*28)) or remaining-44
         self.listTitle:ClearAllPoints();self.listTitle:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);self.listTitle:SetWidth(historyWidth)
+        self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8+historyWidth-22,-top+1);self.historyToggle:SetText(self.historyCollapsed and ">>" or "<<")
+        local headerX=8
+        local headerName=math.floor(historyWidth*0.38);local headerRaid=math.floor(historyWidth*0.34);local headerTime=historyWidth-headerName-headerRaid
+        local headerWidths={headerName,headerRaid,headerTime}
+        for index=1,3 do local header=self.historyHeaders[index];header:ClearAllPoints();header:SetPoint("TOPLEFT",page,"TOPLEFT",headerX,-top-24);header:SetWidth(headerWidths[index]);header:SetHeight(18);headerX=headerX+headerWidths[index] end
         self.historyRect=self.historyRect or {}
-        self.historyRect.x=8;self.historyRect.y=top+24;self.historyRect.width=historyWidth;self.historyRect.height=historyHeight
-        local playerX=stacked and 8 or 8+historyWidth+12
-        local playerTop=stacked and top+24+historyHeight+8 or top
-        local playerWidth=stacked and available or available-historyWidth-12
+        self.historyRect.x=8;self.historyRect.y=top+44;self.historyRect.width=historyWidth;self.historyRect.height=historyHeight
+        local playerX=self.historyCollapsed and 8 or (stacked and 8 or 8+historyWidth+12)
+        local playerTop=self.historyCollapsed and top+28 or (stacked and top+44+historyHeight+8 or top)
+        local playerWidth=self.historyCollapsed and available or (stacked and available or available-historyWidth-12)
+        if self.historyCollapsed then
+            self.listTitle:SetWidth(math.max(1,available-28));self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPRIGHT",page,"TOPRIGHT",-8,-top+1)
+            for index=1,3 do self.historyHeaders[index]:Hide() end
+        else for index=1,3 do self.historyHeaders[index]:Show() end end
+        local statusHeight=self.showResultStatus and 22 or 0
         self.filterStatus:ClearAllPoints();self.filterStatus:SetPoint("TOPLEFT",page,"TOPLEFT",playerX,-playerTop);self.filterStatus:SetWidth(math.max(1,playerWidth-54))
         local font,_,flags=self.filterStatus:GetFont();self.filterStatus:SetFont(font,12,flags);self.filterStatus:SetHeight(18)
         if self.filterStatus.SetWordWrap then self.filterStatus:SetWordWrap(false) end
         self.headerRemove:ClearAllPoints();self.headerRemove:SetPoint("TOPLEFT",page,"TOPLEFT",playerX+playerWidth-18,-playerTop);self.headerRemove:SetWidth(16);self.headerRemove:SetHeight(16)
         self.headerEdit:SetWidth(18);self.headerEdit:SetHeight(18)
         self.playerRect=self.playerRect or {}
-        self.playerRect.x=playerX;self.playerRect.y=playerTop+44;self.playerRect.width=playerWidth;self.playerRect.height=math.max(48,height-playerTop-52)
+        self.playerRect.x=playerX;self.playerRect.y=playerTop+statusHeight+22;self.playerRect.width=playerWidth;self.playerRect.height=math.max(48,height-playerTop-statusHeight-30)
         return self.playerRect.y+self.playerRect.height+8
     end
     function controller:Layout() UI.LayoutResponsiveCanvas(page,LayoutContent,self) end
@@ -295,20 +311,26 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local selectedRaid = nil
         if self.selectedId then for index = 1, table.getn(entries) do if entries[index].id == self.selectedId then selectedRaid = entries[index]; break end end end
         if self.selectedId and not selectedRaid then self.selectedId = nil end
-        if filterError then self.headerEdit:Hide(); self.headerRemove:Hide()
-        elseif selectedRaid then self.filterStatus:SetText(tostring(selectedRaid.id) .. " | " .. tostring(selectedRaid.raidName or "Unknown zone") .. " | " .. date("%Y-%m-%d", tonumber(selectedRaid.savedAt) or 0)); self.headerEdit.raidId = selectedRaid.id; self.headerRemove.raidId = selectedRaid.id; self.headerEdit:Show(); self.headerRemove:Show()
-        else self.filterStatus:SetText("Raid Statistics"); self.headerEdit:Hide(); self.headerRemove:Hide() end
+        self.showResultStatus=filterError or selectedRaid
+        if filterError then self.filterStatus:SetText(filterError);self.filterStatus:Show();self.headerEdit:Hide(); self.headerRemove:Hide()
+        elseif selectedRaid then self.filterStatus:SetText(tostring(selectedRaid.id) .. " | " .. tostring(selectedRaid.raidName or "Unknown zone") .. " | " .. date("%Y-%m-%d", tonumber(selectedRaid.savedAt) or 0)); self.filterStatus:Show();self.headerEdit.raidId = selectedRaid.id; self.headerRemove.raidId = selectedRaid.id; self.headerEdit:Show(); self.headerRemove:Show()
+        else self.filterStatus:SetText("");self.filterStatus:Hide(); self.headerEdit:Hide(); self.headerRemove:Hide() end
         self:Layout()
         local rect=self.historyRect
-        local raidOffset,visibleRaids,historyWidth=UI.Table.LayoutViewport(self.raidScroll,page,rect.x,rect.y,rect.width,rect.height,table.getn(entries),28,table.getn(self.raidButtons))
+        local raidOffset,visibleRaids,historyWidth=0,0,rect.width
+        if self.historyCollapsed then
+            self.raidScroll:Hide();UI.SetScrollBarVisible(getglobal("MuklaOfficerSuiteRaidStatisticsHistoryScrollScrollBar"),false)
+        else raidOffset,visibleRaids,historyWidth=UI.Table.LayoutViewport(self.raidScroll,page,rect.x,rect.y,rect.width,rect.height,table.getn(entries),28,table.getn(self.raidButtons)) end
         for index = 1, table.getn(self.raidButtons) do
             local button, logicalIndex = self.raidButtons[index], raidOffset + index
             local raid = entries[logicalIndex]
             if raid and index <= visibleRaids then
                 button:ClearAllPoints();button:SetPoint("TOPLEFT",page,"TOPLEFT",rect.x,-rect.y-(index-1)*28);button:SetWidth(historyWidth)
-                button.allText:SetJustifyV("MIDDLE");if button.allText.SetWordWrap then button.allText:SetWordWrap(false) end
                 button.raidId = raid.id
-                button.allText:SetText(tostring(raid.id) .. "  |  " .. tostring(raid.raidName or "Unknown") .. "  |  " .. date("%Y-%m-%d", tonumber(raid.savedAt) or 0)); button.allText:Show(); button.idText:Hide(); button.zoneText:Hide(); button.dateText:Hide()
+                local nameWidth=math.floor(historyWidth*0.38);local raidWidth=math.floor(historyWidth*0.34);local timeWidth=historyWidth-nameWidth-raidWidth
+                button.idText:ClearAllPoints();button.idText:SetPoint("LEFT",button,"LEFT",6,0);button.idText:SetWidth(nameWidth-8);button.idText:SetJustifyH("LEFT");button.idText:SetText(tostring(raid.id));button.idText:Show()
+                button.zoneText:ClearAllPoints();button.zoneText:SetPoint("LEFT",button,"LEFT",nameWidth,0);button.zoneText:SetWidth(raidWidth-4);button.zoneText:SetJustifyH("LEFT");button.zoneText:SetText(tostring(raid.raidName or "Unknown"));button.zoneText:Show()
+                button.dateText:ClearAllPoints();button.dateText:SetPoint("LEFT",button,"LEFT",nameWidth+raidWidth,0);button.dateText:SetWidth(timeWidth-4);button.dateText:SetJustifyH("LEFT");button.dateText:SetText(date("%Y-%m-%d",tonumber(raid.savedAt) or 0));button.dateText:Show();button.allText:Hide()
                 local selected = self.selectedId == raid.id; button:Show()
                 MOS.UI.Components.SetClassicButtonSelected(button, selected)
                 MOS.UI.Components.StyleWarmListRow(button, selected)
@@ -320,14 +342,17 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         self:LayoutColumns(rowWidth)
         self.emptyHistory:ClearAllPoints();self.emptyHistory:SetPoint("TOPLEFT",page,"TOPLEFT",rect.x,-rect.y-4);self.emptyHistory:SetWidth(historyWidth)
         self.emptyPlayers:ClearAllPoints();self.emptyPlayers:SetPoint("TOPLEFT",page,"TOPLEFT",body.x,-body.y-4);self.emptyPlayers:SetWidth(rowWidth)
-        if table.getn(entries)==0 then self.emptyHistory:Show() else self.emptyHistory:Hide() end
+        if not self.historyCollapsed and table.getn(entries)==0 then self.emptyHistory:Show() else self.emptyHistory:Hide() end
         if table.getn(summary.players)==0 then self.emptyPlayers:Show() else self.emptyPlayers:Hide() end
         for index = 1, table.getn(self.rows) do
             local row, player = self.rows[index], summary.players[offset + index]
             if player and index <= visible then
                 row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",body.x,-body.y-(index-1)*24);row:SetWidth(rowWidth)
                 UI.ApplyRowBackground(row,offset+index,false)
-                row.player = player; row.name:SetText(player.name); row.attendance:SetText(player.attendanceOff and "Off" or player.raids); row.loot:SetInactive(table.getn(player.lootItems or {}) == 0)
+                row.player = player; row.name:SetText(player.name)
+                local classKey=string.upper(tostring(player.class or ""));local classColor=(RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or UI.Theme.classColors[classKey]
+                if classColor then row.name:SetTextColor(classColor.r,classColor.g,classColor.b) else row.name:SetTextColor(1,1,1) end
+                row.attendance:SetText(player.attendanceOff and "Off" or player.raids); row.loot:SetInactive(table.getn(player.lootItems or {}) == 0)
                 row.srMissing:Hide()
                 if self.selectedId and self.directItemLabel and player.srItems and player.srItems[1] and player.srItems[1].itemId then
                     local item = player.srItems[1]; row.sr:Hide(); row.srDirect.itemId = item.itemId; row.srDirect.itemName = item.name; row.srDirect.label:SetText(MOS.UI.Components.GetItemLabel(item.itemId) .. (table.getn(player.srItems) > 1 and (" +" .. (table.getn(player.srItems) - 1)) or "")); row.srDirect:Show()
