@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.44 - 2026-09-30
+
+- Preserve the project gold top/side outline when toggling the header.
+- Hiding the header in top Tab View lowers the outer edge and moves controls into content while keeping tabs in place.
+
 ## 0.5.0-dev.43 - 2026-09-30
 
 - Remove header top/status bottom borders and restore the status right border.

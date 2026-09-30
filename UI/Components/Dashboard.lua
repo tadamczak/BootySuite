@@ -9,16 +9,17 @@ function Dashboard.GetChromeLayout(get, classic)
     local topTabs = get("menuStyle") == "tabs"
     local headerHeight = (topTabs and 20 or (compact and 30 or normalHeight)) + 4
     local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 26 or 31)
-    if get("hideHeaderBar") then return 0, -1, bottom, -1 end
-    local top = -(topTabs and 1 or (classic and 8 or 14)) - headerHeight
+    if get("hideHeaderBar") then return 0, topTabs and -28 or -4, bottom, topTabs and -28 or -4 end
+    local top = -(topTabs and 4 or (classic and 8 or 14)) - headerHeight
     return headerHeight, top, bottom, top
 end
 
 local function SetChromeVisible(region, shown) if shown then region:Show() else region:Hide() end end
 
-function Dashboard.SetTabBody(view, protruding)
+function Dashboard.SetTabBody(view, protruding, topInset)
+    topInset = topInset or 0
     local frame = view.frame
-    if protruding then
+    if protruding or topInset > 0 then
         if not view.tabBody then
             local body = MOS.UI.Components.CreateContainer(nil, frame)
             body:EnableMouse(false); body:SetFrameLevel(frame:GetFrameLevel())
@@ -27,6 +28,9 @@ function Dashboard.SetTabBody(view, protruding)
             body:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0); body:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 30)
             view.tabBody = body
         end
+        view.tabBody:ClearAllPoints()
+        view.tabBody:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -topInset)
+        view.tabBody:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, protruding and 30 or 0)
         frame:SetBackdropColor(0, 0, 0, 0); frame:SetBackdropBorderColor(0, 0, 0, 0)
         view.tabBody:Show()
     elseif view.tabBody then
@@ -49,8 +53,8 @@ function Dashboard.ApplyChrome(view, get)
     local classic = MOS.UI.Components.IsClassicSkin()
     local height = Dashboard.GetChromeLayout(get, classic)
     view.titleBar:ClearAllPoints()
-    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, get("menuStyle") == "tabs" and -1 or (classic and -8 or -14))
-    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", -4, get("menuStyle") == "tabs" and -1 or (classic and -8 or -14))
+    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, get("menuStyle") == "tabs" and -4 or (classic and -8 or -14))
+    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", -4, get("menuStyle") == "tabs" and -4 or (classic and -8 or -14))
     view.titleBar:SetHeight(height)
     SetChromeVisible(view.title, not classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
     SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
@@ -70,7 +74,7 @@ function Dashboard.ApplyChrome(view, get)
         else view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 7, 0) end
     end
     local footer = not get("hideStatusVersionBar")
-    Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()))
+    Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()), hiddenHeader and get("menuStyle") == "tabs" and 24 or 0)
     if view.frame.mosStatusBar then SetChromeVisible(view.frame.mosStatusBar, footer) end
     SetChromeVisible(view.versionText, footer)
     SetChromeVisible(view.resizeGrip.texture, footer)
