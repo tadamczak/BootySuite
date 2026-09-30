@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.86 - 2026-10-01
+
+- Make Guild Statistics, Raid Statistics, CSR and Performance adapt to narrow and short windows without clipping controls.
+- Unify project dialogs, dropdowns, table spacing and conditional scrollbar gutters.
+- Keep every CSR source raid, profiler operation and addon-memory entry accessible through scrolling; stop hidden-page updates.
+
 ## 0.5.0-dev.85 - 2026-10-01
 
 - Improve LM Config scrolling, field order, focus handling and short help tooltips.

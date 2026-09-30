@@ -114,7 +114,7 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 - **CSR overview -** Review unsuccessful Soft Reserves accumulated per player and item.
 - **Raid filter -** Include one or more raid types in the calculation.
 - **Search -** Find a player or item.
-- **Raid history -** Expand a CSR record to see the contributing raids.
+- **Raid history -** Expand a CSR record and scroll through all contributing raids.
 - **View raid -** Open the selected contributing raid in Raid Statistics.
 - **CSR Test Lab -** Simulate players, ranks, reservations, awards, and elapsed time without changing saved raid data.
 
@@ -123,7 +123,9 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 - **Runtime metrics -** Review FPS, frame time, latency, Lua memory, event rate, refresh rate, and saved-data size.
 - **Live Monitor -** Open a small movable window with current runtime metrics.
 - **Performance diagnosis -** Capture scoped addon activity when investigating performance problems.
-- **Memory by Addon -** Compare addon memory usage when the client exposes the required data.
+- **Memory by Addon -** Compare addon memory usage when the client exposes the required data. Long addon and operation lists are scrollable.
+
+Statistics, CSR and Performance adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, **Clear date** in the calendar removes a date filter; **Apply** refreshes the results.
 
 ### Settings
 

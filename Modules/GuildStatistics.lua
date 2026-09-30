@@ -128,6 +128,12 @@ function GuildStatistics.CreateTable(page, name, x, width, controller)
         bindRow = function(row)
             row.statisticsController = controller
             row:SetScript("OnClick", OnSummaryClick)
+            MOS.UI.Components.AttachTooltip(row,"Guild statistics",function()
+                local entry=this.entry
+                if not entry then return "" end
+                if entry.member then return (entry.member.name or "").." - "..(string.lower(entry.member.rank or "")=="officer wukong" and "Officer (Chimp)" or (entry.member.rank or "")) end
+                return (entry.value or "")..": "..tostring(entry.count or 0)
+            end)
         end,
     })
     statsTable.entries = {}; statsTable.entryPool = {}; statsTable.memberScratch = {}
@@ -179,14 +185,18 @@ function GuildStatistics.PopulateTable(statsTable, summaries, statsType, data, o
             end
         end
     end
-    local visibleRows = statsTable.visibleRows or table.getn(statsTable.rows)
-    local offset = MOS.UI.Components.UpdateScrollFrame(statsTable.scroll, table.getn(entries), visibleRows, 24)
+    local UI=MOS.UI.Components
+    local rect=statsTable.layout
+    local offset,visibleRows,rowWidth
+    if rect then offset,visibleRows,rowWidth=UI.Table.LayoutViewport(statsTable.scroll,statsTable.controller.page,rect.x,rect.y,rect.width,rect.height,table.getn(entries),24,table.getn(statsTable.rows))
+    else visibleRows=statsTable.visibleRows or table.getn(statsTable.rows); rowWidth=220; offset=UI.UpdateScrollFrame(statsTable.scroll,table.getn(entries),visibleRows,24) end
     local rowIndex
     for rowIndex = 1, table.getn(statsTable.rows) do
         local row = statsTable.rows[rowIndex]
         local entry = entries[offset + rowIndex]
         row.entry = entry
         if entry and rowIndex <= visibleRows then
+            if rect then row:ClearAllPoints(); row:SetPoint("TOPLEFT",statsTable.controller.page,"TOPLEFT",rect.x,-rect.y-(rowIndex-1)*24);row:SetWidth(rowWidth) end
             local expanded = entry.kind == "summary" and expandedType == statsType and expandedValue == entry.value
             MOS.UI.Components.ApplyRowBackground(row, offset + rowIndex, expanded)
             if entry.kind == "summary" then
@@ -194,13 +204,22 @@ function GuildStatistics.PopulateTable(statsTable, summaries, statsType, data, o
                 if statsType == "class" then row.icon:Show() else row.icon:Hide() end
                 row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", statsType == "class" and 28 or 0, 0)
                 row.name:SetWidth(statsType == "class" and 132 or 180)
-                row.name:SetText(entry.value .. (expanded and "  ^" or ""))
+                row.name:SetText((string.lower(entry.value)=="officer wukong" and "Officer (Chimp)" or entry.value) .. (expanded and "  ^" or ""))
                 row.count:SetText(entry.count); row.count:Show(); row.rank:Hide(); row.level:Hide()
             else
                 row.icon:Hide(); row.count:Hide()
                 row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", 12, 0); row.name:SetWidth(82); row.name:SetText(statsTable.controller.shortText(entry.member.name, 12))
                 row.rank:SetWidth(onlyLevel60 and 116 or 96); row.rank:SetText(statsTable.controller.shortText(entry.member.rank, 18)); row.rank:Show()
                 if onlyLevel60 then row.level:Hide() else row.level:SetText(entry.member.level or ""); row.level:Show() end
+            end
+            if entry.kind == "summary" then
+                UI.Table.Cell(row.name,row,statsType=="class" and 28 or 6,rowWidth-(statsType=="class" and 68 or 46),23)
+                UI.Table.Cell(row.count,row,rowWidth-36,30,23)
+            else
+                local nameWidth=math.floor((rowWidth-12)*0.43)
+                UI.Table.Cell(row.name,row,6,nameWidth,23,entry.member.name)
+                UI.Table.Cell(row.rank,row,6+nameWidth,rowWidth-nameWidth-(onlyLevel60 and 12 or 38),23,string.lower(entry.member.rank or "")=="officer wukong" and "Officer (Chimp)" or entry.member.rank)
+                UI.Table.Cell(row.level,row,rowWidth-28,24,23)
             end
             row:Show()
         else
@@ -212,12 +231,14 @@ end
 function GuildStatistics.AttachExport(view, button)
     button:SetParent(view.page); button:ClearAllPoints()
     button:SetPoint("TOPRIGHT", view.page, "TOPRIGHT", -6, -10)
-    button:SetWidth(120); button:SetHeight(22); button:Show()
+    button:SetWidth(120); button:SetHeight(26); button:Show(); MOS.UI.Components.StyleActionButton(button)
     view.exportButton = button
+    view.layoutControls = nil
 end
 
-function GuildStatistics.CreateView(page, styleButton, refresh)
-    local view = { page = page }
+function GuildStatistics.CreateView(host, styleButton, refresh)
+    local page = MOS.UI.Components.CreateResponsiveCanvas(host, "MOSGuildStatisticsPage")
+    local view = { page = page, host = host }
     view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10)
     view.title:SetText("Guild Statistics")
@@ -279,6 +300,10 @@ function GuildStatistics.CreateController(options)
         options.refreshButton = view.refreshButton
         options.lastScan = view.lastScan
     end
+    if view then
+        MOS.UI.Components.StyleActionButton(view.refreshButton); MOS.UI.Components.StyleActionButton(view.scanButton)
+        MOS.UI.Components.BindCheckboxLabel(view.onlyLevel60, function() GuildStatistics.Refresh(options) end)
+    end
     options.ready = false
     options.classIcons = CLASS_ICONS
     options.summaryState = GuildStatistics.CreateSummaryState()
@@ -309,6 +334,9 @@ function GuildStatistics.BeginScan(controller)
     controller.rankPanel:Hide()
     controller.classTable.scroll:Hide()
     controller.rankTable.scroll:Hide()
+    for _,target in ipairs({controller.classTable,controller.rankTable}) do
+        if target.scroll.GetName then MOS.UI.Components.SetScrollBarVisible(target.scroll:GetName() and getglobal(target.scroll:GetName().."ScrollBar"),false) end
+    end
     local index
     for index = 1, table.getn(controller.classTable.rows) do
         controller.classTable.rows[index]:Hide()
@@ -325,13 +353,20 @@ function GuildStatistics.HandleScanFailure(controller)
 end
 
 function GuildStatistics.Refresh(controller)
+    if controller.page.IsShown and not controller.page:IsShown() then return end
+    if controller.refreshing then return end
     MOS.Diagnostics.Count("uiRefreshes")
-    if not controller.ready then return end
+    controller.refreshing = true
+    if not controller.ready then if controller.view then GuildStatistics.Layout(controller) end; controller.refreshing=false; return end
     local data, guildName = controller.getData()
     if not data or not data.members then
-        controller.summary:SetText((guildName or "Guild") .. " has no saved roster. Use Export Roster first.")
+        GuildStatistics.BeginScan(controller)
+        controller.summary:SetText((guildName or "Guild") .. " has no saved roster. Scan Guild Statistics to begin.")
+        controller.summary:Show();controller.scanButton:Show()
+        GuildStatistics.Layout(controller)
         controller.classesHeading:SetText("")
         controller.ranksHeading:SetText("")
+        controller.refreshing=false
         return
     end
     local onlyLevel60 = controller.onlyLevel60:GetChecked()
@@ -342,14 +377,8 @@ function GuildStatistics.Refresh(controller)
     )
     controller.classesHeading:SetText("Members by class")
     controller.ranksHeading:SetText("Members by rank")
-    local panelHeight = math.max(120, controller.page:GetHeight() - 130)
-    controller.classPanel:SetHeight(panelHeight)
-    controller.rankPanel:SetHeight(panelHeight)
-    controller.classTable.scroll:SetHeight(panelHeight - 36)
-    controller.rankTable.scroll:SetHeight(panelHeight - 36)
-    local visibleRows = MOS.UI.Components.CalculateVisibleRows(panelHeight, 44, 24, table.getn(controller.classTable.rows), 3)
-    controller.classTable.visibleRows = visibleRows
-    controller.rankTable.visibleRows = visibleRows
+    controller.lastScan:SetText("Last scan: " .. (data.scannedAtText or "Unknown"))
+    GuildStatistics.Layout(controller)
     GuildStatistics.PopulateTable(controller.classTable, summaryState.classSummaries, "class", data, onlyLevel60, controller.classIcons)
     GuildStatistics.PopulateTable(controller.rankTable, summaryState.rankList, "rank", data, onlyLevel60, controller.classIcons)
     controller.summary:Show()
@@ -362,13 +391,65 @@ function GuildStatistics.Refresh(controller)
     controller.lastScan:SetText("Last scan: " .. (data.scannedAtText or "Unknown"))
     controller.lastScan:Show()
     controller.refreshButton:Show()
+    controller.refreshing=false
 end
 
 function GuildStatistics.CreateLifecycle(controller)
     return {
-        Hide = function(self) controller.page:Hide() end,
+        Hide = function(self) controller.page:Hide(); MOS.UI.Components.SetScrollBarVisible(controller.classTable.scroll:GetName() and getglobal(controller.classTable.scroll:GetName() .. "ScrollBar"),false); MOS.UI.Components.SetScrollBarVisible(controller.rankTable.scroll:GetName() and getglobal(controller.rankTable.scroll:GetName() .. "ScrollBar"),false) end,
         Show = function(self) controller.page:Show(); GuildStatistics.Refresh(controller) end,
         Refresh = function(self) GuildStatistics.Refresh(controller) end,
         OnResize = function(self) GuildStatistics.Refresh(controller) end,
     }
+end
+
+local function LayoutContent(fullWidth,height,controller)
+    local UI,view=MOS.UI.Components,controller.view
+    local width=math.max(80,fullWidth-16)
+    local page=view.page
+    view.title:ClearAllPoints();view.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);UI.FitButtonLabel(view.title,width)
+    local top=38
+    local controls=view.layoutControls
+    if not controls then
+        controls={view.refreshButton,view.onlyLevel60};view.layoutControls=controls
+        view.refreshButton.mosFlowWidth=108;view.onlyLevel60.mosFlowWidth=120
+        if view.exportButton then table.insert(controls,1,view.exportButton);view.exportButton.mosFlowWidth=120 end
+    end
+    if controller.ready then
+        -- Checkbox width is the hit target; artwork remains the native22-unit box.
+        view.onlyLevel60:SetWidth(22)
+        top=UI.LayoutFlow(page,controls,8,top,width,8)+8
+        view.onlyLevel60:SetWidth(22)
+        view.lastScan:ClearAllPoints();view.lastScan:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);view.lastScan:SetWidth(width);view.lastScan:SetHeight(0)
+        top=top+math.max(16,view.lastScan:GetStringHeight())+8
+        view.summary:ClearAllPoints();view.summary:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);view.summary:SetWidth(width);view.summary:SetHeight(0)
+        top=top+math.max(16,view.summary:GetStringHeight())+8
+    else
+        if view.exportButton then UI.LayoutFlow(page,{view.exportButton},8,38,width,8) end
+        view.summary:ClearAllPoints();view.summary:SetPoint("TOPLEFT",page,"TOPLEFT",8,-76);view.summary:SetWidth(width);view.summary:SetHeight(0)
+        view.scanButton:ClearAllPoints();view.scanButton:SetPoint("TOPLEFT",page,"TOPLEFT",8,-76-math.max(24,view.summary:GetStringHeight())-8)
+        view.scanButton:SetWidth(math.min(160,width))
+    end
+    local stacked=width<560
+    local minimum=stacked and 172 or 80
+    local available=math.max(minimum,height-top-8)
+    local panelWidth=stacked and width or (width-12)/2
+    local panelHeight=stacked and (available-12)/2 or available
+    for index=1,2 do
+        local x=8+(stacked and 0 or (index-1)*(panelWidth+12))
+        local y=top+(stacked and (index-1)*(panelHeight+12) or 0)
+        local panel=index==1 and view.classPanel or view.rankPanel
+        panel:ClearAllPoints();panel:SetPoint("TOPLEFT",page,"TOPLEFT",x,-y);panel:SetWidth(panelWidth);panel:SetHeight(panelHeight)
+        local heading=index==1 and view.classesHeading or view.ranksHeading
+        heading:ClearAllPoints();heading:SetPoint("TOPLEFT",page,"TOPLEFT",x+6,-y-4);UI.FitButtonLabel(heading,panelWidth-12)
+        heading:SetTextColor(unpack(UI.Theme.colors.goldText))
+        local target=index==1 and view.classTable or view.rankTable
+        target.controller.page=page;target.layout=target.layout or {}
+        target.layout.x=x+6;target.layout.y=y+26;target.layout.width=panelWidth-12;target.layout.height=math.max(24,panelHeight-32)
+    end
+    return top+available+8
+end
+
+function GuildStatistics.Layout(controller)
+    if controller.view then MOS.UI.Components.LayoutResponsiveCanvas(controller.view.page,LayoutContent,controller) end
 end
