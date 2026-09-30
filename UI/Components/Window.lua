@@ -4,6 +4,10 @@ local projectBackdrop = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "I
 MOS.UI.Components.Window = Window
 
 function Window.ApplyProjectSurface(frame)
+    -- Registered dropdowns may already own a skinned nine-slice. Hide it before
+    -- applying the native project border, including after a skin change.
+    frame.mosUseNativeSurface = true
+    if MOS.UI.Components.SetSurfaceCompact then MOS.UI.Components.SetSurfaceCompact(frame, false) end
     frame:SetBackdrop(projectBackdrop)
     frame:SetBackdropColor(0.015, 0.015, 0.015, 1)
     frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.73 - 2026-09-30
+
+- Align gold LM toolbar icons, reuse the main Settings gear and add a compact Loot Master Mode title.
+- Remove decorative skin overlays from project dropdown borders; shorten shared loot rules to HCI and RC.
+
 ## 0.5.0-dev.72 - 2026-09-30
 
 - Open Loot Master Mode in an independent window without changing dashboard visibility or navigation.

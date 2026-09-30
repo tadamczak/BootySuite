@@ -964,7 +964,7 @@ end
 
 function RaidService.SendLootRules(rules)
     rules = rules or MOS.Database.GetLootRules()
-    local sent, errorMessage = RaidService.SendRaidWarning("Sons of Mukla raid loot rules:")
+    local sent, errorMessage = RaidService.SendRaidWarning("=== LOOT RULES ===")
     if not sent then return false, errorMessage end
     local ranks = {
         { "Silverback", "silverback" }, { "Chimp", "chimp" }, { "Baboon", "baboon" },
@@ -979,8 +979,8 @@ function RaidService.SendLootRules(rules)
         local hasReyCoin = rule and rule.reyCoin or (not rule and defaultReyCoinRanks[rankKey])
         local hasCSR = rule and rule.csr or (not rule and rankKey == "silverback")
         local parts = {}
-        if hasSR then parts[table.getn(parts) + 1] = hasContested and "SR + Highly Contested Items" or "SR" end
-        if hasReyCoin then parts[table.getn(parts) + 1] = "Reycoin" end
+        if hasSR then parts[table.getn(parts) + 1] = hasContested and "SR + HCI" or "SR" end
+        if hasReyCoin then parts[table.getn(parts) + 1] = "RC" end
         if hasCSR then parts[table.getn(parts) + 1] = "CSR" end
         local rights = table.getn(parts) > 0 and table.concat(parts, ", ") or "None"
         sent, errorMessage = RaidService.SendRaidWarning(rankName .. ": " .. rights)
