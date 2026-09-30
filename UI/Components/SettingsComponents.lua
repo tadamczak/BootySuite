@@ -330,30 +330,39 @@ function Settings.OnViewportSizeChanged()
     if page then Settings.UpdateScroll(this, page, page.settingsContentHeight or 960) end
 end
 
-function Settings.UpdateScroll(viewport, page, pageHeight)
-    if not viewport or not page then return end
-    local width = viewport:GetWidth()
-    if viewport.mosWidthOwner and viewport.mosWidthInset then
-        width = viewport.mosWidthOwner:GetWidth() - viewport.mosWidthInset
-    elseif viewport.GetLeft and viewport:GetLeft() and viewport:GetRight() then
-        width = viewport:GetRight() - viewport:GetLeft()
-    end
-    width = math.max(1, width)
+local function MeasureSettingsWidth(width, page)
     local changed = math.abs(page:GetWidth() - width) > 0.5
     page:SetWidth(width)
-    if changed and page.ReflowSettings and not page.mosReflowing then
-        page.mosReflowing = true; page.ReflowSettings(); page.mosReflowing = nil
-        pageHeight = page.settingsContentHeight or pageHeight
+    if changed and page.ReflowSettings then page.ReflowSettings() end
+    return page.settingsContentHeight or page.mosRequestedHeight or 960
+end
+
+function Settings.UpdateScroll(viewport, page, pageHeight)
+    if not viewport or not page or viewport.mosScrollLayoutBusy then return end
+    viewport.mosScrollLayoutBusy = true
+    local UI = MOS.UI.Components
+    local fullWidth, height = UI.GetFrameSpan(viewport)
+    local anchor = viewport.mosScrollAnchor
+    if viewport.mosWidthOwner and viewport.mosWidthInset then
+        fullWidth = viewport.mosWidthOwner:GetWidth() - viewport.mosWidthInset
+    else
+        fullWidth = fullWidth + (viewport.mosScrollGutter or 0)
     end
-    page:SetHeight(pageHeight or 960)
-    local scrollBar = getglobal(viewport:GetName() .. "ScrollBar")
-    local maximum = math.max(0, page:GetHeight() - viewport:GetHeight())
-    if scrollBar then
-        scrollBar:SetMinMaxValues(0, maximum)
-        scrollBar:SetValue(math.max(0, math.min(maximum, viewport:GetVerticalScroll())))
-        if maximum > 0 then scrollBar:Show() else scrollBar:Hide() end
+    if viewport.mosHeightOwner and viewport.mosHeightInset then
+        height = viewport.mosHeightOwner:GetHeight() - viewport.mosHeightInset
+
     end
+    page.mosRequestedHeight = pageHeight
+    local width, contentHeight, overflow, maximum = UI.ResolveScrollLayout(fullWidth, height, 20, MeasureSettingsWidth, page)
+    if anchor then
+        viewport:ClearAllPoints(); viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 4, -4)
+        viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", overflow and -24 or -4, 4)
+    end
+    page:SetHeight(contentHeight)
+    viewport.mosScrollGutter = overflow and 20 or 0
     if viewport.UpdateScrollChildRect then viewport:UpdateScrollChildRect() end
+    UI.ApplyScrollRange(viewport, getglobal(viewport:GetName() .. "ScrollBar"), maximum)
+    viewport.mosScrollLayoutBusy = nil
 end
 
 function Settings.CreateFactory(binding)

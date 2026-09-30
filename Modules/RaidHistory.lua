@@ -20,8 +20,43 @@ local function Cell(label, parent, x, width, text)
     return label:GetStringHeight() + 10
 end
 
+local function MeasureHistory(width, controls)
+    local page, snapshots, actionY = controls.historyPage, controls.historyPage.raidHistorySnapshots, controls.historyActionY
+    local dataWidth = math.max(60, width - 48)
+    local nameWidth, raidWidth = math.floor(dataWidth * 0.34), math.floor(dataWidth * 0.34)
+    local timeWidth = dataWidth - nameWidth - raidWidth
+    local widths = {nameWidth, raidWidth, timeWidth}
+    local x = 8
+    for index = 1, 3 do
+        local heading = controls.historyHeaders[index]
+        heading:ClearAllPoints(); heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, actionY - 62); heading:SetWidth(widths[index] - 6); heading:SetJustifyH("LEFT"); heading:Show()
+        x = x + widths[index]
+    end
+    controls.historyCanvas:SetWidth(width)
+    local y = 0
+    for index = 1, 5 do
+        local snapshot, button = snapshots[index], controls.historyButtons[index]
+        local deleteButton, load = controls.historyDeleteButtons[index], controls.historyLoadButtons[index]
+        button:ClearAllPoints(); button:SetPoint("TOPLEFT", controls.historyCanvas, "TOPLEFT", 0, y); button:SetWidth(dataWidth)
+        if snapshot then
+            local savedAt = snapshot.savedAt or snapshot.updatedAt
+            local height = math.max(26,
+                Cell(button.label, button, 4, nameWidth - 6, tostring(snapshot.id or "Unknown")),
+                Cell(button.raidName, button, nameWidth + 4, raidWidth - 6, snapshot.raidName or "Unknown zone"),
+                Cell(button.savedAt, button, nameWidth + raidWidth + 4, timeWidth - 6, savedAt and date("%Y-%m-%d %H:%M", savedAt) or ""))
+            button:SetHeight(height); button:Show()
+            MOS.UI.Components.StyleWarmListRow(button, page.selectedRaidHistoryId == snapshot.id)
+            load:SetWidth(24); load:SetHeight(24); deleteButton:SetWidth(16); deleteButton:SetHeight(16)
+            load:ClearAllPoints(); load:SetPoint("LEFT", button, "RIGHT", 4, 0); load:Show()
+            deleteButton:ClearAllPoints(); deleteButton:SetPoint("LEFT", load, "RIGHT", 4, 0); deleteButton:Show()
+            y = y - height - 2
+        else button:Hide(); load:Hide(); deleteButton:Hide() end
+    end
+    return math.max(1, -y - 2)
+end
+
 function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
-    local width = math.max(120, page:GetWidth() - 16)
+    local width = math.max(1, MOS.UI.Components.GetFrameSpan(page) - 16)
     local buttonWidth = math.min(110, (width - 8) / 2)
     local textY = MuklaOfficerSuiteDB.raidHideSectionHeader and -8 or -48
     local actionY = textY - 38
@@ -45,39 +80,24 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     controls.historyTitle:ClearAllPoints(); controls.historyTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 8, actionY - 38); controls.historyTitle:Show()
     local snapshots = page.getRaidHistory and page.getRaidHistory() or {}; page.raidHistorySnapshots = snapshots
     if not MOS.UI.Components.ApplySelectionListStyle(controls.historyButtons, snapshots, page.selectedRaidHistoryId, controls.loadRaid) then page.selectedRaidHistoryId = nil end
-    local dataWidth = math.max(60, width - 68)
-    local nameWidth, raidWidth = math.floor(dataWidth * 0.34), math.floor(dataWidth * 0.34)
-    local timeWidth = dataWidth - nameWidth - raidWidth
-    local widths = {nameWidth, raidWidth, timeWidth}
-    local x = 8
-    for index = 1, 3 do
-        local heading = controls.historyHeaders[index]
-        heading:ClearAllPoints(); heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, actionY - 62); heading:SetWidth(widths[index] - 6); heading:SetJustifyH("LEFT"); heading:Show()
-        x = x + widths[index]
+    controls.historyPage = page; controls.historyActionY = actionY
+    local _, pageHeight = MOS.UI.Components.GetFrameSpan(page)
+    local viewportHeight = math.max(1, pageHeight + actionY - 82 - 8)
+    local contentWidth, contentHeight, overflow, maximum = MOS.UI.Components.ResolveScrollLayout(width, viewportHeight, 20, MeasureHistory, controls)
+    controls.historyScroll:ClearAllPoints()
+    controls.historyScroll:SetPoint("TOPLEFT", page, "TOPLEFT", 8, actionY - 82)
+    controls.historyScroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", overflow and -28 or -8, 8)
+    controls.historyCanvas:SetWidth(contentWidth); controls.historyCanvas:SetHeight(contentHeight)
+    controls.historyScroll:Show()
+    local bar = getglobal("MuklaOfficerSuiteRaidHistoryScrollScrollBar")
+    if bar then
+        bar:ClearAllPoints(); bar:SetWidth(16)
+        bar:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, actionY - 98)
+        bar:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -8, 24)
     end
-    controls.historyScroll:ClearAllPoints(); controls.historyScroll:SetPoint("TOPLEFT",page,"TOPLEFT",8,actionY-82);controls.historyScroll:SetPoint("BOTTOMRIGHT",page,"BOTTOMRIGHT",-28,8)
-    controls.historyCanvas:SetWidth(width-20);controls.historyScroll:Show()
-    local y = 0
-    for index = 1, 5 do
-        local snapshot, button = snapshots[index], controls.historyButtons[index]
-        local deleteButton, load = controls.historyDeleteButtons[index], controls.historyLoadButtons[index]
-        button:ClearAllPoints(); button:SetPoint("TOPLEFT", controls.historyCanvas, "TOPLEFT", 0, y); button:SetWidth(dataWidth)
-        if snapshot then
-            local savedAt = snapshot.savedAt or snapshot.updatedAt
-            local height = math.max(26,
-                Cell(button.label, button, 4, nameWidth - 6, tostring(snapshot.id or "Unknown")),
-                Cell(button.raidName, button, nameWidth + 4, raidWidth - 6, snapshot.raidName or "Unknown zone"),
-                Cell(button.savedAt, button, nameWidth + raidWidth + 4, timeWidth - 6, savedAt and date("%Y-%m-%d %H:%M", savedAt) or ""))
-            button:SetHeight(height); button:Show()
-            MOS.UI.Components.StyleWarmListRow(button, page.selectedRaidHistoryId == snapshot.id)
-            load:SetWidth(24); load:SetHeight(24); deleteButton:SetWidth(16); deleteButton:SetHeight(16)
-            load:ClearAllPoints(); load:SetPoint("LEFT", button, "RIGHT", 4, 0); load:Show()
-            deleteButton:ClearAllPoints(); deleteButton:SetPoint("LEFT", load, "RIGHT", 4, 0); deleteButton:Show()
-            y = y - height - 2
-        else button:Hide(); load:Hide(); deleteButton:Hide() end
-    end
-    controls.historyCanvas:SetHeight(math.max(1,-y))
     if controls.historyScroll.UpdateScrollChildRect then controls.historyScroll:UpdateScrollChildRect() end
+    MOS.UI.Components.ApplyScrollRange(controls.historyScroll, bar, maximum)
+    controls.historyScroll.mosScrollGutter = overflow and 20 or 0
     if table.getn(snapshots) == 0 then
         controls.historyEmpty:ClearAllPoints(); controls.historyEmpty:SetPoint("TOPLEFT", page, "TOPLEFT", 8, actionY - 86); controls.historyEmpty:Show()
     else controls.historyEmpty:Hide() end

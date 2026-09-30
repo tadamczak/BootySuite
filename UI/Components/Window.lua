@@ -97,6 +97,8 @@ function Window.Create(options)
         view = settingsView
         view.viewport.mosWidthOwner = window
         view.viewport.mosWidthInset = options.viewportWidthInset
+        view.viewport.mosHeightOwner = window
+        view.viewport.mosHeightInset = options.viewportHeightInset
         options.attach(view, content)
         view.viewport:Hide()
     end
