@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.69 - 2026-09-30
+
+- Scale raid column headers together and release hidden scrollbar space in list/group views.
+- Keep four group columns within the available width.
+- Open raid leader/loot master actions in dismissible dropdowns with project gold button outlines.
+
 ## 0.5.0-dev.68 - 2026-09-30
 
 - Place the status footer above bottom tabs and widen saved-raid dates.

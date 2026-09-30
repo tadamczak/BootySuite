@@ -811,7 +811,7 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
 
     local classic = MOS.UI.Components.IsClassicSkin()
     page.reyCoinToggle:Hide(); page.reyCoinPanel:Hide(); page.lmConfigPanel:Hide(); page.lmConfigToggle:Hide()
-    local submenuOffset = classic and ((page.activeToolMenu and 32 or 0) + (page.classicActionOffset or 0) + (page.classicToolbarOffset or 0)) or 0
+    local submenuOffset = classic and ((page.classicActionOffset or 0) + (page.classicToolbarOffset or 0)) or 0
     controls.filterLabel:ClearAllPoints(); controls.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -106 - submenuOffset)
     local pageWidth = PageSpan(page)
     local filterWidth = pageWidth < 650 and 60 or 84
@@ -1010,6 +1010,7 @@ function RaidManagement.RefreshPage(renderer)
 end
 
 function RaidManagement.ShowMinimizedLootMasterState(page, rows)
+    if page.toolDropdowns then for _, panel in pairs(page.toolDropdowns) do panel:Hide() end end
     local controls = page.refreshControls
     controls.leaderMode:Hide(); controls.resetFilters:Hide()
     controls.unavailable:Hide(); controls.status:Hide(); controls.scan:Hide(); controls.testRaid:Hide(); controls.raidLeaderTools:Hide(); controls.lootMasterTools:Hide(); controls.addStatistics:Hide(); controls.export:Hide(); controls.quit:Hide(); controls.lootRules:Hide(); controls.sendLootRules:Hide(); controls.import:Hide(); controls.shareSr:Hide(); controls.resetLoot:Hide(); controls.live:Hide()
@@ -1024,6 +1025,7 @@ function RaidManagement.ShowMinimizedLootMasterState(page, rows)
 end
 
 function RaidManagement.ShowNoRaidState(page, rows)
+    if page.toolDropdowns then for _, panel in pairs(page.toolDropdowns) do panel:Hide() end end
     local controls = page.refreshControls
     controls.leaderMode:Hide(); controls.resetFilters:Hide(); controls.mode:Hide(); controls.unavailable:Show()
     controls.unavailable:ClearAllPoints(); controls.unavailable:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -48); controls.unavailable:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -48); controls.unavailable:SetHeight(0); if controls.unavailable.SetWordWrap then controls.unavailable:SetWordWrap(true) end
@@ -1034,6 +1036,7 @@ function RaidManagement.ShowNoRaidState(page, rows)
 end
 
 function RaidManagement.ShowScanRequiredState(page, rows)
+    if page.toolDropdowns then for _, panel in pairs(page.toolDropdowns) do panel:Hide() end end
     local controls = page.refreshControls
     controls.leaderMode:Hide(); controls.resetFilters:Hide(); controls.mode:Hide()
     controls.raidLeaderTools:Hide(); controls.lootMasterTools:Hide(); controls.addStatistics:Hide(); controls.export:Hide(); controls.quit:Hide(); controls.lootRules:Hide(); controls.sendLootRules:Hide(); controls.import:Hide(); controls.shareSr:Hide(); controls.resetLoot:Hide(); controls.minimize:Hide(); controls.live:Hide()
@@ -1053,6 +1056,7 @@ function RaidManagement.ShowScanningState(page, rows)
 end
 
 function RaidManagement.ShowReadyState(page, lootMasterMode)
+    if lootMasterMode and page.toolDropdowns then for _, panel in pairs(page.toolDropdowns) do panel:Hide() end end
     local controls = page.refreshControls
     if MOS.UI.Components.IsClassicSkin() and not lootMasterMode then page.classicToolbar:Show(); page.classicSummary:Show() else page.classicToolbar:Hide(); page.classicSummary:Hide() end
     controls.mode:Show(); controls.scan:Hide(); controls.live:Hide()
@@ -1162,7 +1166,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
     if side then
         local pageWidth, pageHeight = PageSpan(page)
         local width = math.min(250, math.max(210, math.floor(pageWidth * 0.30)))
-        local top = -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)
+        local top = -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0)
         local available = math.max(0, pageHeight + top - 8 - (page.classicWarningBottom or 0))
         local shownCount = (showUnmatched and 1 or 0) + (showMissing and 1 or 0) + (showInvalid and 1 or 0)
         local gap = shownCount > 1 and 8 or 0
@@ -1240,7 +1244,7 @@ function RaidManagement.ShowGroupView(page, rows)
         local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
         if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then warningWidth = 0 end
         -- 2px warning inset + 7.5px outer clearance (4px window + 1.5px page + 2px warning) + 20px scrollbar/gap.
-        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 4)
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 4)
         if page.groupScrollBar then
             page.groupScrollBar:ClearAllPoints(); page.groupScrollBar:SetWidth(16)
             page.groupScrollBar:SetPoint("TOPLEFT", page.groupFrame, "TOPRIGHT", 4, -12)
@@ -1248,8 +1252,12 @@ function RaidManagement.ShowGroupView(page, rows)
         end
     else
         local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
-        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, page.activeToolMenu and -98 or -72); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -72); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
     end
+    page.mosGroupLayout = true
+    page.mosGroupLeft = MOS.UI.Components.IsClassicSkin() and 10 or 6
+    page.mosGroupTop = MOS.UI.Components.IsClassicSkin() and (-100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0)) or -72
+    page.mosGroupBottom = MOS.UI.Components.IsClassicSkin() and 4 or 5
     page.groupFrame:Show(); if page.listScrollBar then page.listScrollBar:Hide() end
     page.refreshGroupView()
 end
@@ -1404,7 +1412,7 @@ function RaidManagement.CalculateGroupGeometry(width, height, columns, preferred
         rows = groupRows,
         layoutWidth = layoutWidth,
         xOffset = math.max(0, math.floor((availableWidth - layoutWidth) / 2)),
-        columnWidth = math.max(80, math.floor((layoutWidth - ((columnCount - 1) * margin)) / columnCount)),
+        columnWidth = math.max(1, math.floor((layoutWidth - ((columnCount - 1) * margin)) / columnCount)),
         headerHeight = headerHeight,
         groupHeight = groupHeight,
         contentHeight = contentHeight,
@@ -1457,8 +1465,37 @@ function RaidManagement.FilterMembers(target, members, query, selectedClasses, s
     return target
 end
 
+function RaidManagement.MeasureListHeight(width, page)
+    return page.mosListMeasuredHeight
+end
+
+function RaidManagement.FitListHeaders(page, headerButtons, lootMasterMode)
+    local scale = 1
+    local _, baseSize = page.headerLabels[1]:GetFont()
+    baseSize = baseSize or (lootMasterMode and 10 or 12)
+    local count = lootMasterMode and table.getn(headerButtons) or table.getn(page.listColumns)
+    for index = 1, count do
+        local button = lootMasterMode and headerButtons[index] or page.listColumns[index].button
+        local enabled = lootMasterMode and button:IsVisible() or not lootMasterMode and page.listEnabled[index]
+        if enabled then
+            local label = button.label
+            local font, _, flags = label:GetFont()
+            label:SetFont(font, baseSize, flags); label:SetWidth(0)
+            if label.SetWordWrap then label:SetWordWrap(false) end
+            if label.SetNonSpaceWrap then label:SetNonSpaceWrap(false) end
+            scale = math.min(scale, math.max(1, button:GetWidth() - 3) / math.max(1, label:GetStringWidth()))
+        end
+    end
+    for index = 1, count do
+        local button = lootMasterMode and headerButtons[index] or page.listColumns[index].button
+        local label = button.label
+        local font, _, flags = label:GetFont()
+        label:SetFont(font, baseSize * scale, flags); label:SetWidth(math.max(1, button:GetWidth() - 3)); label:SetHeight(baseSize * scale + 3)
+    end
+end
+
 function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMasterMode, configuredRowWidth, memberCount, selectedName)
-    local submenuOffset = not lootMasterMode and MOS.UI.Components.IsClassicSkin() and ((page.activeToolMenu and 32 or 0) + (page.classicActionOffset or 0) + (page.classicToolbarOffset or 0) + (page.classicSearchOffset or 0)) or 0
+    local submenuOffset = not lootMasterMode and MOS.UI.Components.IsClassicSkin() and ((page.classicActionOffset or 0) + (page.classicToolbarOffset or 0) + (page.classicSearchOffset or 0)) or 0
     local headerY = lootMasterMode and -29 or -134 - submenuOffset
     local rowStartY = lootMasterMode and -46 or -156 - submenuOffset
     local positions = lootMasterMode and lootHeaderPositions or normalHeaderPositions
@@ -1489,24 +1526,17 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
     local tableLeft = lootMasterMode and 1.5 or 6
     local pageWidth, pageHeight = PageSpan(page)
     local classic = MOS.UI.Components.IsClassicSkin()
-    local warningWidth = page.classicWarningWidth or 0
-    -- Leave room for the separately anchored 16-unit scrollbar and its gap.
-    local tableRight = pageWidth - (classic and warningWidth == 0 and 20 or 24) - (warningWidth > 0 and (warningWidth + 18) or 0)
-    if lootMasterMode then
-        local bodyHeight = math.max(0, pageHeight + rowStartY - 3)
-        local visibleRows = math.max(1, math.floor(bodyHeight / 21))
-        local needsScroll = not selectedName and (memberCount or 0) > visibleRows
-        tableRight = pageWidth - (needsScroll and 21 or 3)
-    end
-    if MOS.UI.Components.IsClassicSkin() and (tonumber(page.classicWarningWidth) or 0) > 0 and page:GetLeft() then
-        local warning = page.softReserveWarning and page.softReserveWarning:IsVisible() and page.softReserveWarning
-            or page.missingSoftReserveWarning and page.missingSoftReserveWarning:IsVisible() and page.missingSoftReserveWarning
-            or page.invalidSoftReserveWarning
-        if warning and warning:IsVisible() and warning:GetLeft() then tableRight = warning:GetLeft() - page:GetLeft() - 30 end
-    end
-    if not MOS.UI.Components.IsClassicSkin() and page.listScrollBar and page.listScrollBar:GetLeft() and page:GetLeft() then
-        tableRight = page.listScrollBar:GetLeft() - page:GetLeft() - 4
-    end
+    local rowStep = lootMasterMode and 21 or ((tonumber(MuklaOfficerSuiteDB.raidListRowHeight) or 20) + 1)
+    local bottom = lootMasterMode and 1.5 or (classic and 4 or 11)
+    local bodyHeight = math.max(1, pageHeight + rowStartY - bottom)
+    local count = memberCount or 0
+    if not lootMasterMode and selectedName then count = count + 7 end
+    if lootMasterMode and selectedName then count = 1 end
+    page.mosListMeasuredHeight = count * rowStep
+    local fullWidth = math.max(1, pageWidth - tableLeft - (lootMasterMode and 3 or 4))
+    local resolvedWidth, _, overflow = MOS.UI.Components.ResolveScrollLayout(fullWidth, bodyHeight, 20, RaidManagement.MeasureListHeight, page)
+    page.mosListScrollGutter = overflow and 20 or 0
+    local tableRight = tableLeft + resolvedWidth
     local availableWidth = math.max(1, tableRight - tableLeft)
     local tableWidth = availableWidth
     if lootMasterMode then
@@ -1543,6 +1573,7 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
             end
         end
     end
+    RaidManagement.FitListHeaders(page, headerButtons, lootMasterMode)
     return rowStartY, tableLeft, tableWidth
 end
 
@@ -1882,12 +1913,37 @@ function RaidManagement.SetGroupRenderer(page, dependencies)
     page.groupRenderer = dependencies
 end
 
+function RaidManagement.MeasureGroupHeight(width, page)
+    local db = MuklaOfficerSuiteDB
+    local geometry = RaidManagement.CalculateGroupGeometry(width, page.mosGroupHeight, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder)
+    return geometry.contentHeight
+end
+
+function RaidManagement.ResolveGroupViewport(page)
+    local width, height = PageSpan(page.groupFrame)
+    if page.mosGroupLayout then
+        local pageWidth, pageHeight = PageSpan(page)
+        width = pageWidth - page.mosGroupLeft - 4
+        height = pageHeight + page.mosGroupTop - page.mosGroupBottom
+    else width = width + (page.mosGroupScrollGutter or 0) end
+    width, height = math.max(1, width), math.max(1, height)
+    page.mosGroupHeight = height
+    local overflow, maximum, measuredHeight
+    width, measuredHeight, overflow, maximum = MOS.UI.Components.ResolveScrollLayout(width, height, 20, RaidManagement.MeasureGroupHeight, page)
+    page.mosGroupScrollGutter = overflow and 20 or 0
+    if page.mosGroupLayout then
+        page.groupFrame:ClearAllPoints()
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", page.mosGroupLeft, page.mosGroupTop)
+        page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -4 - page.mosGroupScrollGutter, page.mosGroupBottom)
+    end
+    return width, height, maximum
+end
+
 function RaidManagement.RefreshGroupView(page)
     if not page.groupFrame:IsVisible() then return end
     local renderer = page.groupRenderer
     renderer.ensureDatabase()
-    local width, height = PageSpan(page.groupFrame)
-    width, height = math.max(1, width), math.max(1, height)
+    local width, height, maximum = RaidManagement.ResolveGroupViewport(page)
     local configuredWidth = tonumber(MuklaOfficerSuiteDB.raidGroupTileWidth) or 280
     local backgroundColor = MuklaOfficerSuiteDB.raidGroupBackgroundColor
     local textColor = MuklaOfficerSuiteDB.raidGroupTextColor
@@ -1903,12 +1959,7 @@ function RaidManagement.RefreshGroupView(page)
     local contentHeight = geometry.contentHeight
     local yOffset = 0
     page.groupCanvas:SetWidth(width); page.groupCanvas:SetHeight(geometry.canvasHeight)
-    local maximum = geometry.maximumScroll
-    if page.groupScrollBar then
-        page.groupScrollBar:SetMinMaxValues(0, maximum)
-        page.groupScrollBar:SetValue(math.max(0, math.min(maximum, page.groupFrame:GetVerticalScroll())))
-        MOS.UI.Components.SetScrollBarVisible(page.groupScrollBar, maximum > 0)
-    end
+    MOS.UI.Components.ApplyScrollRange(page.groupFrame, page.groupScrollBar, maximum)
     local groupIndex, slotIndex
     for groupIndex = 1, 8 do
         page.groupCounts[groupIndex] = 0
@@ -2166,30 +2217,63 @@ function RaidManagement.SetActions(page, viewButton, raidLeaderToolsButton, loot
     }
 end
 
+local function InvokeToolChoice()
+    local option = this
+    local source = option.toolSource
+    option:GetParent():Hide()
+    local handler = source:GetScript("OnClick")
+    if handler then
+        this = source
+        local ok, message = pcall(handler)
+        this = option
+        if not ok then error(message) end
+    end
+end
+
 function RaidManagement.UpdateToolSubmenu(page)
+    local UI = MOS.UI.Components
     local controls = page.refreshControls
     controls.leaderMode:Hide(); controls.mode:Hide(); controls.resetLoot:Hide(); controls.import:Hide(); controls.shareSr:Hide(); controls.lootRules:Hide(); controls.sendLootRules:Hide()
-    if MOS.UI.Components.IsClassicSkin() then
-        MOS.UI.Components.SetClassicButtonVariant(controls.raidLeaderTools, "dark")
-        MOS.UI.Components.SetClassicButtonVariant(controls.lootMasterTools, "dark")
-        MOS.UI.Components.SetClassicButtonSelected(controls.raidLeaderTools, page.activeToolMenu == "leader")
-        MOS.UI.Components.SetClassicButtonSelected(controls.lootMasterTools, page.activeToolMenu == "loot")
-    end
-    local buttons = {}
-    if page.activeToolMenu == "leader" then buttons = { controls.leaderMode }
-    elseif page.activeToolMenu == "loot" then buttons = { controls.mode, controls.resetLoot, controls.import, controls.shareSr, controls.lootRules, controls.sendLootRules } end
-    local x, index = 6, nil
-    local y = MOS.UI.Components.IsClassicSkin() and (-96 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0)) or -68
-    for index = 1, table.getn(buttons) do
-        local button = buttons[index]
-        if MOS.UI.Components.IsClassicSkin() and button.mosClassicIconKey and button.label then
-            local neededWidth = button.label:GetStringWidth() + 34
-            if button:GetWidth() < neededWidth then button:SetWidth(neededWidth) end
+    page.toolDropdowns = page.toolDropdowns or {}
+    for key, panel in pairs(page.toolDropdowns) do if key ~= page.activeToolMenu then panel:Hide() end end
+    UI.SetClassicButtonSelected(controls.raidLeaderTools, page.activeToolMenu == "leader")
+    UI.SetClassicButtonSelected(controls.lootMasterTools, page.activeToolMenu == "loot")
+    if not page.activeToolMenu then return end
+    local key = page.activeToolMenu
+    local toggle = key == "leader" and controls.raidLeaderTools or controls.lootMasterTools
+    local panel = page.toolDropdowns[key]
+    if not panel then
+        local sources = key == "leader" and {controls.leaderMode} or {controls.mode, controls.resetLoot, controls.import, controls.shareSr, controls.lootRules, controls.sendLootRules}
+        panel = UI.CreateDropdownPanel(page, toggle, 230, 8 + table.getn(sources) * 28, 80)
+        panel.mosMinimumFrameLevel = page:GetFrameLevel() + 80
+        UI.Window.ApplyProjectSurface(panel)
+        UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(panel) end)
+        panel:ClearAllPoints(); panel:SetPoint("TOPRIGHT", toggle, "BOTTOMRIGHT", 0, -2)
+        if panel.SetClampedToScreen then panel:SetClampedToScreen(true) end
+        for index = 1, table.getn(sources) do
+            local option = UI.CreateButton(panel, nil, "", 222, 24)
+            option:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4 - (index - 1) * 28)
+            option.toolSource = sources[index]
+            UI.SetProjectButtonOutline(option, true)
+            option:SetScript("OnClick", InvokeToolChoice)
+            panel.options[index] = option
         end
-        if x + button:GetWidth() > PageSpan(page) - 12 then x = 12; y = y - 28 end
-        button:ClearAllPoints(); button:SetPoint("TOPLEFT", page, "TOPLEFT", x, y); button:Show()
-        x = x + button:GetWidth() + 6
+        local onHide = panel:GetScript("OnHide")
+        panel:SetScript("OnHide", function()
+            if panel.IsShown and panel:IsShown() then panel:Hide() end
+            if onHide then onHide() end
+            if page.activeToolMenu == key then page.activeToolMenu = nil end
+            UI.SetClassicButtonSelected(toggle, false)
+        end)
+        page.toolDropdowns[key] = panel
     end
+    for index = 1, table.getn(panel.options) do
+        local option = panel.options[index]
+        option:SetText(option.toolSource:GetText())
+        local enabled = not option.toolSource.IsEnabled or option.toolSource:IsEnabled()
+        UI.SetButtonEnabled(option, enabled ~= false and enabled ~= 0)
+    end
+    panel:Show(); UI.RefreshDropdownLayers(panel, toggle)
 end
 
 function RaidManagement.LayoutActions(page)
