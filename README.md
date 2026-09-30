@@ -77,18 +77,18 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Attendance -** Track the raid roster and optionally include attendance when saving statistics.
 - **Raid views -** Switch between the member list and a centered, configurable group layout with adjustable sizing, spacing, and typography.
 - **Player actions -** Manage raid leader, assistants, removal, reporting, and ignore state.
-- **Soft Reserve warnings -** Review missing SR, imported SR outside the raid, and SR without loot rights.
+- **Soft Reserve warnings -** Review compact, movable detail lists for missing SR, imported SR outside the raid, and SR without loot rights without blocking the game interface.
 - **Loot rules -** Configure SR, Highly Contested Items, Reycoin, and CSR rights by guild rank.
 - **Reycoin list -** Review used Reycoins and pending item trades.
 - **Narrow raid windows -** Raid Leader Tools and Loot Master Tools wrap to a left-aligned row. Warnings move below the roster as compact headers when space is limited.
-- **Raid header -** In narrow windows, saved date, warning count, Save Session and Quit move together to a second row aligned to the left.
+- **Raid header -** The Raid section label has its own row. In narrow windows, saved date, warning count, Save Session and Quit move together to a second row aligned to the left.
 - **Saved raids -** Select and load an earlier raid session.
 
 ### Loot Master Mode
 
 Open **Loot Master Tools > LM Mode** to show a separate window while keeping the main addon open. Its top bar has gold **SR** and **Loot Rules** icons beside the configuration controls. Their menus offer **Import SR / Share SR Link** and **Set Loot Rules / Share Loot Rules**. Shared rules start with **=== LOOT RULES ===** and abbreviate Highly Contested Items as **HCI** and Reycoin as **RC**. Click outside a menu to close it. The minimized main window keeps its controls and border without a background. Minimize, resize or close the LM window independently. Click a player to expand loot details within the scrollable list; neighboring players remain visible. The gold list icon opens **Reycoin List**. Enter a raid member name and click **Add** (or press Enter) to record a used Reycoin; invalid names show an explanation. **Loot Master Config** has its own close button, supports narrower widths, and colors rarity options by item quality. Config and Reycoin List remain attached when moving LM. **Set Loot Rules** can be minimized without losing unsaved edits.
 
-Loading a saved raid with Live Tracking enabled asks whether to refresh it from the current raid. Choosing No turns Live Tracking off in Settings. Officer Wukong uses Chimp loot rights regardless of officer notes and appears in the raid list as **Officer (Chimp)**.
+Loading a saved raid with Live Tracking enabled asks whether to refresh the saved data from the current raid. Choosing No turns Live Tracking off in Settings and the prompt reminds you to enable it again when desired. Officer Wukong uses Chimp loot rights regardless of officer notes and appears in the raid list as **Officer (Chimp)**.
 
 In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening the loot source), or **Off**. **Auto Loot Rarity** selects item qualities. **Auto Loot Inclusions** bypasses rarity selection while the mode is enabled; **Auto Loot Exclusions** always takes priority and prevents automatic looting. Both lists accept comma-separated names and case-insensitive `*` wildcards: `Recipe *` matches recipe names, `* Sack of *` matches names containing Sack of, and `* Coin` matches names ending in Coin. Spaces next to `*` are optional. Settings profiles save both lists. **Add Exclusions Preset** supplies MC, Onyxia's Lair, BWL and ZG exclusions; Kara10 remains an empty reserved preset. Changing presets replaces preset-owned entries while preserving other manual entries.
 

@@ -147,11 +147,13 @@ function RaidResService.Import(encoded, attendance, srUrl)
             for itemIndex = 1, table.getn(itemIds) do labels[itemIndex] = tostring(itemIds[itemIndex]) end
             member.sr = table.concat(labels, ", ")
             member.srItemIds = itemIds
+            member.srSourceName = reservation.name
             byName[NormalizeName(member.name)] = nil
             matched = matched + 1
         else
             member.sr = ""
             member.srItemIds = nil
+            member.srSourceName = nil
             missingNames[table.getn(missingNames) + 1] = member.name
             if reservation then byName[NormalizeName(member.name)] = nil end
         end
@@ -202,7 +204,7 @@ function RaidResService.ApplyAssignments(attendance, assignments)
             local labels = {}
             for index = 1, table.getn(reservation.itemIds or {}) do labels[index] = tostring(reservation.itemIds[index]) end
             if table.getn(labels) > 0 then
-                member.sr = table.concat(labels, ", "); member.srItemIds = reservation.itemIds
+                member.sr = table.concat(labels, ", "); member.srItemIds = reservation.itemIds; member.srSourceName = reservation.name
                 assignedReservations[NormalizeName(reservation.name)] = true
             end
         end
@@ -251,16 +253,17 @@ function RaidResService.RemoveMemberReservation(attendance, memberName)
     if not member or not member.srItemIds or table.getn(member.srItemIds) == 0 then return false end
     local releasedItemIds = {}
     for index = 1, table.getn(member.srItemIds) do releasedItemIds[index] = member.srItemIds[index] end
-    member.sr = ""; member.srItemIds = nil
+    local releasedName = member.srSourceName or member.name
+    member.sr = ""; member.srItemIds = nil; member.srSourceName = nil
     local unmatchedReservations = importInfo.unmatchedReservations or {}
     local unmatchedNames = importInfo.unmatchedNames or {}
     local reservationExists = false
     for index = 1, table.getn(unmatchedReservations) do
-        if NormalizeName(unmatchedReservations[index].name) == NormalizeName(member.name) then reservationExists = true; break end
+        if NormalizeName(unmatchedReservations[index].name) == NormalizeName(releasedName) then reservationExists = true; break end
     end
     if not reservationExists then
-        unmatchedReservations[table.getn(unmatchedReservations) + 1] = { name = member.name, itemIds = releasedItemIds }
-        unmatchedNames[table.getn(unmatchedNames) + 1] = member.name
+        unmatchedReservations[table.getn(unmatchedReservations) + 1] = { name = releasedName, itemIds = releasedItemIds }
+        unmatchedNames[table.getn(unmatchedNames) + 1] = releasedName
         table.sort(unmatchedReservations, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
         table.sort(unmatchedNames)
     end
@@ -294,6 +297,7 @@ function RaidResService.ClearInvalidMemberReservations(attendance, rules)
                 if not invalid[tostring(itemId)] then remaining[table.getn(remaining) + 1] = itemId end
             end
             member.srItemIds = table.getn(remaining) > 0 and remaining or nil
+            if table.getn(remaining) == 0 then member.srSourceName = nil end
             local labels = {}
             for itemIndex = 1, table.getn(remaining) do labels[itemIndex] = tostring(remaining[itemIndex]) end
             member.sr = table.concat(labels, ", ")
@@ -328,7 +332,7 @@ function RaidResService.Reconcile(previousAttendance, attendance)
     for index = 1, table.getn(previousAttendance.members or {}) do
         local member = previousAttendance.members[index]
         if member.srItemIds and table.getn(member.srItemIds) > 0 then
-            reservationsByName[NormalizeName(member.name)] = { name = member.name, itemIds = member.srItemIds }
+            reservationsByName[NormalizeName(member.name)] = { name = member.srSourceName or member.name, itemIds = member.srItemIds }
         end
     end
 
@@ -341,12 +345,13 @@ function RaidResService.Reconcile(previousAttendance, attendance)
             reservationsByName[key] = nil
         elseif reservation then
             member.srItemIds = reservation.itemIds
+            member.srSourceName = reservation.name
             local labels, itemIndex = {}, nil
             for itemIndex = 1, table.getn(reservation.itemIds or {}) do labels[itemIndex] = tostring(reservation.itemIds[itemIndex]) end
             member.sr = table.concat(labels, ", ")
             reservationsByName[key] = nil
         else
-            member.sr = ""; member.srItemIds = nil
+            member.sr = ""; member.srItemIds = nil; member.srSourceName = nil
             missingNames[table.getn(missingNames) + 1] = member.name
         end
     end
@@ -400,7 +405,7 @@ function RaidResService.BuildSnapshot(attendance)
         if member.srItemIds and table.getn(member.srItemIds) > 0 then
             local itemIds = {}
             for itemIndex = 1, table.getn(member.srItemIds) do itemIds[itemIndex] = member.srItemIds[itemIndex] end
-            savedMember.srItemIds = itemIds; savedMember.sr = member.sr
+            savedMember.srItemIds = itemIds; savedMember.sr = member.sr; savedMember.srSourceName = member.srSourceName
             snapshot.assignedCount = snapshot.assignedCount + 1
         end
         table.insert(snapshot.members, savedMember)

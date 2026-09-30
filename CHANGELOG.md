@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.87 - 2026-10-01
+
+- Separate the Raid section heading from active-session details and keep the responsive toolbar inside its frame.
+- Compact Raid action and view buttons, keep the saved date left aligned, and clarify the Live Tracking load choice.
+- Make warning details compact and nonmodal with list explanations; return removed reassigned Soft Reserves to the imported unassigned pool.
+
 ## 0.5.0-dev.86 - 2026-10-01
 
 - Make Guild Statistics, Raid Statistics, CSR and Performance adapt to narrow and short windows without clipping controls.
