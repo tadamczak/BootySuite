@@ -172,5 +172,15 @@ function Window.CreateProjectConfirmation(name, title, action)
     frame.no:SetWidth(96); frame.yes:SetWidth(96)
     UI.AttachGoldHoverBorder(frame.no, 0.35, 0.35, 0.35, 1)
     UI.AttachGoldHoverBorder(frame.yes, 0.35, 0.35, 0.35, 1)
+    frame.no:ClearAllPoints(); frame.no:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -112, 8)
+    frame.yes:ClearAllPoints(); frame.yes:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
+    local open = frame.Open
+    frame.Open = function(self, message, onYes, onNo)
+        open(self, message, onYes, onNo)
+        self.label:SetText(message)
+        local textHeight = math.max(32, self.label:GetStringHeight())
+        self.label:SetHeight(textHeight)
+        self:SetHeight(textHeight + 78)
+    end
     return frame
 end

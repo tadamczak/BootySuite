@@ -34,12 +34,12 @@ function RaidManagement.CreateSoftReserveImportDialog(options)
     MOS.UI.Components.Window.StyleProjectDialog(dialog)
     dialog:SetWidth(620); dialog:SetHeight(360); dialog.save:SetText("Import"); dialog.cancel:SetText("Cancel")
     dialog.urlLabel = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormalSmall")
-    dialog.urlLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -42); dialog.urlLabel:SetText("SR URL")
+    dialog.urlLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -36); dialog.urlLabel:SetText("SR URL")
     dialog.url = MOS.UI.Components.CreateFramedEditBox(dialog, nil, 580)
-    dialog.url:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -58); dialog.url:SetPoint("TOPRIGHT", dialog, "TOPRIGHT", -18, -58); dialog.url:SetMaxLetters(500)
+    dialog.url:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -52); dialog.url:SetPoint("TOPRIGHT", dialog, "TOPRIGHT", -8, -52); dialog.url:SetMaxLetters(500)
     dialog.exportLabel = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormalSmall")
-    dialog.exportLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -86); dialog.exportLabel:SetText("RollFor export")
-    dialog.scroll:ClearAllPoints(); dialog.scroll:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -103); dialog.scroll:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -34, 52)
+    dialog.exportLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -80); dialog.exportLabel:SetText("RollFor export")
+    dialog.scroll:ClearAllPoints(); dialog.scroll:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -97); dialog.scroll:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -28, 38)
     local openEditor = dialog.Open
     dialog.Open = function(self, value)
         local testMode = options.isTestRaid and options.isTestRaid()
@@ -52,8 +52,8 @@ function RaidManagement.CreateSoftReserveImportDialog(options)
         openEditor(self, testMode and "" or (options.getRollForExport() or value or ""))
         if testMode then self.url:SetFocus() end
     end
-    dialog.cancel:ClearAllPoints(); dialog.cancel:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -92, 18)
-    dialog.save:ClearAllPoints(); dialog.save:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -14, 18)
+    dialog.cancel:ClearAllPoints(); dialog.cancel:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -86, 8)
+    dialog.save:ClearAllPoints(); dialog.save:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -8, 8)
     return dialog
 end
 
@@ -76,9 +76,12 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
     MOS.UI.Components.JoinSurfaceEdges(divider, true, false)
     warning.classicHeader.icon = MOS.UI.Components.CreateTexture(warning.classicHeader, nil, "ARTWORK")
     warning.classicHeader.icon:SetTexture(MOS.UI.Components.ClassicAsset("Icons\\warning_triangle.tga")); warning.classicHeader.icon:SetWidth(12); warning.classicHeader.icon:SetHeight(12)
-    warning.classicHeader.icon:SetPoint("LEFT", warning.classicHeader, "LEFT", 3, 1); warning.classicHeader.icon:SetVertexColor(1, 0.78, 0.24)
+    warning.classicHeader.icon:SetPoint("LEFT", warning.classicHeader, "LEFT", 4, 0); warning.classicHeader.icon:SetVertexColor(1, 0.78, 0.24)
     warning.classicHeader.title = MOS.UI.Components.CreateLabel(warning.classicHeader, nil, "OVERLAY", "GameFontNormalSmall")
     warning.classicHeader.title:SetPoint("LEFT", warning.classicHeader.icon, "RIGHT", 6, 0); warning.classicHeader.title:SetText("Warning")
+    warning.classicHeader.title:SetTextColor(1, 0.82, 0.28)
+    local _, warningFontSize = warning.classicHeader.title:GetFont()
+    warning.classicHeader.icon:SetWidth(warningFontSize); warning.classicHeader.icon:SetHeight(warningFontSize)
     warning.classicHeader.close = MOS.UI.Components.CreateWindowButton(warning.classicHeader, nil, "close")
     warning.classicHeader.close:SetPoint("RIGHT", warning.classicHeader, "RIGHT", -3, 1)
     warning.classicHeader.minimize = MOS.UI.Components.CreateWindowButton(warning.classicHeader, nil, "minimize")
@@ -107,17 +110,50 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
     end)
     warning.dialog = MOS.UI.Components.CreateReadOnlyDialog(dialogName, dialogTitle, 560, 340, background)
     MOS.UI.Components.Window.StyleProjectDialog(warning.dialog)
+    warning.dialog.title:SetTextColor(1, 0.82, 0.28)
+    warning.dialog.icon = MOS.UI.Components.CreateTexture(warning.dialog, nil, "ARTWORK")
+    warning.dialog.icon:SetTexture(MOS.UI.Components.ClassicAsset("Icons\\warning_triangle.tga"))
+    warning.dialog.icon:SetVertexColor(unpack(MOS.UI.Components.Theme.colors.goldIcon))
+    warning.dialog.icon:SetWidth(13); warning.dialog.icon:SetHeight(13)
+    warning.dialog.icon:SetPoint("TOPLEFT", warning.dialog, "TOPLEFT", 8, -8)
+    warning.dialog.title:ClearAllPoints(); warning.dialog.title:SetPoint("LEFT", warning.dialog.icon, "RIGHT", 6, 0)
+    warning.dialog.ok:ClearAllPoints(); warning.dialog.ok:SetPoint("BOTTOMRIGHT", warning.dialog, "BOTTOMRIGHT", -8, 8)
+    warning.dialog.playerRows = {}
     warning.info = MOS.UI.Components.CreateButton(warning, nil, "INFO", 66, 20)
     warning.info:SetPoint("BOTTOMRIGHT", warning, "BOTTOMRIGHT", -8, 6); warning.info:SetFrameLevel(warning:GetFrameLevel() + 2)
     warning.info:SetScript("OnClick", function()
         warning.dialog.title:SetText("Warning: " .. (warning.text:GetText() or dialogTitle))
-        warning.dialog:Open(warning.details or "")
+        local attendance = page.getWarningAttendance and page.getWarningAttendance() or page.listRenderer and page.listRenderer.getData()
+        local issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
+        local key = warning == page.softReserveWarning and "unmatchedNames" or warning == page.missingSoftReserveWarning and "missingNames" or "invalidNames"
+        local names = issues[key] or {}
+        local dialog = warning.dialog
+        dialog:Open(""); dialog.text:Hide()
+        local contentHeight = table.getn(names) * 24
+        local overflow = contentHeight > dialog:GetHeight() - 78
+        dialog.scroll:ClearAllPoints(); dialog.scroll:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -36)
+        dialog.scroll:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", overflow and -28 or -8, 38)
+        local width = dialog:GetWidth() - (overflow and 36 or 16)
+        dialog.canvas:SetWidth(width); dialog.canvas:SetHeight(math.max(1, contentHeight))
+        if dialog.scrollBar then if overflow then dialog.scrollBar:Show() else dialog.scrollBar:Hide() end end
+        for index=1, table.getn(names) do
+            local row = dialog.playerRows[index]
+            if not row then
+                row = MOS.UI.Components.CreateButton(dialog.canvas, nil, "", width, 22)
+                MOS.UI.Components.SetButtonLabelInsets(row, 6, 6)
+                dialog.playerRows[index] = row
+            end
+            row:ClearAllPoints(); row:SetPoint("TOPLEFT", dialog.canvas, "TOPLEFT", 0, -(index-1)*24)
+            row:SetWidth(width); row:SetText(RaidManagement.SoftReservePlayerLabel(names[index], attendance)); row:Show()
+        end
+        for index=table.getn(names)+1, table.getn(dialog.playerRows) do dialog.playerRows[index]:Hide() end
     end)
     warning:Hide()
     return warning
 end
 
 function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh, getAttendance)
+    page.getWarningAttendance = getAttendance
     page.softReserveWarning = CreateWarningCard(page, "MuklaOfficerSuiteSoftReserveWarningDetails", "Soft Reserves outside raid", { 0.18, 0.08, 0.01 }, { 1, 0.55, 0.08 }, { 1, 0.72, 0.18 })
     page.softReserveWarning.onDismiss = refresh
     page.softReserveWarning.text:ClearAllPoints(); page.softReserveWarning.text:SetPoint("LEFT", page.softReserveWarning, "LEFT", 9, -5); page.softReserveWarning.text:SetPoint("RIGHT", page.softReserveWarning, "RIGHT", -84, -5)
@@ -165,6 +201,7 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
     local confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SRDialog", "Fix Soft Reserves", "Remove")
+    confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:SetWidth(300)
     invalidWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_INVALID_SR; confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:Open(spec.text, spec.OnAccept) end)
     invalidWarning.ping:SetScript("OnClick", function()
         local names = MOS.Services.Raid.GetSoftReserveIssues(getAttendance(), page.getSoftReserveRules and page.getSoftReserveRules()).invalidNames
@@ -181,7 +218,7 @@ function RaidManagement.SoftReservePlayerLabel(name, attendance, reservation)
             if string.lower(candidate.name or "") == string.lower(name or "") then return candidate end
         end
     end
-    member = Find(attendance and attendance.members) or member
+    member = Find(attendance and attendance.members) or member or Find(attendance and attendance.softReserveImport and attendance.softReserveImport.unmatchedReservations)
     if not member or not (member.classFile or member.class) then
         local roster = MOS.Database and MOS.Database.GetRosterData and MOS.Database.GetRosterData()
         member = Find(roster and roster.members) or member
@@ -201,13 +238,13 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
     dialog:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 7, right = 7, top = 7, bottom = 7 } }); dialog:SetBackdropColor(0.018, 0.018, 0.016, 1)
     MOS.UI.Components.RegisterDialogSurface(dialog, "panel", { 0.018, 0.018, 0.016, 1 })
-    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -16); dialog.title:SetText("Fix Soft Reserve assignments")
+    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -16); dialog.title:SetText("Fix Soft Reserve assignments")
     MOS.UI.Components.Window.StyleProjectDialog(dialog)
-    dialog.help = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.help:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -43); dialog.help:SetText("Drag an unassigned Soft Reserve from the right onto the correct raid member.")
-    dialog.leftTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.leftTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -72); dialog.leftTitle:SetText("Raid members without SR")
-    dialog.rightTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.rightTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 358, -72); dialog.rightTitle:SetText("Unassigned Soft Reserves")
-    dialog.leftPanel = MOS.UI.Components.CreateContainer(nil, dialog); dialog.leftPanel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -92); dialog.leftPanel:SetWidth(326); dialog.leftPanel:SetHeight(278)
-    dialog.rightPanel = MOS.UI.Components.CreateContainer(nil, dialog); dialog.rightPanel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 356, -92); dialog.rightPanel:SetWidth(326); dialog.rightPanel:SetHeight(278)
+    dialog.help = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.help:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -36); dialog.help:SetText("Drag an unassigned Soft Reserve from the right onto the correct raid member.")
+    dialog.leftTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.leftTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -72); dialog.leftTitle:SetText("Raid members without SR")
+    dialog.rightTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.rightTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 354, -72); dialog.rightTitle:SetText("Unassigned Soft Reserves")
+    dialog.leftPanel = MOS.UI.Components.CreateContainer(nil, dialog); dialog.leftPanel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -92); dialog.leftPanel:SetWidth(338); dialog.leftPanel:SetHeight(278)
+    dialog.rightPanel = MOS.UI.Components.CreateContainer(nil, dialog); dialog.rightPanel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 354, -92); dialog.rightPanel:SetWidth(338); dialog.rightPanel:SetHeight(278)
     local panels = { dialog.leftPanel, dialog.rightPanel }
     local panelIndex, rowIndex
     for panelIndex = 1, 2 do
@@ -216,8 +253,8 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     end
     dialog.leftRows = {}; dialog.rightRows = {}; dialog.assignments = {}
     for rowIndex = 1, 12 do
-        local left = MOS.UI.Components.CreateButton(dialog.leftPanel, nil, "", 312, 20); left:SetPoint("TOPLEFT", dialog.leftPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); left.label:SetJustifyH("LEFT")
-        local right = MOS.UI.Components.CreateButton(dialog.rightPanel, nil, "", 312, 20); right:SetPoint("TOPLEFT", dialog.rightPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); right.label:SetJustifyH("LEFT"); right:RegisterForDrag("LeftButton")
+        local left = MOS.UI.Components.CreateButton(dialog.leftPanel, nil, "", 324, 20); left:SetPoint("TOPLEFT", dialog.leftPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); left.label:SetJustifyH("LEFT")
+        local right = MOS.UI.Components.CreateButton(dialog.rightPanel, nil, "", 324, 20); right:SetPoint("TOPLEFT", dialog.rightPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); right.label:SetJustifyH("LEFT"); right:RegisterForDrag("LeftButton")
         MOS.UI.Components.SetButtonLabelInsets(left, 6, 6); MOS.UI.Components.SetButtonLabelInsets(right, 6, 6)
         right.itemHit = MOS.UI.Components.CreateControl(nil, right)
         right.itemHit:SetHeight(20); right.itemHit:RegisterForDrag("LeftButton")
@@ -225,8 +262,8 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
         right.itemHit:SetScript("OnClick", HandleItemClick)
         dialog.leftRows[rowIndex] = left; dialog.rightRows[rowIndex] = right
     end
-    dialog.save = MOS.UI.Components.CreateButton(dialog, nil, "Save", 78, 22); dialog.save:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -100, 18)
-    dialog.close = MOS.UI.Components.CreateButton(dialog, nil, "Close", 78, 22); dialog.close:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -16, 18)
+    dialog.save = MOS.UI.Components.CreateButton(dialog, nil, "Save", 78, 22); dialog.save:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -94, 8)
+    dialog.close = MOS.UI.Components.CreateButton(dialog, nil, "Close", 78, 22); dialog.close:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -8, 8)
     dialog.ghost = MOS.UI.Components.CreateContainer(nil, UIParent); dialog.ghost:SetWidth(260); dialog.ghost:SetHeight(22); dialog.ghost:SetFrameStrata("TOOLTIP"); dialog.ghost:SetFrameLevel(240)
     dialog.ghost:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }); dialog.ghost:SetBackdropColor(0.12, 0.09, 0.03, 0.98)
     dialog.ghost.text = MOS.UI.Components.CreateLabel(dialog.ghost, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.ghost.text:SetPoint("LEFT", dialog.ghost, "LEFT", 8, 0); dialog.ghost:Hide()
@@ -249,7 +286,7 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
         local index
         for index = 1, 12 do
             local memberName = dialog.missing[dialog.leftOffset + index]; local left = dialog.leftRows[index]; left.memberName = memberName
-            if memberName then local assigned = dialog.assignments[memberName]; left.label:SetText(RaidManagement.SoftReservePlayerLabel(memberName, dialog.attendance) .. (assigned and ("  <-  " .. assigned) or "")); left:Show() else left:Hide() end
+            if memberName then local assigned = dialog.assignments[memberName]; left.label:SetText(RaidManagement.SoftReservePlayerLabel(memberName, dialog.attendance) .. (assigned and ("  <-  " .. RaidManagement.SoftReservePlayerLabel(assigned, dialog.attendance, dialog.reservationByName and dialog.reservationByName[string.lower(assigned)])) or "")); left:Show() else left:Hide() end
             local reservation = dialog.available[dialog.rightOffset + index]; local right = dialog.rightRows[index]; right.reservation = reservation
             if reservation then
                 right.itemId = reservation.itemIds and reservation.itemIds[1] or nil
@@ -293,6 +330,8 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
         local importInfo = attendance and attendance.softReserveImport
         if not importInfo or not importInfo.missingNames or not importInfo.unmatchedReservations then return end
         self.attendance = attendance; self.importInfo = importInfo; self.missing = importInfo.missingNames; self.assignments = {}; self.leftOffset = 0; self.rightOffset = 0
+        self.reservationByName = {}
+        for _, reservation in ipairs(importInfo.unmatchedReservations) do self.reservationByName[string.lower(reservation.name or "")] = reservation end
         RefreshDialog(); dismiss:Show(); self:Show()
     end
     page.softReserveFixDialog = dialog

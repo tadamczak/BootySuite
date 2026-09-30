@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.82 - 2026-09-30
+
+- Present warning details as class-colored player rows and unify warning header/content spacing.
+- Preserve assignment name colors, constrain Reycoin resizing to its corner and fix tool dropdown bottom padding.
+
 ## 0.5.0-dev.81 - 2026-09-30
 
 - Restore toolbar background/both separators; tighten project dialog and loot rules spacing.
