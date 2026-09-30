@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.71"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.72"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -402,7 +402,8 @@ RefreshStatisticsPage = function()
 end
 
 RefreshRaidPage = function()
-    MOS.Modules.RaidManagement.RefreshPage(raidRenderer)
+    if raidPage:IsVisible() then MOS.Modules.RaidManagement.RefreshPage(raidRenderer) end
+    if raidPage.lootMasterController then raidPage.lootMasterController.Refresh() end
 end
 
 RefreshRosterPage = MOS.Diagnostics.Wrap("Roster refresh", RefreshRosterPage)
@@ -435,8 +436,9 @@ MOS.ModuleRegistry.Register("raid", MOS.Modules.RaidManagement.CreateLifecycle({
     getScanReady = function() return MOS.raidScanReady end,
     isHistoricalLoaded = function() return raidHistoricalLoaded end,
     isPresentationActive = function()
-        return dashboard:IsVisible() and (MOS.lootMasterMode or not dashboardView.minimized)
+        return (raidPage:IsVisible() and not dashboardView.minimized) or (raidPage.lootMasterController and raidPage.lootMasterController.IsVisible())
     end,
+    isDetachedActive = function() return raidPage.lootMasterController and raidPage.lootMasterController.IsVisible() end,
     saveRaidRoster = SaveActiveRaidRoster,
     setLiveTracking = function(value) MOS.raidLiveTracking = value end,
     setScanReady = function(value) MOS.raidScanReady = value end,
@@ -717,9 +719,7 @@ local function ToggleDashboard()
     if dashboard:IsVisible() then
         dashboard:Hide()
     else
-        -- Reassert the normal dashboard as one coherent presentation before it
-        -- becomes visible. This also repairs stale frame geometry left by a UI
-        -- reload while Loot Master Mode was active.
+        -- Main-window chrome is independent of the detached Loot Master window.
         if not MOS.lootMasterMode and not dashboardView.minimized and raidPage.lootMasterController then
             raidPage.lootMasterController.resetOnLoad()
             ApplyNavigationLayout()
@@ -850,7 +850,7 @@ MOS.Core.EventDispatcher.Attach(MOS, {
     end,
     RAID_ROSTER_UPDATE = function()
         raidPage.lifecycle:OnWorldContextChanged()
-        if currentPage == "raid" then
+        if currentPage == "raid" or raidPage.lootMasterController.IsVisible() then
             raidPage.lifecycle:OnRosterUpdate()
         end
     end,
@@ -860,7 +860,7 @@ MOS.Core.EventDispatcher.Attach(MOS, {
         local attendance = MOS.Database.GetRaidAttendance()
         local trackingLoot = MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused
             and not IsTestRaid() and MOS.Services.Raid.IsInRaid() and MOS.Services.RaidRes.HasSession(attendance)
-        if trackingLoot and RecordRaidLoot(message) and currentPage == "raid" and raidPage:IsVisible() then RefreshRaidPage() end
+        if trackingLoot and RecordRaidLoot(message) and (raidPage:IsVisible() or raidPage.lootMasterController.IsVisible()) then RefreshRaidPage() end
     end,
 })
 

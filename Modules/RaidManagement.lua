@@ -422,6 +422,7 @@ local function OnListViewportScroll()
 end
 
 local function PageSpan(page)
+    if page.detachedLootMaster then return math.max(1, page:GetParent():GetWidth() - 8), math.max(1, page:GetParent():GetHeight() - 8) end
     local left, right = page:GetLeft(), page:GetRight()
     local bottom, top = page:GetBottom(), page:GetTop()
     return left and right and (right - left) or page:GetWidth(),
@@ -582,7 +583,7 @@ function RaidManagement.CreateListRow(parent, index, controller)
         lootRow.hit:SetScript("OnEnter", OnLootItemEnter); lootRow.hit:SetScript("OnLeave", OnLootItemLeave); lootRow.hit:SetScript("OnClick", OnLootItemClick); lootRow.hit:Hide()
         row.lootRows[lootIndex] = lootRow
     end
-    row.lootScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidLootScroll" .. index, row.lootPanel, "FauxScrollFrameTemplate")
+    row.lootScroll = MOS.UI.Components.CreateScrollFrame((parent.mosLootScrollPrefix or "MuklaOfficerSuiteRaidLootScroll") .. index, row.lootPanel, "FauxScrollFrameTemplate")
     row.lootScroll:SetPoint("TOPLEFT", row.lootPanel, "TOPLEFT", 8, -24); row.lootScroll:SetPoint("BOTTOMRIGHT", row.lootPanel, "BOTTOMRIGHT", -30, 8)
     row.lootScrollBar = getglobal(row.lootScroll:GetName() .. "ScrollBar")
     if row.lootScrollBar then
@@ -688,15 +689,16 @@ function RaidManagement.CreateListController(options)
     return controller
 end
 
-function RaidManagement.CreateListViewport(page, rowCount, controller)
+function RaidManagement.CreateListViewport(page, rowCount, controller, scrollName)
     local rows = {}
     local index
     for index = 1, rowCount do rows[index] = RaidManagement.CreateListRow(page, index, controller) end
-    local scrollFrame = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidScrollFrame", page, "FauxScrollFrameTemplate")
+    scrollName = scrollName or "MuklaOfficerSuiteRaidScrollFrame"
+    local scrollFrame = MOS.UI.Components.CreateScrollFrame(scrollName, page, "FauxScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", -4, -121)
     scrollFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -6, 18)
     page.listRows = rows; page.listScrollFrame = scrollFrame
-    page.listScrollBar = getglobal("MuklaOfficerSuiteRaidScrollFrameScrollBar")
+    page.listScrollBar = getglobal(scrollName .. "ScrollBar")
     MOS.UI.Components.RegisterSkinnedScrollBar(page.listScrollBar)
     return rows, scrollFrame
 end
@@ -813,7 +815,8 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
     end
 
     local classic = MOS.UI.Components.IsClassicSkin()
-    page.reyCoinToggle:Hide(); page.reyCoinPanel:Hide(); page.lmConfigPanel:Hide(); page.lmConfigToggle:Hide()
+    page.reyCoinToggle:Hide(); page.lmConfigToggle:Hide()
+    if not page.lootMasterController or not page.lootMasterController.IsVisible() then page.reyCoinPanel:Hide(); page.lmConfigPanel:Hide() end
     local submenuOffset = classic and ((page.classicActionOffset or 0) + (page.classicToolbarOffset or 0)) or 0
     controls.filterLabel:ClearAllPoints(); controls.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -106 - submenuOffset)
     local pageWidth = PageSpan(page)
@@ -1290,7 +1293,7 @@ end
 
 function RaidManagement.RefreshListView(page, rows, members, selectedName, sortKey, lootMasterMode, settings)
     local renderer = page.listRenderer
-    RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true)
+    if not page.detachedLootMaster then RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true) end
     page.classicWarningWidth = 0
     local pageWidth = PageSpan(page)
     local filterWidth = pageWidth < 650 and 60 or 84
@@ -1300,7 +1303,7 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     page.classicSearchOffset = not lootMasterMode and MOS.UI.Components.IsClassicSkin() and settings.raidListShowFilters and settings.raidListShowSearch and searchWidth < 90 and 30 or 0
     page.classicSearchWidth = (page.classicSearchOffset or 0) > 0 and math.max(60, math.min(178, searchSpace - 93)) or math.max(90, math.min(178, searchWidth))
     if not settings.raidListShowFilters then page.classicSearchWidth = math.max(90, math.min(178, searchSpace - 93)) end
-    RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
+    if not page.detachedLootMaster then RaidManagement.LayoutListToolbar(page, lootMasterMode, settings) end
     local rowStartY, tableLeft, tableWidth = RaidManagement.LayoutListHeaders(page, page.listHeaderUI.buttons, sortKey, lootMasterMode, settings.raidListRowWidth, table.getn(members), selectedName)
     local warningHeight = 0
     local scrollFrame = page.listScrollFrame
@@ -2530,7 +2533,7 @@ end
 
 function RaidManagement.CreateLifecycle(options)
     local lifecycle = {}
-    local rosterDebounce = MOS.UI.Components.CreateContainer(nil, options.page)
+    local rosterDebounce = MOS.UI.Components.CreateContainer(nil, UIParent)
     rosterDebounce.raidLifecycle = lifecycle
     rosterDebounce.remaining = 0
     rosterDebounce:SetScript("OnUpdate", OnRosterDebounceUpdate)
@@ -2544,7 +2547,7 @@ function RaidManagement.CreateLifecycle(options)
 
     function lifecycle:FlushRosterUpdate()
         local inRaid = options.isInRaid()
-        local tracking = options.getTrackingEnabled() and inRaid
+        local tracking = options.getTrackingEnabled() and inRaid and options.isPresentationActive()
         options.setLiveTracking(tracking and true or false)
         if not tracking then return end
         if not options.isPresentationActive() then return end
@@ -2557,24 +2560,24 @@ function RaidManagement.CreateLifecycle(options)
     end
 
     function lifecycle:SyncTrackingSetting()
-        local tracking = options.page:IsVisible() and options.isInRaid() and options.getScanReady() and options.getTrackingEnabled()
+        local tracking = options.isPresentationActive() and options.isInRaid() and options.getScanReady() and options.getTrackingEnabled()
         options.setLiveTracking(tracking and true or false)
         options.page.refreshControls.refreshButton:SetInactive(tracking)
         if tracking then options.saveRaidRoster() end
-        if options.page:IsVisible() then options.refresh() end
+        if options.isPresentationActive() then options.refresh() end
     end
 
     function lifecycle:Hide()
         options.page.groupMovePending = nil
-        options.setLiveTracking(false)
-        self:CancelRosterUpdate()
+        local detached = options.isDetachedActive and options.isDetachedActive()
+        if not detached then options.setLiveTracking(false); self:CancelRosterUpdate() end
         options.page.refreshControls.refreshButton:SetInactive(false)
         if options.page.filterController then options.page.filterController:Hide() end
         if options.page.memberMenu then options.page.memberMenu:Hide() end
         if options.page.memberMenuDismiss then options.page.memberMenuDismiss:Hide() end
-        if options.page.softReserveImportDialog then options.page.softReserveImportDialog:Hide() end
+        if not detached and options.page.softReserveImportDialog then options.page.softReserveImportDialog:Hide() end
         if options.page.softReserveFixDialog and options.page.softReserveFixDialog.Close then options.page.softReserveFixDialog:Close() end
-        if options.page.lootRulesDialog and options.page.lootRulesDialog.Close then options.page.lootRulesDialog:Close() end
+        if not detached and options.page.lootRulesDialog and options.page.lootRulesDialog.Close then options.page.lootRulesDialog:Close() end
         if options.page.contestedItemsDialog then options.page.contestedItemsDialog:Hide() end
         options.page:Hide()
     end
@@ -2598,7 +2601,7 @@ function RaidManagement.CreateLifecycle(options)
             if not options.getTrackingEnabled() and options.isPresentationActive() then options.refresh() end
         end
         local inRaid = options.isInRaid()
-        local tracking = options.getTrackingEnabled() and inRaid
+        local tracking = options.getTrackingEnabled() and inRaid and options.isPresentationActive()
         options.setLiveTracking(tracking and true or false)
         if not inRaid then
             self:CancelRosterUpdate()
@@ -2625,7 +2628,18 @@ function RaidManagement.CreateLifecycle(options)
 end
 
 function RaidManagement.CreateLootMasterController(options)
-    local controller = { dashboard = options.dashboard, getSettings = options.getSettings }
+    local UI = MOS.UI.Components
+    local window = UI.CreateContainer("MuklaOfficerSuiteLootMasterMode", UIParent)
+    window:SetFrameStrata("DIALOG"); window:SetFrameLevel(100)
+    window:SetWidth(400); window:SetHeight(210); window:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    window:SetMovable(true); window:SetResizable(true); window:EnableMouse(true); window:RegisterForDrag("LeftButton")
+    if window.SetClampedToScreen then window:SetClampedToScreen(true) end
+    UI.Window.ApplyProjectSurface(window)
+    UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(window) end)
+    window:Hide()
+    -- This controller owns a separate window; it never changes dashboard chrome or geometry.
+    options.dashboard = window
+    local controller = { dashboard = window, getSettings = options.getSettings }
     options.page.lmDashboard = options.dashboard
     options.page.lmConfigPanel:SetParent(UIParent)
     options.page.lmConfigPanel:ClearAllPoints()
@@ -2670,7 +2684,7 @@ function RaidManagement.CreateLootMasterController(options)
     SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight")
     local alphaWatcher = MOS.UI.Components.CreateContainer(nil, options.dashboard)
     alphaWatcher.elapsed = 0; alphaWatcher.lootMasterController = controller
-    alphaWatcher:SetScript("OnUpdate", OnLootMasterAlphaUpdate); alphaWatcher:Hide()
+    alphaWatcher:Hide()
     controller.alphaWatcher = alphaWatcher
 
     controller.closePanels = function()
@@ -2679,119 +2693,196 @@ function RaidManagement.CreateLootMasterController(options)
         options.page.lmConfigToggle:Hide(); options.page.reyCoinToggle:Hide()
     end
 
-    local function RestoreModeButton()
-        options.modeButton.mosWindowAction = nil; options.modeButton.mosClassicLabelYOffset = nil; options.modeButton.mosTextColor = nil
-        options.modeButton:SetText("LM Mode")
-        options.modeButton:ClearAllPoints()
-        options.modeButton:SetPoint("TOPRIGHT", options.page, "TOPRIGHT", -4, -8)
-        options.modeButton:SetWidth(96); options.modeButton:SetHeight(22)
-        MOS.UI.Components.SetClassicButtonCompact(options.modeButton, false)
-        MOS.UI.Components.SetClassicButtonIcon(options.modeButton, "loot_tools", 13, 7, 0)
+    local compact, rows, members = nil, nil, {}
+    local selectedName, sortKey, ascending = nil, nil, true
+    local emptyFilters = {}
+    local menus = {}
+    local close, minimize, config, reycoin, sr, rules, grip
+
+    local function SaveGeometry()
+        local settings = options.getSettings()
+        if not window.minimized then settings.lootMasterWidth = window:GetWidth(); settings.lootMasterHeight = window:GetHeight() end
+        local left, bottom = window:GetLeft(), window:GetBottom()
+        if left and bottom then settings.lootMasterLeft = left; settings.lootMasterBottom = bottom end
     end
 
+    local function HideMenus()
+        for _, panel in pairs(menus) do panel:Hide() end
+    end
+
+    local function LayoutToolbar()
+        local scale = math.min(1, math.max(0.6, (window:GetWidth() - 108) / 190))
+        UI.SizeClassicButton(sr, 62, 24, scale); UI.SizeClassicButton(rules, 118, 24, scale)
+        sr:ClearAllPoints(); sr:SetPoint("TOPLEFT", window, "TOPLEFT", 6, -5)
+        rules:ClearAllPoints(); rules:SetPoint("LEFT", sr, "RIGHT", 6 * scale, 0)
+    end
+
+    controller.Refresh = function()
+        if not window:IsVisible() or not compact then return end
+        LayoutToolbar()
+        if window.minimized then return end
+        local data = options.page.listRenderer.getData()
+        local source = data and data.members or emptyFilters
+        for index = table.getn(members), 1, -1 do members[index] = nil end
+        local found = false
+        for index = 1, table.getn(source) do
+            members[index] = source[index]
+            if source[index].name == selectedName then found = true end
+        end
+        if not found then selectedName = nil end
+        table.sort(members, compact.listRenderer.sortMembers)
+        RaidManagement.HideListTable(compact, rows)
+        RaidManagement.RefreshListView(compact, rows, members, selectedName, sortKey, true, options.getSettings())
+        compact.listHeaderUI.level:Hide(); compact.listHeaderUI.levelButton:Hide()
+        compact.listHeaderUI.online:Hide(); compact.listHeaderUI.onlineButton:Hide()
+    end
+
+    local function BuildMenu(button, captions, sources)
+        local width = 1
+        local panel = UI.CreateDropdownPanel(window, button, 180, 48, 30)
+        UI.Window.ApplyProjectSurface(panel)
+        UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(panel) end)
+        panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
+        if panel.SetClampedToScreen then panel:SetClampedToScreen(true) end
+        for index = 1, table.getn(captions) do
+            local choice = UI.CreateButton(panel, nil, captions[index], 166, 18)
+            UI.StyleDropdownChoice(choice)
+            choice:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, -7 - (index - 1) * 19)
+            choice.toolSource = sources[index]
+            choice:SetScript("OnClick", InvokeToolChoice)
+            width = math.max(width, choice.label:GetStringWidth() + 20)
+            panel.options[index] = choice
+        end
+        panel:SetWidth(width + 14)
+        for index = 1, table.getn(panel.options) do panel.options[index]:SetWidth(width) end
+        menus[button] = panel; button.panel = panel
+        button:SetScript("OnClick", function()
+            local shown = panel:IsVisible()
+            HideMenus()
+            if not shown then
+                for index = 1, table.getn(panel.options) do
+                    local source = panel.options[index].toolSource
+                    local enabled = not source.IsEnabled or source:IsEnabled()
+                    UI.SetButtonEnabled(panel.options[index], enabled ~= false and enabled ~= 0)
+                end
+                panel:Show(); UI.RefreshDropdownLayers(panel, button)
+            end
+        end)
+    end
+
+    local function Build()
+        if compact then return end
+        compact = UI.CreateContainer(nil, window); compact.detachedLootMaster = true
+        compact.mosLootScrollPrefix = "MuklaOfficerSuiteDetachedLootScroll"
+        compact:SetPoint("TOPLEFT", window, "TOPLEFT", 4, -4); compact:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -4, 4)
+        controller.page = compact
+        local source = options.page.rowController
+        local rowController = {
+            refresh = controller.Refresh, onAction = source.onAction, onContext = source.onContext,
+            onGroup = source.onGroup, onRemoveSoftReserve = source.onRemoveSoftReserve,
+            isSelected = function(member) return member.name == selectedName end,
+            onSelect = function(row)
+                if selectedName == row.displayedMember.name then selectedName = nil else selectedName = row.displayedMember.name end
+                controller.Refresh()
+            end,
+        }
+        RaidManagement.CreateListHeaders(compact, function(key, defaultAscending)
+            if sortKey ~= key then sortKey = key; ascending = defaultAscending
+            elseif ascending then ascending = false else sortKey = nil; ascending = true end
+            controller.Refresh()
+        end)
+        rows = RaidManagement.CreateListViewport(compact, 35, rowController, "MuklaOfficerSuiteLootMasterListScroll")
+        RaidManagement.AttachListScroll(compact, controller.Refresh)
+        RaidManagement.SetListRenderer(compact, {
+            getLootMasterInfo = options.page.listRenderer.getLootMasterInfo,
+            updateScrollFrame = options.page.listRenderer.updateScrollFrame,
+            shorten = options.page.listRenderer.shorten,
+            sortMembers = function(a, b) return RaidManagement.CompareMembers(a, b, sortKey, ascending) end,
+        })
+        close = UI.CreateWindowButton(window, nil, "close"); close:SetPoint("TOPRIGHT", window, "TOPRIGHT", -6, -8)
+        close:SetScript("OnClick", function() controller.Close() end)
+        minimize = UI.CreateWindowButton(window, nil, "minimize"); minimize:SetPoint("RIGHT", close, "LEFT", -4, 0)
+        minimize:SetScript("OnClick", function() controller.toggleMinimize() end)
+        config = UI.CreateButton(window, nil, "", 18, 18); config:SetPoint("RIGHT", minimize, "LEFT", -4, 0)
+        UI.SetClassicButtonCompact(config, true); UI.SetClassicButtonIcon(config, "settings", 13, 2, 0)
+        config:SetScript("OnClick", function()
+            options.page.reyCoinPanel:Hide()
+            options.page.lmConfigOpen = not options.page.lmConfigOpen
+            if options.page.lmConfigOpen then options.page.lmConfigPanel:Show() else options.page.lmConfigPanel:Hide() end
+        end)
+        reycoin = UI.CreateIconButton(window, nil, "Interface\\Icons\\INV_Misc_Coin_01", 18, 3)
+        reycoin:SetPoint("RIGHT", config, "LEFT", -4, 0)
+        reycoin.toolSource = options.page.reyCoinToggle
+        reycoin:SetScript("OnClick", function()
+            local handler = options.page.reyCoinToggle:GetScript("OnClick")
+            if handler then handler() end
+        end)
+        sr = UI.CreateButton(window, nil, "SR", 62, 24)
+        rules = UI.CreateButton(window, nil, "Loot Rules", 118, 24)
+        UI.AttachGoldHoverBorder(sr, 0.35, 0.35, 0.35, 1); UI.AttachGoldHoverBorder(rules, 0.35, 0.35, 0.35, 1)
+        local controls = options.page.refreshControls
+        BuildMenu(sr, {"Import SR", "Share SR Link"}, {controls.import, controls.shareSr})
+        BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules})
+        controller.srButton = sr; controller.rulesButton = rules
+        grip = UI.CreateResizeGrip(window)
+        grip:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
+        grip:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); SaveGeometry(); controller.Refresh() end)
+        grip:SetScript("OnHide", function() window:StopMovingOrSizing() end)
+        controller.closeButton = close; controller.minimizeButton = minimize
+    end
+
+    controller.Close = function()
+        SaveGeometry(); HideMenus(); controller.closePanels()
+        alphaWatcher:Hide(); alphaWatcher:SetScript("OnUpdate", nil)
+        window:Hide()
+        if options.page.lifecycle then options.page.lifecycle:SyncTrackingSetting(); options.page.lifecycle:CancelRosterUpdate() end
+    end
+    controller.IsVisible = function() return window:IsVisible() end
     controller.resetOnLoad = function()
-        local settings = options.getSettings()
         MOS.lootMasterMode = false; MOS.lootMasterMinimized = false
-        MOS.lootMasterWidthBeforeMinimize = nil; MOS.lootMasterHeightBeforeMinimize = nil
-        alphaWatcher:Hide(); options.dashboard:SetAlpha(1); controller.closePanels()
-        options.dashboard:SetMinResize(350, 380); options.dashboard:SetMaxResize(1100, 760)
-        options.dashboard:SetWidth(math.max(350, math.min(1100, tonumber(settings.windowWidth) or 840)))
-        options.dashboard:SetHeight(math.max(380, math.min(760, tonumber(settings.windowHeight) or 540)))
-        options.dashboard:ClearAllPoints()
-        if tonumber(settings.windowLeft) and tonumber(settings.windowBottom) then
-            options.dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", settings.windowLeft, settings.windowBottom)
-        else
-            options.dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
-        end
-        options.sidebar:Show(); options.titleBar:Show(); options.closeButton:Show(); options.versionText:Show(); options.raidTitle:Show(); options.statusBar:Show()
-        if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Hide() end
-        options.applyNavigationLayout()
-        options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel.mosPageHost or options.contentPanel, "TOPLEFT", 1.5, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel.mosPageHost or options.contentPanel, "BOTTOMRIGHT", -1.5, 1.5)
-        RestoreModeButton()
     end
-
     controller.toggle = function()
-        local settings = options.getSettings()
-        local enableLootMasterMode = not MOS.lootMasterMode
-        if enableLootMasterMode then options.saveDashboardGeometry() end
-        MOS.lootMasterMode = enableLootMasterMode
-        MOS.raidHeightBeforeExpansion = nil
-        if MOS.lootMasterMode then
-            MOS.lootMasterMinimized = false; controller.closePanels()
-            options.dashboard:SetMinResize(380, 170); options.dashboard:SetMaxResize(900, 760)
-            options.dashboard:SetWidth(math.max(380, math.min(900, tonumber(settings.lootMasterWidth) or 400)))
-            options.dashboard:SetHeight(math.max(170, math.min(240, tonumber(settings.lootMasterHeight) or 210)))
-            options.dashboard:ClearAllPoints()
-            if tonumber(settings.lootMasterLeft) and tonumber(settings.lootMasterBottom) then
-                options.dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", settings.lootMasterLeft, settings.lootMasterBottom)
-            else
-                options.dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-            end
-            options.dashboard:SetAlpha(0.3)
-            alphaWatcher.elapsed = 0; alphaWatcher:Show()
-            options.statusBar:Hide()
-            if options.dashboard.mosWindowControls then options.dashboard.mosWindowControls:Hide() end
-            options.sidebar:Hide(); options.titleBar:Hide(); options.closeButton:Hide(); options.versionText:Hide(); options.raidTitle:Hide()
-            if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Show() end
-            options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 1, -1); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -1, 1)
-            options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 1, -1); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -1, 1)
-            MOS.UI.Components.SetSurfaceCompact(options.dashboard, true); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, true)
-            MOS.UI.Components.SetWindowButtonAction(options.modeButton, "close")
-        else
-            if MOS.lootMasterMinimized then
-                settings.lootMasterWidth = MOS.lootMasterWidthBeforeMinimize or 430; settings.lootMasterHeight = MOS.lootMasterHeightBeforeMinimize or 210
-            else
-                settings.lootMasterWidth = options.dashboard:GetWidth(); settings.lootMasterHeight = options.dashboard:GetHeight()
-            end
-            MOS.lootMasterMinimized = false
-            controller.closePanels()
-            alphaWatcher:Hide(); options.dashboard:SetAlpha(1); options.dashboard:SetMinResize(350, 380); options.dashboard:SetMaxResize(1100, 760)
-            options.dashboard:SetWidth(math.max(350, tonumber(settings.windowWidth) or 840)); options.dashboard:SetHeight(math.max(380, tonumber(settings.windowHeight) or 540))
-            options.dashboard:ClearAllPoints()
-            if tonumber(settings.windowLeft) and tonumber(settings.windowBottom) then options.dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", settings.windowLeft, settings.windowBottom)
-            else options.dashboard:SetPoint("CENTER", UIParent, "CENTER", 0, 10) end
-            options.sidebar:Show(); options.titleBar:Show(); options.closeButton:Show(); options.versionText:Show(); options.raidTitle:Show(); options.statusBar:Show()
-            if options.dashboard.mosLootBorder then options.dashboard.mosLootBorder:Hide() end
-            options.applyNavigationLayout()
-            options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel.mosPageHost or options.contentPanel, "TOPLEFT", 1.5, -3); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel.mosPageHost or options.contentPanel, "BOTTOMRIGHT", -1.5, 1.5)
-            RestoreModeButton()
-            if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Show() end
-            MOS.UI.Components.SetSurfaceCompact(options.dashboard, false); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, false)
-            options.applyNavigationLayout()
+        Build()
+        if window:IsVisible() then
+            if window.minimized then controller.toggleMinimize() end
+            window:Raise(); return
         end
-        options.refresh()
+        local settings = options.getSettings()
+        window.minimized = false
+        window:SetMinResize(380, 170); window:SetMaxResize(900, 760)
+        window:SetWidth(math.max(380, math.min(900, tonumber(settings.lootMasterWidth) or 400)))
+        window:SetHeight(math.max(170, math.min(760, tonumber(settings.lootMasterHeight) or 210)))
+        window:ClearAllPoints()
+        if tonumber(settings.lootMasterLeft) and tonumber(settings.lootMasterBottom) then
+            window:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", settings.lootMasterLeft, settings.lootMasterBottom)
+        else window:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
+        compact:Show(); grip:Show(); UI.SetWindowButtonAction(minimize, "minimize")
+        window:Show(); alphaWatcher.elapsed = 0; alphaWatcher:SetScript("OnUpdate", OnLootMasterAlphaUpdate); alphaWatcher:Show()
+        if options.page.lifecycle then options.page.lifecycle:SyncTrackingSetting() end
+        controller.Refresh()
     end
-
     controller.toggleMinimize = function()
-        if not MOS.lootMasterMode then return end
-        local settings = options.getSettings()
-        if MOS.lootMasterMinimized then
-            MOS.lootMasterMinimized = false
-            options.dashboard:SetMinResize(380, 170); options.dashboard:SetMaxResize(900, 760)
-            options.dashboard:SetWidth(math.max(380, math.min(900, MOS.lootMasterWidthBeforeMinimize or 400)))
-            options.dashboard:SetHeight(math.max(170, MOS.lootMasterHeightBeforeMinimize or 210))
-            options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 1, -1); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -1, 1)
-            options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 1, -1); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -1, 1)
-            if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Show() end
-            MOS.UI.Components.SetSurfaceCompact(options.dashboard, true); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, true)
+        if not window:IsVisible() then return end
+        HideMenus(); controller.closePanels()
+        if window.minimized then
+            window.minimized = false; window:SetMinResize(380, 170)
+            window:SetHeight(window.expandedHeight or 210); compact:Show(); grip:Show()
+            UI.SetWindowButtonAction(minimize, "minimize")
         else
-            MOS.lootMasterWidthBeforeMinimize = options.dashboard:GetWidth(); MOS.lootMasterHeightBeforeMinimize = options.dashboard:GetHeight()
-            settings.lootMasterWidth = MOS.lootMasterWidthBeforeMinimize; settings.lootMasterHeight = MOS.lootMasterHeightBeforeMinimize
-            MOS.lootMasterMinimized = true
-            options.dashboard:SetMinResize(200, 32); options.dashboard:SetMaxResize(420, 760)
-            options.dashboard:SetWidth(200); options.dashboard:SetHeight(32)
-            options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 2, -2); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -2, 2)
-            options.rosterPage:ClearAllPoints(); options.rosterPage:SetPoint("TOPLEFT", options.contentPanel, "TOPLEFT", 1, -1); options.rosterPage:SetPoint("BOTTOMRIGHT", options.contentPanel, "BOTTOMRIGHT", -1, 1)
-            if options.dashboard.mosResizeGrip then options.dashboard.mosResizeGrip:Hide() end
-            MOS.UI.Components.SetSurfaceCompact(options.dashboard, true); MOS.UI.Components.SetSurfaceCompact(options.contentPanel, true)
+            SaveGeometry(); window.expandedHeight = window:GetHeight(); window.minimized = true
+            window:SetMinResize(380, 32); compact:Hide(); grip:Hide(); window:SetHeight(32)
+            UI.SetWindowButtonAction(minimize, "maximize")
         end
-        options.page.lmConfigPanel:ClearAllPoints()
-        options.page.lmConfigPanel:SetPoint("TOPLEFT", options.dashboard, "TOPRIGHT", 0, 0)
-        options.page.reyCoinPanel:ClearAllPoints()
-        options.page.reyCoinPanel:SetPoint("TOPLEFT", options.page.lmConfigPanel, "TOPLEFT", 0, 0)
-        options.refresh()
+        controller.Refresh()
     end
-
+    window:SetScript("OnDragStart", function() window:StartMoving() end)
+    window:SetScript("OnDragStop", function() window:StopMovingOrSizing(); SaveGeometry() end)
+    window:SetScript("OnSizeChanged", function() controller.Refresh() end)
+    window:SetScript("OnHide", function()
+        window:StopMovingOrSizing(); HideMenus(); controller.closePanels()
+        alphaWatcher:Hide(); alphaWatcher:SetScript("OnUpdate", nil)
+    end)
+    UI.RegisterSkinCallback(function() controller.Refresh() end)
     options.page.lootMasterController = controller
     return controller
 end
