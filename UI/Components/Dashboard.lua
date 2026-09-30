@@ -7,10 +7,10 @@ function Dashboard.GetChromeLayout(get, classic)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
     local topTabs = get("menuStyle") == "tabs"
-    local headerHeight = (topTabs and compact and 20 or (compact and 30 or normalHeight)) + 4
-    local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 26 or 31)
+    local headerHeight = (topTabs and 20 or (compact and 30 or normalHeight)) + 4
+    local bottom = get("hideStatusVersionBar") and 4 or (classic and 26 or 31)
     if get("hideHeaderBar") then return 0, topTabs and -28 or -4, bottom, topTabs and -28 or -4 end
-    local top = -(topTabs and 4 or (classic and 8 or 14)) - headerHeight
+    local top = -4 - headerHeight
     return headerHeight, top, bottom, top
 end
 
@@ -44,7 +44,7 @@ function Dashboard.PlaceWindowControls(view, inContent)
     local controls = view.windowControls
     controls:ClearAllPoints()
     if inContent then controls:SetPoint("TOPRIGHT", view.contentPanel, "TOPRIGHT", -3, -3)
-    else controls:SetPoint("RIGHT", view.titleBar, "RIGHT", -3, 0) end
+    else controls:SetPoint("TOPRIGHT", view.titleBar, "TOPRIGHT", -3, -3) end
     controls:Show()
 end
 
@@ -53,9 +53,11 @@ function Dashboard.ApplyChrome(view, get)
     local classic = MOS.UI.Components.IsClassicSkin()
     local height = Dashboard.GetChromeLayout(get, classic)
     view.titleBar:ClearAllPoints()
-    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, get("menuStyle") == "tabs" and -4 or (classic and -8 or -14))
-    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", -4, get("menuStyle") == "tabs" and -4 or (classic and -8 or -14))
+    view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, -4)
+    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", -4, -4)
     view.titleBar:SetHeight(height)
+    local topTabs = get("menuStyle") == "tabs"
+    view.classicLogo:SetWidth(topTabs and 45 or 100); view.classicLogo:SetHeight(topTabs and 18 or 40)
     SetChromeVisible(view.title, not classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName"))
@@ -65,7 +67,7 @@ function Dashboard.ApplyChrome(view, get)
     SetChromeVisible(view.titleBar, not hiddenHeader)
     Dashboard.PlaceWindowControls(view, hiddenHeader)
     if view.pageHost then
-        view.pageHost:ClearAllPoints(); view.pageHost:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 0, hiddenHeader and -24 or 0)
+        view.pageHost:ClearAllPoints(); view.pageHost:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 0, hiddenHeader and -19 or 0)
         view.pageHost:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 0, 0)
     end
     if not classic then

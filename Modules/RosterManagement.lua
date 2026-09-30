@@ -786,7 +786,12 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
     page.rowsHeaderY = headerY
     local rowsTop = headerY - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24)
     local bottom = 34 + (page.summaryWrap and 22 or 0)
-    local availableHeight = page.tablePanel and math.max(0, (page.tablePanelHeight or 0) + rowsTop - bottom) or math.max(0, page.tableViewport:GetHeight())
+    local panelHeight = page.tablePanelHeight or 0
+    if page.tablePanel and page.tablePanel.GetTop and page.tablePanel.GetBottom then
+        local top, bottomEdge = page.tablePanel:GetTop(), page.tablePanel:GetBottom()
+        if top and bottomEdge and top > bottomEdge then panelHeight = top - bottomEdge end
+    end
+    local availableHeight = page.tablePanel and math.max(0, panelHeight + rowsTop - bottom) or math.max(0, page.tableViewport:GetHeight())
     local visibleRowCount = RosterManagement.CalculateVisibleRows(availableHeight, rowHeight, selectedName ~= nil)
     local needsScroll = table.getn(visibleMembers) > visibleRowCount
     local rightInset = needsScroll and 24 or 6
@@ -981,15 +986,11 @@ function RosterManagement.LayoutSummary(page, summary)
     local panel = page.tablePanel or page
     local width = page:GetWidth()
     summary:ClearAllPoints()
-    if page.renderedRowsHeight then
-        summary:SetPoint("TOPLEFT", page.tableViewport, "BOTTOMLEFT", 0, -10)
-    else summary:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 6, 10 + (page.summaryWrap and 22 or 0)) end
+    summary:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 6, 10 + (page.summaryWrap and 22 or 0))
     summary:SetHeight(14); summary:SetJustifyV("MIDDLE")
     summary:SetWidth(math.max(1, width - (page.summaryWrap and 12 or page.modeButton.label:GetStringWidth() + page.modeButton:GetWidth() + 22)))
     page.modeButton:ClearAllPoints()
-    if page.renderedRowsHeight then
-        page.modeButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -2, (page.rowsHeaderY or 0) - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24) - page.renderedRowsHeight - 6 - (page.summaryWrap and 22 or 0))
-    else page.modeButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 6) end
+    page.modeButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 6)
 end
 
 function RosterManagement.SetReady(controller, ready)
@@ -1123,7 +1124,9 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     local tabs = MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs"
     local leftOutset = 1.5 + (tabs and (MOS.UI.Components.IsClassicSkin() and 0 or 5) or 0)
     if page.tablePanel then MOS.UI.Components.JoinSurfaceEdges(page.tablePanel, true, true, leftOutset, 1.5) end
-    if page.actionsPanel then MOS.UI.Components.JoinSurfaceEdges(page.actionsPanel, true, false, leftOutset, 4.5) end
+    if page.actionsPanel then MOS.UI.Components.JoinSurfaceEdges(page.actionsPanel, true, false, leftOutset, 1.5) end
+    local actionBottom = MuklaOfficerSuiteDB.hideStatusVersionBar and 3.5 or 6
+    if page.actionsPanel then page.actionsPanel:SetHeight(28 + actionBottom) end
     local width = page:GetWidth()
     local headerShift = RosterManagement.UpdateSectionHeader(page)
     controls.footer.guild:SetText("Guild Message Of The Day:")
@@ -1198,7 +1201,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
             action.button:SetWidth(math.floor(action.width * widthScale))
             action.button:SetHeight(22)
             MOS.UI.Components.FitButtonLabel(action.button, action.button:GetWidth() - 16)
-            action.button:SetPoint("BOTTOMLEFT", page.actionsPanel or page, "BOTTOMLEFT", actionX, 6)
+            action.button:SetPoint("BOTTOMLEFT", page.actionsPanel or page, "BOTTOMLEFT", actionX, actionBottom)
             actionX = actionX + math.floor(action.width * widthScale) + 6
         else action.button:Hide() end
     end

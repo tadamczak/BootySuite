@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.47 - 2026-09-30
+
+- Use settled roster section height and keep guild status directly above actions.
+- Tighten hidden-header spacing, balance control/action padding, and contain the action separator inside the gold border.
+
 ## 0.5.0-dev.46 - 2026-09-30
 
 - Remove extra content edge strips and keep section separators inside the gold outline.
