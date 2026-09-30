@@ -13,7 +13,7 @@ function Dashboard.GetChromeLayout(get, classic, width)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
     local topTabs = get("menuStyle") == "tabs" or get("menuStyle") == "bottomTabs"
-    local headerHeight = (topTabs and 20 or (compact and 30 or normalHeight)) + 4
+    local headerHeight = (compact and 23 or (topTabs and 20 or normalHeight)) + 4
     if Dashboard.HeaderNeedsCompactTitle(get, classic, width) then
         headerHeight = not topTabs and classic and not get("hideHeaderLogo") and 50 or 32
     end
@@ -77,14 +77,14 @@ function Dashboard.ApplyChrome(view, get)
     view.classicTitle:ClearAllPoints(); view.title:ClearAllPoints()
     if fitted then
         view.classicTitleLeft:Hide(); view.classicTitleRight:Hide()
-        view.classicTitle:SetPoint("TOPLEFT", view.titleBar, "TOPLEFT", titleLeft, -5)
+        view.classicTitle:SetPoint("LEFT", view.titleBar, "LEFT", titleLeft, 1.5)
         local wordWidth = math.max(1, math.min(220, view.frame:GetWidth() - titleLeft - 78))
         view.classicTitle:SetWidth(wordWidth); view.classicTitle:SetHeight(19 * wordWidth / 220)
-        view.title:SetPoint("TOPLEFT", view.titleBar, "TOPLEFT", titleLeft, -5)
+        view.title:SetPoint("LEFT", view.titleBar, "LEFT", titleLeft, 1.5)
         view.title:SetWidth(math.max(1, view.frame:GetWidth() - titleLeft - 78)); view.title:SetJustifyH("LEFT")
     else
-        view.classicTitle:SetPoint("CENTER", view.titleBar, "CENTER", 0, 1); view.classicTitle:SetWidth(220); view.classicTitle:SetHeight(19)
-        view.title:SetPoint("CENTER", view.titleBar, "CENTER", 0, 2); view.title:SetJustifyH("CENTER")
+        view.classicTitle:SetPoint("CENTER", view.titleBar, "CENTER", 0, 1.5); view.classicTitle:SetWidth(220); view.classicTitle:SetHeight(19)
+        view.title:SetPoint("CENTER", view.titleBar, "CENTER", 0, 1.5); view.title:SetJustifyH("CENTER")
     end
     local hiddenHeader = get("hideHeaderBar")
     SetChromeVisible(view.titleBar, not hiddenHeader)
