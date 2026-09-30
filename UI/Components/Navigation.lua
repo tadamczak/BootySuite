@@ -111,6 +111,11 @@ function Navigation.Create(options)
     end
 
     function controller.Apply()
+        if options.dashboard.mosMinimized then
+            options.sidebar:Hide(); options.contentPanel:Hide()
+            for _, button in pairs(controller.buttons) do button:Hide() end
+            return
+        end
         options.ensure()
         local bottomTabs = options.get("menuStyle") == "bottomTabs"
         local tabs = options.get("menuStyle") == "tabs" or bottomTabs

@@ -318,6 +318,12 @@ local SURFACE_STYLES = {
 
 local function ApplySurface(entry)
     local frame = entry.frame
+    if frame.mosTransparentSurface then
+        SetNineSliceShown(entry.classicSkin, false)
+        if entry.classicFill then entry.classicFill:Hide() end
+        frame:SetBackdropColor(0,0,0,0); frame:SetBackdropBorderColor(0,0,0,0)
+        return
+    end
     if not frame.mosUseNativeSurface and (Skins.current == "classic" or frame.mosJoinedTop ~= nil or frame.mosHorizontalBorders) then
         local style = SURFACE_STYLES[entry.kind] or SURFACE_STYLES.panel
         if entry.kind == "row" and not entry.classicFill then
@@ -697,5 +703,10 @@ function UI.JoinSurfaceEdges(frame, top, bottom, leftOutset, rightOutset)
     frame.mosBorderOutsetLeft = leftOutset; frame.mosBorderOutsetRight = rightOutset
     frame.mosJoinedTop = top; frame.mosJoinedBottom = bottom
     frame.mosSeparatorsOnly = true
+    if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
+end
+
+function UI.SetSurfaceTransparent(frame, transparent)
+    frame.mosTransparentSurface = transparent and true or false
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end

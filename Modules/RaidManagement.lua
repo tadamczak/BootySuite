@@ -2680,6 +2680,12 @@ function RaidManagement.CreateLootMasterController(options)
     end
     options.page.reyCoinInput:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinInput:SetFrameLevel(303)
     options.page.reyCoinAdd:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinAdd:SetFrameLevel(303)
+    controller.ReanchorPanels = function()
+        options.page.lmConfigPanel:ClearAllPoints()
+        options.page.lmConfigPanel:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, 0)
+        options.page.reyCoinPanel:ClearAllPoints()
+        options.page.reyCoinPanel:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, 0)
+    end
     local function SetupSidePanelResize(panel, widthKey, heightKey, minimumWidth, minimumHeight)
         minimumWidth = minimumWidth or 150; minimumHeight = minimumHeight or 90
         local settings = options.getSettings()
@@ -2694,10 +2700,11 @@ function RaidManagement.CreateLootMasterController(options)
             panel:StopMovingOrSizing()
             local saved = options.getSettings()
             saved[widthKey] = panel:GetWidth(); saved[heightKey] = panel:GetHeight()
+            controller.ReanchorPanels()
         end)
-        grip:SetScript("OnHide", function() panel:StopMovingOrSizing() end)
+        grip:SetScript("OnHide", function() panel:StopMovingOrSizing(); controller.ReanchorPanels() end)
     end
-    SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 340, 260)
+    SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 260, 260)
     SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight")
     local alphaWatcher = MOS.UI.Components.CreateContainer(nil, options.dashboard)
     alphaWatcher.elapsed = 0; alphaWatcher.lootMasterController = controller
@@ -2825,6 +2832,7 @@ function RaidManagement.CreateLootMasterController(options)
         config = UI.CreateSettingsButton(window); config:SetPoint("RIGHT", minimize, "LEFT", -4, 0)
         UI.AttachTooltip(config, "LM Config", "Open Loot Master configuration.")
         config:SetScript("OnClick", function()
+            controller.ReanchorPanels()
             options.page.reyCoinPanel:Hide()
             options.page.lmConfigOpen = not options.page.lmConfigOpen
             if options.page.lmConfigOpen then options.page.lmConfigPanel:Show() else options.page.lmConfigPanel:Hide() end
@@ -2834,6 +2842,7 @@ function RaidManagement.CreateLootMasterController(options)
         reycoin:SetPoint("RIGHT", config, "LEFT", -4, 0)
         reycoin.toolSource = options.page.reyCoinToggle
         reycoin:SetScript("OnClick", function()
+            controller.ReanchorPanels()
             local handler = options.page.reyCoinToggle:GetScript("OnClick")
             if handler then handler() end
         end)
@@ -2904,7 +2913,7 @@ function RaidManagement.CreateLootMasterController(options)
         controller.Refresh()
     end
     window:SetScript("OnDragStart", function() window:StartMoving() end)
-    window:SetScript("OnDragStop", function() window:StopMovingOrSizing(); SaveGeometry() end)
+    window:SetScript("OnDragStop", function() window:StopMovingOrSizing(); controller.ReanchorPanels(); SaveGeometry() end)
     window:SetScript("OnSizeChanged", function() controller.Refresh() end)
     window:SetScript("OnHide", function()
         window:StopMovingOrSizing(); HideMenus(); controller.closePanels()
@@ -3228,7 +3237,12 @@ function RaidManagement.CreateAutoLootControls(page, view)
     rarity:SetScript("OnClick", function()
         if choices:IsVisible() then choices:Hide() else
             mode.panel:Hide(); RefreshRarity()
-            UI.FilterPanel.Refresh(choices, names, selected, SaveRarity, false, true); choices:Show()
+            UI.FilterPanel.Refresh(choices, names, selected, SaveRarity, false, true)
+            for index = 1, table.getn(names) do
+                local red, green, blue = GetItemQualityColor(index - 1)
+                choices.options[index].label:SetTextColor(red, green, blue)
+            end
+            choices:Show()
         end
     end)
     view.lmAutoLootRarity = rarity; rarity.panel = choices
@@ -3253,6 +3267,14 @@ function RaidManagement.CreateAutoLootControls(page, view)
     presets:SetPoint("LEFT", presetLabel, "LEFT", 134, 0)
     local presetPanel = UI.CreateDropdownPanel(panel, presets, 184, 138, 20)
     presets.panel = presetPanel; view.lmExceptionPresets = presets
+    UI.Window.ApplyProjectSurface(presetPanel)
+    UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(presetPanel) end)
+    local function LayoutConfig()
+        local width = math.max(94, panel:GetWidth() - 150)
+        mode:SetWidth(width); rarity:SetWidth(width); presets:SetWidth(width)
+    end
+    panel:SetScript("OnSizeChanged", LayoutConfig)
+    LayoutConfig()
     local presetNames, presetSelected = MOS.Services.AutoLoot.PresetNames, {}
     local function RefreshPresets()
         local mask, captions = MOS.Database.GetSetting("lmAutoLootPresets"), {}
@@ -3281,6 +3303,8 @@ function RaidManagement.CreateAutoLootControls(page, view)
     mode:SetScript("OnClick", function() presetPanel:Hide(); modeClick() end)
     rarity:SetScript("OnClick", function() presetPanel:Hide(); rarityClick() end)
     panel:SetScript("OnShow", function()
+        LayoutConfig()
+        if page.lootMasterController then page.lootMasterController.ReanchorPanels() end
         local strata, level = panel:GetFrameStrata(), panel:GetFrameLevel() + 1
         mode:SetFrameStrata(strata); mode:SetFrameLevel(level)
         rarity:SetFrameStrata(strata); rarity:SetFrameLevel(level)
