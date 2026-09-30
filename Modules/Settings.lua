@@ -93,7 +93,6 @@ function Settings.LayoutRaidGrid(page, offset)
     local y = -318 + offset
     At(shell.groupHeading, 48, y); y = y - 38
     At(group.displayHeading, 52, y); y = y - 26
-    At(group.columnsLabel, 52, y - 6); At(group.columnsButton, 104, y); y = y - 28
     y = y - C.LayoutGrid(page, group.memberDisplayChecks, 52, y, width, 26)
     At(group.showHeader, 52, y); y = y - 26
     At(group.showBorder, 52, y); y = y - 34
@@ -358,8 +357,6 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
         return heading
     end
     local displayHeading = Heading("Display", -356)
-    local columnsLabel, columnsButton, columnsPanel = Settings.CreateRaidColumnControl(page, 40, -382, onColumnsChanged, shell.panel)
-    columnsLabel:SetTextColor(1, 1, 1)
     local showClass = factory.Checkbox(40, -410, "Show class", "raidGroupShowClass")
     local showLevel = factory.Checkbox(300, -410, "Show lvl", "raidGroupShowLevel")
     local showHeader = factory.Checkbox(40, -434, "Show group header", "raidGroupShowHeader")
@@ -401,11 +398,10 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
         displayChecks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole },
         memberDisplayChecks = {showClass, showLevel, showLootMaster, showRole}, showHeader = showHeader, showBorder = showBorder,
         autoChecks = {autoWidth}, colorChecks = {classColors}, sliders = {width, height, headerHeight, margin, tileTextSize, headerTextSize},
-        columnsLabel = columnsLabel, columnsButton = columnsButton, columnsPanel = columnsPanel,
         checks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, autoWidth, classColors },
         width = width, height = height, headerHeight = headerHeight, margin = margin, tileTextSize = tileTextSize, headerTextSize = headerTextSize, autoWidth = autoWidth, colors = { background, text, hover },
         tileColorHeading = tileColorHeading, tileColors = {headerText, headerBackground, border},
-        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, columnsLabel, columnsButton, showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, lightnessLabel, lightnessField, tileColorHeading, headerText, headerBackground, border },
+        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, lightnessLabel, lightnessField, tileColorHeading, headerText, headerBackground, border },
     }
 end
 
@@ -485,7 +481,7 @@ function Settings.AttachSectionResets(page, callbacks)
         local button = C(page, heading, groups, refresh)
         table.insert(page.raidAccordionControls.layoutControls, button)
     end
-    Add(group, group.displayHeading, {group.displayChecks, {{settingKey="raidGroupColumns"}}}, callbacks.refreshGroup)
+    Add(group, group.displayHeading, {group.displayChecks}, callbacks.refreshGroup)
     Add(group, group.sizeHeading, {group.autoChecks, group.sliders}, callbacks.refreshGroup)
     Add(group, group.colorHeading, {group.colorChecks, group.colors, {group.lightnessField}}, callbacks.refreshGroup)
     Add(group, group.tileColorHeading, {group.tileColors}, callbacks.refreshGroup)
@@ -596,7 +592,6 @@ end
 function Settings.RefreshRaidViewControls(controls)
     if not controls then return end
     MOS.Database.Ensure()
-    controls.columnsButton.label:SetText(tostring(MuklaOfficerSuiteDB.raidGroupColumns))
 
     local checkIndex
     for checkIndex = 1, table.getn(controls.checks) do
@@ -688,7 +683,7 @@ function Settings.ApplyRaidAccordions(controls)
     for controlIndex = 1, table.getn(controls.generalControls or {}) do
         if state.general and uiVisible then controls.generalControls[controlIndex]:Show() else controls.generalControls[controlIndex]:Hide() end
     end
-    controls.columnsPanel:Hide()
+    if controls.columnsPanel then controls.columnsPanel:Hide() end
 
     local offset = controls.raidOffset or 0
     controls.general:ClearAllPoints(); controls.general:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, -230 + offset)

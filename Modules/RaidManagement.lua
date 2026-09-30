@@ -179,6 +179,7 @@ function RaidManagement.CreateChrome(page, callbacks)
         for index = count + 1, table.getn(view.reyCoinRows) do view.reyCoinRows[index]:Hide() end
         view.reyCoinCanvas:SetHeight(math.max(1, count * 25))
     end
+    page.RefreshReyCoinList = RefreshReyCoinList
     MOS.Services.Raid.onReyCoinChanged = function()
         if view.reyCoinPanel:IsShown() then RefreshReyCoinList() end
     end
@@ -280,7 +281,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.status = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     view.status:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -48); view.status:SetWidth(245); view.status:SetJustifyH("LEFT")
 
-    page.leaderModeButton = MOS.UI.Components.CreateButton(page, nil, "Raid Leader Mode", 118, 22)
+    page.leaderModeButton = MOS.UI.Components.CreateButton(page, nil, "RL Mode", 118, 22)
     MOS.UI.Components.SetClassicButtonIcon(page.leaderModeButton, "raid_tools")
     page.leaderModeButton:SetPoint("TOPRIGHT", view.modeButton, "BOTTOMRIGHT", 0, -8)
     page.leaderModeButton:Disable(); page.leaderModeButton:Hide()
@@ -358,12 +359,18 @@ function RaidManagement.CreateActionControls(page)
     MOS.UI.Components.SetClassicButtonIcon(controls.quit, "quit")
     MOS.UI.Components.SetClassicButtonGold(controls.quit, true)
     controls.raidLeaderTools = MOS.UI.Components.CreateButton(page, nil, "Raid Leader Tools", 118, 22); controls.raidLeaderTools:Hide()
-    MOS.UI.Components.SetClassicButtonVariant(controls.raidLeaderTools, "red")
+    controls.raidLeaderTools.mosClassicKeepNormalSurface = true
     MOS.UI.Components.SetClassicButtonIcon(controls.raidLeaderTools, "raid_tools", 13, 7, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(controls.raidLeaderTools, 2)
     controls.lootMasterTools = MOS.UI.Components.CreateButton(page, nil, "Loot Master Tools", 118, 22); controls.lootMasterTools:Hide()
+    controls.lootMasterTools.mosClassicKeepNormalSurface = true
     MOS.UI.Components.SetClassicButtonIcon(controls.lootMasterTools, "loot_tools", 13, 7, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(controls.lootMasterTools, 2)
+    MOS.UI.Components.AttachGoldHoverBorder(controls.raidLeaderTools, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.AttachGoldHoverBorder(controls.lootMasterTools, 0.35, 0.35, 0.35, 1)
+    controls.reycoin = MOS.UI.Components.CreateButton(page, nil, "Reycoin list", 100, 22)
+    controls.reycoin:Hide()
+    controls.reycoin:SetScript("OnClick", function() page.lootMasterController.OpenSoloReyCoin() end)
     controls.lootRules = MOS.UI.Components.CreateButton(page, nil, "Set Loot Rules", 102, 22)
     controls.lootRules.mosClassicReserveIconSpace = true
     MOS.UI.Components.SetClassicButtonIcon(controls.lootRules, "rules")
@@ -672,7 +679,7 @@ function RaidManagement.CreateGroupViewport(page)
     MOS.UI.Components.SetClassicButtonIcon(page.classicTwoButton, "list", 12, 7, 2); MOS.UI.Components.SetClassicButtonIcon(page.classicFourButton, "groups", 12, 7, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(page.classicListButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicGroupButton, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(page.classicTwoButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicFourButton, 2)
-    for _, button in ipairs({page.classicListButton, page.classicGroupButton, page.classicTwoButton, page.classicFourButton}) do MOS.UI.Components.SetButtonTextColor(button, {1,1,1}) end
+    for _, button in ipairs({page.classicListButton, page.classicGroupButton, page.classicTwoButton, page.classicFourButton}) do button.mosSelectedTextColor = {1,0.82,0.28}; MOS.UI.Components.SetButtonTextColor(button, {1,1,1}) end
     page.groupFrame = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidGroupScroll", page, "UIPanelScrollFrameTemplate")
     page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -72)
     page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
@@ -837,7 +844,7 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
 
     local classic = MOS.UI.Components.IsClassicSkin()
     page.reyCoinToggle:Hide(); page.lmConfigToggle:Hide()
-    if not page.lootMasterController or not page.lootMasterController.IsVisible() then page.reyCoinPanel:Hide(); page.lmConfigPanel:Hide() end
+    if not page.lootMasterController or not page.lootMasterController.IsVisible() then if not page.reyCoinSolo then page.reyCoinPanel:Hide() end; page.lmConfigPanel:Hide() end
     local submenuOffset = classic and ((page.classicActionOffset or 0) + (page.classicToolbarOffset or 0)) or 0
     controls.filterLabel:ClearAllPoints(); controls.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -106 - submenuOffset)
     local pageWidth = PageSpan(page)
@@ -2264,8 +2271,8 @@ function RaidManagement.UpdateToolSubmenu(page)
     local toggle = key == "leader" and controls.raidLeaderTools or controls.lootMasterTools
     local panel = page.toolDropdowns[key]
     if not panel then
-        local sources = key == "leader" and {controls.leaderMode} or {controls.mode, controls.resetLoot, controls.import, controls.shareSr, controls.lootRules, controls.sendLootRules}
-        local captions = key == "leader" and {"Raid Leader Mode"} or {"Loot Master Mode", "Reset Loot", "Import SR", "Share SR", "Loot Rules", "Send Loot Rules"}
+        local sources = key == "leader" and {controls.leaderMode} or {controls.mode, controls.resetLoot, controls.import, controls.shareSr, controls.lootRules, controls.sendLootRules, controls.reycoin}
+        local captions = key == "leader" and {"RL Mode"} or {"Loot Master Mode", "Reset Loot", "Import SR", "Share SR", "Loot Rules", "Send Loot Rules", "Reycoin list"}
         panel = UI.CreateDropdownPanel(page, toggle, 230, 8 + table.getn(sources) * 28, 80)
         panel.mosMinimumFrameLevel = page:GetFrameLevel() + 80
         UI.Window.ApplyProjectSurface(panel)
@@ -2683,8 +2690,10 @@ function RaidManagement.CreateLootMasterController(options)
     controller.ReanchorPanels = function()
         options.page.lmConfigPanel:ClearAllPoints()
         options.page.lmConfigPanel:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, 0)
-        options.page.reyCoinPanel:ClearAllPoints()
-        options.page.reyCoinPanel:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, 0)
+        if not options.page.reyCoinSolo then
+            options.page.reyCoinPanel:ClearAllPoints()
+            options.page.reyCoinPanel:SetPoint("TOPLEFT", window, "TOPRIGHT", 0, 0)
+        end
     end
     local function SetupSidePanelResize(panel, widthKey, heightKey, minimumWidth, minimumHeight)
         minimumWidth = minimumWidth or 150; minimumHeight = minimumHeight or 90
@@ -2706,6 +2715,21 @@ function RaidManagement.CreateLootMasterController(options)
     end
     SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 260, 260)
     SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight")
+    local reyPanel = options.page.reyCoinPanel
+    reyPanel:SetMovable(true); reyPanel:RegisterForDrag("LeftButton")
+    reyPanel:SetScript("OnDragStart", function() if options.page.reyCoinSolo then reyPanel:StartMoving() end end)
+    reyPanel:SetScript("OnDragStop", function() reyPanel:StopMovingOrSizing(); controller.ReanchorPanels() end)
+    local reyClose = UI.CreateWindowButton(reyPanel, nil, "close")
+    reyClose:SetPoint("TOPRIGHT", reyPanel, "TOPRIGHT", -4, -4)
+    reyClose:SetFrameStrata("FULLSCREEN_DIALOG"); reyClose:SetFrameLevel(305)
+    reyClose:SetScript("OnClick", function() reyPanel:Hide() end)
+    controller.OpenSoloReyCoin = function()
+        reyPanel:Hide()
+        options.page.reyCoinSolo = true
+        reyPanel:ClearAllPoints(); reyPanel:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        if options.page.RefreshReyCoinList then options.page.RefreshReyCoinList() end
+        reyPanel:Show(); reyPanel:Raise()
+    end
     local alphaWatcher = MOS.UI.Components.CreateContainer(nil, options.dashboard)
     alphaWatcher.elapsed = 0; alphaWatcher.lootMasterController = controller
     alphaWatcher:Hide()
@@ -2713,7 +2737,7 @@ function RaidManagement.CreateLootMasterController(options)
 
     controller.closePanels = function()
         options.page.lmConfigOpen = false
-        options.page.lmConfigPanel:Hide(); options.page.reyCoinPanel:Hide()
+        options.page.lmConfigPanel:Hide(); if not options.page.reyCoinSolo then options.page.reyCoinPanel:Hide() end
         options.page.lmConfigToggle:Hide(); options.page.reyCoinToggle:Hide()
     end
 
@@ -2842,6 +2866,7 @@ function RaidManagement.CreateLootMasterController(options)
         reycoin:SetPoint("RIGHT", config, "LEFT", -4, 0)
         reycoin.toolSource = options.page.reyCoinToggle
         reycoin:SetScript("OnClick", function()
+            if options.page.reyCoinSolo then options.page.reyCoinPanel:Hide(); options.page.reyCoinSolo = false end
             controller.ReanchorPanels()
             local handler = options.page.reyCoinToggle:GetScript("OnClick")
             if handler then handler() end
@@ -2857,7 +2882,7 @@ function RaidManagement.CreateLootMasterController(options)
         controller.title = title; controller.configButton = config; controller.reycoinButton = reycoin
         local controls = options.page.refreshControls
         BuildMenu(sr, {"Import SR", "Share SR Link"}, {controls.import, controls.shareSr})
-        BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules})
+        BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules, controls.reycoin})
         controller.srButton = sr; controller.rulesButton = rules
         grip = UI.CreateResizeGrip(window)
         grip:SetFrameLevel(window:GetFrameLevel() + 250)
@@ -2879,6 +2904,8 @@ function RaidManagement.CreateLootMasterController(options)
         MOS.lootMasterMode = false; MOS.lootMasterMinimized = false
     end
     controller.toggle = function()
+        if options.page.reyCoinSolo then options.page.reyCoinPanel:Hide(); options.page.reyCoinSolo = false end
+        controller.ReanchorPanels()
         Build()
         if window:IsVisible() then
             if window.minimized then controller.toggleMinimize() end

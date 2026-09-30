@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.78 - 2026-09-30
+
+- Update raid tool selection borders and view selector colors; remove redundant Group View Columns setting.
+- Add standalone Reycoin list to Loot Master Tools and shorten RL Mode menu label.
+
 ## 0.5.0-dev.77 - 2026-09-30
 
 - Restore dashboard geometry after native login layout cache and prevent minimized dimensions from being cached by the client.

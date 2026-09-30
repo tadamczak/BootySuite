@@ -246,3 +246,5 @@ Disabling **Save attendance** keeps the raid record but marks Attendance as Off.
 Raid warnings overlay the content without shrinking lists or groups. They can be minimized to a bottom row and restored with the header button or **X issues**. The **X issues** button pulses for half a second every second until clicked; new issues or loading a session restart the pulse. The text turns light red during each pulse.
 
 Raid column headers shrink together when space is tight and grow back as space returns. List and Group views reserve scrollbar space only when scrolling is needed. **Raid Leader Tools** and **Loot Master Tools** open action dropdowns; options share the width of the longest caption and show a gold outline on hover. Click an option or outside the menu to close it.
+
+The Loot Master Tools menu can open a standalone, movable Reycoin list. Opening Loot Master Mode closes the standalone list; its toolbar can reopen the same list beside the LM window.
