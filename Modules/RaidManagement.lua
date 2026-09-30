@@ -286,7 +286,7 @@ function RaidManagement.CreateActionControls(page)
         button.raidName = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall")
         button.savedAt:SetPoint("RIGHT", button, "RIGHT", -8, 0); button.savedAt:SetWidth(112); button.savedAt:SetJustifyH("RIGHT"); button.savedAt:SetTextColor(0.78, 0.78, 0.72)
         controls.historyButtons[historyIndex] = button
-        local deleteButton = MOS.UI.Components.CreateIconButton(controls.historyCanvas, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 18, 2, {0.72, 0.70, 0.8})
+        local deleteButton = MOS.UI.Components.CreateDeleteButton(controls.historyCanvas, nil, 18, 2)
         deleteButton.historyIndex = historyIndex; deleteButton:Hide()
         MOS.UI.Components.AttachTooltip(deleteButton, "Delete saved raid", "Permanently remove this raid snapshot from saved history.")
         controls.historyDeleteButtons[historyIndex] = deleteButton
@@ -516,7 +516,7 @@ function RaidManagement.CreateListRow(parent, index, controller)
     AddRaidCell(parent, row, "sr", 500, 55, false)
     row.srHit = MOS.UI.Components.CreateControl(nil, row)
     row.srHit.ownerRow = row; row.srHit.label = row.sr; row.srHit:Hide()
-    row.srDelete = MOS.UI.Components.CreateIconButton(row.srHit, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 18, 3)
+    row.srDelete = MOS.UI.Components.CreateDeleteButton(row.srHit, nil, 18, 3)
     row.srDelete:SetPoint("LEFT", row.srHit, "LEFT", 0, 0); row.srDelete.ownerRow = row; row.srDelete:SetScript("OnClick", OnSoftReserveDeleteClick); row.srDelete:Hide()
     MOS.UI.Components.AttachTooltip(row.srDelete, "Remove Soft Reserve", "Remove this player's assigned Soft Reserve.")
     row.srIcon = MOS.UI.Components.CreateTexture(row.srHit, nil, "ARTWORK")
@@ -914,7 +914,7 @@ function RaidManagement.RefreshPage(renderer)
     local pageWidth = PageSpan(page)
     page.classicActionOffset = MOS.UI.Components.IsClassicSkin() and pageWidth < 680 and 38 or 0
     page.classicActionScale = MOS.UI.Components.IsClassicSkin() and page.classicActionOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 270) / 544)) or 1
-    page.classicToolbarOffset = MOS.UI.Components.IsClassicSkin() and page.raidView == "groups" and pageWidth < 616 and 30 or 0
+    page.classicToolbarOffset = MOS.UI.Components.IsClassicSkin() and pageWidth < (page.raidView == "groups" and 680 or 530) and 30 or 0
     local attendance = renderer.getData()
     local importInfo = attendance and attendance.softReserveImport
     local raidId = attendance and (attendance.snapshotId or (importInfo and importInfo.id))
@@ -1088,7 +1088,33 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
     if not showUnmatched then page.softReserveWarning:Hide() end
     if not showMissing then page.missingSoftReserveWarning:Hide() end
     if not showInvalid then page.invalidSoftReserveWarning:Hide() end
+    page.classicWarningBottom = 0
+    local cards = {page.softReserveWarning, page.missingSoftReserveWarning, page.invalidSoftReserveWarning}
+    for index = 1, 3 do
+        local card = cards[index]
+        card.text:Show(); card.info:Show(); card.fix:Show(); if card.ping then card.ping:Show() end
+    end
     if not showUnmatched and not showMissing and not showInvalid then return 0, 0 end
+    if side and PageSpan(page) < 620 then
+        local visible = {showUnmatched, showMissing, showInvalid}
+        local titles = {"Unassigned SR", "Missing SR", "Invalid SR"}
+        local bottom = 4
+        for index = 1, 3 do
+            local card = cards[index]
+            if visible[index] then
+                card:ClearAllPoints(); card:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 6, bottom)
+                card:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -4, bottom); card:SetHeight(30)
+                card.text:Hide(); card.info:Hide(); card.fix:Hide(); if card.ping then card.ping:Hide() end
+                if card.classicHeader then card.classicHeader:Show(); card.classicHeader.title:SetText(titles[index]) end
+                card:Show(); bottom = bottom + 34
+            end
+        end
+        page.classicWarningBottom = bottom
+        return 0, bottom
+    end
+    for index = 1, 3 do
+        if cards[index].classicHeader then cards[index].classicHeader.title:SetText("Warning") end
+    end
     if side then
         local pageWidth, pageHeight = PageSpan(page)
         local width = math.min(250, math.max(210, math.floor(pageWidth * 0.30)))
@@ -1132,6 +1158,13 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
             warning.info:ClearAllPoints(); warning.info:SetPoint("LEFT", warning.fix, "RIGHT", 7, 0); warning.info:SetWidth(actionWidth); warning.info:SetHeight(22)
             warning.ping:ClearAllPoints(); warning.ping:SetPoint("LEFT", warning.info, "RIGHT", 7, 0); warning.ping:SetWidth(actionWidth); warning.ping:SetHeight(22)
         end
+        for index = 1, 3 do
+            local card = cards[index]
+            for _, button in ipairs({card.fix, card.info, card.ping}) do
+                MOS.UI.Components.FitButtonLabel(button, math.max(1, button:GetWidth() - 28))
+                MOS.UI.Components.SetButtonLabelInsets(button, 23, 5)
+            end
+        end
         return width, 0
     end
     return 0, 0
@@ -1163,7 +1196,7 @@ function RaidManagement.ShowGroupView(page, rows)
         local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
         if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then warningWidth = 0 end
         -- 2px warning inset + 7.5px outer clearance (4px window + 1.5px page + 2px warning) + 20px scrollbar/gap.
-        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(warningWidth + 29.5), 4)
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(warningWidth + 29.5), 4 + (page.classicWarningBottom or 0))
         if page.groupScrollBar then
             page.groupScrollBar:ClearAllPoints(); page.groupScrollBar:SetWidth(16)
             page.groupScrollBar:SetPoint("TOPLEFT", page.groupFrame, "TOPRIGHT", 4, -12)
@@ -1223,7 +1256,7 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     local showMissing = not lootMasterMode and table.getn(missingNames) > 0 and not page.missingSoftReserveWarning.userDismissed
     local showInvalid = not lootMasterMode and table.getn(invalidNames) > 0 and not page.invalidSoftReserveWarning.userDismissed
     if MOS.UI.Components.IsClassicSkin() then
-        warningHeight = 0
+        warningHeight = page.classicWarningBottom or 0
     elseif showUnmatched or showMissing or showInvalid then
         local availableWarningWidth = math.max(1, page:GetWidth() - 42)
         local shownCount = (showUnmatched and 1 or 0) + (showMissing and 1 or 0) + (showInvalid and 1 or 0)
@@ -2206,10 +2239,27 @@ function RaidManagement.LayoutActions(page)
         page.classicGroupButton:ClearAllPoints(); page.classicGroupButton:SetPoint("LEFT", page.classicListButton, "RIGHT", 8, 0)
         page.classicTwoButton:ClearAllPoints(); page.classicTwoButton:SetPoint("LEFT", page.classicGroupButton, "RIGHT", 8, 0)
         page.classicFourButton:ClearAllPoints(); page.classicFourButton:SetPoint("LEFT", page.classicTwoButton, "RIGHT", 8, 0)
+        local selectorScale = math.min(1, math.max(1, PageSpan(page) - 32) / 344)
+        if page.raidView == "groups" then
+            MOS.UI.Components.SizeClassicButton(page.classicListButton, 90 * selectorScale, 24, selectorScale)
+            MOS.UI.Components.SizeClassicButton(page.classicGroupButton, 100 * selectorScale, 24, selectorScale)
+            MOS.UI.Components.SizeClassicButton(page.classicTwoButton, 78 * selectorScale, 24, selectorScale)
+            MOS.UI.Components.SizeClassicButton(page.classicFourButton, 76 * selectorScale, 24, selectorScale)
+        else
+            MOS.UI.Components.SizeClassicButton(page.classicListButton, 90, 24, 1)
+            MOS.UI.Components.SizeClassicButton(page.classicGroupButton, 100, 24, 1)
+        end
         local pageWidth = PageSpan(page)
         local groupToolsScale = page.raidView == "groups" and toolbarOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 394) / 296)) or 1
         page.lootMasterToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * groupToolsScale), 24, groupToolsScale); page.lootMasterToolsButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -57 - actionOffset - toolbarOffset)
         page.raidLeaderToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * groupToolsScale), 24, groupToolsScale); page.raidLeaderToolsButton:SetPoint("RIGHT", page.lootMasterToolsButton, "LEFT", -8, 0)
+        if toolbarOffset > 0 then
+            local toolScale = math.min(1, math.max(1, pageWidth - 16) / 296)
+            MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * toolScale), 24, toolScale)
+            MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * toolScale), 24, toolScale)
+            page.raidLeaderToolsButton:ClearAllPoints(); page.raidLeaderToolsButton:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -57 - actionOffset - toolbarOffset)
+            page.lootMasterToolsButton:ClearAllPoints(); page.lootMasterToolsButton:SetPoint("LEFT", page.raidLeaderToolsButton, "RIGHT", 8, 0)
+        end
         page.classicSummary:ClearAllPoints(); page.classicSummary:SetPoint("TOPLEFT", page.classicRaidName, "BOTTOMLEFT", 0, -2)
         local toolbarLevel = page.classicToolbar:GetFrameLevel() + 2
         page.classicListButton:SetFrameLevel(toolbarLevel); page.classicGroupButton:SetFrameLevel(toolbarLevel)

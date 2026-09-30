@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.62 - 2026-09-30
+
+- Match saved raid outlines to current buttons and derive Settings content width from the window.
+- Prevent toolbar/icon overlap; place compact warnings below narrow raid views.
+- Route every delete icon through one shared muted-gold control.
+
 ## 0.5.0-dev.61 - 2026-09-30
 
 - Use the addon button outline and one shared hover/selection gradient on saved raid rows.
