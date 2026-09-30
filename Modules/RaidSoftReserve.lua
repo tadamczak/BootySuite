@@ -29,6 +29,7 @@ function RaidManagement.CreateSoftReserveImportDialog(options)
         options.printMessage("Soft Reserves imported. Matched: " .. result.matched .. ", outside raid: " .. result.unmatched .. ", raid members without SR: " .. result.missing .. ".")
         return true
     end)
+    MOS.UI.Components.Window.StyleProjectDialog(dialog)
     dialog:SetWidth(620); dialog:SetHeight(360); dialog.save:SetText("Import"); dialog.cancel:SetText("Cancel")
     dialog.urlLabel = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormalSmall")
     dialog.urlLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -42); dialog.urlLabel:SetText("SR URL")

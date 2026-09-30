@@ -136,3 +136,37 @@ function Window.CreateAttached(parent, owner, width, height, onClose)
     frame:Hide()
     return frame
 end
+
+-- Compact project dialog chrome shared by feature dialogs.
+function Window.StyleProjectDialog(frame)
+    local UI = MOS.UI.Components
+    Window.ApplyProjectSurface(frame)
+    UI.RegisterSkinCallback(function() Window.ApplyProjectSurface(frame) end)
+    frame:SetMovable(true); frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function() frame:StartMoving() end)
+    frame:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
+    if frame.title then
+        local font, _, flags = frame.title:GetFont()
+        frame.title:SetFont(font, 13, flags); frame.title:SetTextColor(unpack(UI.Theme.colors.goldText))
+        frame.title:ClearAllPoints(); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -9)
+    end
+    frame.projectDivider = UI.CreateContainer(nil, frame)
+    frame.projectDivider:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -30)
+    frame.projectDivider:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -30); frame.projectDivider:SetHeight(4)
+    UI.RegisterSkinnedSurface(frame.projectDivider, "content", nil, {0,0,0,0}, {0.68,0.54,0.27,1})
+    UI.JoinSurfaceEdges(frame.projectDivider, true, false)
+    if frame.close then frame.close:ClearAllPoints(); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6) end
+end
+
+function Window.CreateProjectConfirmation(name, title, action)
+    local UI = MOS.UI.Components
+    local frame = UI.CreateConfirmation(name)
+    frame.title:SetText(title); Window.StyleProjectDialog(frame)
+    frame.no:SetText("Cancel"); frame.yes:SetText(action)
+    frame.no:ClearAllPoints(); frame.no:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -116, 12)
+    frame.yes:ClearAllPoints(); frame.yes:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 12)
+    frame.no:SetWidth(96); frame.yes:SetWidth(96)
+    UI.AttachGoldHoverBorder(frame.no, 0.35, 0.35, 0.35, 1)
+    UI.AttachGoldHoverBorder(frame.yes, 0.35, 0.35, 0.35, 1)
+    return frame
+end

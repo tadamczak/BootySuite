@@ -125,9 +125,9 @@ local function ApplySizedButtonGeometry(button, entry)
     end
     if button.label then
         button.label:ClearAllPoints()
-        button.label:SetPoint("TOPLEFT", button, "TOPLEFT", button.mosClassicIconKey and inset + iconSize + 3 * scale or 0, 0)
-        button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4 * scale, 0)
-        button.label:SetJustifyH("CENTER"); button.label:SetJustifyV("MIDDLE")
+        button.label:SetPoint("TOPLEFT", button, "TOPLEFT", button.mosClassicIconKey and inset + iconSize + 4 or 0, 0)
+        button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 0)
+        button.label:SetJustifyH(button.mosClassicIconKey and "LEFT" or "CENTER"); button.label:SetJustifyV("MIDDLE")
     end
 end
 
