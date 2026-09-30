@@ -596,12 +596,16 @@ end
 
 function UI.SetRowColor(row, color, alpha)
     row.mosRowColor = color; row.mosRowAlpha = alpha
-    row:SetBackdropColor(color[1], color[2], color[3], alpha)
-    local entry = row.mosSurfaceEntry
-    if entry and entry.classicFill and Skins.current == "classic" then
-        entry.classicFill:SetTexture("Interface\\Buttons\\WHITE8X8")
-        entry.classicFill:SetVertexColor(color[1], color[2], color[3], alpha); entry.classicFill:Show()
+    row:SetBackdropColor(0, 0, 0, 0)
+    if not row.mosColorFill then
+        row.mosColorFill = row:CreateTexture(nil, "BORDER")
+        row.mosColorFill:SetAllPoints(row)
+        row.mosColorFill:SetTexture("Interface\\Buttons\\WHITE8X8")
     end
+    row.mosColorFill:SetVertexColor(color[1], color[2], color[3], alpha)
+    row.mosColorFill:SetAlpha(1); row.mosColorFill:Show()
+    local entry = row.mosSurfaceEntry
+    if entry and entry.classicFill then entry.classicFill:Hide() end
     if row.mosClassicRowShade then row.mosClassicRowShade:Hide() end
 end
 

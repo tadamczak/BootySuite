@@ -287,9 +287,12 @@ function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tool
 end
 
 function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback, binding)
-    local label = MOS.UI.Components.CreateComponentLabel(parent, name .. "Label", "white")
+    local labelOwner = MOS.UI.Components.CreateContainer(nil, parent)
+    labelOwner:SetAllPoints(parent); labelOwner:SetFrameLevel(parent:GetFrameLevel() + 2)
+    local label = MOS.UI.Components.CreateComponentLabel(labelOwner, name .. "Label", "white")
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
     label:SetText(labelText)
+    label:SetTextColor(1, 1, 1, 1); label:SetAlpha(1)
     local field = MOS.UI.Components.CreateEditField(name, parent, "InputBoxTemplate")
     MOS.UI.Components.ApplyTextSizeDelta(field, parent)
     field:SetWidth(34)

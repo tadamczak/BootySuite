@@ -55,6 +55,7 @@ function Settings.LayoutGeneral(page)
     page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
     local menu = page.menuStyleControl
     local method = state.layout and "Show" or "Hide"
+    if page.uiLayoutDisplayHeading.resetButton then page.uiLayoutDisplayHeading.resetButton[method](page.uiLayoutDisplayHeading.resetButton) end
     page.uiLayoutGeneralHeading[method](page.uiLayoutGeneralHeading); page.uiLayoutDisplayHeading[method](page.uiLayoutDisplayHeading)
     page.uiLayoutGeneralHeading:ClearAllPoints(); page.uiLayoutGeneralHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",24,headingY-28)
     menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 54)
@@ -190,13 +191,14 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
         if page.topSectionState then Settings.ApplyTopSections(page) end
     end
-    Settings.BindTopSections(page, function()
+    page.ApplySavedSettings = function()
         MOS.UI.Components.SetSkin(MOS.Database.GetSetting("uiSkin"), false)
         if options.minimapVisibilityChanged then options.minimapVisibilityChanged() end
         if onNavigationLayout then onNavigationLayout() end
         if page.RefreshAllSettings then page.RefreshAllSettings() else page.RefreshGeneralSettings() end
         if options.profileLoaded then options.profileLoaded() end
-    end)
+    end
+    Settings.BindTopSections(page, page.ApplySavedSettings)
     page.ReflowSettings = function() Settings.ApplyTopSections(page) end
     page:SetScript("OnShow", function() page:RegisterEvent("GUILD_ROSTER_UPDATE") end)
     page:SetScript("OnHide", function() page:UnregisterEvent("GUILD_ROSTER_UPDATE") end)
@@ -322,8 +324,8 @@ function Settings.CreateRaidControlFactory(page, callbacks)
         Slider = function(name, x, y, label, key, minimum, maximum)
             return controls.CreateSlider(page, name, x + 12, y, label, key, minimum, maximum, Refresh)
         end,
-        Percentage = function(name, key)
-            local label, field = controls.CreatePercentageField(page, name, "Odd record lightness (%)", 52, 0, key, 5)
+        Percentage = function(name, key, parent)
+            local label, field = controls.CreatePercentageField(parent or page, name, "Odd record lightness (%)", 52, 0, key, 5)
             field.onChanged = Refresh
             return label, field
         end,
@@ -381,8 +383,8 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local background = factory.Color(40, -774, "Background color", "raidGroupBackgroundColor")
     local text = factory.Color(230, -774, "Main text color", "raidGroupTextColor")
     local hover = factory.Color(40, -802, "Hover color", "raidGroupHoverColor")
-    local pressed = factory.Color(230, -802, "On press color", "raidGroupPressedColor")
-    local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteGroupLightness", "raidGroupOddLightness")
+    local pressed = factory.Color(230, -802, "Collapsed color", "raidGroupPressedColor")
+    local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteGroupLightness", "raidGroupOddLightness", shell.panel)
     return {
         lightnessLabel = lightnessLabel, lightnessField = lightnessField,
         displayHeading = displayHeading, sizeHeading = sizeHeading, colorHeading = colorHeading,
@@ -400,7 +402,7 @@ function Settings.CreateRaidListViewControls(page, shell, factory)
         local heading = MOS.UI.Components.CreateHeading(shell.panel, "", 3, "orange"); heading:SetText(text); return heading
     end
     local displayHeading, sizeHeading, colorHeading = Heading("Display"), Heading("Size"), Heading("Member tile color")
-    local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteListLightness", "raidListOddLightness")
+    local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteListLightness", "raidListOddLightness", shell.panel)
     local showName = factory.Checkbox(40, -890, "Show name", "raidListShowName")
     local showLevel = factory.Checkbox(300, -890, "Show lvl", "raidListShowLevel")
     local showStatus = factory.Checkbox(560, -890, "Show status", "raidListShowStatus")
@@ -419,7 +421,7 @@ function Settings.CreateRaidListViewControls(page, shell, factory)
     local background = factory.Color(40, -1050, "Background color", "raidListBackgroundColor")
     local text = factory.Color(230, -1050, "Main text color", "raidListTextColor")
     local hover = factory.Color(40, -1078, "Hover color", "raidListHoverColor")
-    local pressed = factory.Color(230, -1078, "On press color", "raidListPressedColor")
+    local pressed = factory.Color(230, -1078, "Collapsed color", "raidListPressedColor")
     return {
         displayHeading=displayHeading, sizeHeading=sizeHeading, colorHeading=colorHeading, lightnessLabel=lightnessLabel, lightnessField=lightnessField,
         sliders = {width, height},
@@ -433,6 +435,56 @@ function Settings.MergeControls(target, source)
     local index
     for index = 1, table.getn(source) do table.insert(target, source[index]) end
     return target
+end
+
+function Settings.CreateSectionReset(page, heading, groups, refresh)
+    local keys = {}
+    for _, group in ipairs(groups) do
+        for _, control in ipairs(group) do if control.settingKey then keys[control.settingKey] = true end end
+    end
+    local button = MOS.UI.Components.CreateButton(heading:GetParent(), nil, "Reset to default", 100, 18)
+    MOS.UI.Components.SizeClassicButton(button, 100, 18, 0.8)
+    button:SetPoint("LEFT", heading, "RIGHT", 12, 0)
+    button:SetScript("OnClick", function()
+        MOS.Core.SettingsProfiles.ResetDefaults(keys)
+        if page.RefreshAllSettings then page.RefreshAllSettings() end
+        if refresh then refresh() end
+    end)
+    heading.resetButton = button
+    return button
+end
+
+function Settings.AttachSectionResets(page, callbacks)
+    local C = Settings.CreateSectionReset
+    C(page, page.uiLayoutDisplayHeading, {page.chromeChecks}, page.ApplySavedSettings)
+    C(page, page.rosterDisplayHeading, {page.rosterLayoutChecks}, RefreshRosterLayout)
+    C(page, page.rosterColorHeading, {{page.rosterClassColorsCheck, page.rosterLightnessField}, page.rosterColors}, RefreshRosterLayout)
+    local group, list = page.responsiveRaid.group, page.responsiveRaid.list
+    local function Add(view, heading, groups, refresh)
+        local button = C(page, heading, groups, refresh)
+        table.insert(page.raidAccordionControls.layoutControls, button)
+    end
+    Add(group, group.displayHeading, {group.displayChecks, {{settingKey="raidGroupColumns"}}}, callbacks.refreshGroup)
+    Add(group, group.sizeHeading, {group.autoChecks, group.sliders}, callbacks.refreshGroup)
+    Add(group, group.colorHeading, {group.colorChecks, group.colors, {group.lightnessField}}, callbacks.refreshGroup)
+    Add(list, list.displayHeading, {list.checks}, callbacks.refreshList)
+    Add(list, list.sizeHeading, {list.sliders}, callbacks.refreshList)
+    Add(list, list.colorHeading, {list.colors, {list.lightnessField}}, callbacks.refreshList)
+    local reset = MOS.UI.Components.CreateButton(page, nil, "Reset to defaults", 130, 20)
+    page.globalReset = reset
+    StaticPopupDialogs["MUKLA_OFFICER_SUITE_RESET_ALL_SETTINGS"] = {
+        text = "Reset all settings to defaults? Saved profiles, guild data and raid history will be kept.",
+        button1 = "Reset", button2 = "Cancel", timeout = 0, whileDead = 1, hideOnEscape = 1,
+        OnAccept = function()
+            MOS.Core.SettingsProfiles.ResetDefaults()
+            page.ApplySavedSettings()
+            if callbacks.trackingChanged then callbacks.trackingChanged() end
+            RosterTrackingChanged()
+            if callbacks.refreshGroup then callbacks.refreshGroup() end
+            if callbacks.refreshList then callbacks.refreshList() end
+        end,
+    }
+    reset:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_ALL_SETTINGS") end)
 end
 
 function Settings.CreateRaidSettings(page, callbacks)
@@ -489,6 +541,8 @@ function Settings.CreateRaidSettings(page, callbacks)
         Settings.SyncSavedControls(page.chatLogsCheck, page.raidAccordionControls.opacityField, page.raidAccordionControls.focusField)
         page.ApplyRaidLayoutAccordion()
     end
+    Settings.AttachSectionResets(page, callbacks)
+    page.RefreshGeneralSettings()
     page.ApplyRaidLayoutAccordion()
 end
 
@@ -689,6 +743,10 @@ function Settings.ApplyRaidAccordions(controls)
         controls.page.settingsContentHeight = -debugY + (controls.page.topSectionState.debug and 66 or 32)
         Settings.ApplyUIVisibility(controls)
     end
+    if controls.page.globalReset then
+        controls.page.globalReset:ClearAllPoints(); controls.page.globalReset:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", -12, -controls.page.settingsContentHeight - 8)
+        controls.page.settingsContentHeight = controls.page.settingsContentHeight + 40
+    end
     Settings.UpdateScroll(controls.page.settingsViewport, controls.page, controls.page.settingsContentHeight)
     controls.layout.rule:Hide()
 end
@@ -707,6 +765,7 @@ function Settings.ApplyUIVisibility(controls)
     if not visible then
         page.rosterLiveTrackingCheck:Hide(); page.rosterClassColorsCheck:Hide()
         page.playerDetailsControl:Hide(); page.playerDetailsControl.fieldLabel:Hide(); page.playerDetailsControl.panel:Hide()
+        if page.rosterDisplayHeading.resetButton then page.rosterDisplayHeading.resetButton:Hide(); page.rosterColorHeading.resetButton:Hide(); page.uiLayoutDisplayHeading.resetButton:Hide() end
         page.rosterDisplayHeading:Hide(); page.rosterColorHeading:Hide(); page.rosterLightnessLabel:Hide(); page.rosterLightnessField:Hide()
         for colorIndex = 1, table.getn(page.rosterColors) do page.rosterColors[colorIndex]:Hide() end
         local index
@@ -798,6 +857,7 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     page.rosterLightnessLabel:ClearAllPoints(); page.rosterLightnessLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, colorY - 54 - colorHeight)
     if not page.rosterLightnessField.mosEditing then page.rosterLightnessField:SetText(MOS.Database.GetSetting("rosterOddLightness") or 5) end
     local method = state.layout and uiVisible and "Show" or "Hide"
+    if page.rosterDisplayHeading.resetButton then page.rosterDisplayHeading.resetButton[method](page.rosterDisplayHeading.resetButton); page.rosterColorHeading.resetButton[method](page.rosterColorHeading.resetButton) end
     page.rosterDisplayHeading[method](page.rosterDisplayHeading); page.rosterColorHeading[method](page.rosterColorHeading)
     page.rosterLightnessLabel[method](page.rosterLightnessLabel); page.rosterLightnessField[method](page.rosterLightnessField)
     for index = 1, table.getn(page.rosterColors) do page.rosterColors[index][method](page.rosterColors[index]) end
