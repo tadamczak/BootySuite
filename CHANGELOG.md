@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.66 - 2026-09-30
+
+- Replace the flat bottom-tab line with the existing textured main-window gold border.
+
 ## 0.5.0-dev.65 - 2026-09-30
 
 - Close the bottom-tab seam with a shared gold edge above content and beneath the active tab.

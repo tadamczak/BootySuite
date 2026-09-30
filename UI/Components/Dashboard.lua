@@ -41,6 +41,7 @@ function Dashboard.SetTabBody(view, protruding, topInset)
         view.tabBody:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -topInset)
         view.tabBody:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, protruding and 30 or 0)
         frame:SetBackdropColor(0, 0, 0, 0); frame:SetBackdropBorderColor(0, 0, 0, 0)
+        view.tabBody:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
         view.tabBody:Show()
     elseif view.tabBody then
         view.tabBody:Hide()
@@ -49,24 +50,25 @@ function Dashboard.SetTabBody(view, protruding, topInset)
     view.tabsProtruding = protruding
 end
 
--- Own the exposed one-pixel seam above inactive bottom tabs. The native
--- window backdrop sits below content; it cannot close this foreground gap.
+-- Reuse the exact main-window backdrop, including its textured gold edge.
+-- Keep the transparent outline above inactive tabs and below the active tab.
 function Dashboard.SetBottomTabSeam(view, shown)
     local seam = view.bottomTabSeam
     if shown then
         if not seam then
             seam = MOS.UI.Components.CreateContainer(nil, view.frame)
             seam:EnableMouse(false)
-            seam:SetPoint("BOTTOMLEFT", view.contentPanel, "BOTTOMLEFT", 0, -1)
-            seam:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 0, -1)
-            seam:SetHeight(1)
-            local edge = seam:CreateTexture(nil, "OVERLAY")
-            edge:SetAllPoints(seam); edge:SetTexture("Interface\\Buttons\\WHITE8X8")
-            edge:SetVertexColor(0.68, 0.54, 0.27, 1)
+            seam:SetBackdrop(view.frame.mosWindowBackdrop)
+            seam:SetBackdropColor(0, 0, 0, 0)
+            seam:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
             view.bottomTabSeam = seam
         end
+        seam:ClearAllPoints()
+        seam:SetPoint("TOPLEFT", view.frame, "TOPLEFT", 0, 0)
+        seam:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 4, -4)
         seam:SetFrameStrata(view.frame:GetFrameStrata())
-        seam:SetFrameLevel(view.frame:GetFrameLevel() + 19)
+        seam:SetFrameLevel(view.frame:GetFrameLevel() + 23)
+        if view.tabsProtruding then view.tabBody:SetBackdropBorderColor(0, 0, 0, 0) end
         seam:Show()
     elseif seam then seam:Hide() end
 end
