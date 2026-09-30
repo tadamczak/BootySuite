@@ -115,7 +115,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
         warning.classicHeader:Show(); warning.badge:Hide()
         warning.text:SetTextColor(0.92, 0.91, 0.87)
     end)
-    warning.dialog = MOS.UI.Components.CreateReadOnlyDialog(dialogName, dialogTitle, 560, 340, background)
+    warning.dialog = MOS.UI.Components.CreateReadOnlyDialog(dialogName, dialogTitle, 430, 260, background)
     MOS.UI.Components.Window.StyleProjectDialog(warning.dialog)
     warning.dialog.title:SetTextColor(1, 1, 1)
     warning.dialog.icon = MOS.UI.Components.CreateTexture(warning.dialog, nil, "ARTWORK")
@@ -125,6 +125,12 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
     warning.dialog.icon:SetPoint("TOPLEFT", warning.dialog, "TOPLEFT", 8, -8)
     warning.dialog.title:ClearAllPoints(); warning.dialog.title:SetPoint("LEFT", warning.dialog.icon, "RIGHT", 6, 0)
     warning.dialog.ok:ClearAllPoints(); warning.dialog.ok:SetPoint("BOTTOMRIGHT", warning.dialog, "BOTTOMRIGHT", -8, 8)
+    warning.dialog.description = MOS.UI.Components.CreateLabel(warning.dialog, nil, "OVERLAY", "GameFontHighlightSmall")
+    warning.dialog.description:SetPoint("TOPLEFT", warning.dialog, "TOPLEFT", 8, -36)
+    warning.dialog.description:SetPoint("TOPRIGHT", warning.dialog, "TOPRIGHT", -8, -36)
+    warning.dialog.description:SetHeight(20); warning.dialog.description:SetJustifyH("LEFT"); warning.dialog.description:SetJustifyV("TOP")
+    warning.dialog:SetScript("OnShow", function() warning.dialog.dismiss:Hide() end)
+    warning.dialog:SetScript("OnHide", function() warning.dialog.dismiss:Hide() end)
     warning.dialog.playerRows = {}
     warning.info = MOS.UI.Components.CreateButton(warning, nil, "INFO", 66, 20)
     warning.info:SetPoint("BOTTOMRIGHT", warning, "BOTTOMRIGHT", -8, 6); warning.info:SetFrameLevel(warning:GetFrameLevel() + 2)
@@ -135,10 +141,17 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
         local key = warning == page.softReserveWarning and "unmatchedNames" or warning == page.missingSoftReserveWarning and "missingNames" or "invalidNames"
         local names = issues[key] or {}
         local dialog = warning.dialog
+        local descriptions = {
+            unmatchedNames = "Imported Soft Reserves that are not assigned to a current raid member.",
+            missingNames = "Current raid members who do not have an imported Soft Reserve.",
+            invalidNames = "Raid members whose Soft Reserve is excluded by their loot rights.",
+        }
+        dialog.description:SetText(descriptions[key])
+        dialog:SetHeight(math.min(300, math.max(150, 106 + table.getn(names) * 24)))
         dialog:Open(""); dialog.text:Hide()
         local contentHeight = table.getn(names) * 24
-        local overflow = contentHeight > dialog:GetHeight() - 78
-        dialog.scroll:ClearAllPoints(); dialog.scroll:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -36)
+        local overflow = contentHeight > dialog:GetHeight() - 98
+        dialog.scroll:ClearAllPoints(); dialog.scroll:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -60)
         dialog.scroll:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", overflow and -28 or -8, 38)
         local width = dialog:GetWidth() - (overflow and 36 or 16)
         dialog.canvas:SetWidth(width); dialog.canvas:SetHeight(math.max(1, contentHeight))
