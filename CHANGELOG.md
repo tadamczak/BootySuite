@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.88 - 2026-10-01
+
+- Rebuild Guild Statistics around one responsive member table with rank, class, level, search and grouping controls.
+- Add the guild name to the heading and align compact icon actions with the visible-member count.
+- Match the Raid Statistics history to saved Raid rows, add collapse behavior, date-only times and class-colored players.
+
 ## 0.5.0-dev.87 - 2026-10-01
 
 - Separate the Raid section heading from active-session details and keep the responsive toolbar inside its frame.

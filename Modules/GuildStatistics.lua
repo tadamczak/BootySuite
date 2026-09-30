@@ -1,455 +1,320 @@
 local MOS = MuklaOfficerSuite
+local UI = MOS.UI.Components
 
 MOS.Modules = MOS.Modules or {}
 local GuildStatistics = {}
 MOS.Modules.GuildStatistics = GuildStatistics
 
-local CLASS_ICONS = {
-    Druid = "Interface\\Icons\\Spell_Nature_ForceOfNature",
-    Hunter = "Interface\\Icons\\INV_Weapon_Bow_07",
-    Mage = "Interface\\Icons\\INV_Staff_13",
-    Paladin = "Interface\\Icons\\Spell_Holy_HolyBolt",
-    Priest = "Interface\\Icons\\INV_Staff_30",
-    Rogue = "Interface\\Icons\\INV_ThrowingKnife_04",
-    Shaman = "Interface\\Icons\\Spell_Nature_BloodLust",
-    Warlock = "Interface\\Icons\\Spell_Nature_FaerieFire",
-    Warrior = "Interface\\Icons\\INV_Sword_27",
-}
-
-local function OnSummaryClick()
-    local entry = this.entry
-    if not entry or entry.kind ~= "summary" then return end
-    local controller = this.statisticsController
-    if controller.expandedType == entry.statsType and controller.expandedValue == entry.value then
-        controller.expandedType = nil
-        controller.expandedValue = nil
-    else
-        controller.expandedType = entry.statsType
-        controller.expandedValue = entry.value
-    end
-    controller.refresh()
+local function Lower(value) return string.lower(tostring(value or "")) end
+local function DisplayRank(value)
+    if value == nil or value == "" then return "Unknown" end
+    return Lower(value) == "officer wukong" and "Officer (Chimp)" or tostring(value)
 end
-
-local function OnTableScroll()
-    FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback)
-end
-
-local function ShortText(text, length)
-    text = tostring(text or "")
-    if string.len(text) > length then return string.sub(text, 1, length - 1) .. "~" end
-    return text
-end
-
-local function SortClassNames(a, b)
-    return string.lower(a) < string.lower(b)
-end
-
-local function SortRanks(a, b)
-    if a.index == b.index then return string.lower(a.name) < string.lower(b.name) end
-    return a.index < b.index
-end
-
-function GuildStatistics.CreateSummaryState()
-    return {
-        classes = {},
-        ranks = {},
-        classNames = {},
-        rankList = {},
-        classSummaries = {},
-        included = 0,
-        total = 0,
-    }
-end
+local function DisplayClass(value) return value and value ~= "" and value or "Unknown" end
+local function OnTableScroll() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end
 
 local function ClearArray(values)
     local index
     for index = table.getn(values), 1, -1 do values[index] = nil end
 end
 
+function GuildStatistics.CreateSummaryState()
+    return { classes = {}, ranks = {}, classNames = {}, rankList = {}, classSummaries = {}, included = 0, total = 0 }
+end
+
 function GuildStatistics.BuildSummary(state, data, onlyLevel60)
-    local className
-    for className in pairs(state.classes) do state.classes[className] = 0 end
-    local rankName, rankData
-    for rankName, rankData in pairs(state.ranks) do rankData.count = 0 end
-    ClearArray(state.classNames)
-    ClearArray(state.rankList)
-    state.included = 0
-    state.total = table.getn(data.members)
-    local memberIndex
-    for memberIndex = 1, state.total do
-        local member = data.members[memberIndex]
-        if not onlyLevel60 or (tonumber(member.level) or 0) == 60 then
-            className = member.class ~= "" and member.class or "Unknown"
-            if not state.classes[className] or state.classes[className] == 0 then
-                state.classes[className] = 0
-                table.insert(state.classNames, className)
-            end
-            state.classes[className] = state.classes[className] + 1
-            rankName = member.rank ~= "" and member.rank or "Unknown"
-            rankData = state.ranks[rankName]
-            if not rankData then
-                rankData = { name = rankName, count = 0, index = 999 }
-                state.ranks[rankName] = rankData
-            end
-            if rankData.count == 0 then table.insert(state.rankList, rankData) end
-            rankData.index = tonumber(member.rankIndex) or 999
-            rankData.count = rankData.count + 1
-            state.included = state.included + 1
+    state = state or GuildStatistics.CreateSummaryState()
+    state.classes = {}; state.ranks = {}; ClearArray(state.classNames); ClearArray(state.rankList); ClearArray(state.classSummaries)
+    state.included = 0; state.total = table.getn(data and data.members or {})
+    local index
+    for index = 1, state.total do
+        local member = data.members[index]
+        if not onlyLevel60 or tonumber(member.level) == 60 then
+            local className = DisplayClass(member.class)
+            local rankName = DisplayRank(member.rank)
+            state.classes[className] = (state.classes[className] or 0) + 1
+            local rank = state.ranks[rankName]
+            if not rank then rank = { name = rankName, count = 0, index = tonumber(member.rankIndex) or 999 }; state.ranks[rankName] = rank end
+            rank.count = rank.count + 1; state.included = state.included + 1
         end
     end
-    table.sort(state.classNames, SortClassNames)
-    table.sort(state.rankList, SortRanks)
-    local classCount = table.getn(state.classNames)
-    local index
-    for index = 1, classCount do
-        local summary = state.classSummaries[index]
-        if not summary then summary = {}; state.classSummaries[index] = summary end
-        summary.name = state.classNames[index]
-        summary.count = state.classes[summary.name]
-    end
-    for index = table.getn(state.classSummaries), classCount + 1, -1 do state.classSummaries[index] = nil end
+    local className
+    for className in pairs(state.classes) do table.insert(state.classNames, className) end
+    table.sort(state.classNames, function(a, b) return Lower(a) < Lower(b) end)
+    for index = 1, table.getn(state.classNames) do table.insert(state.classSummaries, { name = state.classNames[index], count = state.classes[state.classNames[index]] }) end
+    local _, rank
+    for _, rank in pairs(state.ranks) do table.insert(state.rankList, rank) end
+    table.sort(state.rankList, function(a, b) if a.index == b.index then return Lower(a.name) < Lower(b.name) end return a.index < b.index end)
     return state
 end
 
-local summaryColumns = {
-    { key = "icon", texture = true, side = "LEFT", x = 0, width = 20, height = 20 },
-    { key = "name", side = "LEFT", x = 28, width = 132 },
-    { key = "rank", side = "LEFT", x = 100, width = 116 },
-    { key = "level", side = "RIGHT", x = -2, width = 25 },
-    { key = "count", side = "RIGHT", x = -2, width = 35 },
-}
+local function ClassColor(className)
+    local key = string.upper(tostring(className or ""))
+    return (RAID_CLASS_COLORS and RAID_CLASS_COLORS[key]) or UI.Theme.classColors[key] or { r = 1, g = 1, b = 1 }
+end
 
-function GuildStatistics.CreateTable(page, name, x, width, controller)
-    local statsTable = MOS.UI.Components.Table.Create({
-        parent = page, name = name, x = x, width = width,
-        scrollTop = -148, scrollHeight = 224, rowTop = -152,
-        rowCount = 25, rowHeight = 23, rowStep = 24, columns = summaryColumns,
-        refresh = controller.refresh, onScroll = OnTableScroll,
-        bindRow = function(row)
-            row.statisticsController = controller
-            row:SetScript("OnClick", OnSummaryClick)
-            MOS.UI.Components.AttachTooltip(row,"Guild statistics",function()
-                local entry=this.entry
-                if not entry then return "" end
-                if entry.member then return (entry.member.name or "").." - "..(string.lower(entry.member.rank or "")=="officer wukong" and "Officer (Chimp)" or (entry.member.rank or "")) end
-                return (entry.value or "")..": "..tostring(entry.count or 0)
-            end)
-        end,
-    })
-    statsTable.entries = {}; statsTable.entryPool = {}; statsTable.memberScratch = {}
-    statsTable.controller = controller
-    return statsTable
+local function CreateFilterGroup(parent, labelText, buttonText, width)
+    local group = UI.CreateContainer(nil, parent); group:SetWidth(width); group:SetHeight(26); group.mosFlowWidth = width
+    group.label = UI.CreateLabel(group, nil, "OVERLAY", "GameFontHighlightSmall"); group.label:SetPoint("LEFT", group, "LEFT", 0, 0); group.label:SetText(labelText)
+    group.button = UI.CreateDropdownButton(group, nil, buttonText, width - 48); group.button:SetPoint("RIGHT", group, "RIGHT", 0, 0); group.button:SetHeight(26)
+    group.panel = UI.CreateDropdownPanel(parent, group.button, 150, 80, 50); UI.StyleProjectPopup(group.panel)
+    group.button:SetScript("OnClick", function() if group.panel:IsVisible() then group.panel:Hide() else group.panel:Show() end end)
+    return group
+end
+
+local function CreateMemberTable(page, refresh)
+    local tableView = { rows = {}, headers = {}, entries = {}, memberScratch = {}, columns = {
+        { key = "name", text = "Name", desiredWidth = 210, minimumWidth = 72, fraction = 0.36 },
+        { key = "class", text = "Class", desiredWidth = 130, minimumWidth = 48, fraction = 0.22 },
+        { key = "rank", text = "Rank", desiredWidth = 180, minimumWidth = 60, fraction = 0.31 },
+        { key = "level", text = "Lvl", desiredWidth = 46, minimumWidth = 30, fraction = 0.11 },
+    } }
+    tableView.scroll = UI.CreateScrollFrame("MuklaOfficerSuiteGuildStatisticsScroll", page, "FauxScrollFrameTemplate")
+    tableView.scroll.refreshCallback = refresh; tableView.scroll:SetScript("OnVerticalScroll", OnTableScroll)
+    UI.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteGuildStatisticsScrollScrollBar"))
+    local index
+    for index = 1, table.getn(tableView.columns) do
+        local column = tableView.columns[index]
+        tableView.headers[index] = UI.Table.CreateHeader(page, nil, column.text, 0, 0, column.desiredWidth, nil, false)
+    end
+    for index = 1, 30 do
+        local row = UI.CreateContainer(nil, page); row:SetHeight(23)
+        row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" }); row:SetBackdropColor(0, 0, 0, 0)
+        UI.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8" }, {0,0,0,0}, {0,0,0,0})
+        row.name = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
+        row.class = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
+        row.rank = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
+        row.level = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
+        row:Hide(); tableView.rows[index] = row
+    end
+    return tableView
+end
+
+local function MemberGroupValue(member, groupBy)
+    if groupBy == "class" then return DisplayClass(member.class) end
+    if groupBy == "rank" then return DisplayRank(member.rank) end
+    if groupBy == "level" then return tostring(tonumber(member.level) or 0) end
+    return ""
 end
 
 local function SortMembers(a, b)
-    local aRank, bRank = tonumber(a.rankIndex) or 999, tonumber(b.rankIndex) or 999
-    if aRank == bRank then return string.lower(a.name or "") < string.lower(b.name or "") end
-    return aRank < bRank
+    local aGroup, bGroup = a.group or "", b.group or ""
+    if aGroup ~= bGroup then
+        if a.groupNumber and b.groupNumber then return a.groupNumber > b.groupNumber end
+        return Lower(aGroup) < Lower(bGroup)
+    end
+    local aRank, bRank = tonumber(a.member.rankIndex) or 999, tonumber(b.member.rankIndex) or 999
+    if aRank ~= bRank then return aRank < bRank end
+    return Lower(a.member.name) < Lower(b.member.name)
 end
 
-local function AcquireEntry(statsTable, index)
-    local entry = statsTable.entryPool[index]
-    if not entry then entry = {}; statsTable.entryPool[index] = entry end
-    statsTable.entries[index] = entry
-    return entry
-end
-
-function GuildStatistics.PopulateTable(statsTable, summaries, statsType, data, onlyLevel60, classIcons)
-    local expandedType = statsTable.controller.expandedType
-    local expandedValue = statsTable.controller.expandedValue
-    local entries = statsTable.entries
-    local entriesCount = table.getn(entries)
-    while entriesCount > 0 do entries[entriesCount] = nil; entriesCount = entriesCount - 1 end
-    local entryCount = 0
-    local summaryIndex
-    for summaryIndex = 1, table.getn(summaries) do
-        local summary = summaries[summaryIndex]
-        entryCount = entryCount + 1
-        local entry = AcquireEntry(statsTable, entryCount)
-        entry.kind = "summary"; entry.statsType = statsType; entry.value = summary.name; entry.count = summary.count; entry.member = nil
-        if expandedType == statsType and expandedValue == summary.name then
-            local members = statsTable.memberScratch
-            local memberCount = table.getn(members)
-            while memberCount > 0 do members[memberCount] = nil; memberCount = memberCount - 1 end
-            local memberIndex
-            for memberIndex = 1, table.getn(data.members) do
-                local member = data.members[memberIndex]
-                local matches = (statsType == "class" and member.class == summary.name) or (statsType == "rank" and member.rank == summary.name)
-                if matches and (not onlyLevel60 or tonumber(member.level) == 60) then table.insert(members, member) end
-            end
-            table.sort(members, SortMembers)
-            for memberIndex = 1, table.getn(members) do
-                entryCount = entryCount + 1
-                entry = AcquireEntry(statsTable, entryCount)
-                entry.kind = "member"; entry.statsType = nil; entry.value = nil; entry.count = nil; entry.member = members[memberIndex]
-            end
+local function BuildEntries(controller, data)
+    ClearArray(controller.table.memberScratch); ClearArray(controller.table.entries)
+    local ranks, classes, rankSeen, classSeen = {}, {}, {}, {}
+    local query = Lower(controller.search:GetText())
+    local level = tonumber(controller.level:GetText())
+    local index
+    for index = 1, table.getn(data.members) do
+        local member = data.members[index]
+        local rank, className = DisplayRank(member.rank), DisplayClass(member.class)
+        if not rankSeen[rank] then rankSeen[rank] = true; table.insert(ranks, rank) end
+        if not classSeen[className] then classSeen[className] = true; table.insert(classes, className) end
+        if controller.knownRanks[rank] == nil then controller.knownRanks[rank] = true; controller.selectedRanks[rank] = true end
+        if controller.knownClasses[className] == nil then controller.knownClasses[className] = true; controller.selectedClasses[className] = true end
+        local matchesQuery = query == "" or string.find(Lower(member.name), query, 1, true) or string.find(Lower(rank), query, 1, true) or string.find(Lower(className), query, 1, true)
+        if controller.selectedRanks[rank] and controller.selectedClasses[className] and (not level or tonumber(member.level) == level) and matchesQuery then
+            table.insert(controller.table.memberScratch, { member = member, group = MemberGroupValue(member, controller.groupBy), groupNumber = controller.groupBy == "level" and tonumber(member.level) or nil })
         end
     end
-    local UI=MOS.UI.Components
-    local rect=statsTable.layout
-    local offset,visibleRows,rowWidth
-    if rect then offset,visibleRows,rowWidth=UI.Table.LayoutViewport(statsTable.scroll,statsTable.controller.page,rect.x,rect.y,rect.width,rect.height,table.getn(entries),24,table.getn(statsTable.rows))
-    else visibleRows=statsTable.visibleRows or table.getn(statsTable.rows); rowWidth=220; offset=UI.UpdateScrollFrame(statsTable.scroll,table.getn(entries),visibleRows,24) end
-    local rowIndex
-    for rowIndex = 1, table.getn(statsTable.rows) do
-        local row = statsTable.rows[rowIndex]
-        local entry = entries[offset + rowIndex]
-        row.entry = entry
-        if entry and rowIndex <= visibleRows then
-            if rect then row:ClearAllPoints(); row:SetPoint("TOPLEFT",statsTable.controller.page,"TOPLEFT",rect.x,-rect.y-(rowIndex-1)*24);row:SetWidth(rowWidth) end
-            local expanded = entry.kind == "summary" and expandedType == statsType and expandedValue == entry.value
-            MOS.UI.Components.ApplyRowBackground(row, offset + rowIndex, expanded)
-            if entry.kind == "summary" then
-                row.icon:SetTexture(statsType == "class" and (classIcons[entry.value] or "Interface\\Icons\\INV_Misc_QuestionMark") or nil)
-                if statsType == "class" then row.icon:Show() else row.icon:Hide() end
-                row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", statsType == "class" and 28 or 0, 0)
-                row.name:SetWidth(statsType == "class" and 132 or 180)
-                row.name:SetText((string.lower(entry.value)=="officer wukong" and "Officer (Chimp)" or entry.value) .. (expanded and "  ^" or ""))
-                row.count:SetText(entry.count); row.count:Show(); row.rank:Hide(); row.level:Hide()
+    table.sort(ranks, function(a,b) return Lower(a)<Lower(b) end); table.sort(classes, function(a,b) return Lower(a)<Lower(b) end)
+    UI.FilterPanel.Refresh(controller.rankGroup.panel, ranks, controller.selectedRanks, controller.filterChanged, true)
+    UI.FilterPanel.Refresh(controller.classGroup.panel, classes, controller.selectedClasses, controller.filterChanged, true)
+    table.sort(controller.table.memberScratch, SortMembers)
+    local previousGroup, groupEntry, count = nil, nil, 0
+    for index = 1, table.getn(controller.table.memberScratch) do
+        local wrapped = controller.table.memberScratch[index]
+        if controller.groupBy ~= "none" and wrapped.group ~= previousGroup then
+            groupEntry = { kind = "group", value = wrapped.group, count = 0 }
+            table.insert(controller.table.entries, groupEntry); previousGroup = wrapped.group
+        end
+        if groupEntry and controller.groupBy ~= "none" then groupEntry.count = groupEntry.count + 1 end
+        table.insert(controller.table.entries, { kind = "member", member = wrapped.member }); count = count + 1
+    end
+    return count
+end
+
+local function LayoutTable(controller, rowWidth)
+    UI.Table.AllocateColumnWidths(controller.table.columns, rowWidth)
+    local x, index = 0, nil
+    for index = 1, table.getn(controller.table.columns) do
+        local column, header = controller.table.columns[index], controller.table.headers[index]
+        header:ClearAllPoints(); header:SetPoint("TOPLEFT", controller.page, "TOPLEFT", controller.tableRect.x + x, -controller.tableRect.y)
+        header:SetWidth(column.width); header:SetHeight(20); x = x + column.width
+    end
+    UI.Table.FitHeaders(controller.table.headers, 12)
+end
+
+local function RenderTable(controller)
+    local rect, entries = controller.tableRect, controller.table.entries
+    local offset, visible, rowWidth = UI.Table.LayoutViewport(controller.table.scroll, controller.page, rect.x, rect.y + 22, rect.width, rect.height - 22, table.getn(entries), 24, table.getn(controller.table.rows))
+    LayoutTable(controller, rowWidth)
+    local index
+    for index = 1, table.getn(controller.table.rows) do
+        local row, entry = controller.table.rows[index], entries[offset + index]
+        if entry and index <= visible then
+            row:ClearAllPoints(); row:SetPoint("TOPLEFT", controller.page, "TOPLEFT", rect.x, -rect.y - 22 - (index - 1) * 24); row:SetWidth(rowWidth)
+            UI.ApplyRowBackground(row, offset + index, false)
+            if entry.kind == "group" then
+                UI.Table.Cell(row.name, row, 6, rowWidth - 12, 23, entry.value .. "  (" .. entry.count .. ")")
+                row.name:SetTextColor(unpack(UI.Theme.colors.goldText)); row.class:Hide(); row.rank:Hide(); row.level:Hide()
             else
-                row.icon:Hide(); row.count:Hide()
-                row.name:ClearAllPoints(); row.name:SetPoint("LEFT", row, "LEFT", 12, 0); row.name:SetWidth(82); row.name:SetText(statsTable.controller.shortText(entry.member.name, 12))
-                row.rank:SetWidth(onlyLevel60 and 116 or 96); row.rank:SetText(statsTable.controller.shortText(entry.member.rank, 18)); row.rank:Show()
-                if onlyLevel60 then row.level:Hide() else row.level:SetText(entry.member.level or ""); row.level:Show() end
-            end
-            if entry.kind == "summary" then
-                UI.Table.Cell(row.name,row,statsType=="class" and 28 or 6,rowWidth-(statsType=="class" and 68 or 46),23)
-                UI.Table.Cell(row.count,row,rowWidth-36,30,23)
-            else
-                local nameWidth=math.floor((rowWidth-12)*0.43)
-                UI.Table.Cell(row.name,row,6,nameWidth,23,entry.member.name)
-                UI.Table.Cell(row.rank,row,6+nameWidth,rowWidth-nameWidth-(onlyLevel60 and 12 or 38),23,string.lower(entry.member.rank or "")=="officer wukong" and "Officer (Chimp)" or entry.member.rank)
-                UI.Table.Cell(row.level,row,rowWidth-28,24,23)
+                local member, columns = entry.member, controller.table.columns
+                local x = 0
+                UI.Table.Cell(row.name, row, x + 6, columns[1].width - 10, 23, member.name); x = x + columns[1].width
+                local color = ClassColor(member.class); row.name:SetTextColor(color.r or color[1], color.g or color[2], color.b or color[3])
+                UI.Table.Cell(row.class, row, x, columns[2].width - 4, 23, DisplayClass(member.class)); x = x + columns[2].width
+                UI.Table.Cell(row.rank, row, x, columns[3].width - 4, 23, DisplayRank(member.rank)); x = x + columns[3].width
+                UI.Table.Cell(row.level, row, x, columns[4].width - 2, 23, member.level or "")
+                row.class:Show(); row.rank:Show(); row.level:Show()
             end
             row:Show()
-        else
-            row:Hide()
-        end
+        else row:Hide() end
     end
 end
 
 function GuildStatistics.AttachExport(view, button)
-    button:SetParent(view.page); button:ClearAllPoints()
-    button:SetPoint("TOPRIGHT", view.page, "TOPRIGHT", -6, -10)
-    button:SetWidth(120); button:SetHeight(26); button:Show(); MOS.UI.Components.StyleActionButton(button)
+    button:SetParent(view.page); button:ClearAllPoints(); button:SetWidth(100); button:SetHeight(26); button:Show()
+    UI.StyleActionButton(button); UI.SetClassicButtonIcon(button, "save", 13, 7, 0); UI.SetClassicButtonLabelOffset(button, 2)
     view.exportButton = button
-    view.layoutControls = nil
 end
 
 function GuildStatistics.CreateView(host, styleButton, refresh)
-    local page = MOS.UI.Components.CreateResponsiveCanvas(host, "MOSGuildStatisticsPage")
+    local page = UI.CreateResponsiveCanvas(host, "MOSGuildStatisticsPage")
     local view = { page = page, host = host }
-    view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
-    view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10)
-    view.title:SetText("Guild Statistics")
-    view.onlyLevel60 = MOS.UI.Components.CreateCheckButton(nil, page, "UICheckButtonTemplate")
-    view.onlyLevel60:SetPoint("TOPRIGHT", page, "TOPRIGHT", -225, -42)
-    view.onlyLevel60:SetWidth(22); view.onlyLevel60:SetHeight(22); view.onlyLevel60:SetChecked(true)
-    view.onlyLevel60.label = MOS.UI.Components.CreateLabel(view.onlyLevel60, nil, "OVERLAY", "GameFontHighlightSmall")
-    view.onlyLevel60.label:SetPoint("LEFT", view.onlyLevel60, "RIGHT", 2, 0)
-    view.onlyLevel60.label:SetText("Only level 60"); view.onlyLevel60:Hide()
-    view.lastScan = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
-    view.lastScan:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -48); view.lastScan:SetWidth(360); view.lastScan:SetJustifyH("LEFT"); view.lastScan:Hide()
-    view.refreshButton = MOS.UI.Components.CreateControl(nil, page)
-    view.refreshButton:SetWidth(108); view.refreshButton:SetHeight(22); view.refreshButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -42)
-    styleButton(view.refreshButton, "Refresh Data"); view.refreshButton:Hide()
-    view.scanButton = MOS.UI.Components.CreateControl(nil, page)
-    view.scanButton:SetWidth(160); view.scanButton:SetHeight(24); view.scanButton:SetPoint("CENTER", page, "CENTER", 0, 12)
-    styleButton(view.scanButton, "Scan Guild Statistics")
-    view.summary = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlight")
-    view.summary:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -72); view.summary:SetWidth(545); view.summary:SetJustifyH("LEFT"); view.summary:SetJustifyV("TOP"); view.summary:Hide()
-    view.classPanel = MOS.UI.Components.CreateTexture(page, nil, "BACKGROUND")
-    view.classPanel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -112); view.classPanel:SetWidth(272); view.classPanel:SetHeight(270); view.classPanel:SetTexture(0.07, 0.065, 0.055, 0.82); view.classPanel:Hide()
-    view.rankPanel = MOS.UI.Components.CreateTexture(page, nil, "BACKGROUND")
-    view.rankPanel:SetPoint("TOPLEFT", page, "TOPLEFT", 300, -112); view.rankPanel:SetWidth(262); view.rankPanel:SetHeight(270); view.rankPanel:SetTexture(0.07, 0.065, 0.055, 0.82); view.rankPanel:Hide()
-    view.classesHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
-    view.classesHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -128); view.classesHeading:SetWidth(260); view.classesHeading:SetJustifyH("LEFT"); view.classesHeading:SetJustifyV("TOP"); view.classesHeading:SetText("Members by class"); view.classesHeading:Hide()
-    view.ranksHeading = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
-    view.ranksHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 316, -128); view.ranksHeading:SetWidth(255); view.ranksHeading:SetJustifyH("LEFT"); view.ranksHeading:SetJustifyV("TOP"); view.ranksHeading:SetText("Members by rank"); view.ranksHeading:Hide()
-    view.tableController = {
-        refresh = refresh,
-        shortText = ShortText,
-        expandedType = nil,
-        expandedValue = nil,
-    }
-    view.classTable = GuildStatistics.CreateTable(page, "MuklaOfficerSuiteStatisticsClassTableScroll", 24, 252, view.tableController)
-    view.rankTable = GuildStatistics.CreateTable(page, "MuklaOfficerSuiteStatisticsRankTableScroll", 316, 238, view.tableController)
+    view.title = UI.CreateHeading(page, "", 1, "gold"); view.title:SetText("Guild Statistics")
+    view.titleSeparator = UI.CreateHeading(page, "", 1, "white"); view.titleSeparator:SetText("|"); view.titleSeparator:SetTextColor(1,1,1)
+    view.guildTitle = UI.CreateHeading(page, "", 1, "gold"); view.guildTitle:SetText("Guild")
+    view.refreshButton = UI.CreateControl(nil, page); view.refreshButton:SetWidth(108); view.refreshButton:SetHeight(26); styleButton(view.refreshButton, "Refresh Data"); view.refreshButton:Hide()
+    UI.SetClassicButtonIcon(view.refreshButton, "reset", 13, 7, 0); UI.SetClassicButtonLabelOffset(view.refreshButton, 2)
+    view.showing = UI.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); view.showing:SetJustifyH("RIGHT"); view.showing:Hide()
+    view.lastScan = UI.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall"); view.lastScan:Hide()
+    view.scanButton = UI.CreateControl(nil, page); view.scanButton:SetWidth(160); view.scanButton:SetHeight(26); styleButton(view.scanButton, "Scan Guild Statistics")
+    view.empty = UI.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall"); view.empty:SetJustifyH("CENTER"); view.empty:Hide()
+    view.filterPanel = UI.CreateContainer(nil, page); view.filterPanel:SetBackdrop({ bgFile="Interface\\Buttons\\WHITE8X8", edgeFile="Interface\\Tooltips\\UI-Tooltip-Border", edgeSize=8, insets={left=2,right=2,top=2,bottom=2} }); view.filterPanel:SetBackdropColor(0.035,0.03,0.02,0.94)
+    UI.RegisterSkinnedSurface(view.filterPanel, "content"); UI.SetSurfaceHorizontalBorders(view.filterPanel, true, true)
+    view.rankGroup = CreateFilterGroup(view.filterPanel, "Rank", "Rank", 142)
+    view.classGroup = CreateFilterGroup(view.filterPanel, "Class", "Class", 142)
+    view.groupGroup = UI.CreateContainer(nil, view.filterPanel); view.groupGroup:SetWidth(184); view.groupGroup:SetHeight(26); view.groupGroup.mosFlowWidth=184
+    local groupChoices={{value="none",text="None"},{value="class",text="Class"},{value="rank",text="Rank"},{value="level",text="Level"}}
+    view.groupLabel=UI.CreateLabel(view.groupGroup,nil,"OVERLAY","GameFontHighlightSmall");view.groupLabel:SetPoint("LEFT",view.groupGroup,"LEFT",0,0);view.groupLabel:SetText("Group by:")
+    view.groupButton=UI.CreateDropdownButton(view.groupGroup,nil,"None",104);view.groupButton:SetPoint("RIGHT",view.groupGroup,"RIGHT",0,0);view.groupButton:SetHeight(26)
+    view.groupPanel=UI.CreateDropdownPanel(view.filterPanel,view.groupButton,104,88,50)
+    local choiceIndex
+    for choiceIndex=1,table.getn(groupChoices) do
+        local choice=UI.CreateButton(view.groupPanel,nil,groupChoices[choiceIndex].text,96,18);UI.StyleDropdownChoice(choice)
+        choice:SetPoint("TOPLEFT",view.groupPanel,"TOPLEFT",4,-4-(choiceIndex-1)*20);choice.choiceValue=groupChoices[choiceIndex].value;choice.choiceText=groupChoices[choiceIndex].text
+        choice:SetScript("OnClick",function() view.groupBy=this.choiceValue;view.groupButton:SetText(this.choiceText);view.groupPanel:Hide();refresh() end)
+        table.insert(view.groupPanel.options,choice)
+    end
+    view.groupButton:SetScript("OnClick",function() if view.groupPanel:IsVisible() then view.groupPanel:Hide() else view.groupPanel:Show() end end)
+    UI.StyleProjectPopup(view.groupPanel)
+    view.levelGroup=UI.CreateContainer(nil,view.filterPanel);view.levelGroup:SetWidth(96);view.levelGroup:SetHeight(26);view.levelGroup.mosFlowWidth=96
+    view.levelLabel=UI.CreateLabel(view.levelGroup,nil,"OVERLAY","GameFontHighlightSmall");view.levelLabel:SetPoint("LEFT",view.levelGroup,"LEFT",0,0);view.levelLabel:SetText("Level")
+    view.level=UI.CreateFramedEditBox(view.levelGroup,nil,48);view.level:SetPoint("RIGHT",view.levelGroup,"RIGHT",0,0);view.level:SetMaxLetters(2);view.level:SetScript("OnTextChanged",function() refresh() end)
+    view.searchGroup=UI.CreateContainer(nil,view.filterPanel);view.searchGroup:SetWidth(180);view.searchGroup:SetHeight(26);view.searchGroup.mosFlowWidth=180
+    view.searchLabel=UI.CreateLabel(view.searchGroup,nil,"OVERLAY","GameFontHighlightSmall");view.searchLabel:SetPoint("LEFT",view.searchGroup,"LEFT",0,0);view.searchLabel:SetText("Search")
+    view.search=UI.CreateFramedEditBox(view.searchGroup,nil,132);view.search:SetPoint("RIGHT",view.searchGroup,"RIGHT",0,0);view.search:SetScript("OnTextChanged",function() refresh() end)
+    view.flow={view.rankGroup,view.classGroup,view.groupGroup,view.levelGroup,view.searchGroup}
+    view.table=CreateMemberTable(page,refresh)
     return view
 end
 
-local function OnStatisticsScan()
-    this.statisticsController.startScan("statistics")
-end
-
-local function OnStatisticsFilter()
-    GuildStatistics.Refresh(this.statisticsController)
-end
+local function OnStatisticsScan() this.statisticsController.startScan("statistics") end
 
 function GuildStatistics.CreateController(options)
-    local view = options.view
-    if view then
-        options.summary = view.summary
-        options.classesHeading = view.classesHeading
-        options.ranksHeading = view.ranksHeading
-        options.classPanel = view.classPanel
-        options.rankPanel = view.rankPanel
-        options.classTable = view.classTable
-        options.rankTable = view.rankTable
-        options.onlyLevel60 = view.onlyLevel60
-        options.scanButton = view.scanButton
-        options.refreshButton = view.refreshButton
-        options.lastScan = view.lastScan
-    end
-    if view then
-        MOS.UI.Components.StyleActionButton(view.refreshButton); MOS.UI.Components.StyleActionButton(view.scanButton)
-        MOS.UI.Components.BindCheckboxLabel(view.onlyLevel60, function() GuildStatistics.Refresh(options) end)
-    end
-    options.ready = false
-    options.classIcons = CLASS_ICONS
-    options.summaryState = GuildStatistics.CreateSummaryState()
-    options.page.statisticsController = options
-    options.scanButton.statisticsController = options
-    options.refreshButton.statisticsController = options
-    options.onlyLevel60.statisticsController = options
-    options.scanButton:SetScript("OnClick", OnStatisticsScan)
-    options.refreshButton:SetScript("OnClick", OnStatisticsScan)
-    options.onlyLevel60:SetScript("OnClick", OnStatisticsFilter)
+    local view=options.view
+    options.page=view.page;options.view=view;options.rankGroup=view.rankGroup;options.classGroup=view.classGroup;options.level=view.level;options.search=view.search;options.table=view.table
+    options.ready=false;options.groupBy="none";options.selectedRanks={};options.selectedClasses={};options.knownRanks={};options.knownClasses={}
+    view.groupBy="none";options.filterChanged=function() GuildStatistics.Refresh(options) end
+    options.page.statisticsController=options;view.host.statisticsController=options;view.scanButton.statisticsController=options;view.refreshButton.statisticsController=options
+    view.scanButton:SetScript("OnClick",OnStatisticsScan);view.refreshButton:SetScript("OnClick",OnStatisticsScan)
     return options
 end
 
-function GuildStatistics.SetReady(controller, ready)
-    controller.ready = ready and true or false
-end
+function GuildStatistics.SetReady(controller,ready) controller.ready=ready and true or false end
+function GuildStatistics.IsReady(controller) return controller.ready end
 
-function GuildStatistics.IsReady(controller)
-    return controller.ready
+local function HideResults(controller)
+    controller.view.showing:Hide();controller.view.lastScan:Hide();controller.view.filterPanel:Hide();controller.table.scroll:Hide()
+    local index
+    for index=1,table.getn(controller.table.headers) do controller.table.headers[index]:Hide() end
+    for index=1,table.getn(controller.table.rows) do controller.table.rows[index]:Hide() end
+    UI.SetScrollBarVisible(getglobal("MuklaOfficerSuiteGuildStatisticsScrollScrollBar"),false)
 end
 
 function GuildStatistics.BeginScan(controller)
-    controller.ready = false
-    controller.summary:Hide()
-    controller.classesHeading:Hide()
-    controller.ranksHeading:Hide()
-    controller.classPanel:Hide()
-    controller.rankPanel:Hide()
-    controller.classTable.scroll:Hide()
-    controller.rankTable.scroll:Hide()
-    for _,target in ipairs({controller.classTable,controller.rankTable}) do
-        if target.scroll.GetName then MOS.UI.Components.SetScrollBarVisible(target.scroll:GetName() and getglobal(target.scroll:GetName().."ScrollBar"),false) end
+    controller.ready=false;HideResults(controller);controller.view.refreshButton:Hide();controller.view.scanButton:Hide();controller.view.empty:Hide()
+end
+function GuildStatistics.HandleScanFailure(controller) controller.view.scanButton:Show() end
+
+local function LayoutContent(width,height,controller)
+    local view,page=controller.view,controller.page
+    local available=math.max(80,width-16)
+    local titleWidth=math.min(view.title:GetStringWidth()+2,available*0.55)
+    view.title:ClearAllPoints();view.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);view.title:SetWidth(titleWidth)
+    view.titleSeparator:ClearAllPoints();view.titleSeparator:SetPoint("LEFT",view.title,"RIGHT",8,0);view.titleSeparator:SetWidth(8)
+    local guildWidth=math.max(1,available-titleWidth-32)
+    view.guildTitle:ClearAllPoints();view.guildTitle:SetPoint("LEFT",view.titleSeparator,"RIGHT",8,0);view.guildTitle:SetWidth(guildWidth);UI.FitButtonLabel(view.guildTitle,guildWidth)
+    local top=38
+    if controller.ready then
+        local showingWidth=math.min(105,available*0.36)
+        local actionAvailable=math.max(72,available-showingWidth-12)
+        local actionScale=math.min(1,math.max(0.62,(actionAvailable-8)/212))
+        local actionX=8
+        if view.exportButton then UI.SizeClassicButton(view.exportButton,math.floor(100*actionScale),26,actionScale);view.exportButton:ClearAllPoints();view.exportButton:SetPoint("TOPLEFT",page,"TOPLEFT",actionX,-top);actionX=actionX+view.exportButton:GetWidth()+8 end
+        UI.SizeClassicButton(view.refreshButton,math.floor(104*actionScale),26,actionScale);view.refreshButton:ClearAllPoints();view.refreshButton:SetPoint("TOPLEFT",page,"TOPLEFT",actionX,-top)
+        top=top+34
+        view.showing:ClearAllPoints();view.showing:SetPoint("TOPRIGHT",page,"TOPRIGHT",-8,-42);view.showing:SetWidth(showingWidth);view.showing:SetHeight(18)
+        view.filterPanel:ClearAllPoints();view.filterPanel:SetPoint("TOPLEFT",page,"TOPLEFT",4,-top);view.filterPanel:SetWidth(width-8)
+        local filterBottom=UI.LayoutFlow(view.filterPanel,view.flow,4,8,available,6)+8;view.filterPanel:SetHeight(filterBottom)
+        view.rankGroup.button:SetWidth(math.max(32,view.rankGroup:GetWidth()-48));view.classGroup.button:SetWidth(math.max(32,view.classGroup:GetWidth()-48))
+        view.groupButton:SetWidth(math.max(32,view.groupGroup:GetWidth()-76));view.level:SetWidth(math.max(28,view.levelGroup:GetWidth()-48));view.search:SetWidth(math.max(32,view.searchGroup:GetWidth()-48))
+        top=top+filterBottom+8
+        controller.tableRect=controller.tableRect or {};controller.tableRect.x=8;controller.tableRect.y=top;controller.tableRect.width=available;controller.tableRect.height=math.max(96,height-top-8)
+        return controller.tableRect.y+controller.tableRect.height+8
     end
-    local index
-    for index = 1, table.getn(controller.classTable.rows) do
-        controller.classTable.rows[index]:Hide()
-        controller.rankTable.rows[index]:Hide()
-    end
-    controller.onlyLevel60:Hide()
-    controller.lastScan:Hide()
-    controller.refreshButton:Hide()
-    controller.scanButton:Hide()
+    view.empty:ClearAllPoints();view.empty:SetPoint("TOPLEFT",page,"TOPLEFT",8,-64);view.empty:SetWidth(available)
+    view.scanButton:ClearAllPoints();view.scanButton:SetPoint("TOP",view.empty,"BOTTOM",0,-12);view.scanButton:SetWidth(math.min(160,available))
+    return 130
 end
 
-function GuildStatistics.HandleScanFailure(controller)
-    controller.scanButton:Show()
-end
+function GuildStatistics.Layout(controller) UI.LayoutResponsiveCanvas(controller.page,LayoutContent,controller) end
 
 function GuildStatistics.Refresh(controller)
     if controller.page.IsShown and not controller.page:IsShown() then return end
     if controller.refreshing then return end
-    MOS.Diagnostics.Count("uiRefreshes")
-    controller.refreshing = true
-    if not controller.ready then if controller.view then GuildStatistics.Layout(controller) end; controller.refreshing=false; return end
-    local data, guildName = controller.getData()
+    controller.refreshing=true;MOS.Diagnostics.Count("uiRefreshes")
+    if not controller.ready then GuildStatistics.Layout(controller);controller.refreshing=false;return end
+    local data,guildName=controller.getData();guildName=guildName or "Guild";controller.view.guildTitle:SetText(guildName)
     if not data or not data.members then
-        GuildStatistics.BeginScan(controller)
-        controller.summary:SetText((guildName or "Guild") .. " has no saved roster. Scan Guild Statistics to begin.")
-        controller.summary:Show();controller.scanButton:Show()
-        GuildStatistics.Layout(controller)
-        controller.classesHeading:SetText("")
-        controller.ranksHeading:SetText("")
-        controller.refreshing=false
-        return
+        HideResults(controller);controller.view.empty:SetText(guildName.." has no saved roster. Scan Guild Statistics to begin.");controller.view.empty:Show();controller.view.scanButton:Show();GuildStatistics.Layout(controller);controller.refreshing=false;return
     end
-    local onlyLevel60 = controller.onlyLevel60:GetChecked()
-    local summaryState = GuildStatistics.BuildSummary(controller.summaryState, data, onlyLevel60)
-    controller.summary:SetText(
-        "|cffffd200" .. (guildName or "Guild") .. "|r   |   Included members: " .. summaryState.included ..
-        (onlyLevel60 and " (level 60 only)" or (" of " .. summaryState.total))
-    )
-    controller.classesHeading:SetText("Members by class")
-    controller.ranksHeading:SetText("Members by rank")
-    controller.lastScan:SetText("Last scan: " .. (data.scannedAtText or "Unknown"))
-    GuildStatistics.Layout(controller)
-    GuildStatistics.PopulateTable(controller.classTable, summaryState.classSummaries, "class", data, onlyLevel60, controller.classIcons)
-    GuildStatistics.PopulateTable(controller.rankTable, summaryState.rankList, "rank", data, onlyLevel60, controller.classIcons)
-    controller.summary:Show()
-    controller.classesHeading:Show()
-    controller.ranksHeading:Show()
-    controller.classPanel:Show()
-    controller.rankPanel:Show()
-    controller.onlyLevel60:Show()
-    controller.scanButton:Hide()
-    controller.lastScan:SetText("Last scan: " .. (data.scannedAtText or "Unknown"))
-    controller.lastScan:Show()
-    controller.refreshButton:Show()
+    controller.groupBy=controller.view.groupBy or "none"
+    local count=BuildEntries(controller,data)
+    controller.view.showing:SetText("Showing members: "..count);controller.view.showing:Show()
+    controller.view.lastScan:SetText("Last scan: "..(data.scannedAtText or "Unknown"))
+    controller.view.empty:Hide();controller.view.scanButton:Hide();controller.view.refreshButton:Show();controller.view.filterPanel:Show()
+    GuildStatistics.Layout(controller);RenderTable(controller)
+    local index
+    for index=1,table.getn(controller.table.headers) do controller.table.headers[index]:Show() end
     controller.refreshing=false
 end
 
 function GuildStatistics.CreateLifecycle(controller)
     return {
-        Hide = function(self) controller.page:Hide(); MOS.UI.Components.SetScrollBarVisible(controller.classTable.scroll:GetName() and getglobal(controller.classTable.scroll:GetName() .. "ScrollBar"),false); MOS.UI.Components.SetScrollBarVisible(controller.rankTable.scroll:GetName() and getglobal(controller.rankTable.scroll:GetName() .. "ScrollBar"),false) end,
-        Show = function(self) controller.page:Show(); GuildStatistics.Refresh(controller) end,
-        Refresh = function(self) GuildStatistics.Refresh(controller) end,
-        OnResize = function(self) GuildStatistics.Refresh(controller) end,
+        Hide=function() controller.view.rankGroup.panel:Hide();controller.view.classGroup.panel:Hide();controller.view.groupPanel:Hide();controller.page:Hide();controller.view.host:Hide();UI.SetScrollBarVisible(getglobal("MuklaOfficerSuiteGuildStatisticsScrollScrollBar"),false) end,
+        Show=function() controller.view.host:Show();controller.page:Show();GuildStatistics.Refresh(controller) end,
+        Refresh=function() GuildStatistics.Refresh(controller) end,
+        OnResize=function() GuildStatistics.Refresh(controller) end,
     }
-end
-
-local function LayoutContent(fullWidth,height,controller)
-    local UI,view=MOS.UI.Components,controller.view
-    local width=math.max(80,fullWidth-16)
-    local page=view.page
-    view.title:ClearAllPoints();view.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);UI.FitButtonLabel(view.title,width)
-    local top=38
-    local controls=view.layoutControls
-    if not controls then
-        controls={view.refreshButton,view.onlyLevel60};view.layoutControls=controls
-        view.refreshButton.mosFlowWidth=108;view.onlyLevel60.mosFlowWidth=120
-        if view.exportButton then table.insert(controls,1,view.exportButton);view.exportButton.mosFlowWidth=120 end
-    end
-    if controller.ready then
-        -- Checkbox width is the hit target; artwork remains the native22-unit box.
-        view.onlyLevel60:SetWidth(22)
-        top=UI.LayoutFlow(page,controls,8,top,width,8)+8
-        view.onlyLevel60:SetWidth(22)
-        view.lastScan:ClearAllPoints();view.lastScan:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);view.lastScan:SetWidth(width);view.lastScan:SetHeight(0)
-        top=top+math.max(16,view.lastScan:GetStringHeight())+8
-        view.summary:ClearAllPoints();view.summary:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);view.summary:SetWidth(width);view.summary:SetHeight(0)
-        top=top+math.max(16,view.summary:GetStringHeight())+8
-    else
-        if view.exportButton then UI.LayoutFlow(page,{view.exportButton},8,38,width,8) end
-        view.summary:ClearAllPoints();view.summary:SetPoint("TOPLEFT",page,"TOPLEFT",8,-76);view.summary:SetWidth(width);view.summary:SetHeight(0)
-        view.scanButton:ClearAllPoints();view.scanButton:SetPoint("TOPLEFT",page,"TOPLEFT",8,-76-math.max(24,view.summary:GetStringHeight())-8)
-        view.scanButton:SetWidth(math.min(160,width))
-    end
-    local stacked=width<560
-    local minimum=stacked and 172 or 80
-    local available=math.max(minimum,height-top-8)
-    local panelWidth=stacked and width or (width-12)/2
-    local panelHeight=stacked and (available-12)/2 or available
-    for index=1,2 do
-        local x=8+(stacked and 0 or (index-1)*(panelWidth+12))
-        local y=top+(stacked and (index-1)*(panelHeight+12) or 0)
-        local panel=index==1 and view.classPanel or view.rankPanel
-        panel:ClearAllPoints();panel:SetPoint("TOPLEFT",page,"TOPLEFT",x,-y);panel:SetWidth(panelWidth);panel:SetHeight(panelHeight)
-        local heading=index==1 and view.classesHeading or view.ranksHeading
-        heading:ClearAllPoints();heading:SetPoint("TOPLEFT",page,"TOPLEFT",x+6,-y-4);UI.FitButtonLabel(heading,panelWidth-12)
-        heading:SetTextColor(unpack(UI.Theme.colors.goldText))
-        local target=index==1 and view.classTable or view.rankTable
-        target.controller.page=page;target.layout=target.layout or {}
-        target.layout.x=x+6;target.layout.y=y+26;target.layout.width=panelWidth-12;target.layout.height=math.max(24,panelHeight-32)
-    end
-    return top+available+8
-end
-
-function GuildStatistics.Layout(controller)
-    if controller.view then MOS.UI.Components.LayoutResponsiveCanvas(controller.view.page,LayoutContent,controller) end
 end
