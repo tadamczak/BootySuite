@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.53 - 2026-09-30
+
+- Close inactive tab seams and keep empty headers compact.
+- Hide roster Refresh during Live tracking and preserve pending scan ownership.
+
 ## 0.5.0-dev.52 - 2026-09-30
 
 - Add UI > General > Player details style: Collapsible or an attached Window with guild-member details and actions.

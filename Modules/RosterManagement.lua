@@ -60,7 +60,7 @@ function RosterManagement.CreateGuildControls(page)
     scanButton:SetPoint("CENTER", page, "CENTER", 0, 12)
     local refreshButton = MOS.UI.Components.CreateIconButton(page.actionsPanel or page, nil, "Interface\\Buttons\\UI-RotationRight-Button-Up", 24)
     refreshButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -48)
-    MOS.UI.Components.AttachTooltip(refreshButton, "Refresh guild data", "Refresh the saved guild roster. Disabled while Live tracking is active.")
+    MOS.UI.Components.AttachTooltip(refreshButton, "Refresh guild data", "Refresh the saved guild roster. Hidden while Live tracking is active.")
     refreshButton:Hide()
     local exportButton = MOS.UI.Components.CreateButton(page, nil, "Export Roster", 120, 22)
     exportButton:SetPoint("CENTER", page, "CENTER", 96, 12)
@@ -770,6 +770,7 @@ function RosterManagement.SetDataVisible(controller, visible)
     page.listController.scrollFrame[method](page.listController.scrollFrame)
     controller.sortHint:Hide()
     controller.refreshButton[method](controller.refreshButton)
+    if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.rosterLiveTrackingEnabled then controller.refreshButton:Hide() end
     controller.infoButton[method](controller.infoButton)
     controller.addButton[method](controller.addButton)
     controller.controlButton[method](controller.controlButton)
@@ -1041,8 +1042,8 @@ end
 
 function RosterManagement.SetRefreshPending(controller, pending)
     controller.refreshPending = pending and true or false
-    local configuredTracking = controller.page:IsVisible() and MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.rosterLiveTrackingEnabled
-    controller.refreshButton:SetInactive(controller.refreshPending or controller.liveTracking or configuredTracking)
+    controller.refreshButton:SetInactive(controller.refreshPending)
+    if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.rosterLiveTrackingEnabled then controller.refreshButton:Hide() end
 end
 
 function RosterManagement.HandleGuildRosterUpdate(controller, scanCompleted, scanPending)
@@ -1072,11 +1073,18 @@ function RosterManagement.ActivateDataController(controller, scanAlreadyStarted)
     if not scanAlreadyStarted and not controller.requestScan("quiet") then
         controller.liveTracking = false
     end
-    controller.refreshButton:SetInactive(controller.refreshPending or controller.liveTracking)
+    controller.refreshButton:SetInactive(controller.refreshPending)
+    controller.refreshButton:Hide()
 end
 
 function RosterManagement.CreateLifecycle(page, dataController, refresh)
     RosterManagement.RefreshLayout = function() if page:IsVisible() then refresh(false) end end
+    RosterManagement.TrackingChanged = function()
+        if page:IsVisible() then RosterManagement.ActivateDataController(dataController, dataController.refreshPending)
+        else RosterManagement.DeactivateDataController(dataController) end
+        if MuklaOfficerSuiteDB.rosterLiveTrackingEnabled then dataController.refreshButton:Hide() end
+        RosterManagement.RefreshLayout()
+    end
     return {
         Hide = function(self)
             RosterManagement.DeactivateDataController(dataController)
@@ -1250,7 +1258,8 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
             actionX = actionX + math.floor(action.width * widthScale) + 6
         else action.button:Hide() end
     end
-    controls.refreshButton:Show(); controls.refreshButton:ClearAllPoints()
+    if MuklaOfficerSuiteDB.rosterLiveTrackingEnabled then controls.refreshButton:Hide() else controls.refreshButton:Show() end
+    controls.refreshButton:ClearAllPoints()
     controls.refreshButton:SetWidth(22); controls.refreshButton:SetHeight(22)
     controls.refreshButton:SetPoint("BOTTOMLEFT", page.actionsPanel or page, "BOTTOMLEFT", actionX, actionBottom)
     local hasFilterRow = hasFilters or settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false

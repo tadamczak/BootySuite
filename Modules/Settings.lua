@@ -23,6 +23,10 @@ local rosterLayoutOptions = {
     { "Show offline", "rosterShowOffline" },
     { "Show column headers", "rosterShowColumnHeaders" },
 }
+local function RosterTrackingChanged()
+    if MOS.Modules.RosterManagement and MOS.Modules.RosterManagement.TrackingChanged then MOS.Modules.RosterManagement.TrackingChanged() end
+end
+
 local function RefreshRosterLayout()
     if MOS.Modules.RosterManagement and MOS.Modules.RosterManagement.RefreshLayout then MOS.Modules.RosterManagement.RefreshLayout() end
 end
@@ -200,7 +204,7 @@ function Settings.CreatePrimarySections(page)
     rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150)
     rosterHeading:SetText("Roster")
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
-    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster is open. This may have a small performance impact in large guilds.")
+    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster is open. This may have a small performance impact in large guilds.", RosterTrackingChanged)
     page.rosterLayoutChecks = {}
     local index
     for index = 1, table.getn(rosterLayoutOptions) do

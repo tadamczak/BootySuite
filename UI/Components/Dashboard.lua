@@ -13,7 +13,7 @@ function Dashboard.GetChromeLayout(get, classic, width)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
     local topTabs = get("menuStyle") == "tabs" or get("menuStyle") == "bottomTabs"
-    local headerHeight = (compact and 23 or (topTabs and 20 or normalHeight)) + 4
+    local headerHeight = (compact and 20 or (topTabs and 20 or normalHeight)) + 4
     if Dashboard.HeaderNeedsCompactTitle(get, classic, width) then
         headerHeight = not topTabs and classic and not get("hideHeaderLogo") and 50 or 32
     end
