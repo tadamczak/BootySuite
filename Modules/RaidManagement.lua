@@ -632,6 +632,8 @@ function RaidManagement.CreateListHeaders(page, onSort)
     }
     page.listEnabled = {}; page.listPositions = {}; page.listWidths = {}
     page.headerLabels = { ui.name, ui.group, ui.class, ui.rank, ui.sr }
+    local _, headerBaseSize = ui.name:GetFont()
+    page.mosHeaderBaseSize = headerBaseSize
     page.listHeaderUI = ui
     return ui
 end
@@ -648,6 +650,7 @@ function RaidManagement.CreateGroupViewport(page)
     MOS.UI.Components.SetClassicButtonIcon(page.classicTwoButton, "list", 12, 7, 2); MOS.UI.Components.SetClassicButtonIcon(page.classicFourButton, "groups", 12, 7, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(page.classicListButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicGroupButton, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(page.classicTwoButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicFourButton, 2)
+    for _, button in ipairs({page.classicListButton, page.classicGroupButton, page.classicTwoButton, page.classicFourButton}) do MOS.UI.Components.SetButtonTextColor(button, {1,1,1}) end
     page.groupFrame = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidGroupScroll", page, "UIPanelScrollFrameTemplate")
     page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -72)
     page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
@@ -1471,8 +1474,7 @@ end
 
 function RaidManagement.FitListHeaders(page, headerButtons, lootMasterMode)
     local scale = 1
-    local _, baseSize = page.headerLabels[1]:GetFont()
-    baseSize = baseSize or (lootMasterMode and 10 or 12)
+    local baseSize = lootMasterMode and 10 or (page.mosHeaderBaseSize or 12)
     local count = lootMasterMode and table.getn(headerButtons) or table.getn(page.listColumns)
     for index = 1, count do
         local button = lootMasterMode and headerButtons[index] or page.listColumns[index].button
@@ -2244,6 +2246,7 @@ function RaidManagement.UpdateToolSubmenu(page)
     local panel = page.toolDropdowns[key]
     if not panel then
         local sources = key == "leader" and {controls.leaderMode} or {controls.mode, controls.resetLoot, controls.import, controls.shareSr, controls.lootRules, controls.sendLootRules}
+        local captions = key == "leader" and {"Raid Leader Mode"} or {"Loot Master Mode", "Reset Loot", "Import SR", "Share SR", "Loot Rules", "Send Loot Rules"}
         panel = UI.CreateDropdownPanel(page, toggle, 230, 8 + table.getn(sources) * 28, 80)
         panel.mosMinimumFrameLevel = page:GetFrameLevel() + 80
         UI.Window.ApplyProjectSurface(panel)
@@ -2253,8 +2256,10 @@ function RaidManagement.UpdateToolSubmenu(page)
         for index = 1, table.getn(sources) do
             local option = UI.CreateButton(panel, nil, "", 222, 24)
             option:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4 - (index - 1) * 28)
-            option.toolSource = sources[index]
-            UI.SetProjectButtonOutline(option, true)
+            option.toolSource = sources[index]; option.toolCaption = captions[index]
+            UI.SetProjectButtonOutline(option, false)
+            option:SetScript("OnEnter", function() UI.SetProjectButtonOutline(this, true) end)
+            option:SetScript("OnLeave", function() UI.SetProjectButtonOutline(this, false) end)
             option:SetScript("OnClick", InvokeToolChoice)
             panel.options[index] = option
         end
@@ -2267,12 +2272,22 @@ function RaidManagement.UpdateToolSubmenu(page)
         end)
         page.toolDropdowns[key] = panel
     end
+    local choiceWidth = 1
     for index = 1, table.getn(panel.options) do
         local option = panel.options[index]
-        option:SetText(option.toolSource:GetText())
+        local caption = option.toolSource.label:GetText()
+        option:SetText(caption and caption ~= "" and caption or option.toolCaption)
+        option.label:ClearAllPoints(); option.label:SetPoint("LEFT", option, "LEFT", 4, 0); option.label:SetWidth(0)
+        choiceWidth = math.max(choiceWidth, option.label:GetStringWidth() + 16)
         local enabled = not option.toolSource.IsEnabled or option.toolSource:IsEnabled()
         UI.SetButtonEnabled(option, enabled ~= false and enabled ~= 0)
     end
+    for index = 1, table.getn(panel.options) do
+        panel.options[index]:SetWidth(choiceWidth)
+        panel.options[index].label:SetWidth(choiceWidth - 8)
+        panel.options[index].label:SetJustifyV("MIDDLE")
+    end
+    panel:SetWidth(choiceWidth + 8)
     panel:Show(); UI.RefreshDropdownLayers(panel, toggle)
 end
 

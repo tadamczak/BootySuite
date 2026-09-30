@@ -48,6 +48,7 @@ function UI.StyleButton(button, text)
     end
     button.label:SetText(text or "")
     button.SetText = function(self, value) self.label:SetText(value) end
+    button.GetText = function(self) return self.label:GetText() end
     if not button.mosHighlight then
         button.mosHighlight = button:CreateTexture(nil, "HIGHLIGHT")
         button.mosHighlight:SetAllPoints(button)

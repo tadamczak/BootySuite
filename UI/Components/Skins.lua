@@ -109,6 +109,27 @@ local function ApplySolidButton(entry)
     button:SetHighlightTexture(nil); button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
 end
 
+local function ApplySizedButtonGeometry(button, entry)
+    if not button.mosButtonScale then return end
+    local scale = button.mosButtonScale
+    local iconSize = (button.mosBaseIconSize or 13) * scale
+    local inset = (button.mosBaseIconInset or 7) * scale
+    if button.mosClassicIconKey then
+        button.mosClassicIconSize = iconSize; button.mosClassicIconInset = inset; button.mosClassicIconYOffset = 0
+        if entry and entry.classicIcon then
+            entry.classicIcon:SetWidth(iconSize); entry.classicIcon:SetHeight(iconSize)
+            entry.classicIcon:ClearAllPoints(); entry.classicIcon:SetPoint("LEFT", button, "LEFT", inset, 0)
+            entry.classicIcon:SetVertexColor(1, 0.82, 0.28)
+        end
+    end
+    if button.label then
+        button.label:ClearAllPoints()
+        button.label:SetPoint("TOPLEFT", button, "TOPLEFT", button.mosClassicIconKey and inset + iconSize + 3 * scale or 0, 0)
+        button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4 * scale, 0)
+        button.label:SetJustifyH("CENTER"); button.label:SetJustifyV("MIDDLE")
+    end
+end
+
 local function ApplyControl(entry)
     local button = entry.frame
     if Skins.current ~= "classic" or button.mosClassicVariant ~= "red" then entry.hovered = nil end
@@ -169,7 +190,7 @@ local function ApplyControl(entry)
             entry.classicIcon:SetWidth(button.mosClassicIconSize or 13); entry.classicIcon:SetHeight(button.mosClassicIconSize or 13)
             entry.classicIcon:SetTexture(ClassicPath("Icons\\" .. button.mosClassicIconKey .. ".tga")); entry.classicIcon:Show()
             entry.classicIcon:ClearAllPoints(); entry.classicIcon:SetPoint("LEFT", button, "LEFT", button.mosClassicIconInset or 7, button.mosClassicIconYOffset or 0)
-            entry.classicIcon:SetVertexColor(red, green, blue)
+            entry.classicIcon:SetVertexColor(1, 0.82, 0.28)
             -- Keep the label on its original full button bounds. Reserving space
             -- for the icon moved the visual centre of every caption.
             if button.label and entry.labelPoints then
@@ -242,7 +263,7 @@ local function ApplyControl(entry)
         button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
         if button.mosClassicVariant == "red" or button.mosClassicSelected then button:SetBackdropBorderColor(1, 0.78, 0.2, 1) end
     end
-    if button.label and entry.hovered and Skins.current == "classic" and button.mosClassicVariant == "red" and not button.mosClassicDisabled then
+    if button.label and not button.mosTextColor and entry.hovered and Skins.current == "classic" and button.mosClassicVariant == "red" and not button.mosClassicDisabled then
         entry.restR, entry.restG, entry.restB, entry.restA = button.label:GetTextColor()
         button.label:SetTextColor(0.82, 0.82, 0.78)
     end
@@ -257,6 +278,7 @@ local function ApplyControl(entry)
         button.label:SetPoint("TOPLEFT", button, "TOPLEFT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)
         button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)
     end
+    ApplySizedButtonGeometry(button, entry)
     if button.mosWarmListRow then UI.StyleWarmListRow(button, button.mosWarmListSelected) end
 end
 
@@ -398,7 +420,7 @@ local function RedHoverEnter()
     if Skins.current ~= "classic" or this.mosClassicVariant ~= "red" or this.mosClassicCompactControl or this.mosClassicDisabled or enabled == false or enabled == 0 then return end
     if not entry.hovered then entry.restR, entry.restG, entry.restB, entry.restA = this.label:GetTextColor() end
     entry.hovered = true
-    this.label:SetTextColor(0.82, 0.82, 0.78)
+    if not this.mosTextColor then this.label:SetTextColor(0.82, 0.82, 0.78) end
 end
 
 local function RedHoverLeave()
@@ -577,6 +599,7 @@ function UI.SetClassicButtonIcon(button, iconKey, size, inset, yOffset)
     if not button then return end
     button.mosClassicIconKey = iconKey
     button.mosClassicIconSize = size or 13
+    button.mosBaseIconSize = size or 13; button.mosBaseIconInset = inset or 7
     button.mosClassicIconInset = inset or 7
     button.mosClassicIconYOffset = yOffset or 0
     local index
@@ -599,6 +622,8 @@ function UI.SizeClassicButton(button, width, height, fontScale)
     if not button then return end
     button:SetScale(1)
     button:SetWidth(width); button:SetHeight(height)
+    button.mosButtonScale = fontScale or 1
+    ApplySizedButtonGeometry(button, button.mosSkinEntry)
     if not button.label then return end
     if not button.mosBaseFontSize then
         button.mosBaseFontPath, button.mosBaseFontSize, button.mosBaseFontFlags = button.label:GetFont()
