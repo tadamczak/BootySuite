@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.48 - 2026-09-30
+
+- Let Search use free space when Show offline is hidden; align Refresh Data with guild actions.
+- Fit narrow headers consistently in both tab layouts and remove the separator black inner bevel.
+
 ## 0.5.0-dev.47 - 2026-09-30
 
 - Use settled roster section height and keep guild status directly above actions.

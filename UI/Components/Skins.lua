@@ -331,6 +331,10 @@ local function ApplySurface(entry)
         t[1]:Hide(); t[3]:Hide(); t[4]:Hide(); t[5]:Hide(); t[6]:Hide(); t[7]:Hide(); t[9]:Hide()
         t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",-(frame.mosBorderOutsetLeft or 0),0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",frame.mosBorderOutsetRight or 0,0)
         t[8]:ClearAllPoints(); t[8]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",-(frame.mosBorderOutsetLeft or 0),0); t[8]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",frame.mosBorderOutsetRight or 0,0)
+        if entry.kind == "title" then
+            -- Omit the black inner bevel authored above the visible separator.
+            t[8]:SetTexCoord(6/32, 26/32, 29/32, 1); t[8]:SetHeight(3)
+        end
         if not frame.mosBorderTop then t[2]:Hide() end
         if not frame.mosBorderBottom then t[8]:Hide() end
         if frame.mosBorderRight then

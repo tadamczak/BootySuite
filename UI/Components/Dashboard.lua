@@ -3,13 +3,22 @@ local MOS = MuklaOfficerSuite
 MOS.UI.Components.Dashboard = MOS.UI.Components.Dashboard or {}
 local Dashboard = MOS.UI.Components.Dashboard
 
-function Dashboard.GetChromeLayout(get, classic)
+function Dashboard.HeaderNeedsCompactTitle(get, classic, width)
+    if get("hideHeaderName") or not width then return false end
+    local reserved = classic and not get("hideHeaderLogo") and 120 or 66
+    return width - 8 - 2 * reserved < 374
+end
+
+function Dashboard.GetChromeLayout(get, classic, width)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
-    local topTabs = get("menuStyle") == "tabs"
+    local topTabs = get("menuStyle") == "tabs" or get("menuStyle") == "bottomTabs"
     local headerHeight = (topTabs and 20 or (compact and 30 or normalHeight)) + 4
+    if Dashboard.HeaderNeedsCompactTitle(get, classic, width) then
+        headerHeight = not topTabs and classic and not get("hideHeaderLogo") and 50 or 32
+    end
     local bottom = get("hideStatusVersionBar") and 4 or (classic and 26 or 31)
-    if get("hideHeaderBar") then return 0, topTabs and -28 or -4, bottom, topTabs and -28 or -4 end
+    if get("hideHeaderBar") then local offset = get("menuStyle") == "tabs" and -28 or -4; return 0, offset, bottom, offset end
     local top = -4 - headerHeight
     return headerHeight, top, bottom, top
 end
@@ -51,18 +60,32 @@ end
 function Dashboard.ApplyChrome(view, get)
     if view.minimized then return end
     local classic = MOS.UI.Components.IsClassicSkin()
-    local height = Dashboard.GetChromeLayout(get, classic)
+    local height = Dashboard.GetChromeLayout(get, classic, view.frame:GetWidth())
     view.titleBar:ClearAllPoints()
     view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, -4)
     view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", -4, -4)
     view.titleBar:SetHeight(height)
-    local topTabs = get("menuStyle") == "tabs"
+    local topTabs = get("menuStyle") == "tabs" or get("menuStyle") == "bottomTabs"
     view.classicLogo:SetWidth(topTabs and 45 or 100); view.classicLogo:SetHeight(topTabs and 18 or 40)
     SetChromeVisible(view.title, not classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName"))
     SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo"))
+    local fitted = Dashboard.HeaderNeedsCompactTitle(get, classic, view.frame:GetWidth())
+    local titleLeft = classic and not get("hideHeaderLogo") and (topTabs and 72 or 128) or 8
+    view.classicTitle:ClearAllPoints(); view.title:ClearAllPoints()
+    if fitted then
+        view.classicTitleLeft:Hide(); view.classicTitleRight:Hide()
+        view.classicTitle:SetPoint("TOPLEFT", view.titleBar, "TOPLEFT", titleLeft, -5)
+        local wordWidth = math.max(1, math.min(220, view.frame:GetWidth() - titleLeft - 78))
+        view.classicTitle:SetWidth(wordWidth); view.classicTitle:SetHeight(19 * wordWidth / 220)
+        view.title:SetPoint("TOPLEFT", view.titleBar, "TOPLEFT", titleLeft, -5)
+        view.title:SetWidth(math.max(1, view.frame:GetWidth() - titleLeft - 78)); view.title:SetJustifyH("LEFT")
+    else
+        view.classicTitle:SetPoint("CENTER", view.titleBar, "CENTER", 0, 1); view.classicTitle:SetWidth(220); view.classicTitle:SetHeight(19)
+        view.title:SetPoint("CENTER", view.titleBar, "CENTER", 0, 2); view.title:SetJustifyH("CENTER")
+    end
     local hiddenHeader = get("hideHeaderBar")
     SetChromeVisible(view.titleBar, not hiddenHeader)
     Dashboard.PlaceWindowControls(view, hiddenHeader)
@@ -408,3 +431,4 @@ function Dashboard.CreateMinimapButton(options)
     button:SetScript("OnDragStop", function() this:SetScript("OnUpdate", nil) end)
     return button
 end
+
