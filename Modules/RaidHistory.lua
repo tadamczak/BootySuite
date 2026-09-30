@@ -23,10 +23,18 @@ end
 function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     local width = math.max(120, page:GetWidth() - 16)
     local buttonWidth = math.min(110, (width - 8) / 2)
-    local actionY = -94
-    if controls.unavailable and controls.unavailable:IsVisible() then
-        controls.unavailable:SetWidth(width)
-        actionY = -48 - controls.unavailable:GetStringHeight() - 16
+    local textY = MuklaOfficerSuiteDB.raidHideSectionHeader and -8 or -48
+    local actionY = textY - 38
+    if controls.unavailable then
+        local label = controls.unavailable
+        label:ClearAllPoints(); label:SetPoint("TOPLEFT", page, "TOPLEFT", 8, textY)
+        label:SetWidth(width); label:SetJustifyH("LEFT")
+        if label.SetWordWrap then label:SetWordWrap(true) end
+        label:SetText(canStartRaid and "Start a new raid snapshot, or load a saved raid." or "Join a raid to start a new snapshot, or load a saved raid.")
+        label:SetHeight(0)
+        local textHeight = math.max(16, label:GetStringHeight())
+        label:SetHeight(textHeight); label:Show()
+        actionY = textY - textHeight - 16
     end
     controls.scan:ClearAllPoints(); controls.scan:SetPoint("TOPLEFT", page, "TOPLEFT", 8, actionY)
     controls.scan:SetWidth(buttonWidth); controls.scan:SetHeight(22); controls.scan:SetText("New Raid"); controls.scan:Show()

@@ -323,11 +323,13 @@ function UI.CreateTextPrompt(name, titleText, labelText, acceptText, onAccept, m
     return frame
 end
 
-function UI.CreateIconButton(parent, name, texturePath, size, iconInset)
+function UI.CreateIconButton(parent, name, texturePath, size, iconInset, tint)
     local button = CreateFrame("Button", name, parent)
     button:SetWidth(size or 20); button:SetHeight(size or 20)
     local normal = button:CreateTexture(nil, "ARTWORK")
     local inset = tonumber(iconInset) or 0
+    local red, green, blue = tint and tint[1] or 1, tint and tint[2] or 1, tint and tint[3] or 1
+    normal:SetVertexColor(red, green, blue)
     normal:SetPoint("TOPLEFT", button, "TOPLEFT", inset, -inset); normal:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -inset, inset); normal:SetTexture(texturePath)
     normal:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     button:SetNormalTexture(normal)
@@ -340,15 +342,15 @@ function UI.CreateIconButton(parent, name, texturePath, size, iconInset)
     button.SetInactive = function(self, inactive)
         self.inactive = inactive and true or false
         local shade = self.inactive and 0.35 or 1
-        normal:SetVertexColor(shade, shade, shade)
+        normal:SetVertexColor(red * shade, green * shade, blue * shade)
         highlight:SetAlpha(self.inactive and 0 or 1)
     end
     button:SetScript("OnMouseDown", function()
-        if not this.inactive then normal:SetVertexColor(0.55, 0.55, 0.55) end
+        if not this.inactive then normal:SetVertexColor(red * 0.55, green * 0.55, blue * 0.55) end
     end)
     button:SetScript("OnMouseUp", function()
         local shade = this.inactive and 0.35 or 1
-        normal:SetVertexColor(shade, shade, shade)
+        normal:SetVertexColor(red * shade, green * shade, blue * shade)
     end)
     return button
 end

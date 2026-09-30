@@ -177,6 +177,15 @@ function UI.SetAlternatingRowColor(row, background, index, percentage)
     UI.SetRowColor(row, color, 1)
 end
 
+function UI.UpdateWarmListBorder(button, visible)
+    button:SetBackdropBorderColor(0, 0, 0, 0)
+    for index = 1, 4 do
+        if visible then button.warmListBorder[index]:Show() else button.warmListBorder[index]:Hide() end
+    end
+end
+function UI.WarmListEnter() UI.UpdateWarmListBorder(this, true) end
+function UI.WarmListLeave() UI.UpdateWarmListBorder(this, this.mosWarmListSelected) end
+
 local warmListNormal = {0.12, 0.07, 0.02}
 local warmListSelected = {0.32, 0.19, 0.02}
 function UI.StyleWarmListRow(button, selected)
@@ -186,9 +195,33 @@ function UI.StyleWarmListRow(button, selected)
     UI.SetRowColor(button, selected and warmListSelected or warmListNormal, 0.96)
     button:SetNormalTexture(""); button:SetPushedTexture(""); button:SetHighlightTexture("")
     if button.mosHighlight then button.mosHighlight:Hide() end
+    if not button.warmListSelection then
+        button.warmListSelection = button:CreateTexture(nil, "ARTWORK")
+        button.warmListSelection:SetAllPoints(button)
+        UI.ApplyGoldRadialHighlight(button.warmListSelection)
+    end
+    if selected then button.warmListSelection:Show() else button.warmListSelection:Hide() end
+    if not button.warmListBorder then
+        button.warmListBorder = {}
+        for index = 1, 4 do
+            local edge = button:CreateTexture(nil, "OVERLAY")
+            edge:SetTexture(1, 0.78, 0.2, 1)
+            if index <= 2 then
+                edge:SetHeight(1); edge:SetPoint(index == 1 and "TOPLEFT" or "BOTTOMLEFT", button, index == 1 and "TOPLEFT" or "BOTTOMLEFT", 0, 0)
+                edge:SetPoint(index == 1 and "TOPRIGHT" or "BOTTOMRIGHT", button, index == 1 and "TOPRIGHT" or "BOTTOMRIGHT", 0, 0)
+            else
+                edge:SetWidth(1); edge:SetPoint(index == 3 and "TOPLEFT" or "TOPRIGHT", button, index == 3 and "TOPLEFT" or "TOPRIGHT", 0, 0)
+                edge:SetPoint(index == 3 and "BOTTOMLEFT" or "BOTTOMRIGHT", button, index == 3 and "BOTTOMLEFT" or "BOTTOMRIGHT", 0, 0)
+            end
+            button.warmListBorder[index] = edge
+        end
+        button:SetScript("OnEnter", UI.WarmListEnter)
+        button:SetScript("OnLeave", UI.WarmListLeave)
+    end
+    UI.UpdateWarmListBorder(button, selected)
     if not button.warmListHover then
         button.warmListHover = button:CreateTexture(nil, "HIGHLIGHT")
         button.warmListHover:SetAllPoints(button)
-        button.warmListHover:SetTexture(0.32, 0.19, 0.02, 0.75)
+        UI.ApplyGoldRadialHighlight(button.warmListHover)
     end
 end
