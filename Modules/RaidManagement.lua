@@ -3,6 +3,22 @@ local MOS = MuklaOfficerSuite
 MOS.Modules.RaidManagement = MOS.Modules.RaidManagement or {}
 local RaidManagement = MOS.Modules.RaidManagement
 
+function RaidManagement.UpdateIssueAttention(button, issues)
+    local previous, current = button.mosIssueKeys or {}, button.mosIssueScratch or {}
+    for key in pairs(current) do current[key] = nil end
+    local newIssue, count = false, 0
+    local groups = {issues.unmatchedNames, issues.missingNames, issues.invalidNames}
+    for category = 1, 3 do
+        for index = 1, table.getn(groups[category] or {}) do
+            local key = category .. ":" .. groups[category][index]
+            current[key] = true; count = count + 1
+            if not previous[key] then newIssue = true end
+        end
+    end
+    button.mosIssueKeys = current; button.mosIssueScratch = previous
+    MOS.UI.Components.SetAttentionPulse(button, count > 0 and (newIssue or button.mosAttentionPending))
+end
+
 function RaidManagement.CreateChrome(page, callbacks)
     local view = {}
     view.classicToolbar = MOS.UI.Components.CreateContainer(nil, page)
@@ -27,6 +43,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.classicIssues:SetPoint("LEFT", view.classicSaved, "RIGHT", 8, 0); MOS.UI.Components.SetClassicButtonIcon(view.classicIssues, "warning_triangle", 13, 7, 1); MOS.UI.Components.SetClassicButtonGold(view.classicIssues, true); view.classicIssues:Hide()
     MOS.UI.Components.SetClassicButtonLabelOffset(view.classicIssues, 2, 4)
     view.classicIssues:SetScript("OnClick", function()
+        MOS.UI.Components.SetAttentionPulse(view.classicIssues, false)
         if page.softReserveWarning then page.softReserveWarning.userDismissed = false end
         if page.missingSoftReserveWarning then page.missingSoftReserveWarning.userDismissed = false end
         if page.invalidSoftReserveWarning then page.invalidSoftReserveWarning.userDismissed = false end
@@ -912,8 +929,8 @@ function RaidManagement.RefreshPage(renderer)
     renderer.countRefresh()
     RaidManagement.BeginRefresh(page, rows)
     local pageWidth = PageSpan(page)
-    page.classicActionOffset = MOS.UI.Components.IsClassicSkin() and pageWidth < 680 and 38 or 0
-    page.classicActionScale = MOS.UI.Components.IsClassicSkin() and page.classicActionOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 270) / 544)) or 1
+    page.classicActionOffset = 0
+    page.classicActionScale = 1
     page.classicToolbarOffset = MOS.UI.Components.IsClassicSkin() and pageWidth < (page.raidView == "groups" and 680 or 530) and 30 or 0
     local attendance = renderer.getData()
     local importInfo = attendance and attendance.softReserveImport
@@ -930,7 +947,13 @@ function RaidManagement.RefreshPage(renderer)
             page.classicRaidName:SetText(attendance.raidName or "Unknown zone"); page.classicRaidName:Show()
             page.classicMeta:SetText("|  " .. tostring(raidId)); page.classicMeta:Show()
             page.classicSaved:SetText(savedText); page.classicSaved:Show()
-            if issueCount > 0 then page.classicIssues:SetText(issueCount .. " SR issue" .. (issueCount == 1 and "" or "s")); page.classicIssues:Show() else page.classicIssues:Hide() end
+            RaidManagement.UpdateIssueAttention(page.classicIssues, issues)
+            if issueCount > 0 then page.classicIssues:SetText(issueCount .. " issues"); page.classicIssues:Show() else page.classicIssues:Hide() end
+            local titleWidth = math.min(120, page.classicRaidName:GetStringWidth())
+            local metaWidth = math.min(82, page.classicMeta:GetStringWidth())
+            page.classicRaidName:SetWidth(titleWidth); page.classicMeta:SetWidth(metaWidth)
+            local needed = 6 + titleWidth + 10 + metaWidth + 8 + 108 + 118 + 72 + 16 + 4 + (issueCount > 0 and 104 or 0)
+            page.classicActionOffset = pageWidth < needed and 38 or 0
         else
             page.refreshControls.title:Show(); page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide()
             page.refreshControls.title:SetText((MuklaOfficerSuiteDB.raidHideSectionHeader and "" or "Raid - ") .. tostring(raidId) .. " | " .. (attendance.raidName or "Unknown zone") .. " | " .. savedText)
@@ -1095,31 +1118,43 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
         card.text:Show(); card.info:Show(); card.fix:Show(); if card.ping then card.ping:Show() end
     end
     if not showUnmatched and not showMissing and not showInvalid then return 0, 0 end
-    if side and PageSpan(page) < 620 then
-        local visible = {showUnmatched, showMissing, showInvalid}
-        local titles = {"Unassigned SR", "Missing SR", "Invalid SR"}
-        local bottom = 4
-        for index = 1, 3 do
-            local card = cards[index]
-            if visible[index] then
-                card:ClearAllPoints(); card:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 6, bottom)
-                card:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -4, bottom); card:SetHeight(30)
-                card.text:Hide(); card.info:Hide(); card.fix:Hide(); if card.ping then card.ping:Hide() end
-                if card.classicHeader then card.classicHeader:Show(); card.classicHeader.title:SetText(titles[index]) end
-                card:Show(); bottom = bottom + 34
+    local visible = {showUnmatched, showMissing, showInvalid}
+    local titles = {"Unassigned SR", "Missing SR", "Invalid SR"}
+    local dockCount = 0
+    for index = 1, 3 do
+        local card = cards[index]
+        card.docked = visible[index] and (card.userMinimized or (side and PageSpan(page) < 620 and not card.forceExpanded)) or false
+        if card.docked then dockCount = dockCount + 1 end
+        if card.classicHeader then
+            if card.classicHeader.minimize then MOS.UI.Components.SetWindowButtonAction(card.classicHeader.minimize, card.docked and "maximize" or "minimize") end
+            if card.classicHeader.divider then
+                if card.docked then card.classicHeader.divider:Hide() else card.classicHeader.divider:Show() end
             end
         end
-        page.classicWarningBottom = bottom
-        return 0, bottom
     end
+    local dockIndex = 0
     for index = 1, 3 do
-        if cards[index].classicHeader then cards[index].classicHeader.title:SetText("Warning") end
+        local card = cards[index]
+        if card.docked then
+            local width = math.max(1, (PageSpan(page) - 4 - 2 * (dockCount - 1)) / dockCount)
+            card:ClearAllPoints(); card:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 2 + dockIndex * (width + 2), 2)
+            card:SetWidth(width); card:SetHeight(30)
+            card.text:Hide(); card.info:Hide(); card.fix:Hide(); if card.ping then card.ping:Hide() end
+            if card.classicHeader then card.classicHeader:Show(); card.classicHeader.title:SetText(titles[index]) end
+            card:Show(); dockIndex = dockIndex + 1; visible[index] = false
+        end
+    end
+    page.classicWarningBottom = dockCount > 0 and 34 or 0
+    showUnmatched, showMissing, showInvalid = visible[1], visible[2], visible[3]
+    if not showUnmatched and not showMissing and not showInvalid then return 0, page.classicWarningBottom end
+    for index = 1, 3 do
+        if cards[index].classicHeader and not cards[index].docked then cards[index].classicHeader.title:SetText("Warning") end
     end
     if side then
         local pageWidth, pageHeight = PageSpan(page)
         local width = math.min(250, math.max(210, math.floor(pageWidth * 0.30)))
         local top = -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)
-        local available = math.max(0, pageHeight + top - 8)
+        local available = math.max(0, pageHeight + top - 8 - (page.classicWarningBottom or 0))
         local shownCount = (showUnmatched and 1 or 0) + (showMissing and 1 or 0) + (showInvalid and 1 or 0)
         local gap = shownCount > 1 and 8 or 0
         local cardHeight = math.min(115, math.max(1, math.floor((available - gap * (shownCount - 1)) / shownCount)))
@@ -1129,7 +1164,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
             warning:ClearAllPoints(); warning:SetPoint("TOPRIGHT", page, "TOPRIGHT", -2, top); warning:SetWidth(width); warning:SetHeight(unmatchedHeight)
             warning.text:SetText("Unassigned SR in imported SR"); warning.details = "The following players have Soft Reserves but are not currently in the raid:\n\n" .. table.concat(unmatchedNames, "\n"); warning:Show()
             local compact = unmatchedHeight < 90
-            warning.text:ClearAllPoints(); warning.text:SetPoint("TOPLEFT", warning, "TOPLEFT", 15, compact and -27 or -34); warning.text:SetPoint("TOPRIGHT", warning, "TOPRIGHT", -15, compact and -27 or -34); warning.text:SetJustifyH("LEFT")
+            warning.text:ClearAllPoints(); warning.text:SetPoint("TOPLEFT", warning, "TOPLEFT", 15, -36); warning.text:SetPoint("TOPRIGHT", warning, "TOPRIGHT", -15, -36); warning.text:SetJustifyH("LEFT")
             warning.fix:ClearAllPoints(); warning.fix:SetPoint("BOTTOMLEFT", warning, "BOTTOMLEFT", 12, compact and 6 or 10); warning.fix:SetWidth(math.floor((width - 31) / 2)); warning.fix:SetHeight(22)
             warning.info:ClearAllPoints(); warning.info:SetPoint("LEFT", warning.fix, "RIGHT", 7, 0); warning.info:SetWidth(math.floor((width - 31) / 2)); warning.info:SetHeight(22)
             top = top - unmatchedHeight - gap
@@ -1139,7 +1174,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
             warning:ClearAllPoints(); warning:SetPoint("TOPRIGHT", page, "TOPRIGHT", -2, top); warning:SetWidth(width); warning:SetHeight(missingHeight)
             warning.text:SetText("Raid members without SR"); warning.details = "The following raid members do not have a Soft Reserve:\n\n" .. table.concat(missingNames, "\n"); warning:Show()
             local compact = missingHeight < 90
-            warning.text:ClearAllPoints(); warning.text:SetPoint("TOPLEFT", warning, "TOPLEFT", 15, compact and -27 or -34); warning.text:SetPoint("TOPRIGHT", warning, "TOPRIGHT", -15, compact and -27 or -34); warning.text:SetJustifyH("LEFT")
+            warning.text:ClearAllPoints(); warning.text:SetPoint("TOPLEFT", warning, "TOPLEFT", 15, -36); warning.text:SetPoint("TOPRIGHT", warning, "TOPRIGHT", -15, -36); warning.text:SetJustifyH("LEFT")
             local actionWidth = math.floor((width - 38) / 3)
             warning.fix:ClearAllPoints(); warning.fix:SetPoint("BOTTOMLEFT", warning, "BOTTOMLEFT", 12, compact and 6 or 10); warning.fix:SetWidth(actionWidth); warning.fix:SetHeight(22)
             warning.info:ClearAllPoints(); warning.info:SetPoint("LEFT", warning.fix, "RIGHT", 7, 0); warning.info:SetWidth(actionWidth); warning.info:SetHeight(22)
@@ -1152,7 +1187,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
             warning.text:SetText("SR without loot rights")
             warning.details = "The following raid members have Soft Reserves without the required loot rights:\n\n" .. table.concat(invalidNames, "\n")
             warning:Show()
-            warning.text:ClearAllPoints(); warning.text:SetPoint("TOPLEFT", warning, "TOPLEFT", 15, -27); warning.text:SetPoint("TOPRIGHT", warning, "TOPRIGHT", -15, -27); warning.text:SetJustifyH("LEFT")
+            warning.text:ClearAllPoints(); warning.text:SetPoint("TOPLEFT", warning, "TOPLEFT", 15, -36); warning.text:SetPoint("TOPRIGHT", warning, "TOPRIGHT", -15, -36); warning.text:SetJustifyH("LEFT")
             local actionWidth = math.floor((width - 38) / 3)
             warning.fix:ClearAllPoints(); warning.fix:SetPoint("BOTTOMLEFT", warning, "BOTTOMLEFT", 12, 6); warning.fix:SetWidth(actionWidth); warning.fix:SetHeight(22)
             warning.info:ClearAllPoints(); warning.info:SetPoint("LEFT", warning.fix, "RIGHT", 7, 0); warning.info:SetWidth(actionWidth); warning.info:SetHeight(22)
@@ -1165,9 +1200,9 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
                 MOS.UI.Components.SetButtonLabelInsets(button, 23, 5)
             end
         end
-        return width, 0
+        return width, page.classicWarningBottom
     end
-    return 0, 0
+    return 0, page.classicWarningBottom
 end
 
 function RaidManagement.RestoreDefaultWarningLayout(page)
@@ -1203,7 +1238,8 @@ function RaidManagement.ShowGroupView(page, rows)
             page.groupScrollBar:SetPoint("BOTTOMLEFT", page.groupFrame, "BOTTOMRIGHT", 4, 12)
         end
     else
-        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, page.activeToolMenu and -98 or -72); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
+        local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, page.activeToolMenu and -98 or -72); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24 - warningWidth, 5 + (page.classicWarningBottom or 0))
     end
     page.groupFrame:Show(); if page.listScrollBar then page.listScrollBar:Hide() end
     page.refreshGroupView()
@@ -1234,10 +1270,7 @@ end
 
 function RaidManagement.RefreshListView(page, rows, members, selectedName, sortKey, lootMasterMode, settings)
     local renderer = page.listRenderer
-    if MOS.UI.Components.IsClassicSkin() then
-        page.classicWarningWidth = RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true)
-        if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then page.classicWarningWidth = 0 end
-    else page.classicWarningWidth = 0; RaidManagement.RestoreDefaultWarningLayout(page) end
+    page.classicWarningWidth = RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true)
     local pageWidth = PageSpan(page)
     local filterWidth = pageWidth < 650 and 60 or 84
     local searchSpace = pageWidth - (page.classicWarningWidth or 0) - ((page.classicWarningWidth or 0) > 0 and 8 or 12)
@@ -1248,56 +1281,7 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     if not settings.raidListShowFilters then page.classicSearchWidth = math.max(90, math.min(178, searchSpace - 93)) end
     RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
     local rowStartY, tableLeft, tableWidth = RaidManagement.LayoutListHeaders(page, page.listHeaderUI.buttons, sortKey, lootMasterMode, settings.raidListRowWidth, table.getn(members), selectedName)
-    local warningHeight = 0
-    local attendance = renderer.getData()
-    local issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
-    local unmatchedNames, missingNames, invalidNames = issues.unmatchedNames, issues.missingNames, issues.invalidNames
-    local showUnmatched = not lootMasterMode and table.getn(unmatchedNames) > 0 and not page.softReserveWarning.userDismissed
-    local showMissing = not lootMasterMode and table.getn(missingNames) > 0 and not page.missingSoftReserveWarning.userDismissed
-    local showInvalid = not lootMasterMode and table.getn(invalidNames) > 0 and not page.invalidSoftReserveWarning.userDismissed
-    if MOS.UI.Components.IsClassicSkin() then
-        warningHeight = page.classicWarningBottom or 0
-    elseif showUnmatched or showMissing or showInvalid then
-        local availableWarningWidth = math.max(1, page:GetWidth() - 42)
-        local shownCount = (showUnmatched and 1 or 0) + (showMissing and 1 or 0) + (showInvalid and 1 or 0)
-        local cardWidth = math.floor((availableWarningWidth - (shownCount - 1) * 8) / shownCount)
-        local nextX, maximumHeight = 6, 38
-        if showUnmatched then
-            local warning = page.softReserveWarning
-            warning:ClearAllPoints(); warning:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", nextX, 5); warning:SetWidth(cardWidth)
-            warning.text:SetText("Unassigned SR in imported SR")
-            warning.details = "The following players have Soft Reserves but are not currently in the raid:\n\n" .. table.concat(unmatchedNames, "\n")
-            warning:SetHeight(58); warning:Show()
-            maximumHeight = math.max(maximumHeight, warning:GetHeight()); nextX = nextX + cardWidth + 8
-        else
-            page.softReserveWarning:Hide()
-        end
-        if showMissing then
-            local warning = page.missingSoftReserveWarning
-            warning:ClearAllPoints(); warning:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", nextX, 5); warning:SetWidth(cardWidth)
-            warning.text:SetText("Raid members without SR")
-            warning.details = "The following raid members do not have a Soft Reserve:\n\n" .. table.concat(missingNames, "\n")
-            warning:SetHeight(58); warning:Show()
-            maximumHeight = math.max(maximumHeight, warning:GetHeight())
-            nextX = nextX + cardWidth + 8
-        else
-            page.missingSoftReserveWarning:Hide()
-        end
-        if showInvalid then
-            local warning = page.invalidSoftReserveWarning
-            warning:ClearAllPoints(); warning:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", nextX, 5); warning:SetWidth(cardWidth)
-            warning.text:SetText("SR without loot rights")
-            warning.details = "The following raid members have Soft Reserves without the required loot rights:\n\n" .. table.concat(invalidNames, "\n")
-            warning:SetHeight(58); warning:Show()
-        else
-            page.invalidSoftReserveWarning:Hide()
-        end
-        if showUnmatched then page.softReserveWarning:SetHeight(maximumHeight) end
-        if showMissing then page.missingSoftReserveWarning:SetHeight(maximumHeight) end
-        warningHeight = maximumHeight + 8
-    else
-        page.softReserveWarning:Hide(); page.missingSoftReserveWarning:Hide(); page.invalidSoftReserveWarning:Hide()
-    end
+    local warningHeight = page.classicWarningBottom or 0
     local scrollFrame = page.listScrollFrame
     local listBottom = lootMasterMode and 1.5 or (MOS.UI.Components.IsClassicSkin() and 4 or 11)
     scrollFrame:ClearAllPoints(); scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", tableLeft, rowStartY); scrollFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", tableLeft + tableWidth, listBottom + warningHeight)
@@ -1495,7 +1479,7 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
     local tableLeft = lootMasterMode and 1.5 or 6
     local pageWidth, pageHeight = PageSpan(page)
     local classic = MOS.UI.Components.IsClassicSkin()
-    local warningWidth = classic and (page.classicWarningWidth or 0) or 0
+    local warningWidth = page.classicWarningWidth or 0
     -- Leave room for the separately anchored 16-unit scrollbar and its gap.
     local tableRight = pageWidth - (classic and warningWidth == 0 and 20 or 24) - (warningWidth > 0 and (warningWidth + 18) or 0)
     if lootMasterMode then
@@ -2216,6 +2200,10 @@ function RaidManagement.LayoutActions(page)
         MOS.UI.Components.SizeClassicButton(page.classicIssues, math.floor(96 * scale), math.floor(26 * math.max(0.85, scale)), scale)
         page.classicSaved:ClearAllPoints(); page.classicSaved:SetPoint("LEFT", page.classicMeta, "RIGHT", 8, 0); page.classicSaved:SetPoint("TOP", page, "TOP", 0, -9)
         page.classicIssues:ClearAllPoints(); page.classicIssues:SetPoint("LEFT", page.classicSaved, "RIGHT", 8, 0); page.classicIssues:SetPoint("TOP", page, "TOP", 0, -9)
+        if actionOffset == 0 then
+            page.exportButton:ClearAllPoints(); page.exportButton:SetPoint("LEFT", page.classicIssues:IsShown() and page.classicIssues or page.classicSaved, "RIGHT", 8, 0)
+            page.quitButton:ClearAllPoints(); page.quitButton:SetPoint("LEFT", page.exportButton, "RIGHT", 8, 0)
+        end
         if actionOffset > 0 then
             local left = 6
             local secondRow = {page.classicSaved, page.classicIssues, page.exportButton, page.quitButton}

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.67 - 2026-09-30
+
+- Cap saved raids at 500 UI units and remove Raid/Time cell left padding.
+- Fit session actions to their measured header space and pulse new issues until acknowledged.
+- Use the Settings frame for warnings, with minimize/restore and a compact bottom dock.
+
 ## 0.5.0-dev.66 - 2026-09-30
 
 - Replace the flat bottom-tab line with the existing textured main-window gold border.
