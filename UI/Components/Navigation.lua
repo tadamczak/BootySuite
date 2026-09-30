@@ -117,7 +117,7 @@ function Navigation.Create(options)
         local _, sectionTop, sectionBottom, tabTop = MOS.UI.Components.Dashboard.GetChromeLayout(options.get, MOS.UI.Components.IsClassicSkin())
         if tabs then
             options.sidebar:Hide(); options.toggleButton:Hide()
-            local margin = options.get("hideHeaderBar") and 1 or (MOS.UI.Components.IsClassicSkin() and 4 or 9)
+            local margin = MOS.UI.Components.IsClassicSkin() and 4 or 9
             local bottom = options.get("hideStatusVersionBar") and margin or (MOS.UI.Components.IsClassicSkin() and 4 or 9) + 22
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
@@ -128,7 +128,7 @@ function Navigation.Create(options)
                 local button = controller.buttons[name]
                 button.navigationBottom = bottomTabs
                 button.navigationMode = "tabs"
-                button.navigationContent = not bottomTabs and (options.contentPanel.mosPageHost or options.contentPanel) or options.contentPanel
+                button.navigationContent = options.contentPanel
                 button.navigationX = 6 + ((index - 1) * width)
                 button.SetTabBorderVisible(false)
                 button:SetScale(1); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
@@ -159,7 +159,7 @@ function Navigation.Create(options)
             end
             options.contentPanel:ClearAllPoints()
             if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 49 or 153, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, sectionBottom)
-            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 64 or 184, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", 0, sectionBottom) end
+            else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 64 or 184, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, sectionBottom) end
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
