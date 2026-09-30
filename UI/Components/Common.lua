@@ -781,13 +781,20 @@ function UI.ApplyScrollRange(viewport, slider, maximum)
 end
 
 -- Only visible, unacknowledged controls run this animation; no data refreshes.
+local function RestoreAttentionText(button)
+    if button.label and button.mosAttentionTextColor then button.label:SetTextColor(unpack(button.mosAttentionTextColor)) end
+end
 local function AttentionPulseTick()
     this.mosAttentionElapsed = math.mod((this.mosAttentionElapsed or 0) + (arg1 or 0), 1)
-    if this.mosAttentionElapsed < 0.5 then this.mosAttentionTexture:Show() else this.mosAttentionTexture:Hide() end
+    if this.mosAttentionElapsed < 0.5 then
+        this.mosAttentionTexture:Show()
+        if this.label then this.label:SetTextColor(1, 0.48, 0.42, 1) end
+    else this.mosAttentionTexture:Hide(); RestoreAttentionText(this) end
 end
 local function AttentionPulseHide()
     this:SetScript("OnUpdate", nil)
     if this.mosAttentionTexture then this.mosAttentionTexture:Hide() end
+    RestoreAttentionText(this)
 end
 local function AttentionPulseShow()
     if this.mosAttentionPending then this:SetScript("OnUpdate", AttentionPulseTick) end
@@ -799,7 +806,11 @@ function UI.SetAttentionPulse(button, pending)
         button.mosAttentionTexture = texture
         button:SetScript("OnHide", AttentionPulseHide); button:SetScript("OnShow", AttentionPulseShow)
     end
+    if pending and not button.mosAttentionPending then
+        button.mosAttentionElapsed = 0
+        if button.label then button.mosAttentionTextColor = {button.label:GetTextColor()} end
+    end
     button.mosAttentionPending = pending and true or false
     if pending and button:IsVisible() then button:SetScript("OnUpdate", AttentionPulseTick)
-    else button:SetScript("OnUpdate", nil); button.mosAttentionTexture:Hide() end
+    else button:SetScript("OnUpdate", nil); button.mosAttentionTexture:Hide(); RestoreAttentionText(button) end
 end

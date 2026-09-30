@@ -65,7 +65,7 @@ function Dashboard.SetBottomTabSeam(view, shown)
         end
         seam:ClearAllPoints()
         seam:SetPoint("TOPLEFT", view.frame, "TOPLEFT", 0, 0)
-        seam:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 4, -4)
+        seam:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 4, view.bottomTabsWithStatus and -26 or -4)
         seam:SetFrameStrata(view.frame:GetFrameStrata())
         seam:SetFrameLevel(view.frame:GetFrameLevel() + 23)
         if view.tabsProtruding then view.tabBody:SetBackdropBorderColor(0, 0, 0, 0) end
@@ -136,7 +136,15 @@ function Dashboard.ApplyChrome(view, get)
         view.frame.mosStatusBar.mosBorderOutsetRight = 0
         MOS.UI.Components.SetSurfaceHorizontalBorders(view.frame.mosStatusBar, true, false, true)
     end
-    Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()), hiddenHeader and get("menuStyle") == "tabs" and 24 or 0)
+    view.bottomTabsWithStatus = get("menuStyle") == "bottomTabs" and footer
+    local footerBottom = get("menuStyle") == "bottomTabs" and 34 or (classic and 4 or 9)
+    if view.frame.mosStatusBar then
+        local bar = view.frame.mosStatusBar
+        bar:ClearAllPoints(); bar:SetPoint("BOTTOMLEFT", view.frame, "BOTTOMLEFT", classic and 4 or 9, footerBottom)
+        bar:SetPoint("BOTTOMRIGHT", view.frame, "BOTTOMRIGHT", -126, footerBottom)
+    end
+    view.versionText:ClearAllPoints(); view.versionText:SetPoint("BOTTOMRIGHT", view.frame, "BOTTOMRIGHT", -32, footerBottom + 5)
+    Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not (view.lootBorder and view.lootBorder:IsVisible()), hiddenHeader and get("menuStyle") == "tabs" and 24 or 0)
     Dashboard.SetBottomTabSeam(view, get("menuStyle") == "bottomTabs")
     if view.frame.mosStatusBar then SetChromeVisible(view.frame.mosStatusBar, footer) end
     SetChromeVisible(view.versionText, footer)
@@ -325,12 +333,14 @@ function Dashboard.SetStatus(bar, message, kind)
 end
 
 function Dashboard.CreatePages(contentPanel, definitions)
+    local ownerPanel = contentPanel
     contentPanel = contentPanel.mosPageHost or contentPanel
     local pages = {}
     local index
     for index = 1, table.getn(definitions) do
         local definition = definitions[index]
         local page = CreateFrame("Frame", nil, contentPanel)
+        page.mosContentPanel = ownerPanel
         if definition.anchor then page:SetAllPoints(pages[definition.anchor])
 
         else

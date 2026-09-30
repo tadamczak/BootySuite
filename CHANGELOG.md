@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.68 - 2026-09-30
+
+- Place the status footer above bottom tabs and widen saved-raid dates.
+- Overlay warnings without reserving roster space; cap minimized cards and restore them from issues.
+- Pulse issue text light red and restart attention when loading a raid session.
+
 ## 0.5.0-dev.67 - 2026-09-30
 
 - Cap saved raids at 500 UI units and remove Raid/Time cell left padding.
