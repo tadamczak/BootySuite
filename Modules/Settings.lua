@@ -47,7 +47,11 @@ function Settings.LayoutGeneral(page)
     if state.general then page.skinControl:Show(); page.skinControl.fieldLabel:Show()
     else page.skinControl:Hide(); page.skinControl.fieldLabel:Hide(); page.skinControl.panel:Hide() end
     local height = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.generalGrid, 20, -94, page:GetWidth() - 56, 28)
-    local headingY = state.general and (-94 - height - 8) or -66
+    local details = page.playerDetailsControl
+    details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, -94 - height)
+    if state.general then details:Show(); details.fieldLabel:Show()
+    else details:Hide(); details.fieldLabel:Hide(); details.panel:Hide() end
+    local headingY = state.general and (-94 - height - 40) or -66
     page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
     local menu = page.menuStyleControl
     menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 28)
@@ -136,6 +140,14 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         if onNavigationLayout then onNavigationLayout() end
     end)
     local iconTabsCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteUseIconTabs", 330, -204, "Use Icon Tabs", "useIconTabs", nil, nil, onNavigationLayout)
+    local _, detailsControl = MOS.UI.Components.CreateChoiceField({
+        parent = uiContent, x = 24, y = -122, label = "Player details style:", width = 110, height = 51,
+        initialText = "Collapsible", firstY = -7, step = 19,
+        choices = { { text = "Collapsible", value = "collapsible" }, { text = "Window", value = "window" } },
+        getValue = function() return MOS.Database.GetSetting("playerDetailsStyle") or "collapsible" end,
+        onSelect = function(value) MOS.Database.SetSetting("playerDetailsStyle", value); RefreshRosterLayout() end,
+    })
+    page.playerDetailsControl = detailsControl
     page.generalGrid = { minimapCheck, loginMessageCheck }
     page.layoutGrid = { page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3], page.chromeChecks[4], iconTabsCheck }
     page.uiLayoutHeading = layoutHeading
@@ -144,6 +156,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     page.menuStyleControl = menuStyleControl
     page.RefreshGeneralSettings = function()
         MOS.Database.Ensure()
+        detailsControl:SetText(MOS.Database.GetSetting("playerDetailsStyle") == "window" and "Window" or "Collapsible")
         skinControl:SetText(MOS.UI.Components.IsClassicSkin() and "Classic" or "Default")
         menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" and "Bottom Tab view" or "Button view")
         iconTabsCheck:SetChecked(MuklaOfficerSuiteDB.useIconTabs and 1 or nil)

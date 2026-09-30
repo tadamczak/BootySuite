@@ -2,7 +2,7 @@
 ## Title: Mukla Officer Suite
 ## Notes: Guild officer dashboard and persistent guild roster.
 ## Author: Mukla
-## Version: 0.5.0-dev.51
+## Version: 0.5.0-dev.52
 ## X-Release-Version: 0.4.0
 ## SavedVariables: MuklaOfficerSuiteDB
 
@@ -40,6 +40,7 @@ Services\VersionService.lua
 Modules\MasterLootEvents.lua
 Modules\MasterLootWindow.lua
 Modules\RosterManagement.lua
+Modules\RosterDetails.lua
 Modules\GuildStatistics.lua
 Modules\RaidStatistics.lua
 Modules\CSR.lua

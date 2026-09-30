@@ -14,6 +14,7 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.hideStatusVersionBar == nil then MuklaOfficerSuiteDB.hideStatusVersionBar = false end
     if MuklaOfficerSuiteDB.hideHeaderLogo == nil then MuklaOfficerSuiteDB.hideHeaderLogo = false end
     if MuklaOfficerSuiteDB.hideHeaderBar == nil then MuklaOfficerSuiteDB.hideHeaderBar = false end
+    if MuklaOfficerSuiteDB.playerDetailsStyle ~= "window" then MuklaOfficerSuiteDB.playerDetailsStyle = "collapsible" end
     if MuklaOfficerSuiteDB.hideHeaderName == nil then MuklaOfficerSuiteDB.hideHeaderName = false end
     if MuklaOfficerSuiteDB.suppressLoginMessage == nil then MuklaOfficerSuiteDB.suppressLoginMessage = false end
     MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon

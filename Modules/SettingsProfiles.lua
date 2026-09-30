@@ -167,7 +167,7 @@ function Settings.ApplyTopSections(page)
     page.uiContent:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -profileHeight)
     page.uiContent:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -profileHeight)
     if state.ui then page.uiContent:Show() else
-        page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide()
+        page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide(); page.playerDetailsControl.panel:Hide()
     end
     local extra = Settings.LayoutGeneral and Settings.LayoutGeneral(page) or 0
     page.settingsTopOffset = -profileHeight - 28 - 56 - extra

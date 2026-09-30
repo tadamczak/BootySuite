@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.52 - 2026-09-30
+
+- Add UI > General > Player details style: Collapsible or an attached Window with guild-member details and actions.
+- Match expanded roster backgrounds to row hover.
+
 ## 0.5.0-dev.51 - 2026-09-30
 
 - Balance MOTD vertical padding, close the inactive bottom-tab gap and reduce active-tab overlap by 1px.
