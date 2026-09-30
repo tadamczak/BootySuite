@@ -16,7 +16,7 @@ end
 
 function RaidManagement.CreateSoftReserveImportDialog(options)
     local dialog
-    dialog = MOS.UI.Components.CreateTextEditor("MuklaOfficerSuiteSoftReserveImport", "Import RaidRes Soft Reserves", 16000, function(value)
+    dialog = MOS.UI.Components.CreateTextEditor("MuklaOfficerSuiteSoftReserveImport", "Import Soft Reserves", 16000, function(value)
         if options.isTestRaid and options.isTestRaid() then
             local url = dialog.url:GetText() or ""
             if not options.setSrUrl(url) then dialog:SetMessage("SR URL is required.", true); return false end
@@ -29,11 +29,13 @@ function RaidManagement.CreateSoftReserveImportDialog(options)
         options.printMessage("Soft Reserves imported. Matched: " .. result.matched .. ", outside raid: " .. result.unmatched .. ", raid members without SR: " .. result.missing .. ".")
         return true
     end)
+    dialog.close = MOS.UI.Components.CreateWindowButton(dialog, nil, "close")
+    dialog.close:SetScript("OnClick", function() dialog:Hide() end)
     MOS.UI.Components.Window.StyleProjectDialog(dialog)
     dialog:SetWidth(620); dialog:SetHeight(360); dialog.save:SetText("Import"); dialog.cancel:SetText("Cancel")
     dialog.urlLabel = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormalSmall")
     dialog.urlLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -42); dialog.urlLabel:SetText("SR URL")
-    dialog.url = MOS.UI.Components.CreateSearchBox(dialog, nil, 580)
+    dialog.url = MOS.UI.Components.CreateFramedEditBox(dialog, nil, 580)
     dialog.url:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -58); dialog.url:SetPoint("TOPRIGHT", dialog, "TOPRIGHT", -18, -58); dialog.url:SetMaxLetters(500)
     dialog.exportLabel = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormalSmall")
     dialog.exportLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -86); dialog.exportLabel:SetText("RollFor export")

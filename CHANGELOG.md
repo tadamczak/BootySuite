@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.81 - 2026-09-30
+
+- Restore toolbar background/both separators; tighten project dialog and loot rules spacing.
+- Add Import Soft Reserves close control, consistent LM dropdown padding and Reycoin delete hover; hide Reycoin resize artwork.
+
 ## 0.5.0-dev.80 - 2026-09-30
 
 - Keep raid date in the top row and align LM resize grip margins.

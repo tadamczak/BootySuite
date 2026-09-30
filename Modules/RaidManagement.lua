@@ -48,7 +48,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", -3, -48); view.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 3, -48); view.classicToolbar:SetHeight(42)
     view.classicToolbar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }); view.classicToolbar:SetBackdropColor(0, 0, 0, 0); view.classicToolbar:SetBackdropBorderColor(0, 0, 0, 0)
     MOS.UI.Components.RegisterSkinnedSurface(view.classicToolbar, "title", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }); view.classicToolbar:Hide()
-    MOS.UI.Components.JoinSurfaceEdges(view.classicToolbar, true, true)
+    MOS.UI.Components.SetSurfaceHorizontalBorders(view.classicToolbar, true, true)
     view.classicToolbar:SetFrameLevel(page:GetFrameLevel())
     view.classicSummary = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     view.classicSummary:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -31); view.classicSummary:SetWidth(245); view.classicSummary:SetHeight(14); view.classicSummary:SetJustifyH("LEFT"); view.classicSummary:Hide()
@@ -199,6 +199,9 @@ function RaidManagement.CreateChrome(page, callbacks)
         row.remove:SetWidth(16); row.remove:SetHeight(16); row.remove:SetPoint("RIGHT", row, "RIGHT", 0, 0)
         row.remove.text = MOS.UI.Components.CreateLabel(row.remove, nil, "OVERLAY", "GameFontNormalSmall")
         row.remove.text:SetAllPoints(row.remove); row.remove.text:SetText("X")
+        MOS.UI.Components.AttachGoldHoverBorder(row.remove, 0, 0, 0, 0)
+        row.remove:SetScript("OnEnter", function() this.text:SetTextColor(1, 0.82, 0.28); MOS.UI.Components.SetProjectButtonOutline(this, true) end)
+        row.remove:SetScript("OnLeave", function() this.text:SetTextColor(1, 1, 1); MOS.UI.Components.SetProjectButtonOutline(this, false) end)
         row.remove:SetScript("OnClick", function()
             local selected = this:GetParent()
             if selected.pendingTransfer then
@@ -2375,7 +2378,7 @@ function RaidManagement.LayoutActions(page)
                 end
             end
         end
-        page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", 3, -48 - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", -3, -48 - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
+        page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", -3, -48 - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 3, -48 - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
         page.classicListButton:ClearAllPoints(); page.classicListButton:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -57 - actionOffset)
         page.classicGroupButton:ClearAllPoints(); page.classicGroupButton:SetPoint("LEFT", page.classicListButton, "RIGHT", 8, 0)
         page.classicTwoButton:ClearAllPoints(); page.classicTwoButton:SetPoint("LEFT", page.classicGroupButton, "RIGHT", 8, 0)
@@ -2734,6 +2737,8 @@ function RaidManagement.CreateLootMasterController(options)
     end
     SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 260, 260)
     SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight", 240, 120)
+    options.page.reyCoinPanel.resizeGrip.texture:Hide()
+    UI.RegisterSkinCallback(function() options.page.reyCoinPanel.resizeGrip.texture:Hide() end)
     local reyPanel = options.page.reyCoinPanel
     reyPanel:SetMovable(true); reyPanel:RegisterForDrag("LeftButton")
     reyPanel:SetScript("OnDragStart", function() if options.page.reyCoinSolo then reyPanel:StartMoving() end end)
@@ -2816,13 +2821,13 @@ function RaidManagement.CreateLootMasterController(options)
         for index = 1, table.getn(captions) do
             local choice = UI.CreateButton(panel, nil, captions[index], 166, 18)
             UI.StyleDropdownChoice(choice)
-            choice:SetPoint("TOPLEFT", panel, "TOPLEFT", 7, -7 - (index - 1) * 19)
+            choice:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4 - (index - 1) * 22)
             choice.toolSource = sources[index]
             choice:SetScript("OnClick", InvokeToolChoice)
             width = math.max(width, choice.label:GetStringWidth() + 20)
             panel.options[index] = choice
         end
-        panel:SetWidth(width + 14)
+        panel:SetWidth(width + 8); panel:SetHeight(8 + table.getn(captions) * 18 + (table.getn(captions) - 1) * 4)
         for index = 1, table.getn(panel.options) do panel.options[index]:SetWidth(width) end
         menus[button] = panel; button.panel = panel
         button:SetScript("OnClick", function()
