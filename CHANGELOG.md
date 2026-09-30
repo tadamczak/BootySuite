@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.56 - 2026-09-30
+
+- Refine Settings subsection layout, spacing and Roster General field order.
+- Apply lightness while typing and add independent Raid Group/List lightness settings.
+- Preserve roster background after hover and update visible skin color fills.
+
 ## 0.5.0-dev.55 - 2026-09-30
 
 - Organize Roster settings into General, Display and Member tile color, with configurable row colors and alternating lightness.

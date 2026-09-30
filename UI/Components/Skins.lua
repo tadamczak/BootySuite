@@ -599,7 +599,8 @@ function UI.SetRowColor(row, color, alpha)
     row:SetBackdropColor(color[1], color[2], color[3], alpha)
     local entry = row.mosSurfaceEntry
     if entry and entry.classicFill and Skins.current == "classic" then
-        entry.classicFill:SetTexture(color[1], color[2], color[3], alpha)
+        entry.classicFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+        entry.classicFill:SetVertexColor(color[1], color[2], color[3], alpha); entry.classicFill:Show()
     end
     if row.mosClassicRowShade then row.mosClassicRowShade:Hide() end
 end

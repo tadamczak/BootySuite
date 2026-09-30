@@ -140,7 +140,7 @@ Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can 
 - **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them.
 - **Settings window -** Settings reopen from the top with your current saved values.
 - **Resizable window -** Settings can be resized within the available game screen; long sections remain available through scrolling.
-- **Roster preferences -** General contains live tracking and Player details style. Layout groups visibility options under Display and row appearance under Member tile color: class colors, background, main text, hover and Odd record lightness (0â€“100%). The lightness value brightens even rows toward white; 0% keeps all row backgrounds identical.
+- **Roster preferences -** General contains live tracking and Player details style. Layout groups visibility options under Display and row appearance under Member tile color: class colors, background, main text, hover and Odd record lightness (0Ã¢â‚¬â€œ100%). The lightness value brightens even rows toward white while typing; 0% keeps all row backgrounds identical. Raid Group View and List View have independent lightness fields under Member tile color. UI Layout groups Menu type under General and header/status visibility under Display; Raid List View groups its controls under Display, Size and Member tile color.
 - **Raid -** Configure Loot Master opacity and related raid preferences.
 - **Logging -** Enable optional concise addon messages in chat.
 - **Reset options -** Restore supported settings to their defaults.

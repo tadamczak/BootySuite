@@ -54,17 +54,30 @@ function Settings.LayoutGeneral(page)
     local headingY = state.general and (-94 - height - 8) or -66
     page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
     local menu = page.menuStyleControl
-    menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 28)
+    local method = state.layout and "Show" or "Hide"
+    page.uiLayoutGeneralHeading[method](page.uiLayoutGeneralHeading); page.uiLayoutDisplayHeading[method](page.uiLayoutDisplayHeading)
+    page.uiLayoutGeneralHeading:ClearAllPoints(); page.uiLayoutGeneralHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",24,headingY-28)
+    menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 54)
     local check = page.iconTabsCheck
     local iconVisible = state.layout and (MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs")
+    check:ClearAllPoints(); check:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",20,headingY-80)
     if iconVisible then check:Show() else check:Hide() end
     if state.layout then menu:Show(); menu.fieldLabel:Show()
     else menu:Hide(); menu.fieldLabel:Hide(); menu.panel:Hide() end
-    for index = 1, table.getn(page.chromeChecks) do
-        if state.layout then page.chromeChecks[index]:Show() else page.chromeChecks[index]:Hide() end
+    local displayY = headingY - (iconVisible and 114 or 86)
+    page.uiLayoutDisplayHeading:ClearAllPoints();page.uiLayoutDisplayHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",24,displayY)
+    for index = 1, table.getn(page.chromeChecks) do page.chromeChecks[index][method](page.chromeChecks[index]) end
+    local layoutHeight = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.chromeChecks, 20, displayY - 26, page:GetWidth() - 56, 28)
+    local extent = -headingY + page.uiLayoutHeading:GetHeight() + 12
+    if state.layout then
+        local bottom = 0
+        for index = 1, table.getn(page.chromeChecks) do
+            local control = page.chromeChecks[index]
+            local _, _, _, _, y = control:GetPoint(1)
+            bottom = math.max(bottom, -y + math.max(control:GetHeight(), control.label:GetStringHeight() + 3))
+        end
+        extent = bottom + 12
     end
-    local layoutHeight = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.layoutGrid, 20, headingY - 56, page:GetWidth() - 56, 28)
-    local extent = -headingY + (state.layout and (64 + layoutHeight) or 28)
     page.uiContent:SetHeight(extent)
     return extent - 224
 end
@@ -87,10 +100,17 @@ function Settings.LayoutRaidGrid(page, offset)
     At(group.colorHeading, 52, y); y = y - 24
     y = y - C.LayoutGrid(page, group.colorChecks, 52, y, width, 26)
     y = y - C.LayoutGrid(page, group.colors, 52, y, width, 28) - 16
+    At(group.lightnessLabel,52,y); y=y-34
+    if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting("raidGroupOddLightness") or 5) end
     At(shell.listHeading, 48, y); At(shell.listDivider, 48, y - 20); shell.listDivider:SetWidth(math.max(1, page:GetWidth() - 84)); y = y - 44
+    At(list.displayHeading,52,y);y=y-26
     y = y - C.LayoutGrid(page, list.checks, 52, y, width, 26) - 24
+    At(list.sizeHeading,52,y);y=y-38
     y = y - C.LayoutGrid(page, list.sliders, 52, y, width, 56, true)
+    At(list.colorHeading,52,y);y=y-26
     y = y - C.LayoutGrid(page, list.colors, 52, y, width, 28) - 16
+    At(list.lightnessLabel,52,y);y=y-34
+    if not list.lightnessField.mosEditing then list.lightnessField:SetText(MOS.Database.GetSetting("raidListOddLightness") or 5) end
     shell.panel:ClearAllPoints(); shell.panel:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -306 + offset); shell.panel:SetPoint("BOTTOMRIGHT", page, "TOPLEFT", page:GetWidth() - 12, y + 8)
     return y - (-1126 + offset)
 end
@@ -152,6 +172,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     page.generalGrid = { minimapCheck, loginMessageCheck }
     page.layoutGrid = { page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3], page.chromeChecks[4], iconTabsCheck }
     page.uiLayoutHeading = layoutHeading
+    page.uiLayoutGeneralHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange"); page.uiLayoutGeneralHeading:SetText("General")
+    page.uiLayoutDisplayHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange"); page.uiLayoutDisplayHeading:SetText("Display")
     page.iconTabsCheck = iconTabsCheck
     page.skinControl = skinControl
     page.menuStyleControl = menuStyleControl
@@ -300,6 +322,11 @@ function Settings.CreateRaidControlFactory(page, callbacks)
         Slider = function(name, x, y, label, key, minimum, maximum)
             return controls.CreateSlider(page, name, x + 12, y, label, key, minimum, maximum, Refresh)
         end,
+        Percentage = function(name, key)
+            local label, field = controls.CreatePercentageField(page, name, "Odd record lightness (%)", 52, 0, key, 5)
+            field.onChanged = Refresh
+            return label, field
+        end,
         Color = function(x, y, label, key)
             return controls.CreateColor(page, x + 12, y, label, key, Refresh)
         end,
@@ -349,24 +376,31 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
         originalAutoWidthSave(owner)
         MOS.UI.Components.Settings.SetSliderEnabled(width, not owner:GetChecked())
     end
-    local colorHeading = Heading("Member tile colors", -724)
+    local colorHeading = Heading("Member tile color", -724)
     local classColors = factory.Checkbox(40, -746, "Use class colors", "raidGroupClassColors")
     local background = factory.Color(40, -774, "Background color", "raidGroupBackgroundColor")
     local text = factory.Color(230, -774, "Main text color", "raidGroupTextColor")
     local hover = factory.Color(40, -802, "Hover color", "raidGroupHoverColor")
     local pressed = factory.Color(230, -802, "On press color", "raidGroupPressedColor")
+    local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteGroupLightness", "raidGroupOddLightness")
     return {
+        lightnessLabel = lightnessLabel, lightnessField = lightnessField,
         displayHeading = displayHeading, sizeHeading = sizeHeading, colorHeading = colorHeading,
         displayChecks = { showClass, showLevel, showHeader, showLootMaster, showRole },
         autoChecks = {autoWidth}, colorChecks = {classColors}, sliders = {width, height, headerHeight, margin, tileTextSize, headerTextSize},
         columnsLabel = columnsLabel, columnsButton = columnsButton, columnsPanel = columnsPanel,
         checks = { showClass, showLevel, showHeader, showLootMaster, showRole, autoWidth, classColors },
         width = width, height = height, headerHeight = headerHeight, margin = margin, tileTextSize = tileTextSize, headerTextSize = headerTextSize, autoWidth = autoWidth, colors = { background, text, hover, pressed },
-        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, columnsLabel, columnsButton, showClass, showLevel, showHeader, showLootMaster, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, pressed },
+        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, columnsLabel, columnsButton, showClass, showLevel, showHeader, showLootMaster, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, pressed, lightnessLabel, lightnessField },
     }
 end
 
 function Settings.CreateRaidListViewControls(page, shell, factory)
+    local function Heading(text)
+        local heading = MOS.UI.Components.CreateHeading(shell.panel, "", 3, "orange"); heading:SetText(text); return heading
+    end
+    local displayHeading, sizeHeading, colorHeading = Heading("Display"), Heading("Size"), Heading("Member tile color")
+    local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteListLightness", "raidListOddLightness")
     local showName = factory.Checkbox(40, -890, "Show name", "raidListShowName")
     local showLevel = factory.Checkbox(300, -890, "Show lvl", "raidListShowLevel")
     local showStatus = factory.Checkbox(560, -890, "Show status", "raidListShowStatus")
@@ -387,10 +421,11 @@ function Settings.CreateRaidListViewControls(page, shell, factory)
     local hover = factory.Color(40, -1078, "Hover color", "raidListHoverColor")
     local pressed = factory.Color(230, -1078, "On press color", "raidListPressedColor")
     return {
+        displayHeading=displayHeading, sizeHeading=sizeHeading, colorHeading=colorHeading, lightnessLabel=lightnessLabel, lightnessField=lightnessField,
         sliders = {width, height},
         checks = { showName, showLevel, showStatus, showGroup, showClass, showRank, showSoftReserve, showLootMaster, showRole, showFilters, showSearch },
         width = width, height = height, colors = { background, text, hover, pressed },
-        layoutControls = { shell.listDivider, shell.listHeading, shell.listReset, showName, showLevel, showStatus, showGroup, showClass, showRank, showSoftReserve, showLootMaster, showRole, showFilters, showSearch, width, height, background, text, hover, pressed },
+        layoutControls = { shell.listDivider, shell.listHeading, shell.listReset, showName, showLevel, showStatus, showGroup, showClass, showRank, showSoftReserve, showLootMaster, showRole, showFilters, showSearch, width, height, background, text, hover, pressed, displayHeading, sizeHeading, colorHeading, lightnessLabel, lightnessField },
     }
 end
 
@@ -429,6 +464,7 @@ function Settings.CreateRaidSettings(page, callbacks)
         groupAutoWidth = groupControls.autoWidth,
         listWidth = listControls.width,
         listHeight = listControls.height,
+        percentages = {groupControls.lightnessField, listControls.lightnessField},
         colors = Settings.MergeControls(Settings.MergeControls({}, groupControls.colors), listControls.colors),
     }
     Settings.BindRaidViewControls(page, viewControls, shell.groupReset, shell.listReset, callbacks)
@@ -502,6 +538,7 @@ function Settings.RefreshRaidViewControls(controls)
     controls.listWidth:SetValue(MuklaOfficerSuiteDB.raidListRowWidth)
     controls.listHeight:SetValue(MuklaOfficerSuiteDB.raidListRowHeight)
 
+    for _, field in ipairs(controls.percentages or {}) do if not field.mosEditing then field:SetText(MOS.Database.GetSetting(field.settingKey) or 5) end end
     local colorIndex
     for colorIndex = 1, table.getn(controls.colors) do
         local colorControl = controls.colors[colorIndex]
@@ -722,13 +759,13 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local topOffset = page.settingsTopOffset or 0
     sections.rosterHeading:ClearAllPoints(); sections.rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150 + topOffset)
     sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -178 + topOffset)
-    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, -206 + topOffset)
+    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, -238 + topOffset)
     sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
     if state.general and uiVisible then sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
     local details = page.playerDetailsControl
-    details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, -234 + topOffset)
+    details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, -206 + topOffset)
     if state.general and uiVisible then details:Show(); details.fieldLabel:Show()
     else details:Hide(); details.fieldLabel:Hide(); details.panel:Hide() end
     local layoutY = (state.general and -266 or -206) + topOffset

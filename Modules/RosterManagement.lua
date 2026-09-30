@@ -443,7 +443,7 @@ end
 local function OnRowLeave()
     this.hover:Hide()
     if this.displayedMember and this.controller and not this.controller.isSelected(this.displayedMember) then
-        this:SetBackdropColor(0, 0, 0, 0)
+        if this.memberBackground then MOS.UI.Components.SetRowColor(this, this.memberBackground, 1) end
         this:SetBackdropBorderColor(0, 0, 0, 0)
     end
 end
@@ -635,13 +635,7 @@ function RosterManagement.ApplyMemberColors(row, visibleIndex)
     local settings = MuklaOfficerSuiteDB or {}
     local background = settings.rosterBackgroundColor or defaultBackground
     local hover = settings.rosterHoverColor or defaultHover
-    local amount = math.mod(visibleIndex, 2) == 0 and math.max(0, math.min(100, tonumber(settings.rosterOddLightness) or 5)) / 100 or 0
-    local color = row.memberBackground
-    if not color then color = {}; row.memberBackground = color end
-    color[1] = background[1] + (1 - background[1]) * amount
-    color[2] = background[2] + (1 - background[2]) * amount
-    color[3] = background[3] + (1 - background[3]) * amount
-    MOS.UI.Components.SetRowColor(row, color, 1)
+    MOS.UI.Components.SetAlternatingRowColor(row, background, visibleIndex, settings.rosterOddLightness)
     row.hover:SetTexture(hover[1], hover[2], hover[3], 1)
     row.selection:SetTexture(hover[1], hover[2], hover[3], 1)
 end

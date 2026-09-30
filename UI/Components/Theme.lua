@@ -166,3 +166,13 @@ function UI.SetButtonEnabled(button, enabled)
     if enabled then button:Enable() else button:Disable() end
     UI.SetButtonTextColor(button, enabled and UI.TextColors.white or UI.TextColors.gray)
 end
+
+function UI.SetAlternatingRowColor(row, background, index, percentage)
+    local amount = math.mod(index or 1, 2) == 0 and math.max(0, math.min(100, tonumber(percentage) or 5)) / 100 or 0
+    local color = row.memberBackground
+    if not color then color = {}; row.memberBackground = color end
+    color[1] = background[1] + (1 - background[1]) * amount
+    color[2] = background[2] + (1 - background[2]) * amount
+    color[3] = background[3] + (1 - background[3]) * amount
+    UI.SetRowColor(row, color, 1)
+end

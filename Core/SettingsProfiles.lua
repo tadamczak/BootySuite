@@ -7,6 +7,7 @@ local keys = {
     "rosterHideSectionHeader", "raidHideSectionHeader",
     "rosterShowClass", "rosterShowLevel", "rosterShowZone", "rosterShowRank", "rosterShowPublicNote", "rosterShowOfficerNote", "rosterShowLastOnline", "rosterShowClassFilter", "rosterShowRankFilter", "rosterShowSearch", "rosterShowOffline", "rosterShowColumnHeaders",
     "hideHeaderBar", "hideMinimapIcon", "hideStatusVersionBar", "hideHeaderLogo", "hideHeaderName", "suppressLoginMessage", "lootMasterOpacity", "lmAutoLoot", "lmAutoLootMode", "lmAutoLootRarities", "lmAutoLootExceptions", "lmAutoLootPresets", "outOfFocusOpacity", "chatActionLogs",
+    "raidGroupOddLightness", "raidListOddLightness",
     "rosterBackgroundColor", "rosterTextColor", "rosterHoverColor", "rosterOddLightness",
     "playerDetailsStyle", "raidClassColors", "rosterClassColors", "rosterLiveTrackingEnabled", "raidLiveTrackingEnabled", "showOfflineMembers", "menuStyle", "useIconTabs", "uiSkin",
     "raidGroupColumns", "raidGroupShowClass", "raidGroupShowLevel", "raidGroupShowHeader", "raidGroupShowLootMaster", "raidGroupShowRoleIcon",

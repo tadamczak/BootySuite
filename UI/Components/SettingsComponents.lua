@@ -287,9 +287,8 @@ function Settings.CreateSavedCheckbox(parent, name, x, y, text, settingKey, tool
 end
 
 function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback, binding)
-    local label = MOS.UI.Components.CreateLabel(parent, name .. "Label", "OVERLAY", "GameFontDisableSmall")
+    local label = MOS.UI.Components.CreateComponentLabel(parent, name .. "Label", "white")
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    MOS.UI.Components.ApplyTextSizeDelta(label, parent)
     label:SetText(labelText)
     local field = MOS.UI.Components.CreateEditField(name, parent, "InputBoxTemplate")
     MOS.UI.Components.ApplyTextSizeDelta(field, parent)
@@ -307,9 +306,18 @@ function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKe
         binding.ensure()
         local value = math.max(0, math.min(100, tonumber(owner:GetText()) or owner.fallback))
         binding.set(owner.settingKey, value)
-        owner:SetText(value)
+        owner.mosSettingText = true; owner:SetText(value); owner.mosSettingText = nil
         if owner.onChanged then owner.onChanged(owner.settingKey) end
     end
+    field:SetScript("OnTextChanged", function()
+        if this.mosSettingText or not this.mosEditing then return end
+        local value = tonumber(this:GetText())
+        if not value then return end
+        value = math.max(0, math.min(100, value))
+        if binding.get(this.settingKey) == value then return end
+        binding.set(this.settingKey, value)
+        if this.onChanged then this.onChanged(this.settingKey) end
+    end)
     field:SetScript("OnEditFocusLost", function() this:CommitValue(); this.mosEditing = nil end)
     return label, field
 end
