@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.70 - 2026-09-30
+
+- Restore header font size when widening the window; fix tool menu labels and fit all options to the longest caption.
+- Show tool option gold outlines only on hover; scale gold icons with button text and center captions vertically.
+- Keep raid view selector captions white and icons gold in both selected and unselected states.
+
 ## 0.5.0-dev.69 - 2026-09-30
 
 - Scale raid column headers together and release hidden scrollbar space in list/group views.
