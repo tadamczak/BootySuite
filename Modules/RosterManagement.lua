@@ -174,6 +174,7 @@ function RosterManagement.CreateFilterView(page)
 
     page.modeButton = MOS.UI.Components.CreateControl(nil, page.tablePanel or page)
     page.modeButton:SetWidth(22); page.modeButton:SetHeight(22)
+    -- Spellbook artwork has transparent right padding; align its visible edge with the scrollbar arrows.
     page.modeButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -102)
     page.modeButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
     page.modeButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
@@ -987,8 +988,8 @@ function RosterManagement.LayoutSummary(page, summary)
     summary:SetWidth(math.max(1, width - (page.summaryWrap and 12 or page.modeButton.label:GetStringWidth() + page.modeButton:GetWidth() + 22)))
     page.modeButton:ClearAllPoints()
     if page.renderedRowsHeight then
-        page.modeButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -6, (page.rowsHeaderY or 0) - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24) - page.renderedRowsHeight - 6 - (page.summaryWrap and 22 or 0))
-    else page.modeButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -6, 6) end
+        page.modeButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -2, (page.rowsHeaderY or 0) - (MuklaOfficerSuiteDB.rosterShowColumnHeaders == false and 2 or 24) - page.renderedRowsHeight - 6 - (page.summaryWrap and 22 or 0))
+    else page.modeButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 6) end
 end
 
 function RosterManagement.SetReady(controller, ready)
@@ -1119,6 +1120,10 @@ function RosterManagement.UpdateSectionHeader(page)
 end
 
 function RosterManagement.LayoutChrome(page, controls, motdText)
+    local tabs = MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs"
+    local leftOutset = 1.5 + (tabs and (MOS.UI.Components.IsClassicSkin() and 3 or 8) or 0)
+    if page.tablePanel then MOS.UI.Components.JoinSurfaceEdges(page.tablePanel, true, true, leftOutset, 4.5) end
+    if page.actionsPanel then MOS.UI.Components.JoinSurfaceEdges(page.actionsPanel, true, false, leftOutset, 4.5) end
     local width = page:GetWidth()
     local headerShift = RosterManagement.UpdateSectionHeader(page)
     controls.footer.guild:SetText("Guild Message Of The Day:")
