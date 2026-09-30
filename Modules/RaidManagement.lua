@@ -46,6 +46,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", -3, -48); view.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 3, -48); view.classicToolbar:SetHeight(42)
     view.classicToolbar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }); view.classicToolbar:SetBackdropColor(0, 0, 0, 0); view.classicToolbar:SetBackdropBorderColor(0, 0, 0, 0)
     MOS.UI.Components.RegisterSkinnedSurface(view.classicToolbar, "title", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }); view.classicToolbar:Hide()
+    MOS.UI.Components.JoinSurfaceEdges(view.classicToolbar, true, true)
     view.classicToolbar:SetFrameLevel(page:GetFrameLevel())
     view.classicSummary = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     view.classicSummary:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -31); view.classicSummary:SetWidth(245); view.classicSummary:SetHeight(14); view.classicSummary:SetJustifyH("LEFT"); view.classicSummary:Hide()
@@ -391,13 +392,14 @@ function RaidManagement.CreateActionControls(page)
     controls.resetLoot.mosClassicReserveIconSpace = true
     MOS.UI.Components.SetClassicButtonIcon(controls.resetLoot, "reset")
     controls.resetLoot:SetPoint("TOPRIGHT", page, "TOPRIGHT", -326, -42); controls.resetLoot:Hide()
-    controls.resetLoot:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_LOOT") end)
+    controls.resetLoot:SetScript("OnClick", function() RaidManagement.resetLootDialog:Open("Reset all recorded raid loot?", StaticPopupDialogs.MUKLA_OFFICER_SUITE_RESET_LOOT.OnAccept) end)
     controls.live = MOS.UI.Components.CreateButton(page, nil, "Start Live Tracking", 118, 22)
     controls.live:SetPoint("TOPRIGHT", page, "TOPRIGHT", -416, -42); controls.live:Hide()
     return controls
 end
 
 function RaidManagement.RegisterResetLootDialog(options)
+    RaidManagement.resetLootDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteResetLootDialog", "Reset Loot", "Reset Loot")
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_RESET_LOOT"] = {
         text = "Reset all recorded raid loot?", button1 = "Reset loot", button2 = "Cancel",
         OnAccept = function()
@@ -914,6 +916,7 @@ function RaidManagement.MountChrome(page, chrome, actions)
         quit = actions.quit,
         lootRules = actions.lootRules,
         sendLootRules = actions.sendLootRules,
+        reycoin = actions.reycoin,
         import = actions.import,
         shareSr = actions.shareSr,
         resetLoot = actions.resetLoot,
@@ -1182,7 +1185,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
     for index = 1, 3 do
         local card = cards[index]
         if card.docked then
-            local minimumContent = page.mosContentPanel and page.mosContentPanel.mosMinimumWidth or 190
+            local minimumContent = 339 -- minimum dashboard content without sidebar; dock width stays stable
             local width = math.max(1, math.min(minimumContent / 2, (PageSpan(page) - 4 - 2 * (dockCount - 1)) / dockCount))
             card:ClearAllPoints(); card:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 2 + dockIndex * (width + 2), 2)
             card:SetWidth(width); card:SetHeight(30)
@@ -2327,14 +2330,14 @@ function RaidManagement.LayoutActions(page)
         for index = 1, table.getn(topActions) do
             local button, width = topActions[index][1], topActions[index][2]
             local sizedWidth = math.floor(width * scale)
-            button:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(button, sizedWidth, math.floor(26 * math.max(0.85, scale)), scale)
+            button:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(button, sizedWidth, 26, scale)
             button:SetPoint("TOPRIGHT", page, "TOPRIGHT", right, -9 - actionOffset)
             right = right - sizedWidth - 8
         end
-        MOS.UI.Components.SizeClassicButton(page.classicSaved, math.floor(108 * scale), math.floor(26 * math.max(0.85, scale)), scale)
-        MOS.UI.Components.SizeClassicButton(page.classicIssues, math.floor(96 * scale), math.floor(26 * math.max(0.85, scale)), scale)
-        page.classicSaved:ClearAllPoints(); page.classicSaved:SetPoint("LEFT", page.classicMeta, "RIGHT", 8, 0); page.classicSaved:SetPoint("TOP", page, "TOP", 0, -9)
-        page.classicIssues:ClearAllPoints(); page.classicIssues:SetPoint("LEFT", page.classicSaved, "RIGHT", 8, 0); page.classicIssues:SetPoint("TOP", page, "TOP", 0, -9)
+        MOS.UI.Components.SizeClassicButton(page.classicSaved, math.floor(108 * scale), 26, scale)
+        MOS.UI.Components.SizeClassicButton(page.classicIssues, math.floor(96 * scale), 26, scale)
+        page.classicSaved:ClearAllPoints(); page.classicSaved:SetPoint("LEFT", page.classicMeta, "RIGHT", 8, 0)
+        page.classicIssues:ClearAllPoints(); page.classicIssues:SetPoint("LEFT", page.classicSaved, "RIGHT", 8, 0)
         if actionOffset == 0 then
             page.exportButton:ClearAllPoints(); page.exportButton:SetPoint("LEFT", page.classicIssues:IsShown() and page.classicIssues or page.classicSaved, "RIGHT", 8, 0)
             page.quitButton:ClearAllPoints(); page.quitButton:SetPoint("LEFT", page.exportButton, "RIGHT", 8, 0)
@@ -2357,29 +2360,29 @@ function RaidManagement.LayoutActions(page)
                 end
             end
         end
-        page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", -3, -48 - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 3, -48 - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
+        page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", 3, -48 - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", -3, -48 - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
         page.classicListButton:ClearAllPoints(); page.classicListButton:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -57 - actionOffset)
         page.classicGroupButton:ClearAllPoints(); page.classicGroupButton:SetPoint("LEFT", page.classicListButton, "RIGHT", 8, 0)
         page.classicTwoButton:ClearAllPoints(); page.classicTwoButton:SetPoint("LEFT", page.classicGroupButton, "RIGHT", 8, 0)
         page.classicFourButton:ClearAllPoints(); page.classicFourButton:SetPoint("LEFT", page.classicTwoButton, "RIGHT", 8, 0)
         local selectorScale = math.min(1, math.max(1, PageSpan(page) - 32) / 344)
         if page.raidView == "groups" then
-            MOS.UI.Components.SizeClassicButton(page.classicListButton, 90 * selectorScale, 24, selectorScale)
-            MOS.UI.Components.SizeClassicButton(page.classicGroupButton, 100 * selectorScale, 24, selectorScale)
-            MOS.UI.Components.SizeClassicButton(page.classicTwoButton, 78 * selectorScale, 24, selectorScale)
-            MOS.UI.Components.SizeClassicButton(page.classicFourButton, 76 * selectorScale, 24, selectorScale)
+            MOS.UI.Components.SizeClassicButton(page.classicListButton, 90 * selectorScale, 26, selectorScale)
+            MOS.UI.Components.SizeClassicButton(page.classicGroupButton, 100 * selectorScale, 26, selectorScale)
+            MOS.UI.Components.SizeClassicButton(page.classicTwoButton, 78 * selectorScale, 26, selectorScale)
+            MOS.UI.Components.SizeClassicButton(page.classicFourButton, 76 * selectorScale, 26, selectorScale)
         else
-            MOS.UI.Components.SizeClassicButton(page.classicListButton, 90, 24, 1)
-            MOS.UI.Components.SizeClassicButton(page.classicGroupButton, 100, 24, 1)
+            MOS.UI.Components.SizeClassicButton(page.classicListButton, 90, 26, 1)
+            MOS.UI.Components.SizeClassicButton(page.classicGroupButton, 100, 26, 1)
         end
         local pageWidth = PageSpan(page)
         local groupToolsScale = page.raidView == "groups" and toolbarOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 394) / 296)) or 1
-        page.lootMasterToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * groupToolsScale), 24, groupToolsScale); page.lootMasterToolsButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -57 - actionOffset - toolbarOffset)
-        page.raidLeaderToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * groupToolsScale), 24, groupToolsScale); page.raidLeaderToolsButton:SetPoint("RIGHT", page.lootMasterToolsButton, "LEFT", -8, 0)
+        page.lootMasterToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * groupToolsScale), 26, groupToolsScale); page.lootMasterToolsButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -57 - actionOffset - toolbarOffset)
+        page.raidLeaderToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * groupToolsScale), 26, groupToolsScale); page.raidLeaderToolsButton:SetPoint("RIGHT", page.lootMasterToolsButton, "LEFT", -8, 0)
         if toolbarOffset > 0 then
             local toolScale = math.min(1, math.max(1, pageWidth - 16) / 296)
-            MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * toolScale), 24, toolScale)
-            MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * toolScale), 24, toolScale)
+            MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(146 * toolScale), 26, toolScale)
+            MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(150 * toolScale), 26, toolScale)
             page.raidLeaderToolsButton:ClearAllPoints(); page.raidLeaderToolsButton:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -57 - actionOffset - toolbarOffset)
             page.lootMasterToolsButton:ClearAllPoints(); page.lootMasterToolsButton:SetPoint("LEFT", page.raidLeaderToolsButton, "RIGHT", 8, 0)
         end
@@ -2882,7 +2885,7 @@ function RaidManagement.CreateLootMasterController(options)
         controller.title = title; controller.configButton = config; controller.reycoinButton = reycoin
         local controls = options.page.refreshControls
         BuildMenu(sr, {"Import SR", "Share SR Link"}, {controls.import, controls.shareSr})
-        BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules, controls.reycoin})
+        BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules})
         controller.srButton = sr; controller.rulesButton = rules
         grip = UI.CreateResizeGrip(window)
         grip:SetFrameLevel(window:GetFrameLevel() + 250)
@@ -3075,7 +3078,7 @@ function RaidManagement.AttachActionHandlers(options)
         options.startTestRaid(); options.beginRaidSession(); options.setHistoricalLoaded(false); options.setScanReady(true); options.refresh()
     end)
     local saveDialog = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteSaveRaidSessionDialog", UIParent)
-    saveDialog:SetWidth(390); saveDialog:SetHeight(205); saveDialog:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
+    saveDialog:SetWidth(280); saveDialog:SetHeight(176); saveDialog:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
     saveDialog:SetFrameStrata("FULLSCREEN_DIALOG"); saveDialog:SetFrameLevel(245); saveDialog:EnableMouse(true)
     saveDialog:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
     saveDialog:SetBackdropColor(0.03, 0.025, 0.02, 1)
@@ -3089,9 +3092,10 @@ function RaidManagement.AttachActionHandlers(options)
         checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 3, 0); checkbox.label:SetText(label)
         return checkbox
     end
-    saveDialog.statistics = CreateSaveCheckbox("Save raid statistics", -52)
-    saveDialog.attendance = CreateSaveCheckbox("Save attendance", -82)
-    saveDialog.csr = CreateSaveCheckbox("Save CSR", -112)
+    MOS.UI.Components.Window.StyleProjectDialog(saveDialog)
+    saveDialog.statistics = CreateSaveCheckbox("Save raid statistics", -42)
+    saveDialog.attendance = CreateSaveCheckbox("Save attendance", -70)
+    saveDialog.csr = CreateSaveCheckbox("Save CSR", -98)
     local function SyncAttendanceOption()
         if saveDialog.statistics:GetChecked() then
             saveDialog.attendance:Enable(); saveDialog.attendance.label:SetTextColor(1, 1, 1)
@@ -3101,9 +3105,9 @@ function RaidManagement.AttachActionHandlers(options)
     end
     saveDialog.statistics:SetScript("OnClick", SyncAttendanceOption)
     saveDialog.cancel = MOS.UI.Components.CreateButton(saveDialog, nil, "Cancel", 90, 24)
-    saveDialog.cancel:SetPoint("BOTTOMLEFT", saveDialog, "BOTTOMLEFT", 72, 18)
+    saveDialog.cancel:SetPoint("BOTTOMLEFT", saveDialog, "BOTTOMLEFT", 12, 12)
     saveDialog.save = MOS.UI.Components.CreateButton(saveDialog, nil, "Save Session", 112, 24)
-    saveDialog.save:SetPoint("BOTTOMRIGHT", saveDialog, "BOTTOMRIGHT", -72, 18)
+    saveDialog.save:SetPoint("BOTTOMRIGHT", saveDialog, "BOTTOMRIGHT", -12, 12)
     saveDialog.cancel:SetScript("OnClick", function() saveDialog:Hide() end)
     saveDialog.save:SetScript("OnClick", function()
         local saveStatistics = saveDialog.statistics:GetChecked() and true or false
@@ -3128,7 +3132,9 @@ function RaidManagement.AttachActionHandlers(options)
         OnAccept = function() options.quitRaidSession(); RaidManagement.ResetIssueAttention(options.page); options.refresh() end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    controls.quit:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_QUIT_RAID_SESSION") end)
+    local quitDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteQuitRaidDialog", "Quit Raid", "Quit")
+    options.page.quitDialog = quitDialog
+    controls.quit:SetScript("OnClick", function() quitDialog:Open("Quit the current raid session without saving?", StaticPopupDialogs.MUKLA_OFFICER_SUITE_QUIT_RAID_SESSION.OnAccept) end)
 
     local sessionPrompt = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteRaidSessionPrompt", UIParent)
     sessionPrompt:SetWidth(390); sessionPrompt:SetHeight(150); sessionPrompt:SetPoint("CENTER", UIParent, "CENTER", 0, 80)

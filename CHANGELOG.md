@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.79 - 2026-09-30
+
+- Fix missing Reycoin menu action and stable minimized warning widths; align raid buttons and settings resets.
+- Replace raid toolbar border with inset separators and unify import, save, reset and quit dialog styling.
+
 ## 0.5.0-dev.78 - 2026-09-30
 
 - Update raid tool selection borders and view selector colors; remove redundant Group View Columns setting.

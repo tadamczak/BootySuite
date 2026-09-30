@@ -248,3 +248,5 @@ Raid warnings overlay the content without shrinking lists or groups. They can be
 Raid column headers shrink together when space is tight and grow back as space returns. List and Group views reserve scrollbar space only when scrolling is needed. **Raid Leader Tools** and **Loot Master Tools** open action dropdowns; options share the width of the longest caption and show a gold outline on hover. Click an option or outside the menu to close it.
 
 The Loot Master Tools menu can open a standalone, movable Reycoin list. Opening Loot Master Mode closes the standalone list; its toolbar can reopen the same list beside the LM window.
+
+Raid import, save, reset and quit dialogs can be moved by dragging their background. Reset and Quit require confirmation, with the confirming action on the right.

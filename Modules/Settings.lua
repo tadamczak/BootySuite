@@ -39,6 +39,13 @@ local function OnSettingsMouseWheel()
     if scrollBar then scrollBar:SetValue(value) else this:SetVerticalScroll(value) end
 end
 
+local function AlignReset(heading)
+    if not heading.resetButton then return end
+    local _, owner, _, _, y = heading:GetPoint(1)
+    heading.resetButton:ClearAllPoints()
+    heading.resetButton:SetPoint("TOPRIGHT", owner, "TOPRIGHT", -12, y)
+end
+
 function Settings.LayoutGeneral(page)
     if not page.generalGrid then return 0 end
     local state = page.uiSectionState
@@ -80,6 +87,7 @@ function Settings.LayoutGeneral(page)
         extent = bottom + 12
     end
     page.uiContent:SetHeight(extent)
+    AlignReset(page.uiLayoutDisplayHeading)
     return extent - 224
 end
 
@@ -89,6 +97,7 @@ function Settings.LayoutRaidGrid(page, offset)
     local width = math.max(1, page:GetWidth() - 64)
     local function At(control, x, y)
         control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
+        AlignReset(control)
     end
     local y = -318 + offset
     At(shell.groupHeading, 48, y); y = y - 38
@@ -291,7 +300,7 @@ function Settings.CreateRaidViewShell(page)
     groupHeading:SetTextColor(1, 0.82, 0)
     local groupReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
     MOS.UI.Components.SizeClassicButton(groupReset, 100, 18, 0.8)
-    groupReset:SetPoint("LEFT", groupHeading, "RIGHT", 12, 0)
+    groupHeading.resetButton = groupReset; AlignReset(groupHeading)
     local groupDivider = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
     groupDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 48, -336)
     groupDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -336)
@@ -309,7 +318,7 @@ function Settings.CreateRaidViewShell(page)
     listHeading:SetTextColor(1, 0.82, 0)
     local listReset = MOS.UI.Components.CreateButton(page, nil, "Reset to default", 112, 20)
     MOS.UI.Components.SizeClassicButton(listReset, 100, 18, 0.8)
-    listReset:SetPoint("LEFT", listHeading, "RIGHT", 12, 0)
+    listHeading.resetButton = listReset; AlignReset(listHeading)
 
     return { panel = panel, groupHeading = groupHeading, groupReset = groupReset, groupDivider = groupDivider, listDivider = listDivider, listHeading = listHeading, listReset = listReset }
 end
@@ -452,7 +461,7 @@ function Settings.CreateSectionReset(page, heading, groups, refresh)
     end
     local button = MOS.UI.Components.CreateButton(heading:GetParent(), nil, "Reset to default", 100, 18)
     MOS.UI.Components.SizeClassicButton(button, 100, 18, 0.8)
-    button:SetPoint("LEFT", heading, "RIGHT", 12, 0)
+    heading.resetButton = button; AlignReset(heading)
     button.ResetConfirmed = function()
         MOS.Core.SettingsProfiles.ResetDefaults(keys)
         if page.RefreshAllSettings then page.RefreshAllSettings() end
@@ -761,7 +770,7 @@ function Settings.ApplyRaidAccordions(controls)
         Settings.ApplyUIVisibility(controls)
     end
     if controls.page.globalReset then
-        controls.page.globalReset:ClearAllPoints(); controls.page.globalReset:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", 0, -controls.page.settingsContentHeight - 8)
+        controls.page.globalReset:ClearAllPoints(); controls.page.globalReset:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", -12, -controls.page.settingsContentHeight - 8)
         controls.page.settingsContentHeight = controls.page.settingsContentHeight + 40
     end
     Settings.UpdateScroll(controls.page.settingsViewport, controls.page, controls.page.settingsContentHeight)
@@ -869,6 +878,7 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local colorY = layoutY - 68 - gridHeight
     page.rosterDisplayHeading:ClearAllPoints(); page.rosterDisplayHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 56, layoutY - 28)
     page.rosterColorHeading:ClearAllPoints(); page.rosterColorHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 56, colorY)
+    AlignReset(page.rosterDisplayHeading); AlignReset(page.rosterColorHeading)
     page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, colorY - 26)
     local colorHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterColors, 56, colorY - 54, page:GetWidth() - 68, 28)
     page.rosterLightnessLabel:ClearAllPoints(); page.rosterLightnessLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, colorY - 54 - colorHeight)
