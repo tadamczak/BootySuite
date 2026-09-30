@@ -6,8 +6,8 @@ local Skins = UI.Skins
 local CLASSIC_ROOT = "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\"
 
 Skins.definitions = {
-    default = { id = "default", name = "Default" },
-    classic = { id = "classic", name = "Classic", root = CLASSIC_ROOT },
+    default = { id = "default", name = "Classic WIP" },
+    classic = { id = "classic", name = "Default", root = CLASSIC_ROOT },
 }
 Skins.controls = Skins.controls or {}
 Skins.surfaces = Skins.surfaces or {}

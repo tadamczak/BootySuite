@@ -480,11 +480,6 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
     row:SetBackdropColor(0, 0, 0, 0)
     row:SetBackdropBorderColor(0, 0, 0, 0)
     MOS.UI.Components.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
-    if math.mod(index, 2) == 0 then
-        local stripe = MOS.UI.Components.CreateTexture(row, nil, "BACKGROUND")
-        stripe:SetAllPoints(row)
-        stripe:SetTexture(1, 0.78, 0.25, 0.075)
-    end
     row.selection = MOS.UI.Components.CreateTexture(row, nil, "ARTWORK")
     row.selection:SetAllPoints(row)
     row.selection:SetTexture(0.65, 0.65, 0.65, 0.16)
@@ -620,15 +615,35 @@ function RosterManagement.LayoutColumns(page, rows, columns, tableWidth, headerY
     end
 end
 
-local function SetRowTextColor(row, shade)
-    row.officer:SetTextColor(shade, shade, shade)
-    row.name:SetTextColor(shade, shade, shade)
-    row.level:SetTextColor(shade, shade, shade)
-    row.class:SetTextColor(shade, shade, shade)
-    row.rank:SetTextColor(shade, shade, shade)
-    row.notes:SetTextColor(shade, shade, shade)
-    row.zone:SetTextColor(shade, shade, shade)
-    row.lastOnline:SetTextColor(shade, shade, shade)
+local function SetRowTextColor(row, shade, color)
+    local r, g, b = color[1] * shade, color[2] * shade, color[3] * shade
+    row.officer:SetTextColor(r, g, b)
+    row.name:SetTextColor(r, g, b)
+    row.level:SetTextColor(r, g, b)
+    row.class:SetTextColor(r, g, b)
+    row.rank:SetTextColor(r, g, b)
+    row.notes:SetTextColor(r, g, b)
+    row.zone:SetTextColor(r, g, b)
+    row.lastOnline:SetTextColor(r, g, b)
+end
+
+local defaultBackground = {0.025, 0.025, 0.025}
+local defaultText = {1, 1, 1}
+local defaultHover = {0.13, 0.13, 0.13}
+
+function RosterManagement.ApplyMemberColors(row, visibleIndex)
+    local settings = MuklaOfficerSuiteDB or {}
+    local background = settings.rosterBackgroundColor or defaultBackground
+    local hover = settings.rosterHoverColor or defaultHover
+    local amount = math.mod(visibleIndex, 2) == 0 and math.max(0, math.min(100, tonumber(settings.rosterOddLightness) or 5)) / 100 or 0
+    local color = row.memberBackground
+    if not color then color = {}; row.memberBackground = color end
+    color[1] = background[1] + (1 - background[1]) * amount
+    color[2] = background[2] + (1 - background[2]) * amount
+    color[3] = background[3] + (1 - background[3]) * amount
+    MOS.UI.Components.SetRowColor(row, color, 1)
+    row.hover:SetTexture(hover[1], hover[2], hover[3], 1)
+    row.selection:SetTexture(hover[1], hover[2], hover[3], 1)
 end
 
 function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHeight, lowestRankIndex, useClassColors)
@@ -644,7 +659,8 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
     row.displayedMember = member
     row.visibleIndex = visibleIndex
     local shade = member.online and 1 or 0.48
-    SetRowTextColor(row, shade)
+    SetRowTextColor(row, shade, MuklaOfficerSuiteDB.rosterTextColor or defaultText)
+    RosterManagement.ApplyMemberColors(row, visibleIndex)
     if useClassColors then
         local classKey = string.upper(member.classFile or member.class or "")
         local classColor = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or MOS.UI.Components.Theme.classColors[classKey]
@@ -656,7 +672,6 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
     row.expanded = member.name == selectedName and MuklaOfficerSuiteDB.playerDetailsStyle ~= "window"
     if row.expanded then
         row.selection:Show()
-        row:SetBackdropColor(0, 0, 0, 0)
         row:SetBackdropBorderColor(0, 0, 0, 0)
         row.actionPanel:Show()
         local expandedHeight = math.min(rowHeight + 208, row.availableHeight or (rowHeight + 208))
@@ -673,7 +688,6 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
         return expandedHeight
     end
     if member.name == selectedName then row.selection:Show() else row.selection:Hide() end
-    row:SetBackdropColor(0, 0, 0, 0)
     row:SetBackdropBorderColor(0, 0, 0, 0)
     row.actionPanel:Hide(); row.actionViewport:Hide()
     row:SetHeight(rowHeight)

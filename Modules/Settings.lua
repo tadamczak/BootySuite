@@ -9,7 +9,7 @@ local controls = MOS.UI.Components.Settings.CreateFactory({
 })
 
 local rosterLayoutOptions = {
-    { "Hide section header", "rosterHideSectionHeader" },
+    { "Show section header", "rosterHideSectionHeader" },
     { "Show class", "rosterShowClass" },
     { "Show lvl", "rosterShowLevel" },
     { "Show zone", "rosterShowZone" },
@@ -51,11 +51,7 @@ function Settings.LayoutGeneral(page)
     if state.general then page.skinControl:Show(); page.skinControl.fieldLabel:Show()
     else page.skinControl:Hide(); page.skinControl.fieldLabel:Hide(); page.skinControl.panel:Hide() end
     local height = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.generalGrid, 20, -94, page:GetWidth() - 56, 28)
-    local details = page.playerDetailsControl
-    details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, -94 - height)
-    if state.general then details:Show(); details.fieldLabel:Show()
-    else details:Hide(); details.fieldLabel:Hide(); details.panel:Hide() end
-    local headingY = state.general and (-94 - height - 40) or -66
+    local headingY = state.general and (-94 - height - 8) or -66
     page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
     local menu = page.menuStyleControl
     menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 28)
@@ -145,13 +141,14 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     end)
     local iconTabsCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteUseIconTabs", 330, -204, "Use Icon Tabs", "useIconTabs", nil, nil, onNavigationLayout)
     local _, detailsControl = MOS.UI.Components.CreateChoiceField({
-        parent = uiContent, x = 24, y = -122, label = "Player details style:", width = 110, height = 51,
+        parent = page, x = 56, y = -234, label = "Player details style:", width = 110, height = 51,
         initialText = "Collapsible", firstY = -7, step = 19,
         choices = { { text = "Collapsible", value = "collapsible" }, { text = "Window", value = "window" } },
         getValue = function() return MOS.Database.GetSetting("playerDetailsStyle") or "collapsible" end,
         onSelect = function(value) MOS.Database.SetSetting("playerDetailsStyle", value); RefreshRosterLayout() end,
     })
     page.playerDetailsControl = detailsControl
+    detailsControl:Hide(); detailsControl.fieldLabel:Hide()
     page.generalGrid = { minimapCheck, loginMessageCheck }
     page.layoutGrid = { page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3], page.chromeChecks[4], iconTabsCheck }
     page.uiLayoutHeading = layoutHeading
@@ -161,7 +158,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     page.RefreshGeneralSettings = function()
         MOS.Database.Ensure()
         detailsControl:SetText(MOS.Database.GetSetting("playerDetailsStyle") == "window" and "Window" or "Collapsible")
-        skinControl:SetText(MOS.UI.Components.IsClassicSkin() and "Classic" or "Default")
+        skinControl:SetText(MOS.UI.Components.IsClassicSkin() and "Default" or "Classic WIP")
         menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" and "Bottom Tab view" or "Button view")
         iconTabsCheck:SetChecked(MuklaOfficerSuiteDB.useIconTabs and 1 or nil)
         if MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" then iconTabsCheck:Show() else iconTabsCheck:Hide() end
@@ -192,11 +189,24 @@ function Settings.CreateSkinControl(parent, x, y)
     local _, button = MOS.UI.Components.CreateChoiceField({
         parent = parent, x = x, y = y, label = "Skin", width = 126, height = 51,
         initialText = "Default", firstY = -7, step = 19,
-        choices = { { text = "Default", value = "default" }, { text = "Classic", value = "classic" } },
+        choices = { { text = "Default", value = "classic" }, { text = "Classic WIP", value = "default" } },
         getValue = function() return MOS.UI.Components.IsClassicSkin() and "classic" or "default" end,
         onSelect = function(value) MOS.UI.Components.SetSkin(value, true) end,
     })
     return button
+end
+
+function Settings.CreateRosterAppearance(page)
+    local C = MOS.UI.Components
+    page.rosterDisplayHeading = C.CreateHeading(page, "", 3, "orange"); page.rosterDisplayHeading:SetText("Display")
+    page.rosterColorHeading = C.CreateHeading(page, "", 3, "orange"); page.rosterColorHeading:SetText("Member tile color:")
+    page.rosterColors = {
+        controls.CreateColor(page, 52, 0, "Background color", "rosterBackgroundColor", RefreshRosterLayout),
+        controls.CreateColor(page, 52, 0, "Main text color", "rosterTextColor", RefreshRosterLayout),
+        controls.CreateColor(page, 52, 0, "Hover color", "rosterHoverColor", RefreshRosterLayout),
+    }
+    page.rosterLightnessLabel, page.rosterLightnessField = controls.CreatePercentageField(page, "MuklaOfficerSuiteRosterLightness", "Odd record lightness (%)", 56, 0, "rosterOddLightness", 5)
+    page.rosterLightnessField.onChanged = RefreshRosterLayout
 end
 
 function Settings.CreatePrimarySections(page)
@@ -204,15 +214,17 @@ function Settings.CreatePrimarySections(page)
     rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150)
     rosterHeading:SetText("Roster")
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
-    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster is open. This may have a small performance impact in large guilds.", RosterTrackingChanged)
+    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster is open. This may have a small performance impact only while the Roster window is open, not while it is closed.", RosterTrackingChanged)
     page.rosterLayoutChecks = {}
     local index
     for index = 1, table.getn(rosterLayoutOptions) do
         local option = rosterLayoutOptions[index]
         page.rosterLayoutChecks[index] = Settings.CreateSavedCheckbox(page, nil, 52, -234, option[1], option[2], nil, nil, RefreshRosterLayout)
+        page.rosterLayoutChecks[index].invertSetting = option[2] == "rosterHideSectionHeader"
     end
     local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
-    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors")
+    page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors", nil, nil, RefreshRosterLayout)
+    Settings.CreateRosterAppearance(page)
     local raidHeading = MOS.UI.Components.CreateHeading(page, "", 3, "gold")
     raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -206)
     raidHeading:SetText("Raid")
@@ -392,7 +404,7 @@ function Settings.CreateRaidSettings(page, callbacks)
     local primarySections = Settings.CreatePrimarySections(page)
     page.primarySections = primarySections
     local general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -230)
-    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 52, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid is open. This may have a small performance impact during raids.", callbacks.trackingChanged)
+    local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 52, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid is open. This may have a small performance impact only while the Raid window is open, not while it is closed.", callbacks.trackingChanged)
     page.raidLiveTrackingCheck = liveTracking
     local layout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -280)
     local shell = Settings.CreateRaidViewShell(page)
@@ -433,8 +445,10 @@ function Settings.CreateRaidSettings(page, callbacks)
         page.raidLiveTrackingCheck:SetChecked(MuklaOfficerSuiteDB.raidLiveTrackingEnabled and 1 or nil)
         local index
         for index = 1, table.getn(page.rosterLayoutChecks or {}) do
-            local check = page.rosterLayoutChecks[index]; check:SetChecked(MuklaOfficerSuiteDB[check.settingKey] and 1 or nil)
+            local check = page.rosterLayoutChecks[index]; check:SetChecked((check.invertSetting and not MuklaOfficerSuiteDB[check.settingKey] or not check.invertSetting and MuklaOfficerSuiteDB[check.settingKey]) and 1 or nil)
         end
+        page.rosterLightnessField:SetText(MuklaOfficerSuiteDB.rosterOddLightness or 5)
+        for index = 1, table.getn(page.rosterColors) do local control = page.rosterColors[index]; local color = MOS.Database.GetSetting(control.settingKey); if color then control.swatch:SetTexture(color[1],color[2],color[3],1) end end
         if page.RefreshRaidViewSettings then page.RefreshRaidViewSettings() end
         Settings.SyncSavedControls(page.chatLogsCheck, page.raidAccordionControls.opacityField, page.raidAccordionControls.focusField)
         page.ApplyRaidLayoutAccordion()
@@ -475,7 +489,7 @@ function Settings.RefreshRaidViewControls(controls)
     local checkIndex
     for checkIndex = 1, table.getn(controls.checks) do
         local check = controls.checks[checkIndex]
-        check:SetChecked(MuklaOfficerSuiteDB[check.settingKey] and 1 or nil)
+        check:SetChecked((check.invertSetting and not MuklaOfficerSuiteDB[check.settingKey] or not check.invertSetting and MuklaOfficerSuiteDB[check.settingKey]) and 1 or nil)
     end
 
     controls.groupWidth:SetValue(MuklaOfficerSuiteDB.raidGroupTileWidth)
@@ -655,6 +669,9 @@ function Settings.ApplyUIVisibility(controls)
     Root(controls.general); Root(controls.layout); Root(controls.leader); Root(controls.loot)
     if not visible then
         page.rosterLiveTrackingCheck:Hide(); page.rosterClassColorsCheck:Hide()
+        page.playerDetailsControl:Hide(); page.playerDetailsControl.fieldLabel:Hide(); page.playerDetailsControl.panel:Hide()
+        page.rosterDisplayHeading:Hide(); page.rosterColorHeading:Hide(); page.rosterLightnessLabel:Hide(); page.rosterLightnessField:Hide()
+        for colorIndex = 1, table.getn(page.rosterColors) do page.rosterColors[colorIndex]:Hide() end
         local index
         for index = 1, table.getn(page.rosterLayoutChecks or {}) do page.rosterLayoutChecks[index]:Hide() end
         for index = 1, table.getn(controls.layoutControls) do controls.layoutControls[index]:Hide() end
@@ -710,7 +727,11 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
     if state.general and uiVisible then sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
-    local layoutY = (state.general and -234 or -206) + topOffset
+    local details = page.playerDetailsControl
+    details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, -234 + topOffset)
+    if state.general and uiVisible then details:Show(); details.fieldLabel:Show()
+    else details:Hide(); details.fieldLabel:Hide(); details.panel:Hide() end
+    local layoutY = (state.general and -266 or -206) + topOffset
     sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 36, layoutY)
     if state.layout and uiVisible then sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
@@ -726,14 +747,24 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     if page.rosterLayoutChecks then
         page.rosterGrid = page.rosterGrid or {}
         for index = table.getn(page.rosterGrid), 1, -1 do page.rosterGrid[index] = nil end
-        table.insert(page.rosterGrid, page.rosterClassColorsCheck)
         for index = 1, table.getn(page.rosterLayoutChecks) do
             local check = page.rosterLayoutChecks[index]
             if check.settingKey ~= "rosterShowOfficerNote" or page.canShowOfficerOption then table.insert(page.rosterGrid, check) end
         end
-        gridHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterGrid, 52, layoutY - 28, page:GetWidth() - 64, 26)
+        gridHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterGrid, 52, layoutY - 56, page:GetWidth() - 64, 26)
     end
-    local raidHeadingY = layoutY - (state.layout and (40 + gridHeight) or 38)
+    local colorY = layoutY - 68 - gridHeight
+    page.rosterDisplayHeading:ClearAllPoints(); page.rosterDisplayHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 56, layoutY - 28)
+    page.rosterColorHeading:ClearAllPoints(); page.rosterColorHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 56, colorY)
+    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, colorY - 26)
+    local colorHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterColors, 56, colorY - 54, page:GetWidth() - 68, 28)
+    page.rosterLightnessLabel:ClearAllPoints(); page.rosterLightnessLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, colorY - 54 - colorHeight)
+    if not page.rosterLightnessField.mosEditing then page.rosterLightnessField:SetText(MOS.Database.GetSetting("rosterOddLightness") or 5) end
+    local method = state.layout and uiVisible and "Show" or "Hide"
+    page.rosterDisplayHeading[method](page.rosterDisplayHeading); page.rosterColorHeading[method](page.rosterColorHeading)
+    page.rosterLightnessLabel[method](page.rosterLightnessLabel); page.rosterLightnessField[method](page.rosterLightnessField)
+    for index = 1, table.getn(page.rosterColors) do page.rosterColors[index][method](page.rosterColors[index]) end
+    local raidHeadingY = state.layout and (colorY - 90 - colorHeight) or layoutY - 38
     sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, raidHeadingY)
     raidControls.raidOffset = raidHeadingY - (-206)
     Settings.ApplyRaidAccordions(raidControls)
