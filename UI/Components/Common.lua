@@ -839,3 +839,17 @@ function UI.CreateGoldToolbarButton(parent, iconKey)
     UI.AttachGoldHoverBorder(button, 0.35, 0.35, 0.35, 1)
     return button
 end
+
+function UI.AttachPlaceholder(field, text)
+    local label = UI.CreateLabel(field, nil, "OVERLAY", "GameFontDisableSmall")
+    label:SetPoint("LEFT", field, "LEFT", 6, 0); label:SetText(text)
+    field.placeholder = label
+    local function Refresh()
+        if field.mosHasFocus or (field:GetText() or "") ~= "" then label:Hide() else label:Show() end
+    end
+    local changed, gained, lost = field:GetScript("OnTextChanged"), field:GetScript("OnEditFocusGained"), field:GetScript("OnEditFocusLost")
+    field:SetScript("OnTextChanged", function() if changed then changed() end; Refresh() end)
+    field:SetScript("OnEditFocusGained", function() field.mosHasFocus=true; if gained then gained() end; Refresh() end)
+    field:SetScript("OnEditFocusLost", function() field.mosHasFocus=false; if lost then lost() end; Refresh() end)
+    Refresh()
+end

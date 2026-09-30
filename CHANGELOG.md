@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.80 - 2026-09-30
+
+- Keep raid date in the top row and align LM resize grip margins.
+- Unify SR fix/info dialogs, add player padding/class colors and item-only tooltip targets.
+- Add Name/Item placeholders and optional item input to Reycoin list, with tighter header spacing and alternating rows.
+
 ## 0.5.0-dev.79 - 2026-09-30
 
 - Fix missing Reycoin menu action and stable minimized warning widths; align raid buttons and settings resets.

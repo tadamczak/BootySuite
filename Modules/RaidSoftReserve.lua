@@ -104,6 +104,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
         warning.text:SetTextColor(0.92, 0.91, 0.87)
     end)
     warning.dialog = MOS.UI.Components.CreateReadOnlyDialog(dialogName, dialogTitle, 560, 340, background)
+    MOS.UI.Components.Window.StyleProjectDialog(warning.dialog)
     warning.info = MOS.UI.Components.CreateButton(warning, nil, "INFO", 66, 20)
     warning.info:SetPoint("BOTTOMRIGHT", warning, "BOTTOMRIGHT", -8, 6); warning.info:SetFrameLevel(warning:GetFrameLevel() + 2)
     warning.info:SetScript("OnClick", function()
@@ -127,7 +128,8 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
         OnAccept = function() if clearUnmatched(page.listRenderer.getData()) then refresh() end end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    page.softReserveWarning.fix:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR") end)
+    local confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SRDialog", "Fix Soft Reserves", "Remove")
+    page.softReserveWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR; confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR:Open(spec.text, spec.OnAccept) end)
     page.missingSoftReserveWarning = CreateWarningCard(page, "MuklaOfficerSuiteMissingSoftReserveDetails", "Raid members without Soft Reserve", { 0.18, 0.08, 0.01 }, { 1, 0.55, 0.08 }, { 1, 0.72, 0.18 })
     page.missingSoftReserveWarning.onDismiss = refresh
     page.missingSoftReserveWarning.text:ClearAllPoints(); page.missingSoftReserveWarning.text:SetPoint("LEFT", page.missingSoftReserveWarning, "LEFT", 9, -5); page.missingSoftReserveWarning.text:SetPoint("RIGHT", page.missingSoftReserveWarning, "RIGHT", -84, -5)
@@ -160,13 +162,32 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
         end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    invalidWarning.fix:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SR") end)
+    local confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SRDialog", "Fix Soft Reserves", "Remove")
+    invalidWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_INVALID_SR; confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:Open(spec.text, spec.OnAccept) end)
     invalidWarning.ping:SetScript("OnClick", function()
         local names = MOS.Services.Raid.GetSoftReserveIssues(getAttendance(), page.getSoftReserveRules and page.getSoftReserveRules()).invalidNames
         if table.getn(names) == 0 then return end
         local sent = MOS.Services.Raid.SendRaidWarning("Members with invalid SR loot rights: " .. table.concat(names, ", "))
         if sent then MOS.Services.Raid.SendRaidWarning("Their invalid Soft Reserves will not be considered for loot and will be removed.") end
     end)
+end
+
+function RaidManagement.SoftReservePlayerLabel(name, attendance, reservation)
+    local member = reservation
+    local function Find(members)
+        for _, candidate in ipairs(members or {}) do
+            if string.lower(candidate.name or "") == string.lower(name or "") then return candidate end
+        end
+    end
+    member = Find(attendance and attendance.members) or member
+    if not member or not (member.classFile or member.class) then
+        local roster = MOS.Database and MOS.Database.GetRosterData and MOS.Database.GetRosterData()
+        member = Find(roster and roster.members) or member
+    end
+    local key = string.upper(member and (member.classFile or member.class) or "")
+    local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[key] or MOS.UI.Components.Theme.classColors[key]
+    if not color then return name or "" end
+    return string.format("|cff%02x%02x%02x%s|r", math.floor(color.r*255), math.floor(color.g*255), math.floor(color.b*255), name or "")
 end
 
 function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refresh)
@@ -179,6 +200,7 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     dialog:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 7, right = 7, top = 7, bottom = 7 } }); dialog:SetBackdropColor(0.018, 0.018, 0.016, 1)
     MOS.UI.Components.RegisterDialogSurface(dialog, "panel", { 0.018, 0.018, 0.016, 1 })
     dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -16); dialog.title:SetText("Fix Soft Reserve assignments")
+    MOS.UI.Components.Window.StyleProjectDialog(dialog)
     dialog.help = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.help:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -43); dialog.help:SetText("Drag an unassigned Soft Reserve from the right onto the correct raid member.")
     dialog.leftTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.leftTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -72); dialog.leftTitle:SetText("Raid members without SR")
     dialog.rightTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.rightTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 358, -72); dialog.rightTitle:SetText("Unassigned Soft Reserves")
@@ -194,6 +216,11 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     for rowIndex = 1, 12 do
         local left = MOS.UI.Components.CreateButton(dialog.leftPanel, nil, "", 312, 20); left:SetPoint("TOPLEFT", dialog.leftPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); left.label:SetJustifyH("LEFT")
         local right = MOS.UI.Components.CreateButton(dialog.rightPanel, nil, "", 312, 20); right:SetPoint("TOPLEFT", dialog.rightPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); right.label:SetJustifyH("LEFT"); right:RegisterForDrag("LeftButton")
+        MOS.UI.Components.SetButtonLabelInsets(left, 6, 6); MOS.UI.Components.SetButtonLabelInsets(right, 6, 6)
+        right.itemHit = MOS.UI.Components.CreateControl(nil, right)
+        right.itemHit:SetHeight(20); right.itemHit:RegisterForDrag("LeftButton")
+        right.itemHit:SetScript("OnEnter", ShowItemTooltip); right.itemHit:SetScript("OnLeave", HideItemTooltip)
+        right.itemHit:SetScript("OnClick", HandleItemClick)
         dialog.leftRows[rowIndex] = left; dialog.rightRows[rowIndex] = right
     end
     dialog.save = MOS.UI.Components.CreateButton(dialog, nil, "Save", 78, 22); dialog.save:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -100, 18)
@@ -220,9 +247,20 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
         local index
         for index = 1, 12 do
             local memberName = dialog.missing[dialog.leftOffset + index]; local left = dialog.leftRows[index]; left.memberName = memberName
-            if memberName then local assigned = dialog.assignments[memberName]; left.label:SetText(memberName .. (assigned and ("  <-  " .. assigned) or "")); left:Show() else left:Hide() end
+            if memberName then local assigned = dialog.assignments[memberName]; left.label:SetText(RaidManagement.SoftReservePlayerLabel(memberName, dialog.attendance) .. (assigned and ("  <-  " .. assigned) or "")); left:Show() else left:Hide() end
             local reservation = dialog.available[dialog.rightOffset + index]; local right = dialog.rightRows[index]; right.reservation = reservation
-            if reservation then right.itemId = reservation.itemIds and reservation.itemIds[1] or nil; right.labelPrefix = reservation.name .. "  -  "; right.label:SetText(right.labelPrefix .. (right.itemId and MOS.UI.Components.GetItemLabel(right.itemId) or "No item")); right:Show()
+            if reservation then
+                right.itemId = reservation.itemIds and reservation.itemIds[1] or nil
+                right.labelPrefix = RaidManagement.SoftReservePlayerLabel(reservation.name, dialog.attendance, reservation) .. "  -  "
+                right.label:SetText(right.labelPrefix)
+                local inset = math.min(260, right.label:GetStringWidth()) + 6
+                local itemText = right.itemId and MOS.UI.Components.GetItemLabel(right.itemId) or "No item"
+                right.label:SetText(itemText)
+                local itemWidth = math.min(306 - inset, right.label:GetStringWidth())
+                right.label:SetText(right.labelPrefix .. itemText)
+                right.itemHit.itemId = right.itemId
+                right.itemHit:ClearAllPoints(); right.itemHit:SetPoint("LEFT", right, "LEFT", inset, 0)
+                right.itemHit:SetWidth(math.max(1,itemWidth)); right.itemHit:Show(); right:Show()
             else right.itemId = nil; right.labelPrefix = nil; right:Hide() end
         end
     end
@@ -231,7 +269,7 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     for rowIndex = 1, 12 do
         local left = dialog.leftRows[rowIndex]; left:SetScript("OnClick", function() if this.memberName and dialog.assignments[this.memberName] then dialog.assignments[this.memberName] = nil; RefreshDialog() end end)
         local right = dialog.rightRows[rowIndex]
-        right:SetScript("OnEnter", ShowItemTooltip); right:SetScript("OnLeave", HideItemTooltip); right:SetScript("OnClick", HandleItemClick)
+        right:SetScript("OnEnter", nil); right:SetScript("OnLeave", HideItemTooltip)
         right:SetScript("OnDragStart", function() if this.reservation then dialog.dragged = this.reservation; dialog.ghost.text:SetText(this.label:GetText() or this.reservation.name); dialog.ghost:Show() end end)
         right:SetScript("OnDragStop", function()
             dialog.ghost:Hide(); if not dialog.dragged then return end
@@ -239,6 +277,13 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
             for targetIndex = 1, 12 do local target = dialog.leftRows[targetIndex]; if target.memberName and IsCursorOverFrame(target) then dialog.assignments[target.memberName] = dialog.dragged.name; break end end
             dialog.dragged = nil; RefreshDialog()
         end)
+    end
+    for _, row in ipairs(dialog.rightRows) do
+        local owner = row
+        for _, script in ipairs({"OnDragStart", "OnDragStop"}) do
+            local handler = owner:GetScript(script)
+            owner.itemHit:SetScript(script, function() local previous=this; this=owner; handler(); this=previous end)
+        end
     end
     dismiss:SetScript("OnClick", CloseDialog); dialog.close:SetScript("OnClick", CloseDialog)
     dialog.save:SetScript("OnClick", function() if applyAssignments(dialog.attendance, dialog.assignments) then CloseDialog(); refresh() end end)

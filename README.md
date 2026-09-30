@@ -250,3 +250,5 @@ Raid column headers shrink together when space is tight and grow back as space r
 The Loot Master Tools menu can open a standalone, movable Reycoin list. Opening Loot Master Mode closes the standalone list; its toolbar can reopen the same list beside the LM window.
 
 Raid import, save, reset and quit dialogs can be moved by dragging their background. Reset and Quit require confirmation, with the confirming action on the right.
+
+In Reycoin list, enter a player name and optionally an item, then choose Add. A name without an item creates a Manual entry.

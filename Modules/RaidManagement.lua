@@ -30,13 +30,15 @@ function RaidManagement.AttachReyCoinAdd(view, refresh)
     local function Submit()
         local name = string.gsub(view.reyCoinInput:GetText() or "", "^%s*(.-)%s*$", "%1")
         if name == "" then view.reyCoinFeedback:SetText("Enter a player name."); return end
-        if not MOS.Services.Raid.SetReyCoinUsage(name, nil, true) then
+        local item = view.reyCoinItem and string.gsub(view.reyCoinItem:GetText() or "", "^%s*(.-)%s*$", "%1") or ""
+        if not MOS.Services.Raid.SetReyCoinUsage(name, item ~= "" and item or nil, true) then
             view.reyCoinFeedback:SetText("Player not found in this raid."); return
         end
-        view.reyCoinFeedback:SetText(""); view.reyCoinInput:SetText(""); view.reyCoinInput:ClearFocus(); refresh()
+        view.reyCoinFeedback:SetText(""); view.reyCoinInput:SetText(""); view.reyCoinInput:ClearFocus(); if view.reyCoinItem then view.reyCoinItem:SetText(""); view.reyCoinItem:ClearFocus() end; refresh()
     end
     view.reyCoinAdd:SetScript("OnClick", Submit)
     view.reyCoinInput:SetScript("OnEnterPressed", Submit)
+    if view.reyCoinItem then view.reyCoinItem:SetScript("OnEnterPressed", Submit) end
 end
 
 function RaidManagement.CreateChrome(page, callbacks)
@@ -133,7 +135,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.reyCoinTitle:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
     view.reyCoinScroll = MOS.UI.Components.CreateScrollFrame(nil, view.reyCoinPanel)
     view.reyCoinScroll:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 6, -29)
-    view.reyCoinScroll:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -6, 37)
+    view.reyCoinScroll:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -6, 51)
     view.reyCoinCanvas = MOS.UI.Components.CreateContainer(nil, view.reyCoinScroll)
     view.reyCoinCanvas:SetWidth(130); view.reyCoinCanvas:SetHeight(1)
     view.reyCoinScroll:SetScrollChild(view.reyCoinCanvas)
@@ -186,6 +188,8 @@ function RaidManagement.CreateChrome(page, callbacks)
     end
     for index = 1, 40 do
         local row = MOS.UI.Components.CreateContainer(nil, view.reyCoinCanvas)
+        row.shade = MOS.UI.Components.CreateTexture(row, nil, "BACKGROUND"); row.shade:SetAllPoints(row)
+        row.shade:SetTexture(1,1,1, math.mod(index,2)==0 and 0.09 or 0)
         row:SetHeight(24); row:SetPoint("TOPLEFT", view.reyCoinCanvas, "TOPLEFT", 0, -(index - 1) * 25)
         row:SetPoint("RIGHT", view.reyCoinCanvas, "RIGHT", 0, 0)
         row.label = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
@@ -209,21 +213,29 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.reyCoinInput = MOS.UI.Components.CreateFramedEditBox(view.reyCoinPanel, nil, 68)
     view.reyCoinInput:SetHeight(22); view.reyCoinInput:ClearAllPoints(); view.reyCoinInput:SetPoint("BOTTOMLEFT", view.reyCoinPanel, "BOTTOMLEFT", 8, 8); view.reyCoinInput:SetAutoFocus(false)
     view.reyCoinInput:SetScript("OnEscapePressed", function() this:ClearFocus() end); view.reyCoinInput:SetScript("OnEnterPressed", function() this:ClearFocus() end)
+    view.reyCoinItem = MOS.UI.Components.CreateFramedEditBox(view.reyCoinPanel, nil, 68)
+    view.reyCoinItem:SetHeight(22); view.reyCoinItem:SetAutoFocus(false)
+    view.reyCoinItem:SetPoint("LEFT", view.reyCoinInput, "RIGHT", 4, 0)
+    view.reyCoinItem:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+    MOS.UI.Components.AttachPlaceholder(view.reyCoinInput, "Name")
+    MOS.UI.Components.AttachPlaceholder(view.reyCoinItem, "Item")
+    page.reyCoinItem = view.reyCoinItem
     view.reyCoinAdd = MOS.UI.Components.CreateButton(view.reyCoinPanel, nil, "Add", 40, 22)
     page.reyCoinInput = view.reyCoinInput; page.reyCoinAdd = view.reyCoinAdd
-    view.reyCoinAdd:SetPoint("LEFT", view.reyCoinInput, "RIGHT", 4, 0)
+    view.reyCoinAdd:SetPoint("LEFT", view.reyCoinItem, "RIGHT", 4, 0)
     view.reyCoinInput:SetFrameLevel(view.reyCoinPanel:GetFrameLevel() + 3); view.reyCoinAdd:SetFrameLevel(view.reyCoinPanel:GetFrameLevel() + 3)
     view.reyCoinFeedback = MOS.UI.Components.CreateComponentLabel(view.reyCoinPanel, "", "gold")
-    view.reyCoinFeedback:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 8, -27)
-    view.reyCoinFeedback:SetPoint("TOPRIGHT", view.reyCoinPanel, "TOPRIGHT", -8, -27)
+    view.reyCoinFeedback:SetPoint("BOTTOMLEFT", view.reyCoinPanel, "BOTTOMLEFT", 8, 33)
+    view.reyCoinFeedback:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -8, 33)
     view.reyCoinFeedback:SetHeight(16); view.reyCoinFeedback:SetJustifyH("LEFT")
     view.reyCoinScroll:ClearAllPoints()
-    view.reyCoinScroll:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 6, -47)
-    view.reyCoinScroll:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -6, 37)
+    view.reyCoinScroll:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 6, -29)
+    view.reyCoinScroll:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -6, 51)
     RaidManagement.AttachReyCoinAdd(view, RefreshReyCoinList)
     view.reyCoinPanel:SetScript("OnSizeChanged", function()
         view.reyCoinCanvas:SetWidth(math.max(1, view.reyCoinPanel:GetWidth() - 12))
-        view.reyCoinInput:SetWidth(math.max(40, view.reyCoinPanel:GetWidth() - 82))
+        local width = math.max(40, (view.reyCoinPanel:GetWidth() - 64) / 2)
+        view.reyCoinInput:SetWidth(width); view.reyCoinItem:SetWidth(width)
     end)
     view.reyCoinToggle = MOS.UI.Components.CreateButton(page, nil, "", 18, 18)
     MOS.UI.Components.SetClassicButtonCompact(view.reyCoinToggle, true)
@@ -2343,16 +2355,19 @@ function RaidManagement.LayoutActions(page)
             page.quitButton:ClearAllPoints(); page.quitButton:SetPoint("LEFT", page.exportButton, "RIGHT", 8, 0)
         end
         if actionOffset > 0 then
+            local titleSpace = math.max(40, PageSpan(page) - 134)
+            page.classicRaidName:SetWidth(math.min(120, titleSpace * 0.6))
+            page.classicMeta:SetWidth(math.max(1, titleSpace - page.classicRaidName:GetWidth() - 10))
             local left = 6
-            local secondRow = {page.classicSaved, page.classicIssues, page.exportButton, page.quitButton}
+            local secondRow = {page.classicIssues, page.exportButton, page.quitButton}
             local available = math.max(1, PageSpan(page) - 12)
-            local total = 108 + 118 + 72 + (page.classicIssues:IsShown() and 96 or 0)
-            local gaps = page.classicIssues:IsShown() and 24 or 16
+            local total = 118 + 72 + (page.classicIssues:IsShown() and 96 or 0)
+            local gaps = page.classicIssues:IsShown() and 16 or 8
             local rowScale = math.min(1, math.max(1, available - gaps) / total)
-            local widths = {108, 96, 118, 72}
-            for index = 1, 4 do
+            local widths = {96, 118, 72}
+            for index = 1, 3 do
                 local button = secondRow[index]
-                if index ~= 2 or button:IsShown() then
+                if index ~= 1 or button:IsShown() then
                     local width = math.floor(widths[index] * rowScale)
                     button:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(button, width, 26, rowScale)
                     button:SetPoint("TOPLEFT", page, "TOPLEFT", left, -9 - actionOffset)
@@ -2688,6 +2703,7 @@ function RaidManagement.CreateLootMasterController(options)
         row:SetFrameStrata("FULLSCREEN_DIALOG"); row:SetFrameLevel(303)
         row.remove:SetFrameStrata("FULLSCREEN_DIALOG"); row.remove:SetFrameLevel(304)
     end
+    if options.page.reyCoinItem then options.page.reyCoinItem:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinItem:SetFrameLevel(303) end
     options.page.reyCoinInput:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinInput:SetFrameLevel(303)
     options.page.reyCoinAdd:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinAdd:SetFrameLevel(303)
     controller.ReanchorPanels = function()
@@ -2717,7 +2733,7 @@ function RaidManagement.CreateLootMasterController(options)
         grip:SetScript("OnHide", function() panel:StopMovingOrSizing(); controller.ReanchorPanels() end)
     end
     SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 260, 260)
-    SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight")
+    SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight", 240, 120)
     local reyPanel = options.page.reyCoinPanel
     reyPanel:SetMovable(true); reyPanel:RegisterForDrag("LeftButton")
     reyPanel:SetScript("OnDragStart", function() if options.page.reyCoinSolo then reyPanel:StartMoving() end end)
@@ -2888,6 +2904,7 @@ function RaidManagement.CreateLootMasterController(options)
         BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules})
         controller.srButton = sr; controller.rulesButton = rules
         grip = UI.CreateResizeGrip(window)
+        grip:ClearAllPoints(); grip:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -6, 6)
         grip:SetFrameLevel(window:GetFrameLevel() + 250)
         controller.resizeGrip = grip
         grip:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
