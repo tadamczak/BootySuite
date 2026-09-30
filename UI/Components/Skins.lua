@@ -341,6 +341,7 @@ local function ApplySurface(entry)
             t[6]:Show(); t[6]:ClearAllPoints(); t[6]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0); t[6]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
         end
     end
+    if frame.mosRowColor then UI.SetRowColor(frame, frame.mosRowColor, frame.mosRowAlpha) end
     if frame.mosSurfaceBorderHidden then
         SetNineSliceShown(entry.classicSkin, false); frame:SetBackdropBorderColor(0,0,0,0)
     end
@@ -593,8 +594,19 @@ function UI.SizeClassicButton(button, width, height, fontScale)
     end
 end
 
+function UI.SetRowColor(row, color, alpha)
+    row.mosRowColor = color; row.mosRowAlpha = alpha
+    row:SetBackdropColor(color[1], color[2], color[3], alpha)
+    local entry = row.mosSurfaceEntry
+    if entry and entry.classicFill and Skins.current == "classic" then
+        entry.classicFill:SetTexture(color[1], color[2], color[3], alpha)
+    end
+    if row.mosClassicRowShade then row.mosClassicRowShade:Hide() end
+end
+
 function UI.SetClassicRowShade(row, even, hovered, selected)
     if not row then return end
+    if row.mosRowColor then UI.SetRowColor(row, row.mosRowColor, row.mosRowAlpha); return end
     if not row.mosClassicRowShade then
         row.mosClassicRowShade = row:CreateTexture(nil, "BORDER")
         row.mosClassicRowShade:SetAllPoints(row)

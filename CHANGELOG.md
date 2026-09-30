@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.54 - 2026-09-30
+
+- Restore narrow window geometry, configured raid colors and raid-name visibility.
+- Simplify Settings to one outer border with compact header spacing.
+- Replace the delete icon with the supplied gold artwork.
+
 ## 0.5.0-dev.53 - 2026-09-30
 
 - Close inactive tab seams and keep empty headers compact.

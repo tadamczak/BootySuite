@@ -318,6 +318,21 @@ function Dashboard.CreatePages(contentPanel, definitions)
     return pages
 end
 
+function Dashboard.RestoreGeometry(frame, settings)
+    local width, height = tonumber(settings.windowWidth), tonumber(settings.windowHeight)
+    if not width or width < 350 or not height or height < 380 then
+        width, height = 840, 540
+        settings.windowLeft = nil; settings.windowBottom = nil
+    end
+    width = math.max(350, math.min(1100, width)); height = math.max(380, math.min(760, height))
+    settings.windowWidth = width; settings.windowHeight = height
+    frame:SetScale(1); frame:SetMinResize(350, 380); frame:SetMaxResize(1100, 760)
+    frame:SetWidth(width); frame:SetHeight(height)
+    if tonumber(settings.windowLeft) and tonumber(settings.windowBottom) then
+        frame:ClearAllPoints(); frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", tonumber(settings.windowLeft), tonumber(settings.windowBottom))
+    end
+end
+
 function Dashboard.BindWindow(view, options)
     local frame, grip = view.frame, view.resizeGrip
     grip.UpdateLayout = function()
