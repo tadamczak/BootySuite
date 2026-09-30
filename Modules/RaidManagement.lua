@@ -457,7 +457,7 @@ end
 local function OnRaidRowLeave()
     if this.displayedMember and this.controller and not this.controller.isSelected(this.displayedMember) then
         local color = MuklaOfficerSuiteDB.raidListBackgroundColor
-        MOS.UI.Components.SetRowColor(this, color, math.mod(this.visibleIndex or 1, 2) == 0 and 0.98 or 0.82)
+        MOS.UI.Components.SetAlternatingRowColor(this, color, this.visibleIndex, MuklaOfficerSuiteDB.raidListOddLightness)
     end
 end
 
@@ -1646,7 +1646,7 @@ end
 function RaidManagement.CollapseListRow(row, visibleIndex, lootMasterMode, rowStep)
     row:SetHeight(lootMasterMode and 20 or (tonumber(MuklaOfficerSuiteDB.raidListRowHeight) or 20))
     local background = MuklaOfficerSuiteDB.raidListBackgroundColor
-    MOS.UI.Components.SetRowColor(row, background, math.mod(visibleIndex, 2) == 0 and 0.98 or 0.82)
+    MOS.UI.Components.SetAlternatingRowColor(row, background, visibleIndex, MuklaOfficerSuiteDB.raidListOddLightness)
     row:SetBackdropBorderColor(0, 0, 0, 0)
     MOS.UI.Components.SetClassicRowShade(row, math.mod(visibleIndex, 2) == 0, false)
     row.lootPanel:Hide()
@@ -1761,7 +1761,7 @@ local function OnGroupSlotDragStop()
     local sourceIndex, target = MOS.dragRaidIndex, MOS.raidDropSlot
     MOS.dragRaidIndex = nil; MOS.raidDropSlot = nil; MOS.raidDragStarted = nil
     page.dragGhost:SetScript("OnUpdate", nil); page.dragGhost:Hide()
-    local background = MuklaOfficerSuiteDB.raidGroupBackgroundColor; MOS.UI.Components.SetRowColor(this, background, 0.98)
+    local background = MuklaOfficerSuiteDB.raidGroupBackgroundColor; MOS.UI.Components.SetAlternatingRowColor(this, background, this.slotIndex, MuklaOfficerSuiteDB.raidGroupOddLightness)
     if not target then return end
     local sourceName = this.displayedMember and this.displayedMember.name
     local targetName = target.displayedMember and target.displayedMember.name
@@ -1787,7 +1787,7 @@ end
 
 local function OnGroupSlotLeave()
     if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, false) end
-    local color = MuklaOfficerSuiteDB.raidGroupBackgroundColor; MOS.UI.Components.SetRowColor(this, color, 0.98)
+    local color = MuklaOfficerSuiteDB.raidGroupBackgroundColor; MOS.UI.Components.SetAlternatingRowColor(this, color, this.slotIndex, MuklaOfficerSuiteDB.raidGroupOddLightness)
     if MOS.raidDropSlot == this then MOS.raidDropSlot = nil end
 end
 
@@ -1844,7 +1844,7 @@ function RaidManagement.RefreshGroupView(page)
             local slot = page.groupSlots[groupIndex][slotIndex]
             SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
             slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x + 4, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(columnWidth - 8); slot:SetHeight(slotHeight)
-            MOS.UI.Components.SetRowColor(slot, backgroundColor, 0.98); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
+            MOS.UI.Components.SetAlternatingRowColor(slot, backgroundColor, slotIndex, MuklaOfficerSuiteDB.raidGroupOddLightness); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
             MOS.UI.Components.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
             slot.empty:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55); slot.offline:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55)
             slot.raidIndex = nil; slot.hasMember = nil; slot.displayedMember.name = nil; slot.displayedMember.raidRank = nil

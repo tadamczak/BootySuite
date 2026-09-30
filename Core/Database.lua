@@ -29,6 +29,8 @@ function Database.Ensure()
     if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 30 end
     if MuklaOfficerSuiteDB.chatActionLogs == nil then MuklaOfficerSuiteDB.chatActionLogs = false end
     if MuklaOfficerSuiteDB.raidClassColors == nil then MuklaOfficerSuiteDB.raidClassColors = true end
+    MuklaOfficerSuiteDB.raidGroupOddLightness = math.max(0,math.min(100,tonumber(MuklaOfficerSuiteDB.raidGroupOddLightness) or 5))
+    MuklaOfficerSuiteDB.raidListOddLightness = math.max(0,math.min(100,tonumber(MuklaOfficerSuiteDB.raidListOddLightness) or 5))
     if type(MuklaOfficerSuiteDB.rosterBackgroundColor) ~= "table" then MuklaOfficerSuiteDB.rosterBackgroundColor = {0.025,0.025,0.025} end
     if type(MuklaOfficerSuiteDB.rosterTextColor) ~= "table" then MuklaOfficerSuiteDB.rosterTextColor = {1,1,1} end
     if type(MuklaOfficerSuiteDB.rosterHoverColor) ~= "table" then MuklaOfficerSuiteDB.rosterHoverColor = {0.13,0.13,0.13} end
@@ -297,6 +299,7 @@ end
 
 function Database.ResetRaidGroupView()
     Database.Ensure()
+    MuklaOfficerSuiteDB.raidGroupOddLightness = 5
     MuklaOfficerSuiteDB.raidGroupColumns = 2
     MuklaOfficerSuiteDB.raidGroupShowClass = true
     MuklaOfficerSuiteDB.raidGroupShowLevel = true
@@ -319,6 +322,7 @@ end
 
 function Database.ResetRaidListView()
     Database.Ensure()
+    MuklaOfficerSuiteDB.raidListOddLightness = 5
     MuklaOfficerSuiteDB.raidListShowName = true
     MuklaOfficerSuiteDB.raidListShowLevel = true
     MuklaOfficerSuiteDB.raidListShowStatus = true
