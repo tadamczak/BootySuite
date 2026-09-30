@@ -80,10 +80,15 @@ end
 
 function UI.SetProjectButtonOutline(button, visible)
     if not button.mosProjectOutline then
-        button.mosProjectOutline = CreateNineSlice(button, ClassicPath("Buttons\\dark-selected.tga"), 128, 32, 6, "OVERLAY")
+        local border = UI.CreateContainer(nil, button)
+        border:SetAllPoints(button); border:EnableMouse(false)
+        border:SetFrameLevel(button:GetFrameLevel() + 1)
+        UI.ApplyDropdownChoiceSurface(border)
+        border:SetBackdropColor(0, 0, 0, 0)
+        border:SetBackdropBorderColor(1, 0.78, 0.2, 1)
+        button.mosProjectOutline = border
     end
-    SetNineSliceShown(button.mosProjectOutline, visible)
-    button.mosProjectOutline.textures[5]:Hide()
+    if visible then button.mosProjectOutline:Show() else button.mosProjectOutline:Hide() end
 end
 
 function UI.ApplyDropdownChoiceSurface(button)

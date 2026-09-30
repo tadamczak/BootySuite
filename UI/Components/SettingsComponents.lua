@@ -332,7 +332,13 @@ end
 
 function Settings.UpdateScroll(viewport, page, pageHeight)
     if not viewport or not page then return end
-    local width = math.max(1, viewport:GetWidth())
+    local width = viewport:GetWidth()
+    if viewport.mosWidthOwner and viewport.mosWidthInset then
+        width = viewport.mosWidthOwner:GetWidth() - viewport.mosWidthInset
+    elseif viewport.GetLeft and viewport:GetLeft() and viewport:GetRight() then
+        width = viewport:GetRight() - viewport:GetLeft()
+    end
+    width = math.max(1, width)
     local changed = math.abs(page:GetWidth() - width) > 0.5
     page:SetWidth(width)
     if changed and page.ReflowSettings and not page.mosReflowing then

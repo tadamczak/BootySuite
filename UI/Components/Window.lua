@@ -95,6 +95,8 @@ function Window.Create(options)
     window.Toggle = function() if window:IsVisible() then CloseWindow() else window.Open() end end
     window.AttachView = function(settingsView)
         view = settingsView
+        view.viewport.mosWidthOwner = window
+        view.viewport.mosWidthInset = options.viewportWidthInset
         options.attach(view, content)
         view.viewport:Hide()
     end

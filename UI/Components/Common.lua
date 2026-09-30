@@ -323,6 +323,11 @@ function UI.CreateTextPrompt(name, titleText, labelText, acceptText, onAccept, m
     return frame
 end
 
+local deleteIconTint = {0.72, 0.70, 0.8}
+function UI.CreateDeleteButton(parent, name, size, iconInset)
+    return UI.CreateIconButton(parent, name, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", size, iconInset, deleteIconTint)
+end
+
 function UI.CreateIconButton(parent, name, texturePath, size, iconInset, tint)
     local button = CreateFrame("Button", name, parent)
     button:SetWidth(size or 20); button:SetHeight(size or 20)
