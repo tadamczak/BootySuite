@@ -10,21 +10,34 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame:SetMovable(true); frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", function() this:StartMoving() end); frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
     if frame.SetClampedToScreen then frame:SetClampedToScreen(true) end
-    frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 7, right = 7, top = 7, bottom = 7 } })
-    MOS.UI.Components.RegisterDialogSurface(frame, "panel")
-    frame:SetBackdropColor(0.018, 0.018, 0.016, 1)
-    frame.title = MOS.UI.Components.CreateHeading(frame, "", 1, "gold"); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -17); frame.title:SetText("Set Loot Rules")
-    frame.close = MOS.UI.Components.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
+    local UI = MOS.UI.Components
+    UI.Window.ApplyProjectSurface(frame)
+    UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(frame) end)
+    frame.title = UI.CreateHeading(frame, "Set Loot Rules", 3, "gold")
+    local titleFont, _, titleFlags = frame.title:GetFont(); frame.title:SetFont(titleFont, 13, titleFlags)
+    frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -9)
+    frame.close = UI.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
+    frame.minimize = UI.CreateWindowButton(frame, nil, "minimize"); frame.minimize:SetPoint("RIGHT", frame.close, "LEFT", -4, 0)
+    local content = UI.CreateContainer(nil, frame); content:SetAllPoints(frame); frame.content = content
+    frame.divider = UI.CreateContainer(nil, content)
+    frame.divider:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -30); frame.divider:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -30); frame.divider:SetHeight(4)
+    UI.RegisterSkinnedSurface(frame.divider, "content", nil, {0,0,0,0}, {0.68,0.54,0.27,1})
+    UI.JoinSurfaceEdges(frame.divider, true, false)
+    frame.minimize:SetScript("OnClick", function()
+        frame.minimized = not frame.minimized
+        if frame.minimized then content:Hide(); frame:SetHeight(32); UI.SetWindowButtonAction(frame.minimize, "maximize")
+        else frame:SetHeight(560); content:Show(); UI.SetWindowButtonAction(frame.minimize, "minimize") end
+    end)
     local headers = { { "Guild rank", 22, 190 }, { "SR", 224, 66 }, { "Reycoin", 310, 92 }, { "CSR", 422, 66 }, { "Highly Contested Items", 508, 158 } }
     local index
     for index = 1, table.getn(headers) do
-        local header = MOS.UI.Components.CreateColumnLabel(frame, "", "orange"); header:SetPoint("TOPLEFT", frame, "TOPLEFT", headers[index][2], -58); header:SetWidth(headers[index][3]); header:SetJustifyH(index == 1 and "LEFT" or "CENTER"); header:SetText(headers[index][1])
+        local header = MOS.UI.Components.CreateColumnLabel(content, "", "orange"); header:SetPoint("TOPLEFT", frame, "TOPLEFT", headers[index][2], -58); header:SetWidth(headers[index][3]); header:SetJustifyH(index == 1 and "LEFT" or "CENTER"); header:SetText(headers[index][1])
     end
     frame.rows = {}; frame.working = {}
     local keys = { "sr", "reyCoin", "csr", "highlyContested" }
     local checkX = { 257, 356, 455, 587 }
     for index = 1, 10 do
-        local row = MOS.UI.Components.CreateContainer(nil, frame); row:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -78 - ((index - 1) * 27)); row:SetWidth(654); row:SetHeight(24)
+        local row = MOS.UI.Components.CreateContainer(nil, content); row:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -78 - ((index - 1) * 27)); row:SetWidth(654); row:SetHeight(24)
         row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" }); row:SetBackdropColor(0.05, 0.05, 0.045, math.mod(index, 2) == 0 and 0.92 or 0.72)
         row.rank = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall"); row.rank:SetPoint("LEFT", row, "LEFT", 5, 0); row.rank:SetWidth(190); row.rank:SetJustifyH("LEFT")
         row.checks = {}
@@ -36,11 +49,11 @@ function RaidManagement.CreateLootRulesDialog(options)
         end
         frame.rows[index] = row
     end
-    frame.empty = MOS.UI.Components.CreateLabel(frame, nil, "OVERLAY", "GameFontDisable"); frame.empty:SetPoint("CENTER", frame, "CENTER", 0, 0); frame.empty:SetText("Refresh the guild roster before setting loot rules."); frame.empty:Hide()
-    frame.rulesTitle = MOS.UI.Components.CreateColumnLabel(frame, "", "orange"); frame.rulesTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -250); frame.rulesTitle:SetText("Loot rights reference")
-    frame.rulesPanel = MOS.UI.Components.CreateContainer(nil, frame); frame.rulesPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -270); frame.rulesPanel:SetWidth(656); frame.rulesPanel:SetHeight(232)
-    frame.rulesPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 4, right = 4, top = 4, bottom = 4 } }); frame.rulesPanel:SetBackdropColor(0.025, 0.025, 0.022, 1)
-    MOS.UI.Components.RegisterDialogSurface(frame.rulesPanel, "panel")
+    frame.empty = MOS.UI.Components.CreateLabel(content, nil, "OVERLAY", "GameFontDisable"); frame.empty:SetPoint("CENTER", frame, "CENTER", 0, 0); frame.empty:SetText("Refresh the guild roster before setting loot rules."); frame.empty:Hide()
+    frame.rulesTitle = MOS.UI.Components.CreateColumnLabel(content, "", "orange"); frame.rulesTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -250); frame.rulesTitle:SetText("Loot rights reference")
+    frame.rulesPanel = MOS.UI.Components.CreateContainer(nil, content); frame.rulesPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -270); frame.rulesPanel:SetWidth(656); frame.rulesPanel:SetHeight(232)
+    UI.RegisterSkinnedSurface(frame.rulesPanel, "content", nil, {0,0,0,0}, {0.68,0.54,0.27,1})
+    UI.JoinSurfaceEdges(frame.rulesPanel, true, true)
     frame.rulesScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteLootRulesReferenceScroll", frame.rulesPanel, "UIPanelScrollFrameTemplate")
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteLootRulesReferenceScrollScrollBar"))
     frame.rulesScroll:SetPoint("TOPLEFT", frame.rulesPanel, "TOPLEFT", 8, -7); frame.rulesScroll:SetPoint("BOTTOMRIGHT", frame.rulesPanel, "BOTTOMRIGHT", -28, 7)
@@ -48,11 +61,11 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame.rulesText = MOS.UI.Components.CreateLabel(frame.rulesCanvas, nil, "OVERLAY", "GameFontHighlightSmall"); frame.rulesText:SetPoint("TOPLEFT", frame.rulesCanvas, "TOPLEFT", 0, 0); frame.rulesText:SetWidth(596); frame.rulesText:SetJustifyH("LEFT"); frame.rulesText:SetJustifyV("TOP")
     frame.rulesText:SetText("MACAQUE\nLoot rights: none. Lower raid priority than other ranks and may not be selected for the raid.\n\nGUEST\nStarts with Macaque rights and may earn Baboon or Chimp rights under the same requirements as guild members. Silverback rights are unavailable.\n\nALT\nAn alt requested by the raid leader receives the main character's loot rights. A voluntary alt has no loot rights and receives loot after mains. Rights may change with progression and guild needs.\n\nBABOON\nLoot rights: SR excluding Highly Contested Items, plus Reycoin.\n\nCHIMP\nLoot rights: SR plus Reycoin.\n\nSILVERBACK\nLoot rights: CSR, SR and Reycoin. Gains +10 CSR after each unsuccessful SR.")
     frame.rulesCanvas:SetHeight(math.max(280, frame.rulesText:GetStringHeight() + 8))
-    frame.contestedItems = MOS.UI.Components.CreateButton(frame, nil, "Set Highly Contested Items", 154, 22)
+    frame.contestedItems = MOS.UI.Components.CreateButton(content, nil, "Set Highly Contested Items", 154, 22)
     frame.contestedItems:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 18)
     frame.contestedItems:SetScript("OnClick", function() options.openHighlyContestedItems() end)
-    frame.save = MOS.UI.Components.CreateButton(frame, nil, "Save", 78, 22); frame.save:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -100, 18)
-    frame.cancel = MOS.UI.Components.CreateButton(frame, nil, "Cancel", 78, 22); frame.cancel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 18)
+    frame.save = MOS.UI.Components.CreateButton(content, nil, "Save", 78, 22); frame.save:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -100, 18)
+    frame.cancel = MOS.UI.Components.CreateButton(content, nil, "Cancel", 78, 22); frame.cancel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 18)
     local function Close() frame:Hide() end
     frame.Close = Close
     frame.close:SetScript("OnClick", Close); frame.cancel:SetScript("OnClick", Close)
@@ -62,6 +75,7 @@ function RaidManagement.CreateLootRulesDialog(options)
         options.printMessage(options.isTestRaid and options.isTestRaid() and "Loot rules saved for this Test Raid session." or "Loot rules saved.")
     end)
     frame.Open = function(self)
+        self.minimized = false; self:SetHeight(560); content:Show(); UI.SetWindowButtonAction(self.minimize, "minimize")
         local ranks = {
             { index = "silverback", name = "Silverback" }, { index = "chimp", name = "Chimp" }, { index = "baboon", name = "Baboon" },
             { index = "alt", name = "Alt" }, { index = "guest", name = "Guest" }, { index = "macaque", name = "Macaque" },

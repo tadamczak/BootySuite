@@ -26,6 +26,19 @@ function RaidManagement.UpdateIssueAttention(button, issues)
     MOS.UI.Components.SetAttentionPulse(button, count > 0 and (newIssue or button.mosAttentionPending))
 end
 
+function RaidManagement.AttachReyCoinAdd(view, refresh)
+    local function Submit()
+        local name = string.gsub(view.reyCoinInput:GetText() or "", "^%s*(.-)%s*$", "%1")
+        if name == "" then view.reyCoinFeedback:SetText("Enter a player name."); return end
+        if not MOS.Services.Raid.SetReyCoinUsage(name, nil, true) then
+            view.reyCoinFeedback:SetText("Player not found in this raid."); return
+        end
+        view.reyCoinFeedback:SetText(""); view.reyCoinInput:SetText(""); view.reyCoinInput:ClearFocus(); refresh()
+    end
+    view.reyCoinAdd:SetScript("OnClick", Submit)
+    view.reyCoinInput:SetScript("OnEnterPressed", Submit)
+end
+
 function RaidManagement.CreateChrome(page, callbacks)
     local view = {}
     view.classicToolbar = MOS.UI.Components.CreateContainer(nil, page)
@@ -77,7 +90,11 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.lmConfigPanel:Hide()
     view.lmConfigTitle = MOS.UI.Components.CreateLabel(view.lmConfigPanel, nil, "OVERLAY", "GameFontNormalSmall")
     view.lmConfigTitle:SetPoint("TOPLEFT", view.lmConfigPanel, "TOPLEFT", 8, -8)
-    view.lmConfigTitle:SetText("LM config")
+    view.lmConfigTitle:SetText("Loot Master Config")
+    view.lmConfigClose = MOS.UI.Components.CreateWindowButton(view.lmConfigPanel, nil, "close")
+    view.lmConfigClose:SetPoint("TOPRIGHT", view.lmConfigPanel, "TOPRIGHT", -6, -6)
+    view.lmConfigClose:SetScript("OnClick", function() page.lmConfigOpen = false; view.lmConfigPanel:Hide() end)
+    page.lmConfigClose = view.lmConfigClose
     view.lmConfigTitle:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
     RaidManagement.CreateAutoLootControls(page, view)
     view.lmConfigToggle = MOS.UI.Components.CreateButton(page, nil, "", 18, 18)
@@ -194,10 +211,14 @@ function RaidManagement.CreateChrome(page, callbacks)
     page.reyCoinInput = view.reyCoinInput; page.reyCoinAdd = view.reyCoinAdd
     view.reyCoinAdd:SetPoint("LEFT", view.reyCoinInput, "RIGHT", 4, 0)
     view.reyCoinInput:SetFrameLevel(view.reyCoinPanel:GetFrameLevel() + 3); view.reyCoinAdd:SetFrameLevel(view.reyCoinPanel:GetFrameLevel() + 3)
-    view.reyCoinAdd:SetScript("OnClick", function()
-        local name = string.gsub(view.reyCoinInput:GetText() or "", "^%s*(.-)%s*$", "%1")
-        if MOS.Services.Raid.SetReyCoinUsage(name, nil, true) then view.reyCoinInput:SetText(""); RefreshReyCoinList() end
-    end)
+    view.reyCoinFeedback = MOS.UI.Components.CreateComponentLabel(view.reyCoinPanel, "", "gold")
+    view.reyCoinFeedback:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 8, -27)
+    view.reyCoinFeedback:SetPoint("TOPRIGHT", view.reyCoinPanel, "TOPRIGHT", -8, -27)
+    view.reyCoinFeedback:SetHeight(16); view.reyCoinFeedback:SetJustifyH("LEFT")
+    view.reyCoinScroll:ClearAllPoints()
+    view.reyCoinScroll:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 6, -47)
+    view.reyCoinScroll:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -6, 37)
+    RaidManagement.AttachReyCoinAdd(view, RefreshReyCoinList)
     view.reyCoinPanel:SetScript("OnSizeChanged", function()
         view.reyCoinCanvas:SetWidth(math.max(1, view.reyCoinPanel:GetWidth() - 12))
         view.reyCoinInput:SetWidth(math.max(40, view.reyCoinPanel:GetWidth() - 82))
@@ -422,7 +443,7 @@ local function OnListViewportScroll()
 end
 
 local function PageSpan(page)
-    if page.detachedLootMaster then return math.max(1, page:GetParent():GetWidth() - 8), math.max(1, page:GetParent():GetHeight() - 8) end
+    if page.detachedLootMaster then return math.max(1, page:GetParent():GetWidth() - 8), math.max(1, page:GetParent():GetHeight() - 28) end
     local left, right = page:GetLeft(), page:GetRight()
     local bottom, top = page:GetBottom(), page:GetTop()
     return left and right and (right - left) or page:GetWidth(),
@@ -2625,7 +2646,7 @@ end
 function RaidManagement.CreateLootMasterController(options)
     local UI = MOS.UI.Components
     local window = UI.CreateContainer("MuklaOfficerSuiteLootMasterMode", UIParent)
-    window:SetFrameStrata("DIALOG"); window:SetFrameLevel(100)
+    window:SetFrameStrata("FULLSCREEN_DIALOG"); window:SetFrameLevel(100)
     window:SetWidth(400); window:SetHeight(210); window:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     window:SetMovable(true); window:SetResizable(true); window:EnableMouse(true); window:RegisterForDrag("LeftButton")
     if window.SetClampedToScreen then window:SetClampedToScreen(true) end
@@ -2643,21 +2664,22 @@ function RaidManagement.CreateLootMasterController(options)
     options.page.lmConfigPanel:SetFrameStrata("FULLSCREEN_DIALOG")
     options.page.lmConfigPanel:SetFrameLevel(300)
     options.page.lmAutoLoot:SetFrameLevel(301)
+    if options.page.lmConfigClose then options.page.lmConfigClose:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.lmConfigClose:SetFrameLevel(305) end
     options.page.reyCoinPanel:SetParent(UIParent)
     options.page.reyCoinPanel:ClearAllPoints()
     options.page.reyCoinPanel:SetPoint("TOPLEFT", options.page.lmConfigPanel, "TOPLEFT", 0, 0)
     options.page.reyCoinPanel:SetFrameStrata("FULLSCREEN_DIALOG")
     options.page.reyCoinPanel:SetFrameLevel(300)
-    options.page.reyCoinScroll:SetFrameLevel(301)
-    options.page.reyCoinCanvas:SetFrameLevel(302)
+    options.page.reyCoinScroll:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinScroll:SetFrameLevel(301)
+    options.page.reyCoinCanvas:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinCanvas:SetFrameLevel(302)
     local reyCoinRowIndex
     for reyCoinRowIndex = 1, table.getn(options.page.reyCoinRows) do
         local row = options.page.reyCoinRows[reyCoinRowIndex]
-        row:SetFrameLevel(303)
-        row.remove:SetFrameLevel(304)
+        row:SetFrameStrata("FULLSCREEN_DIALOG"); row:SetFrameLevel(303)
+        row.remove:SetFrameStrata("FULLSCREEN_DIALOG"); row.remove:SetFrameLevel(304)
     end
-    options.page.reyCoinInput:SetFrameLevel(303)
-    options.page.reyCoinAdd:SetFrameLevel(303)
+    options.page.reyCoinInput:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinInput:SetFrameLevel(303)
+    options.page.reyCoinAdd:SetFrameStrata("FULLSCREEN_DIALOG"); options.page.reyCoinAdd:SetFrameLevel(303)
     local function SetupSidePanelResize(panel, widthKey, heightKey, minimumWidth, minimumHeight)
         minimumWidth = minimumWidth or 150; minimumHeight = minimumHeight or 90
         local settings = options.getSettings()
@@ -2771,7 +2793,7 @@ function RaidManagement.CreateLootMasterController(options)
         if compact then return end
         compact = UI.CreateContainer(nil, window); compact.detachedLootMaster = true
         compact.mosLootScrollPrefix = "MuklaOfficerSuiteDetachedLootScroll"
-        compact:SetPoint("TOPLEFT", window, "TOPLEFT", 4, -4); compact:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -4, 4)
+        compact:SetPoint("TOPLEFT", window, "TOPLEFT", 4, -4); compact:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -4, 24)
         controller.page = compact
         local source = options.page.rowController
         local rowController = {
