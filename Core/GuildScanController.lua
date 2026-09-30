@@ -73,6 +73,7 @@ function GuildScanController.Request(controller, mode)
 end
 
 function GuildScanController.RequestShared(controller, origin)
+    if controller.mode then return false end
     controller.origin = origin
     if GuildScanController.Request(controller, "shared") then return true end
     controller.origin = nil

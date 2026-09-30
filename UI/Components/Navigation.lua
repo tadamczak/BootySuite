@@ -127,7 +127,7 @@ function Navigation.Create(options)
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
                 button.navigationBottom = bottomTabs
-                button.navigationEdgeInset = bottomTabs and 2 or not bottomTabs and not options.get("hideHeaderBar") and options.get("hideHeaderLogo") and options.get("hideHeaderName") and 3 or 4
+                button.navigationEdgeInset = bottomTabs and 0 or not bottomTabs and not options.get("hideHeaderBar") and options.get("hideHeaderLogo") and options.get("hideHeaderName") and 1 or 2
                 button.navigationMode = "tabs"
                 button.navigationContent = not bottomTabs and not options.get("hideHeaderBar") and not (options.get("hideHeaderLogo") and options.get("hideHeaderName")) and options.contentPanel.mosHeaderAnchor or options.contentPanel
                 button.navigationX = 6 + ((index - 1) * width)
