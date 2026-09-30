@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.65 - 2026-09-30
+
+- Close the bottom-tab seam with a shared gold edge above content and beneath the active tab.
+
 ## 0.5.0-dev.64 - 2026-09-30
 
 - Restore the top-tab content separator, use full tab width and lower inactive bottom tabs by one pixel.

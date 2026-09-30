@@ -49,6 +49,28 @@ function Dashboard.SetTabBody(view, protruding, topInset)
     view.tabsProtruding = protruding
 end
 
+-- Own the exposed one-pixel seam above inactive bottom tabs. The native
+-- window backdrop sits below content; it cannot close this foreground gap.
+function Dashboard.SetBottomTabSeam(view, shown)
+    local seam = view.bottomTabSeam
+    if shown then
+        if not seam then
+            seam = MOS.UI.Components.CreateContainer(nil, view.frame)
+            seam:EnableMouse(false)
+            seam:SetPoint("BOTTOMLEFT", view.contentPanel, "BOTTOMLEFT", 0, -1)
+            seam:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 0, -1)
+            seam:SetHeight(1)
+            local edge = seam:CreateTexture(nil, "OVERLAY")
+            edge:SetAllPoints(seam); edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+            edge:SetVertexColor(0.68, 0.54, 0.27, 1)
+            view.bottomTabSeam = seam
+        end
+        seam:SetFrameStrata(view.frame:GetFrameStrata())
+        seam:SetFrameLevel(view.frame:GetFrameLevel() + 19)
+        seam:Show()
+    elseif seam then seam:Hide() end
+end
+
 function Dashboard.PlaceWindowControls(view, inContent)
     local controls = view.windowControls
     controls:ClearAllPoints()
@@ -113,6 +135,7 @@ function Dashboard.ApplyChrome(view, get)
         MOS.UI.Components.SetSurfaceHorizontalBorders(view.frame.mosStatusBar, true, false, true)
     end
     Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()), hiddenHeader and get("menuStyle") == "tabs" and 24 or 0)
+    Dashboard.SetBottomTabSeam(view, get("menuStyle") == "bottomTabs")
     if view.frame.mosStatusBar then SetChromeVisible(view.frame.mosStatusBar, footer) end
     SetChromeVisible(view.versionText, footer)
     SetChromeVisible(view.resizeGrip.texture, footer)
@@ -392,6 +415,7 @@ function Dashboard.BindWindow(view, options)
             Dashboard.SetTabBody(view, false)
             view.titleBar:Show(); Dashboard.PlaceWindowControls(view, false)
             view.minimized = true
+            Dashboard.SetBottomTabSeam(view, false)
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end
             frame:SetMinResize(250, 40); frame:SetMaxResize(250, 40); frame:SetWidth(250); frame:SetHeight(40)
