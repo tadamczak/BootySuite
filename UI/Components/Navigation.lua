@@ -119,7 +119,7 @@ function Navigation.Create(options)
             options.sidebar:Hide(); options.toggleButton:Hide()
             local margin = options.get("hideHeaderBar") and 1 or (MOS.UI.Components.IsClassicSkin() and 4 or 9)
             local bottom = options.get("hideStatusVersionBar") and margin or (MOS.UI.Components.IsClassicSkin() and 4 or 9) + 22
-            options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", 0, bottomTabs and bottom + 30 or bottom)
+            options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
             local classic = MOS.UI.Components.IsClassicSkin()
             local width = iconTabs and 38 or ((options.dashboard:GetWidth() - 2 * margin - 12 - (bottomTabs and 0 or 66) + 4) / table.getn(order))
@@ -158,7 +158,7 @@ function Navigation.Create(options)
                 options.sidebar:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", 9, sectionTop); options.sidebar:SetPoint("BOTTOMLEFT", options.dashboard, "BOTTOMLEFT", 9, sectionBottom); options.sidebar:SetWidth(collapsed and 54 or 174)
             end
             options.contentPanel:ClearAllPoints()
-            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 49 or 153, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", 0, sectionBottom)
+            if classic then options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 49 or 153, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, sectionBottom)
             else options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", collapsed and 64 or 184, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", 0, sectionBottom) end
             local index, name
             for index, name in ipairs(order) do

@@ -330,6 +330,11 @@ local function ApplySurface(entry)
         t[1]:Hide(); t[3]:Hide(); t[4]:Hide(); t[6]:Hide(); t[7]:Hide(); t[9]:Hide()
         t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
         t[8]:ClearAllPoints(); t[8]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0); t[8]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
+        if not frame.mosBorderTop then t[2]:Hide() end
+        if not frame.mosBorderBottom then t[8]:Hide() end
+        if frame.mosBorderRight then
+            t[6]:Show(); t[6]:ClearAllPoints(); t[6]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0); t[6]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
+        end
     end
     if frame.mosSurfaceBorderHidden then
         SetNineSliceShown(entry.classicSkin, false); frame:SetBackdropBorderColor(0,0,0,0)
@@ -620,8 +625,9 @@ function UI.SetSurfaceBorderVisible(frame, visible)
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
 
-function UI.SetSurfaceHorizontalBorders(frame)
+function UI.SetSurfaceHorizontalBorders(frame, top, bottom, right)
     frame.mosHorizontalBorders = true
+    frame.mosBorderTop = top ~= false; frame.mosBorderBottom = bottom ~= false; frame.mosBorderRight = right == true
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
 
