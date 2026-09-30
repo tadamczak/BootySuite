@@ -121,7 +121,7 @@ In **LM Config**, set **LM Auto Loot** to **Auto Loot**, **Shift Loot** (hold Sh
 
 ### Settings
 
-**UI > Layout** can hide the status/version bar, guild logo, or addon name and ornaments. These options default to off. **Hide header bar** removes the entire header and moves window controls to a compact row inside the content. In top Tab View the gold outer edge moves below the tabs, which retain their position. Menu type stays on a separate row. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. These preferences are saved in profiles under **Profile > General**. Hiding every roster filter also removes its empty row.
+**UI > Layout** can hide the status/version bar, guild logo, or addon name and ornaments. These options default to off. **Hide header bar** removes the entire header and moves window controls to a compact row inside the content. In top Tab View the gold outer edge moves below the tabs, which retain their position. Menu type stays on a separate row. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. In top Tab View, visible logo/name decorations occupy the header below the tabs. These preferences are saved in profiles under **Profile > General**. Hiding every roster filter also removes its empty row.
 
 **Hide section header** is in **UI > Roster > Layout** and **UI > Raid > General**.
 

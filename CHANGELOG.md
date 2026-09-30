@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.46 - 2026-09-30
+
+- Remove extra content edge strips and keep section separators inside the gold outline.
+- Respect logo/name settings in top tabs and align column hover glow with the left-aligned label.
+
 ## 0.5.0-dev.45 - 2026-09-30
 
 - Extend section separators beyond content padding and remove doubled header/footer seams.

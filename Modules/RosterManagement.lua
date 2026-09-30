@@ -1121,8 +1121,8 @@ end
 
 function RosterManagement.LayoutChrome(page, controls, motdText)
     local tabs = MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs"
-    local leftOutset = 1.5 + (tabs and (MOS.UI.Components.IsClassicSkin() and 3 or 8) or 0)
-    if page.tablePanel then MOS.UI.Components.JoinSurfaceEdges(page.tablePanel, true, true, leftOutset, 4.5) end
+    local leftOutset = 1.5 + (tabs and (MOS.UI.Components.IsClassicSkin() and 0 or 5) or 0)
+    if page.tablePanel then MOS.UI.Components.JoinSurfaceEdges(page.tablePanel, true, true, leftOutset, 1.5) end
     if page.actionsPanel then MOS.UI.Components.JoinSurfaceEdges(page.actionsPanel, true, false, leftOutset, 4.5) end
     local width = page:GetWidth()
     local headerShift = RosterManagement.UpdateSectionHeader(page)

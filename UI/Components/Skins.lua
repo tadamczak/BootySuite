@@ -328,7 +328,7 @@ local function ApplySurface(entry)
     end
     if frame.mosHorizontalBorders and entry.classicSkin then
         local t = entry.classicSkin.textures
-        t[1]:Hide(); t[3]:Hide(); t[4]:Hide(); t[6]:Hide(); t[7]:Hide(); t[9]:Hide()
+        t[1]:Hide(); t[3]:Hide(); t[4]:Hide(); t[5]:Hide(); t[6]:Hide(); t[7]:Hide(); t[9]:Hide()
         t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",-(frame.mosBorderOutsetLeft or 0),0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",frame.mosBorderOutsetRight or 0,0)
         t[8]:ClearAllPoints(); t[8]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",-(frame.mosBorderOutsetLeft or 0),0); t[8]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",frame.mosBorderOutsetRight or 0,0)
         if not frame.mosBorderTop then t[2]:Hide() end

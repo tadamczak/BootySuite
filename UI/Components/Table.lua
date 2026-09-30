@@ -7,8 +7,16 @@ local Table = UI.Table
 function Table.ApplyHeaderHover(button)
     local highlight = button.headerHighlight
     if not highlight then highlight = UI.CreateTexture(button, nil, "HIGHLIGHT"); button.headerHighlight = highlight end
-    highlight:SetAllPoints(button)
+    highlight:ClearAllPoints()
+    highlight:SetPoint("TOPLEFT", button, "TOPLEFT", 6, 0)
+    highlight:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
     UI.ApplyGoldRadialHighlight(highlight)
+    highlight:SetTexCoord(0.5, 1, 0, 1)
+    local lead = button.headerHighlightLead
+    if not lead then lead = UI.CreateTexture(button, nil, "HIGHLIGHT"); button.headerHighlightLead = lead end
+    lead:ClearAllPoints(); lead:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
+    lead:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0); lead:SetWidth(6)
+    UI.ApplyGoldRadialHighlight(lead); lead:SetTexCoord(0, 0.5, 0, 1)
     button:SetScript("OnEnter", nil); button:SetScript("OnLeave", nil)
 end
 
