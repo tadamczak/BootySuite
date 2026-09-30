@@ -28,6 +28,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
         end)
     end
 
+    local padding = panel.contentPadding or 10
     local panelWidth = panel:GetWidth()
     if dynamicWidth then
         local widest = 0
@@ -37,8 +38,8 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
         panel:SetWidth(panelWidth)
     end
     panel.selectAll:ClearAllPoints()
-    panel.selectAll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 9)
-    panel:SetHeight(38 + (table.getn(values) * 20))
+    panel.selectAll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", padding, panel.contentPadding or 9)
+    panel:SetHeight(panel.contentPadding and (padding * 2 + 22 + table.getn(values) * 20) or (38 + table.getn(values) * 20))
 
     local optionIndex
     for optionIndex = 1, table.getn(values) do
@@ -59,10 +60,12 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
             end)
             panel.options[optionIndex] = checkbox
         end
+        checkbox:ClearAllPoints()
+        checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", padding, -padding - (optionIndex - 1) * 20)
         checkbox.value = values[optionIndex]
         checkbox.label:SetText(values[optionIndex])
-        checkbox.label:SetWidth(panelWidth - 42)
-        checkbox.labelHit:SetWidth(panelWidth - 38)
+        checkbox.label:SetWidth(panelWidth - (panel.contentPadding and (padding * 2 + 22) or 42))
+        checkbox.labelHit:SetWidth(panelWidth - (panel.contentPadding and (padding * 2 + 18) or 38))
         checkbox:SetChecked(selected[values[optionIndex]] and true or false)
         checkbox:Show()
     end

@@ -290,7 +290,7 @@ local autoLootTimeout = MOS.UI.Components.CreateContainer(nil, panel)
 autoLootTimeout:Hide()
 local function IsAutoLootQuality(slot)
     local _, name, _, quality = GetLootSlotInfo(slot)
-    return MOS.Services.AutoLoot.Allows(name, quality, MOS.Database.GetSetting("lmAutoLootRarities"), MOS.Database.GetSetting("lmAutoLootExceptions"))
+    return MOS.Services.AutoLoot.Allows(name, quality, MOS.Database.GetSetting("lmAutoLootRarities"), MOS.Database.GetSetting("lmAutoLootExceptions"), MOS.Database.GetSetting("lmAutoLootInclusions"))
 end
 
 local function AutoLootRoute(slot, candidate)
