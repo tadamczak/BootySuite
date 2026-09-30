@@ -2697,7 +2697,7 @@ function RaidManagement.CreateLootMasterController(options)
     local selectedName, sortKey, ascending = nil, nil, true
     local emptyFilters = {}
     local menus = {}
-    local close, minimize, config, reycoin, sr, rules, grip
+    local close, minimize, config, reycoin, sr, rules, grip, title
 
     local function SaveGeometry()
         local settings = options.getSettings()
@@ -2711,10 +2711,12 @@ function RaidManagement.CreateLootMasterController(options)
     end
 
     local function LayoutToolbar()
-        local scale = math.min(1, math.max(0.6, (window:GetWidth() - 108) / 190))
-        UI.SizeClassicButton(sr, 62, 24, scale); UI.SizeClassicButton(rules, 118, 24, scale)
-        sr:ClearAllPoints(); sr:SetPoint("TOPLEFT", window, "TOPLEFT", 6, -5)
-        rules:ClearAllPoints(); rules:SetPoint("LEFT", sr, "RIGHT", 6 * scale, 0)
+        local available = math.max(1, window:GetWidth() - 146)
+        local font, _, flags = title:GetFont()
+        title:SetWidth(0); title:SetFont(font, 13, flags)
+        local width = title:GetStringWidth()
+        if width > available then title:SetFont(font, math.max(8, 13 * available / width), flags) end
+        title:SetWidth(available); title:SetHeight(18)
     end
 
     controller.Refresh = function()
@@ -2799,27 +2801,33 @@ function RaidManagement.CreateLootMasterController(options)
             shorten = options.page.listRenderer.shorten,
             sortMembers = function(a, b) return RaidManagement.CompareMembers(a, b, sortKey, ascending) end,
         })
-        close = UI.CreateWindowButton(window, nil, "close"); close:SetPoint("TOPRIGHT", window, "TOPRIGHT", -6, -8)
+        close = UI.CreateWindowButton(window, nil, "close"); close:SetPoint("TOPRIGHT", window, "TOPRIGHT", -6, -6)
         close:SetScript("OnClick", function() controller.Close() end)
         minimize = UI.CreateWindowButton(window, nil, "minimize"); minimize:SetPoint("RIGHT", close, "LEFT", -4, 0)
         minimize:SetScript("OnClick", function() controller.toggleMinimize() end)
-        config = UI.CreateButton(window, nil, "", 18, 18); config:SetPoint("RIGHT", minimize, "LEFT", -4, 0)
-        UI.SetClassicButtonCompact(config, true); UI.SetClassicButtonIcon(config, "settings", 13, 2, 0)
+        config = UI.CreateSettingsButton(window); config:SetPoint("RIGHT", minimize, "LEFT", -4, 0)
+        UI.AttachTooltip(config, "LM Config", "Open Loot Master configuration.")
         config:SetScript("OnClick", function()
             options.page.reyCoinPanel:Hide()
             options.page.lmConfigOpen = not options.page.lmConfigOpen
             if options.page.lmConfigOpen then options.page.lmConfigPanel:Show() else options.page.lmConfigPanel:Hide() end
         end)
-        reycoin = UI.CreateIconButton(window, nil, "Interface\\Icons\\INV_Misc_Coin_01", 18, 3)
+        reycoin = UI.CreateIconButton(window, nil, "Interface\\Icons\\INV_Misc_Coin_01", 18, 2.5, UI.Theme.colors.goldIcon)
         reycoin:SetPoint("RIGHT", config, "LEFT", -4, 0)
         reycoin.toolSource = options.page.reyCoinToggle
         reycoin:SetScript("OnClick", function()
             local handler = options.page.reyCoinToggle:GetScript("OnClick")
             if handler then handler() end
         end)
-        sr = UI.CreateButton(window, nil, "SR", 62, 24)
-        rules = UI.CreateButton(window, nil, "Loot Rules", 118, 24)
-        UI.AttachGoldHoverBorder(sr, 0.35, 0.35, 0.35, 1); UI.AttachGoldHoverBorder(rules, 0.35, 0.35, 0.35, 1)
+        sr = UI.CreateGoldToolbarButton(window, "import")
+        rules = UI.CreateGoldToolbarButton(window, "rules")
+        rules:SetPoint("RIGHT", reycoin, "LEFT", -4, 0); sr:SetPoint("RIGHT", rules, "LEFT", -4, 0)
+        UI.AttachTooltip(sr, "SR", "Import SR or share the SR link.")
+        UI.AttachTooltip(rules, "Loot Rules", "Set or share loot rules.")
+        title = UI.CreateHeading(window, "Loot Master Mode", 3, "gold")
+        title:SetText("Loot Master Mode"); title:SetPoint("TOPLEFT", window, "TOPLEFT", 6, -6)
+        title:SetJustifyH("LEFT"); title:SetJustifyV("MIDDLE"); title:SetHeight(18)
+        controller.title = title; controller.configButton = config; controller.reycoinButton = reycoin
         local controls = options.page.refreshControls
         BuildMenu(sr, {"Import SR", "Share SR Link"}, {controls.import, controls.shareSr})
         BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules})

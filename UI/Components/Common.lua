@@ -814,3 +814,28 @@ function UI.SetAttentionPulse(button, pending)
     if pending and button:IsVisible() then button:SetScript("OnUpdate", AttentionPulseTick)
     else button:SetScript("OnUpdate", nil); button.mosAttentionTexture:Hide(); RestoreAttentionText(button) end
 end
+
+-- Shared authored gear, including its asymmetric transparent-padding crop.
+function UI.CreateSettingsButton(parent)
+    local button = UI.CreateButton(parent, nil, "", 18, 18)
+    UI.SetClassicButtonCompact(button, true)
+    button.icon = button:CreateTexture(nil, "OVERLAY")
+    button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+    button.icon:SetWidth(13); button.icon:SetHeight(13)
+    button.icon:SetTexCoord(8 / 64, 47 / 64, 11 / 64, 50 / 64)
+    button.icon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\SettingsGear")
+    UI.AttachGoldHoverBorder(button, 0.35, 0.35, 0.35, 1)
+    return button
+end
+
+function UI.CreateGoldToolbarButton(parent, iconKey)
+    local button = UI.CreateButton(parent, nil, "", 18, 18)
+    UI.SetClassicButtonCompact(button, true)
+    button.icon = button:CreateTexture(nil, "OVERLAY")
+    button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+    button.icon:SetWidth(13); button.icon:SetHeight(13)
+    button.icon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Icons\\" .. iconKey .. ".tga")
+    button.icon:SetVertexColor(unpack(UI.Theme.colors.goldIcon))
+    UI.AttachGoldHoverBorder(button, 0.35, 0.35, 0.35, 1)
+    return button
+end
