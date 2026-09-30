@@ -119,7 +119,7 @@ local function ApplySizedButtonGeometry(button, entry)
         if entry and entry.classicIcon then
             entry.classicIcon:SetWidth(iconSize); entry.classicIcon:SetHeight(iconSize)
             entry.classicIcon:ClearAllPoints(); entry.classicIcon:SetPoint("LEFT", button, "LEFT", inset, 0)
-            entry.classicIcon:SetVertexColor(1, 0.82, 0.28)
+            entry.classicIcon:SetVertexColor(unpack(UI.Theme.colors.goldIcon))
         end
     end
     if button.label then
@@ -190,7 +190,7 @@ local function ApplyControl(entry)
             entry.classicIcon:SetWidth(button.mosClassicIconSize or 13); entry.classicIcon:SetHeight(button.mosClassicIconSize or 13)
             entry.classicIcon:SetTexture(ClassicPath("Icons\\" .. button.mosClassicIconKey .. ".tga")); entry.classicIcon:Show()
             entry.classicIcon:ClearAllPoints(); entry.classicIcon:SetPoint("LEFT", button, "LEFT", button.mosClassicIconInset or 7, button.mosClassicIconYOffset or 0)
-            entry.classicIcon:SetVertexColor(1, 0.82, 0.28)
+            entry.classicIcon:SetVertexColor(unpack(UI.Theme.colors.goldIcon))
             -- Keep the label on its original full button bounds. Reserving space
             -- for the icon moved the visual centre of every caption.
             if button.label and entry.labelPoints then

@@ -31,7 +31,7 @@ function Navigation.SetActive(buttons, activeName)
             button:ClearAllPoints()
             button:SetPoint(button.navigationBottom and "TOPLEFT" or "BOTTOMLEFT", button.navigationContent, button.navigationBottom and "BOTTOMLEFT" or "TOPLEFT", button.navigationX, selected and (button.navigationBottom and 1 or -1) or (button.navigationBottom and -(button.navigationEdgeInset or 4) or (button.navigationEdgeInset or 4)))
             if selected then button.selectedFill:Show(); button.hoverFill:Hide() end
-            if button.icon then button.icon:SetVertexColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43) end
+            if button.icon then button.icon:SetVertexColor(unpack(selected and MOS.UI.Components.Theme.colors.activeGoldIcon or MOS.UI.Components.Theme.colors.goldIcon)) end
             button:SetFrameLevel(button:GetParent():GetFrameLevel() + (selected and 24 or 20))
             if button.mosHighlight then button.mosHighlight:Hide() end
             button.label:SetTextColor(selected and 1 or 0.82, selected and 1 or 0.70, selected and 1 or 0.43)
@@ -40,17 +40,17 @@ function Navigation.SetActive(buttons, activeName)
             button:SetBackdrop({ bgFile = MOS.UI.Components.ClassicAsset("Surfaces\\nav-" .. (selected and "selected" or "normal") .. ".tga"), tile = false, tileSize = 0, edgeSize = 0, insets = { left = 0, right = 0, top = 0, bottom = 0 } })
             button:SetBackdropColor(1, 1, 1, 1)
             button.label:SetTextColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43)
-            if button.icon then button.icon:SetVertexColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43) end
+            if button.icon then button.icon:SetVertexColor(unpack(selected and MOS.UI.Components.Theme.colors.activeGoldIcon or MOS.UI.Components.Theme.colors.goldIcon)) end
         elseif name == activeName then
             button:SetBackdropColor(0.32, 0.19, 0.02, 0.96)
             button:SetBackdropBorderColor(1, 0.72, 0.08, 1)
             button.label:SetTextColor(1, 0.82, 0.18)
-            if button.icon and MOS.UI.Components.IsClassicSkin() then button.icon:SetVertexColor(1, 0.82, 0.28) end
+            if button.icon and MOS.UI.Components.IsClassicSkin() then button.icon:SetVertexColor(unpack(MOS.UI.Components.Theme.colors.activeGoldIcon)) end
         else
             button:SetBackdropColor(0.12, 0.07, 0.02, 0.92)
             button:SetBackdropBorderColor(0.52, 0.31, 0.07, 1)
             button.label:SetTextColor(0.95, 0.72, 0.18)
-            if button.icon and MOS.UI.Components.IsClassicSkin() then button.icon:SetVertexColor(0.82, 0.70, 0.43) end
+            if button.icon and MOS.UI.Components.IsClassicSkin() then button.icon:SetVertexColor(unpack(MOS.UI.Components.Theme.colors.goldIcon)) end
         end
     end
 end

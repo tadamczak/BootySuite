@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.71 - 2026-09-30
+
+- Use the same shared gold tint for button icons and navigation icons.
+
 ## 0.5.0-dev.70 - 2026-09-30
 
 - Restore header font size when widening the window; fix tool menu labels and fit all options to the longest caption.

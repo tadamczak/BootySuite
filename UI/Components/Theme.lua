@@ -15,6 +15,8 @@ UI.Theme = {
     },
     colors = {
         goldText = { 0.82, 0.70, 0.43 },
+        goldIcon = { 0.82, 0.70, 0.43 },
+        activeGoldIcon = { 1, 0.82, 0.28 },
         button = { 0.08, 0.07, 0.05, 0.96 },
         buttonBorder = { 0.48, 0.38, 0.20, 1 },
         highlight = { 1, 0.72, 0.12, 0.10 },
