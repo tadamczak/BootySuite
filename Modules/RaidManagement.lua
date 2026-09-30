@@ -220,7 +220,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.reyCoinItem:SetHeight(22); view.reyCoinItem:SetAutoFocus(false)
     view.reyCoinItem:SetPoint("LEFT", view.reyCoinInput, "RIGHT", 4, 0)
     view.reyCoinItem:SetScript("OnEscapePressed", function() this:ClearFocus() end)
-    MOS.UI.Components.AttachPlaceholder(view.reyCoinInput, "Name")
+    MOS.UI.Components.AttachPlaceholder(view.reyCoinInput, "Player name")
     MOS.UI.Components.AttachPlaceholder(view.reyCoinItem, "Item")
     page.reyCoinItem = view.reyCoinItem
     view.reyCoinAdd = MOS.UI.Components.CreateButton(view.reyCoinPanel, nil, "Add", 40, 22)
@@ -304,6 +304,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     MOS.UI.Components.AttachTooltip(page.leaderModeButton, "Raid Leader Mode", "Reserved for a future raid-leader workspace.")
     page.resetFiltersButton = MOS.UI.Components.CreateButton(page, nil, "Reset Filters", 104, 22)
     MOS.UI.Components.SetClassicButtonIcon(page.resetFiltersButton, "reset")
+    MOS.UI.Components.SizeClassicButton(page.resetFiltersButton, 104, 22, 1)
     page.resetFiltersButton:SetPoint("TOPLEFT", page, "TOPLEFT", 242, -76); page.resetFiltersButton:Hide()
     MOS.UI.Components.RegisterSkinCallback(function(skin)
         if skin == "classic" then view.classicToolbar:Show()
@@ -376,10 +377,12 @@ function RaidManagement.CreateActionControls(page)
     MOS.UI.Components.SetClassicButtonGold(controls.quit, true)
     controls.raidLeaderTools = MOS.UI.Components.CreateButton(page, nil, "Raid Leader Tools", 118, 22); controls.raidLeaderTools:Hide()
     controls.raidLeaderTools.mosClassicKeepNormalSurface = true
+    controls.raidLeaderTools.mosHoverTextColor = {1, 0.82, 0.28}
     MOS.UI.Components.SetClassicButtonIcon(controls.raidLeaderTools, "raid_tools", 13, 7, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(controls.raidLeaderTools, 2)
     controls.lootMasterTools = MOS.UI.Components.CreateButton(page, nil, "Loot Master Tools", 118, 22); controls.lootMasterTools:Hide()
     controls.lootMasterTools.mosClassicKeepNormalSurface = true
+    controls.lootMasterTools.mosHoverTextColor = {1, 0.82, 0.28}
     MOS.UI.Components.SetClassicButtonIcon(controls.lootMasterTools, "loot_tools", 13, 7, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(controls.lootMasterTools, 2)
     MOS.UI.Components.AttachGoldHoverBorder(controls.raidLeaderTools, 0.35, 0.35, 0.35, 1)
@@ -1205,7 +1208,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
             card:ClearAllPoints(); card:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 2 + dockIndex * (width + 2), 2)
             card:SetWidth(width); card:SetHeight(30)
             card.text:Hide(); card.info:Hide(); card.fix:Hide(); if card.ping then card.ping:Hide() end
-            if card.classicHeader then card.classicHeader:Show(); card.classicHeader.title:SetText(titles[index]) end
+            if card.classicHeader then card.classicHeader:Show(); card.classicHeader.title:SetText(titles[index]); card.classicHeader.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText)) end
             card:Show(); dockIndex = dockIndex + 1; visible[index] = false
         end
     end
@@ -1213,7 +1216,7 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
     showUnmatched, showMissing, showInvalid = visible[1], visible[2], visible[3]
     if not showUnmatched and not showMissing and not showInvalid then return 0, page.classicWarningBottom end
     for index = 1, 3 do
-        if cards[index].classicHeader and not cards[index].docked then cards[index].classicHeader.title:SetText("Warning") end
+        if cards[index].classicHeader and not cards[index].docked then cards[index].classicHeader.title:SetText("Warning"); cards[index].classicHeader.title:SetTextColor(1, 0.82, 0.28) end
     end
     if side then
         local pageWidth, pageHeight = PageSpan(page)
