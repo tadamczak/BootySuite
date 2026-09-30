@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.64 - 2026-09-30
+
+- Restore the top-tab content separator, use full tab width and lower inactive bottom tabs by one pixel.
+- Rename menu choices and place icon tabs beside the dropdown.
+- Clear New Raid hover on leave and cap saved raid lists at 800 UI units with conditional scrollbar space.
+
 ## 0.5.0-dev.63 - 2026-09-30
 
 - Share conditional scrollbar layout between Settings and saved raids: fitting content uses full width.

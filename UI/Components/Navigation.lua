@@ -122,12 +122,14 @@ function Navigation.Create(options)
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
             local classic = MOS.UI.Components.IsClassicSkin()
-            local width = iconTabs and 38 or ((options.dashboard:GetWidth() - 2 * margin - 12 - (bottomTabs and 0 or 66)) / table.getn(order))
+            -- Reserve controls only when they actually share the top-tab row.
+            local controlsWidth = not bottomTabs and not options.get("hideHeaderBar") and options.get("hideHeaderLogo") and options.get("hideHeaderName") and 66 or 0
+            local width = iconTabs and 38 or ((options.dashboard:GetWidth() - 2 * margin - 12 - controlsWidth) / table.getn(order))
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
                 button.navigationBottom = bottomTabs
-                button.navigationEdgeInset = bottomTabs and 0 or not bottomTabs and not options.get("hideHeaderBar") and options.get("hideHeaderLogo") and options.get("hideHeaderName") and 1 or 2
+                button.navigationEdgeInset = bottomTabs and 1 or not bottomTabs and not options.get("hideHeaderBar") and options.get("hideHeaderLogo") and options.get("hideHeaderName") and 1 or 2
                 button.navigationMode = "tabs"
                 button.navigationContent = not bottomTabs and not options.get("hideHeaderBar") and not (options.get("hideHeaderLogo") and options.get("hideHeaderName")) and options.contentPanel.mosHeaderAnchor or options.contentPanel
                 button.navigationX = 6 + ((index - 1) * width)

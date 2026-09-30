@@ -104,9 +104,9 @@ function Dashboard.ApplyChrome(view, get)
     view.titleBar.mosBorderOutsetRight = 0
     view.contentPanel.mosBorderOutsetLeft = tabs and ((classic and 4 or 9) - 4) or 0
     view.contentPanel.mosBorderOutsetRight = 0
-    MOS.UI.Components.SetSurfaceHorizontalBorders(view.titleBar, false, true)
+    MOS.UI.Components.SetSurfaceHorizontalBorders(view.titleBar, false, get("menuStyle") ~= "tabs")
     -- Each shared seam has one owner; adjacent strips must not overlap.
-    MOS.UI.Components.SetSurfaceHorizontalBorders(view.contentPanel, false, false)
+    MOS.UI.Components.SetSurfaceHorizontalBorders(view.contentPanel, get("menuStyle") == "tabs", false)
     if view.frame.mosStatusBar then
         view.frame.mosStatusBar.mosBorderOutsetLeft = (classic and 4 or 9) - 4
         view.frame.mosStatusBar.mosBorderOutsetRight = 0
