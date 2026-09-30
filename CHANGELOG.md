@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.60 - 2026-09-30
+
+- Reconcile group drops, remove unused icon/border spacing and keep the scrollbar clear of warnings.
+- Add persistent gold selection borders and gradients to saved raid lists; soften trash icon gold.
+- Restore raid start help and reclaim hidden section-header space.
+
 ## 0.5.0-dev.59 - 2026-09-30
 
 - Match saved raid table colors, hover and spacing to Raid Statistics; align labels and resize row actions.
