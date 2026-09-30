@@ -1291,6 +1291,11 @@ function RaidManagement.PrepareListMembers(page, target, data, query, selectedCl
     return members
 end
 
+function RaidManagement.LootMasterExpandedHeight(availableHeight, memberCount)
+    local neighborHeight = math.min(2, math.max(0, memberCount - 1)) * 21
+    return math.min(131, math.max(80, availableHeight - neighborHeight))
+end
+
 function RaidManagement.RefreshListView(page, rows, members, selectedName, sortKey, lootMasterMode, settings)
     local renderer = page.listRenderer
     if not page.detachedLootMaster then RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true) end
@@ -1320,33 +1325,21 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     local _, pageHeight = PageSpan(page)
     local rowAreaHeight = math.max(0, pageHeight + rowStartY - listBottom - warningHeight)
     local availableRows = RaidManagement.CalculateVisibleRows(rowAreaHeight, 0, rowStep, table.getn(rows), 3)
-    if lootMasterMode and selectedName then
-        if not page.lootMasterExpandedName then page.lootMasterReturnOffset = scrollFrame.offset or 0 end
-        page.lootMasterExpandedName = selectedName
-        local selectedIndex = 1
-        local memberIndex
-        for memberIndex = 1, table.getn(members) do if members[memberIndex].name == selectedName then selectedIndex = memberIndex; break end end
-        scrollFrame:Hide(); if page.listScrollBar then page.listScrollBar:Hide() end
-        local selectedMember = members[selectedIndex]
-        local lootCount = selectedMember and selectedMember.loot and table.getn(selectedMember.loot) or 0
-        local desiredHeight = 25 + 27 + (math.max(1, math.min(lootCount, 25)) * 24) + 12
-        local availableHeight = math.max(80, pageHeight + rowStartY - listBottom - 4)
-        local expandedHeight = math.min(availableHeight, math.max(80, desiredHeight))
-        local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
-        RaidManagement.RenderListRows(page, rows, members, selectedIndex - 1, 1, rowStep, rowStartY, lootMasterMode, tableLeft, tableWidth, lootMethod, raidLootMasterIndex, selectedName, renderer.shorten, expandedHeight)
-        return
-    end
     scrollFrame:Show()
-    if page.lootMasterExpandedName then
-        scrollFrame.offset = math.max(0, page.lootMasterReturnOffset or 0)
-        scrollFrame:SetVerticalScroll(scrollFrame.offset * rowStep)
-        page.lootMasterExpandedName = nil; page.lootMasterReturnOffset = nil
+    local expandedHeight, visibleRowCount = nil, availableRows
+    if selectedName then
+        if lootMasterMode then
+            expandedHeight = RaidManagement.LootMasterExpandedHeight(rowAreaHeight, table.getn(members))
+            visibleRowCount = math.max(1, math.min(table.getn(rows), 1 + math.floor((rowAreaHeight - expandedHeight) / rowStep)))
+        else visibleRowCount = math.max(1, availableRows - 7) end
     end
-    local visibleRowCount = selectedName and math.max(1, availableRows - 7) or availableRows
-    RaidManagement.KeepSelectionVisible(scrollFrame, members, selectedName, visibleRowCount, rowStep)
+    if not lootMasterMode or page.mosLastLootSelection ~= selectedName then
+        RaidManagement.KeepSelectionVisible(scrollFrame, members, selectedName, visibleRowCount, rowStep)
+    end
+    page.mosLastLootSelection = selectedName
     local offset = renderer.updateScrollFrame(scrollFrame, table.getn(members), visibleRowCount, rowStep)
     local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
-    RaidManagement.RenderListRows(page, rows, members, offset, visibleRowCount, rowStep, rowStartY, lootMasterMode, tableLeft, tableWidth, lootMethod, raidLootMasterIndex, selectedName, renderer.shorten)
+    RaidManagement.RenderListRows(page, rows, members, offset, visibleRowCount, rowStep, rowStartY, lootMasterMode, tableLeft, tableWidth, lootMethod, raidLootMasterIndex, selectedName, renderer.shorten, expandedHeight)
 end
 
 function RaidManagement.CompareMembers(a, b, sortKey, ascending)
@@ -1536,8 +1529,10 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
     local bodyHeight = math.max(1, pageHeight + rowStartY - bottom)
     local count = memberCount or 0
     if not lootMasterMode and selectedName then count = count + 7 end
-    if lootMasterMode and selectedName then count = 1 end
     page.mosListMeasuredHeight = count * rowStep
+    if lootMasterMode and selectedName then
+        page.mosListMeasuredHeight = page.mosListMeasuredHeight + RaidManagement.LootMasterExpandedHeight(bodyHeight, count) - rowStep
+    end
     local fullWidth = math.max(1, pageWidth - tableLeft - (lootMasterMode and 3 or 4))
     local resolvedWidth, _, overflow = MOS.UI.Components.ResolveScrollLayout(fullWidth, bodyHeight, 20, RaidManagement.MeasureListHeight, page)
     page.mosListScrollGutter = overflow and 20 or 0
@@ -2713,9 +2708,9 @@ function RaidManagement.CreateLootMasterController(options)
     local function LayoutToolbar()
         local available = math.max(1, window:GetWidth() - 146)
         local font, _, flags = title:GetFont()
-        title:SetWidth(0); title:SetFont(font, 13, flags)
+        title:SetWidth(0); title:SetFont(font, 12, flags)
         local width = title:GetStringWidth()
-        if width > available then title:SetFont(font, math.max(8, 13 * available / width), flags) end
+        if width > available then title:SetFont(font, math.max(8, 12 * available / width), flags) end
         title:SetWidth(available); title:SetHeight(18)
     end
 
@@ -2812,7 +2807,8 @@ function RaidManagement.CreateLootMasterController(options)
             options.page.lmConfigOpen = not options.page.lmConfigOpen
             if options.page.lmConfigOpen then options.page.lmConfigPanel:Show() else options.page.lmConfigPanel:Hide() end
         end)
-        reycoin = UI.CreateIconButton(window, nil, "Interface\\Icons\\INV_Misc_Coin_01", 18, 2.5, UI.Theme.colors.goldIcon)
+        reycoin = UI.CreateGoldToolbarButton(window, "list")
+        UI.AttachTooltip(reycoin, "Reycoin List", "View used Reycoins and pending item trades.")
         reycoin:SetPoint("RIGHT", config, "LEFT", -4, 0)
         reycoin.toolSource = options.page.reyCoinToggle
         reycoin:SetScript("OnClick", function()
@@ -2833,6 +2829,8 @@ function RaidManagement.CreateLootMasterController(options)
         BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules})
         controller.srButton = sr; controller.rulesButton = rules
         grip = UI.CreateResizeGrip(window)
+        grip:SetFrameLevel(window:GetFrameLevel() + 250)
+        controller.resizeGrip = grip
         grip:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
         grip:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); SaveGeometry(); controller.Refresh() end)
         grip:SetScript("OnHide", function() window:StopMovingOrSizing() end)

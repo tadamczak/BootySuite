@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.74 - 2026-09-30
+
+- Keep the LM player list visible and scrollable when expanding loot details.
+- Update the Reycoin List icon and tooltip, reduce the LM title font and keep the resize grip above the scrollbar.
+
 ## 0.5.0-dev.73 - 2026-09-30
 
 - Align gold LM toolbar icons, reuse the main Settings gear and add a compact Loot Master Mode title.
