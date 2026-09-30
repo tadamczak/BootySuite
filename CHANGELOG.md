@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.77 - 2026-09-30
+
+- Restore dashboard geometry after native login layout cache and prevent minimized dimensions from being cached by the client.
+
 ## 0.5.0-dev.76 - 2026-09-30
 
 - Keep minimized dashboard content/navigation hidden and remove compact header fill and separator.

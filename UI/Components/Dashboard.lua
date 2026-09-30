@@ -167,6 +167,8 @@ function Dashboard.CreateWindow(version)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
     frame:SetFrameStrata("DIALOG")
     frame:SetMovable(true); frame:SetResizable(true)
+    if frame.SetDontSavePosition then frame:SetDontSavePosition(true) end
+    if frame.SetUserPlaced then frame:SetUserPlaced(false) end
     if frame.SetClampedToScreen then frame:SetClampedToScreen(true) end
     frame:SetMinResize(350, 380); frame:SetMaxResize(1100, 760)
     frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
@@ -356,6 +358,7 @@ function Dashboard.CreatePages(contentPanel, definitions)
 end
 
 function Dashboard.RestoreGeometry(frame, settings)
+    if frame.mosDashboardView then frame.mosDashboardView.geometrySettings = settings end
     local width, height = tonumber(settings.windowWidth), tonumber(settings.windowHeight)
     if not width or width < 350 or not height or height < 380 then
         width, height = 840, 540
@@ -363,15 +366,28 @@ function Dashboard.RestoreGeometry(frame, settings)
     end
     width = math.max(350, math.min(1100, width)); height = math.max(380, math.min(760, height))
     settings.windowWidth = width; settings.windowHeight = height
-    frame:SetScale(1); frame:SetMinResize(350, 380); frame:SetMaxResize(1100, 760)
+    if frame.SetUserPlaced then frame:SetUserPlaced(false) end
+    frame:SetScale(1); frame:SetMaxResize(1100, 760); frame:SetMinResize(350, 380)
     frame:SetWidth(width); frame:SetHeight(height)
     if tonumber(settings.windowLeft) and tonumber(settings.windowBottom) then
         frame:ClearAllPoints(); frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", tonumber(settings.windowLeft), tonumber(settings.windowBottom))
+    else
+        frame:ClearAllPoints(); frame:SetPoint("CENTER", UIParent, "CENTER", 0, 10)
     end
 end
 
 function Dashboard.BindWindow(view, options)
     local frame, grip = view.frame, view.resizeGrip
+    -- Native layout-cache is loaded after VARIABLES_LOADED and can contain the
+    -- 250x40 minimized shell. SavedVariables alone own durable geometry.
+    frame:RegisterEvent("PLAYER_LOGIN")
+    frame:SetScript("OnEvent", function()
+        if event ~= "PLAYER_LOGIN" then return end
+        frame:UnregisterEvent("PLAYER_LOGIN")
+        Dashboard.RestoreGeometry(frame, view.geometrySettings or {})
+        options.applyOrRefreshLayout()
+    end)
+    frame.mosDashboardView = view
     grip.UpdateLayout = function()
         this.layoutElapsed = this.layoutElapsed + arg1
         if this.layoutElapsed >= 0.08 then
@@ -384,6 +400,7 @@ function Dashboard.BindWindow(view, options)
     frame:SetScript("OnDragStart", function() this:StartMoving() end)
     frame:SetScript("OnDragStop", function()
         this:StopMovingOrSizing()
+        if frame.SetUserPlaced then frame:SetUserPlaced(false) end
         if view.minimized then
             view.minimizedLeft, view.minimizedBottom = frame:GetLeft(), frame:GetBottom()
         elseif options.isLootMasterMode() then options.saveLootGeometry() else options.saveGeometry() end
@@ -395,6 +412,7 @@ function Dashboard.BindWindow(view, options)
     end)
     grip:SetScript("OnMouseUp", function()
         frame:StopMovingOrSizing(); this:SetScript("OnUpdate", nil)
+        if frame.SetUserPlaced then frame:SetUserPlaced(false) end
         if view.minimized then
             view.minimizedLeft, view.minimizedBottom = frame:GetLeft(), frame:GetBottom()
         elseif options.isLootMasterMode() then options.saveLootGeometry() else options.saveGeometry() end
