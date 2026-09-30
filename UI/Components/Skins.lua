@@ -78,6 +78,14 @@ local function CreateClassicHoverOutline(frame, path, fullEdges)
     return outline
 end
 
+function UI.SetProjectButtonOutline(button, visible)
+    if not button.mosProjectOutline then
+        button.mosProjectOutline = CreateNineSlice(button, ClassicPath("Buttons\\dark-selected.tga"), 128, 32, 6, "OVERLAY")
+    end
+    SetNineSliceShown(button.mosProjectOutline, visible)
+    button.mosProjectOutline.textures[5]:Hide()
+end
+
 function UI.ApplyDropdownChoiceSurface(button)
     button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
     button:SetBackdropColor(0.08, 0.08, 0.08, 0.95)

@@ -134,6 +134,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     viewport.settingsPage = page
     page.settingsViewport = viewport
     viewport:SetScript("OnMouseWheel", OnSettingsMouseWheel)
+    viewport:SetScript("OnSizeChanged", MOS.UI.Components.Settings.OnViewportSizeChanged)
     local scrollBar = getglobal("MuklaOfficerSuiteSettingsScrollScrollBar")
     if scrollBar then
         scrollBar:ClearAllPoints()

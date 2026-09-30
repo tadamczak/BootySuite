@@ -62,7 +62,7 @@ function Settings.CreateSectionAccordion(parent, text, y)
     button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button.rule:ClearAllPoints()
     button.rule:SetPoint("LEFT", button.label, "RIGHT", 10, 0)
-    button.rule:SetPoint("RIGHT", parent, "RIGHT", -12, 0)
+    button.rule:SetPoint("RIGHT", parent, "RIGHT", 0, 0)
     button.rule:SetHeight(1); button.rule:SetTexture(unpack(MOS.UI.Components.TextColors.gold)); button.rule:Show()
     return button
 end
@@ -323,6 +323,11 @@ function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKe
     end)
     field:SetScript("OnEditFocusLost", function() this:CommitValue(); this.mosEditing = nil end)
     return label, field
+end
+
+function Settings.OnViewportSizeChanged()
+    local page = this.settingsPage
+    if page then Settings.UpdateScroll(this, page, page.settingsContentHeight or 960) end
 end
 
 function Settings.UpdateScroll(viewport, page, pageHeight)
