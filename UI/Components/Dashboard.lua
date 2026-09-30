@@ -7,7 +7,7 @@ function Dashboard.GetChromeLayout(get, classic)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
     local topTabs = get("menuStyle") == "tabs"
-    local headerHeight = (topTabs and 20 or (compact and 30 or normalHeight)) + 4
+    local headerHeight = (topTabs and compact and 20 or (compact and 30 or normalHeight)) + 4
     local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 26 or 31)
     if get("hideHeaderBar") then return 0, topTabs and -28 or -4, bottom, topTabs and -28 or -4 end
     local top = -(topTabs and 4 or (classic and 8 or 14)) - headerHeight
@@ -56,11 +56,11 @@ function Dashboard.ApplyChrome(view, get)
     view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, get("menuStyle") == "tabs" and -4 or (classic and -8 or -14))
     view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", -4, get("menuStyle") == "tabs" and -4 or (classic and -8 or -14))
     view.titleBar:SetHeight(height)
-    SetChromeVisible(view.title, not classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
-    SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
-    SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
-    SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
-    SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo") and get("menuStyle") ~= "tabs")
+    SetChromeVisible(view.title, not classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicTitleLeft, classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicTitleRight, classic and not get("hideHeaderName"))
+    SetChromeVisible(view.classicLogo, classic and not get("hideHeaderLogo"))
     local hiddenHeader = get("hideHeaderBar")
     SetChromeVisible(view.titleBar, not hiddenHeader)
     Dashboard.PlaceWindowControls(view, hiddenHeader)
@@ -75,15 +75,15 @@ function Dashboard.ApplyChrome(view, get)
     end
     local footer = not get("hideStatusVersionBar")
     local tabs = get("menuStyle") == "tabs" or get("menuStyle") == "bottomTabs"
-    view.titleBar.mosBorderOutsetLeft = (classic and 4 or 9) - 1
-    view.titleBar.mosBorderOutsetRight = 3
-    view.contentPanel.mosBorderOutsetLeft = tabs and ((classic and 4 or 9) - 1) or 0
-    view.contentPanel.mosBorderOutsetRight = 3
+    view.titleBar.mosBorderOutsetLeft = (classic and 4 or 9) - 4
+    view.titleBar.mosBorderOutsetRight = 0
+    view.contentPanel.mosBorderOutsetLeft = tabs and ((classic and 4 or 9) - 4) or 0
+    view.contentPanel.mosBorderOutsetRight = 0
     MOS.UI.Components.SetSurfaceHorizontalBorders(view.titleBar, false, true)
     -- Each shared seam has one owner; adjacent strips must not overlap.
-    MOS.UI.Components.SetSurfaceHorizontalBorders(view.contentPanel, hiddenHeader, not footer)
+    MOS.UI.Components.SetSurfaceHorizontalBorders(view.contentPanel, false, false)
     if view.frame.mosStatusBar then
-        view.frame.mosStatusBar.mosBorderOutsetLeft = (classic and 4 or 9) - 1
+        view.frame.mosStatusBar.mosBorderOutsetLeft = (classic and 4 or 9) - 4
         view.frame.mosStatusBar.mosBorderOutsetRight = 0
         MOS.UI.Components.SetSurfaceHorizontalBorders(view.frame.mosStatusBar, true, false, true)
     end
@@ -193,6 +193,7 @@ function Dashboard.CreateWindow(version)
     view.classicMenuTitle:SetPoint("TOPLEFT", view.sidebar, "TOPLEFT", 10, -9); view.classicMenuTitle:SetText("Menu"); view.classicMenuTitle:Hide()
     view.sidebar.classicMenuTitle = view.classicMenuTitle
     view.contentPanel = CreateFrame("Frame", nil, frame)
+    view.contentPanel.mosHeaderAnchor = view.titleBar
     view.contentPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 204, -68); view.contentPanel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 46)
     view.contentPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     view.contentPanel:SetBackdropColor(0.02, 0.02, 0.02, 0.90); view.contentPanel:SetBackdropBorderColor(0.36, 0.36, 0.34, 1)

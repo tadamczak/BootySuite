@@ -128,7 +128,7 @@ function Navigation.Create(options)
                 local button = controller.buttons[name]
                 button.navigationBottom = bottomTabs
                 button.navigationMode = "tabs"
-                button.navigationContent = options.contentPanel
+                button.navigationContent = not bottomTabs and not options.get("hideHeaderBar") and not (options.get("hideHeaderLogo") and options.get("hideHeaderName")) and options.contentPanel.mosHeaderAnchor or options.contentPanel
                 button.navigationX = 6 + ((index - 1) * width)
                 button.SetTabBorderVisible(false)
                 button:SetScale(1); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
