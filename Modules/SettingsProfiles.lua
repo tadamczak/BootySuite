@@ -162,10 +162,10 @@ function Settings.ApplyTopSections(page)
     if state.profile then page.profiles.general:Show() else page.profiles.general:Hide() end
     if state.profile and state.profileGeneral then page.profiles.content:Show() else page.profiles.content:Hide() end
     page.uiHeading.label:SetText((state.ui and "-  " or "+  ") .. "UI")
-    page.uiHeading:ClearAllPoints(); page.uiHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 12, uiY); page.uiHeading:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, uiY)
+    page.uiHeading:ClearAllPoints(); page.uiHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 0, uiY); page.uiHeading:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, uiY)
     page.uiContent:ClearAllPoints()
-    page.uiContent:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -profileHeight)
-    page.uiContent:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -profileHeight)
+    page.uiContent:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -profileHeight)
+    page.uiContent:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -profileHeight)
     if state.ui then page.uiContent:Show() else
         page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide(); page.playerDetailsControl.panel:Hide()
     end
@@ -177,7 +177,7 @@ function Settings.ApplyTopSections(page)
 end
 
 function Settings.BindTopSections(page, onLoaded)
-    page.topSectionState = { profile = false, profileGeneral = true, ui = false, debug = false }
+    page.topSectionState = { profile = false, profileGeneral = false, ui = false, debug = false }
     Settings.CreateProfiles(page, onLoaded)
     page.profiles.general:SetScript("OnClick", function()
         page.topSectionState.profileGeneral = not page.topSectionState.profileGeneral; Settings.ApplyTopSections(page)

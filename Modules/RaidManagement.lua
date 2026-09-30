@@ -255,24 +255,45 @@ function RaidManagement.CreateActionControls(page)
     controls.scan = MOS.UI.Components.CreateButton(page, nil, "Scan Raid", 140, 24)
     controls.scan:SetPoint("CENTER", page, "CENTER", 0, 12); controls.scan:Hide()
     controls.loadRaid = MOS.UI.Components.CreateButton(page, nil, "Load", 78, 24); controls.loadRaid:Hide(); MOS.UI.Components.SetButtonEnabled(controls.loadRaid, false)
-    MOS.UI.Components.AttachTooltip(controls.scan, "Start New Raid", "Create a new raid session with a unique ID and scan the current raid roster.")
+    MOS.UI.Components.AttachGoldHoverBorder(controls.scan, 1, 0.78, 0.2, 1)
+    MOS.UI.Components.AttachTooltip(controls.scan, "New Raid", "Create a new raid session with a unique ID and scan the current raid roster.")
     MOS.UI.Components.AttachTooltip(controls.loadRaid, "Load Raid", "Load the selected saved raid snapshot.", true)
     controls.testRaid = MOS.UI.Components.CreateButton(page, nil, "Test Raid", 88, 24); controls.testRaid:Hide()
     MOS.UI.Components.AttachTooltip(controls.testRaid, "Test Raid", "Open a transient 40-player raid sandbox. Test data is never saved.")
     controls.historyTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controls.historyTitle:SetText("Saved raids"); controls.historyTitle:Hide()
+    controls.historyScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidHistoryScroll", page, "UIPanelScrollFrameTemplate")
+    MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRaidHistoryScrollScrollBar"))
+    controls.historyCanvas = MOS.UI.Components.CreateContainer(nil, controls.historyScroll)
+    controls.historyCanvas:SetWidth(300); controls.historyCanvas:SetHeight(1)
+    controls.historyScroll:SetScrollChild(controls.historyCanvas); controls.historyScroll:Hide()
+    controls.historyScroll:EnableMouseWheel(true)
+    controls.historyScroll:SetScript("OnMouseWheel", function()
+        local maximum = math.max(0, controls.historyCanvas:GetHeight() - this:GetHeight())
+        local value = math.max(0, math.min(maximum, this:GetVerticalScroll() - arg1 * 32))
+        local bar = getglobal("MuklaOfficerSuiteRaidHistoryScrollScrollBar")
+        if bar then bar:SetValue(value) else this:SetVerticalScroll(value) end
+    end)
     controls.historyButtons = {}
     controls.historyDeleteButtons = {}
+    controls.historyLoadButtons = {}
+    controls.historyHeaders = {}
+    for index, text in ipairs({"Name", "Raid", "Time"}) do controls.historyHeaders[index] = MOS.UI.Components.CreateColumnLabel(page, text, "gold"); controls.historyHeaders[index]:Hide() end
     local historyIndex
     for historyIndex = 1, 5 do
-        local button = MOS.UI.Components.CreateSelectionButton(page, nil, "", 380, 26); button.historyIndex = historyIndex; button:Hide()
+        local button = MOS.UI.Components.CreateSelectionButton(controls.historyCanvas, nil, "", 380, 26); button.historyIndex = historyIndex; button:Hide()
         MOS.UI.Components.SetButtonLabelInsets(button, 8, 126)
         button.savedAt = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall")
+        button.raidName = MOS.UI.Components.CreateLabel(button, nil, "OVERLAY", "GameFontHighlightSmall")
         button.savedAt:SetPoint("RIGHT", button, "RIGHT", -8, 0); button.savedAt:SetWidth(112); button.savedAt:SetJustifyH("RIGHT"); button.savedAt:SetTextColor(0.78, 0.78, 0.72)
         controls.historyButtons[historyIndex] = button
-        local deleteButton = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 30, 4)
+        local deleteButton = MOS.UI.Components.CreateIconButton(controls.historyCanvas, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\DeleteRaid", 18, 2)
         deleteButton.historyIndex = historyIndex; deleteButton:Hide()
         MOS.UI.Components.AttachTooltip(deleteButton, "Delete saved raid", "Permanently remove this raid snapshot from saved history.")
         controls.historyDeleteButtons[historyIndex] = deleteButton
+        local load = MOS.UI.Components.CreateIconButton(controls.historyCanvas, nil, "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up", 18, 2)
+        load.historyIndex = historyIndex; load:Hide()
+        MOS.UI.Components.AttachTooltip(load, "Load raid", "Open this saved raid snapshot.")
+        controls.historyLoadButtons[historyIndex] = load
     end
     controls.historyEmpty = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisable"); controls.historyEmpty:SetText("No raids to load"); controls.historyEmpty:Hide()
     controls.addStatistics = MOS.UI.Components.CreateButton(page, nil, "Add to Raid Statistics", 132, 22); controls.addStatistics:Hide()
@@ -826,6 +847,9 @@ function RaidManagement.MountChrome(page, chrome, actions)
         historyTitle = actions.historyTitle,
         historyButtons = actions.historyButtons,
         historyDeleteButtons = actions.historyDeleteButtons,
+        historyLoadButtons = actions.historyLoadButtons,
+        historyHeaders = actions.historyHeaders,
+        historyScroll = actions.historyScroll, historyCanvas = actions.historyCanvas,
         historyEmpty = actions.historyEmpty,
         export = actions.export,
         addStatistics = actions.addStatistics,
@@ -971,7 +995,7 @@ end
 function RaidManagement.ShowNoRaidState(page, rows)
     local controls = page.refreshControls
     controls.leaderMode:Hide(); controls.resetFilters:Hide(); controls.mode:Hide(); controls.unavailable:Show()
-    controls.unavailable:ClearAllPoints(); controls.unavailable:SetPoint("CENTER", page, "CENTER", 0, 118)
+    controls.unavailable:ClearAllPoints(); controls.unavailable:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -48); controls.unavailable:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -48); controls.unavailable:SetHeight(0); if controls.unavailable.SetWordWrap then controls.unavailable:SetWordWrap(true) end
     controls.raidLeaderTools:Hide(); controls.lootMasterTools:Hide(); controls.addStatistics:Hide(); controls.export:Hide(); controls.quit:Hide(); controls.lootRules:Hide(); controls.sendLootRules:Hide(); controls.import:Hide(); controls.shareSr:Hide(); controls.resetLoot:Hide(); controls.minimize:Hide(); controls.live:Hide()
     controls.searchLabel:Hide(); controls.searchBox:Hide(); controls.refreshButton:Hide(); controls.filterLabel:Hide(); controls.classButton:Hide(); controls.rankButton:Hide(); controls.classPanel:Hide(); controls.rankPanel:Hide()
     RaidManagement.HideListTable(page, rows); controls.status:SetText(""); controls.unavailable:SetText("Join a raid to start a new snapshot, or load a saved raid.")
@@ -2662,12 +2686,21 @@ function RaidManagement.AttachActionHandlers(options)
             MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_DELETE_RAID_SNAPSHOT")
         end)
     end
-    controls.loadRaid:SetScript("OnClick", function()
+    local function LoadSelectedRaid()
         if not options.page.selectedRaidHistoryId then return end
         if options.loadRaidSnapshot(options.page.selectedRaidHistoryId) then
             options.beginRaidSession(); options.setHistoricalLoaded(true); options.setScanReady(true); options.refresh()
         end
-    end)
+    end
+    controls.loadRaid:SetScript("OnClick", LoadSelectedRaid)
+    for _, button in ipairs(controls.historyLoadButtons) do
+        button:SetScript("OnClick", function()
+            local snapshot = options.page.raidHistorySnapshots and options.page.raidHistorySnapshots[this.historyIndex]
+            if not snapshot then return end
+            options.page.selectedRaidHistoryId = snapshot.id
+            LoadSelectedRaid()
+        end)
+    end
     controls.searchBox:SetScript("OnTextChanged", function() options.refresh() end)
     controls.refreshButton:SetScript("OnClick", function()
         if this.inactive or not options.isInRaid() then return end
