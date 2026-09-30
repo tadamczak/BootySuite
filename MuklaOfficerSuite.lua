@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.53"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.54"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -836,21 +836,7 @@ MOS.Core.EventDispatcher.Attach(MOS, {
         raidHistoricalLoaded = false
         if hasRestorableRaid then MOS.Services.RaidRes.Reconcile(restoredAttendance, restoredAttendance) end
         MOS.Modules.Settings.SyncSavedControls(configurationPage.chatLogsCheck, configurationPage.raidAccordionControls.opacityField, configurationPage.raidAccordionControls.focusField)
-        local savedWindowWidth = tonumber(MuklaOfficerSuiteDB.windowWidth)
-        local savedWindowHeight = tonumber(MuklaOfficerSuiteDB.windowHeight)
-        local pollutedWindowGeometry = not savedWindowWidth or savedWindowWidth < 760 or not savedWindowHeight or savedWindowHeight < 420
-        if pollutedWindowGeometry then
-            savedWindowWidth = 840; savedWindowHeight = 540
-            MuklaOfficerSuiteDB.windowWidth = savedWindowWidth; MuklaOfficerSuiteDB.windowHeight = savedWindowHeight
-            MuklaOfficerSuiteDB.windowLeft = nil; MuklaOfficerSuiteDB.windowBottom = nil
-        end
-        dashboard:SetScale(1)
-        dashboard:SetMinResize(350, 380); dashboard:SetMaxResize(1100, 760)
-        dashboard:SetWidth(math.max(350, math.min(1100, savedWindowWidth)))
-        dashboard:SetHeight(math.max(380, math.min(760, savedWindowHeight)))
-        if tonumber(MuklaOfficerSuiteDB.windowLeft) and tonumber(MuklaOfficerSuiteDB.windowBottom) then
-            dashboard:ClearAllPoints(); dashboard:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", MuklaOfficerSuiteDB.windowLeft, MuklaOfficerSuiteDB.windowBottom)
-        end
+        MOS.UI.Components.Dashboard.RestoreGeometry(dashboard, MuklaOfficerSuiteDB)
         MuklaOfficerSuiteDB.uiScale = nil
         MOS.PositionMinimapButton()
         if MuklaOfficerSuiteDB.hideMinimapIcon then MOS.minimapButton:Hide() end
