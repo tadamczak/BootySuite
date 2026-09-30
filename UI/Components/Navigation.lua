@@ -29,7 +29,7 @@ function Navigation.SetActive(buttons, activeName)
             else button:SetBackdropColor(0.04, 0.03, 0.02, 0.98) end; button:SetBackdropBorderColor(0, 0, 0, 0)
             button:SetHeight(selected and 30 or 26)
             button:ClearAllPoints()
-            button:SetPoint(button.navigationBottom and "TOPLEFT" or "BOTTOMLEFT", button.navigationContent, button.navigationBottom and "BOTTOMLEFT" or "TOPLEFT", button.navigationX, selected and (button.navigationBottom and 2 or -2) or 0)
+            button:SetPoint(button.navigationBottom and "TOPLEFT" or "BOTTOMLEFT", button.navigationContent, button.navigationBottom and "BOTTOMLEFT" or "TOPLEFT", button.navigationX, selected and (button.navigationBottom and 2 or -2) or (button.navigationBottom and -5 or 5))
             if selected then button.selectedFill:Show(); button.hoverFill:Hide() end
             if button.icon then button.icon:SetVertexColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43) end
             button:SetFrameLevel(button:GetParent():GetFrameLevel() + (selected and 24 or 20))
@@ -122,7 +122,7 @@ function Navigation.Create(options)
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
             local classic = MOS.UI.Components.IsClassicSkin()
-            local width = iconTabs and 38 or ((options.dashboard:GetWidth() - 2 * margin - 12 - (bottomTabs and 0 or 66) + 4) / table.getn(order))
+            local width = iconTabs and 38 or ((options.dashboard:GetWidth() - 2 * margin - 12 - (bottomTabs and 0 or 66)) / table.getn(order))
             local index, name
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
@@ -132,7 +132,7 @@ function Navigation.Create(options)
                 button.navigationX = 6 + ((index - 1) * width)
                 button.SetTabBorderVisible(false)
                 button:SetScale(1); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
-                button:SetFrameStrata(options.dashboard:GetFrameStrata()); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width - (iconTabs and 0 or 4)); button:SetHeight(30)
+                button:SetFrameStrata(options.dashboard:GetFrameStrata()); button:SetFrameLevel(options.dashboard:GetFrameLevel() + 20); button:SetWidth(width); button:SetHeight(30)
                 button.iconBorder:Hide(); button:Show()
                 if iconTabs then
                     button.label:Hide(); button.icon:Show(); button.icon:ClearAllPoints()
