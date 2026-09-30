@@ -114,7 +114,7 @@ function Navigation.Create(options)
         options.ensure()
         local bottomTabs = options.get("menuStyle") == "bottomTabs"
         local tabs = options.get("menuStyle") == "tabs" or bottomTabs
-        local _, sectionTop, sectionBottom, tabTop = MOS.UI.Components.Dashboard.GetChromeLayout(options.get, MOS.UI.Components.IsClassicSkin())
+        local _, sectionTop, sectionBottom, tabTop = MOS.UI.Components.Dashboard.GetChromeLayout(options.get, MOS.UI.Components.IsClassicSkin(), options.dashboard:GetWidth())
         if tabs then
             options.sidebar:Hide(); options.toggleButton:Hide()
             local margin = MOS.UI.Components.IsClassicSkin() and 4 or 9
