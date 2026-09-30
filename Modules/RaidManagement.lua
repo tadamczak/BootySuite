@@ -3,6 +3,13 @@ local MOS = MuklaOfficerSuite
 MOS.Modules.RaidManagement = MOS.Modules.RaidManagement or {}
 local RaidManagement = MOS.Modules.RaidManagement
 
+function RaidManagement.ResetIssueAttention(page)
+    local button = page.classicIssues
+    if not button then return end
+    button.mosIssueKeys = nil; button.mosIssueScratch = nil
+    MOS.UI.Components.SetAttentionPulse(button, false)
+end
+
 function RaidManagement.UpdateIssueAttention(button, issues)
     local previous, current = button.mosIssueKeys or {}, button.mosIssueScratch or {}
     for key in pairs(current) do current[key] = nil end
@@ -44,9 +51,9 @@ function RaidManagement.CreateChrome(page, callbacks)
     MOS.UI.Components.SetClassicButtonLabelOffset(view.classicIssues, 2, 4)
     view.classicIssues:SetScript("OnClick", function()
         MOS.UI.Components.SetAttentionPulse(view.classicIssues, false)
-        if page.softReserveWarning then page.softReserveWarning.userDismissed = false end
-        if page.missingSoftReserveWarning then page.missingSoftReserveWarning.userDismissed = false end
-        if page.invalidSoftReserveWarning then page.invalidSoftReserveWarning.userDismissed = false end
+        if page.softReserveWarning then page.softReserveWarning.userDismissed = false; page.softReserveWarning.userMinimized = false; page.softReserveWarning.forceExpanded = true end
+        if page.missingSoftReserveWarning then page.missingSoftReserveWarning.userDismissed = false; page.missingSoftReserveWarning.userMinimized = false; page.missingSoftReserveWarning.forceExpanded = true end
+        if page.invalidSoftReserveWarning then page.invalidSoftReserveWarning.userDismissed = false; page.invalidSoftReserveWarning.userMinimized = false; page.invalidSoftReserveWarning.forceExpanded = true end
         if page.resizeRefresh then page.resizeRefresh() end
     end)
     page.classicRaidName = view.classicRaidName; page.classicMeta = view.classicMeta; page.classicSaved = view.classicSaved; page.classicIssues = view.classicIssues
@@ -916,6 +923,7 @@ function RaidManagement.CreateRenderer(options)
 end
 
 function RaidManagement.ClearSessionHeader(page)
+    RaidManagement.ResetIssueAttention(page)
     page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide(); page.classicSummary:Hide()
     page.refreshControls.title:SetText("Raid"); if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.raidHideSectionHeader then page.refreshControls.title:Hide() else page.refreshControls.title:Show() end
 end
@@ -1136,7 +1144,8 @@ function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
     for index = 1, 3 do
         local card = cards[index]
         if card.docked then
-            local width = math.max(1, (PageSpan(page) - 4 - 2 * (dockCount - 1)) / dockCount)
+            local minimumContent = page.mosContentPanel and page.mosContentPanel.mosMinimumWidth or 190
+            local width = math.max(1, math.min(minimumContent / 2, (PageSpan(page) - 4 - 2 * (dockCount - 1)) / dockCount))
             card:ClearAllPoints(); card:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 2 + dockIndex * (width + 2), 2)
             card:SetWidth(width); card:SetHeight(30)
             card.text:Hide(); card.info:Hide(); card.fix:Hide(); if card.ping then card.ping:Hide() end
@@ -1231,7 +1240,7 @@ function RaidManagement.ShowGroupView(page, rows)
         local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
         if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then warningWidth = 0 end
         -- 2px warning inset + 7.5px outer clearance (4px window + 1.5px page + 2px warning) + 20px scrollbar/gap.
-        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(warningWidth + 29.5), 4 + (page.classicWarningBottom or 0))
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 4)
         if page.groupScrollBar then
             page.groupScrollBar:ClearAllPoints(); page.groupScrollBar:SetWidth(16)
             page.groupScrollBar:SetPoint("TOPLEFT", page.groupFrame, "TOPRIGHT", 4, -12)
@@ -1239,7 +1248,7 @@ function RaidManagement.ShowGroupView(page, rows)
         end
     else
         local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
-        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, page.activeToolMenu and -98 or -72); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24 - warningWidth, 5 + (page.classicWarningBottom or 0))
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, page.activeToolMenu and -98 or -72); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
     end
     page.groupFrame:Show(); if page.listScrollBar then page.listScrollBar:Hide() end
     page.refreshGroupView()
@@ -1270,7 +1279,8 @@ end
 
 function RaidManagement.RefreshListView(page, rows, members, selectedName, sortKey, lootMasterMode, settings)
     local renderer = page.listRenderer
-    page.classicWarningWidth = RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true)
+    RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true)
+    page.classicWarningWidth = 0
     local pageWidth = PageSpan(page)
     local filterWidth = pageWidth < 650 and 60 or 84
     local searchSpace = pageWidth - (page.classicWarningWidth or 0) - ((page.classicWarningWidth or 0) > 0 and 8 or 12)
@@ -1281,7 +1291,7 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     if not settings.raidListShowFilters then page.classicSearchWidth = math.max(90, math.min(178, searchSpace - 93)) end
     RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
     local rowStartY, tableLeft, tableWidth = RaidManagement.LayoutListHeaders(page, page.listHeaderUI.buttons, sortKey, lootMasterMode, settings.raidListRowWidth, table.getn(members), selectedName)
-    local warningHeight = page.classicWarningBottom or 0
+    local warningHeight = 0
     local scrollFrame = page.listScrollFrame
     local listBottom = lootMasterMode and 1.5 or (MOS.UI.Components.IsClassicSkin() and 4 or 11)
     scrollFrame:ClearAllPoints(); scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", tableLeft, rowStartY); scrollFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", tableLeft + tableWidth, listBottom + warningHeight)
@@ -2783,6 +2793,7 @@ function RaidManagement.AttachActionHandlers(options)
     local function LoadSelectedRaid()
         if not options.page.selectedRaidHistoryId then return end
         if options.loadRaidSnapshot(options.page.selectedRaidHistoryId) then
+            RaidManagement.ResetIssueAttention(options.page)
             options.beginRaidSession(); options.setHistoricalLoaded(true); options.setScanReady(true); options.refresh()
         end
     end
@@ -2860,7 +2871,7 @@ function RaidManagement.AttachActionHandlers(options)
     controls.addStatistics:Hide()
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_QUIT_RAID_SESSION"] = {
         text = "Quit the current raid session without saving?", button1 = "Quit", button2 = "Cancel",
-        OnAccept = function() options.quitRaidSession(); options.refresh() end,
+        OnAccept = function() options.quitRaidSession(); RaidManagement.ResetIssueAttention(options.page); options.refresh() end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
     controls.quit:SetScript("OnClick", function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_QUIT_RAID_SESSION") end)
@@ -2892,7 +2903,7 @@ function RaidManagement.AttachActionHandlers(options)
         sessionPrompt:Hide()
         saveDialog:Open()
     end)
-    closeButton:SetScript("OnClick", function() sessionPrompt:Hide(); options.quitRaidSession(); options.refresh() end)
+    closeButton:SetScript("OnClick", function() sessionPrompt:Hide(); options.quitRaidSession(); RaidManagement.ResetIssueAttention(options.page); options.refresh() end)
     options.page.ShowSessionTransitionPrompt = function(contextKey)
         if sessionPrompt:IsVisible() then return end
         sessionPrompt.contextKey = contextKey

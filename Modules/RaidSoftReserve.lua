@@ -57,6 +57,8 @@ end
 local function CreateWarningCard(page, dialogName, dialogTitle, background, border, textColor)
     local warning = MOS.UI.Components.CreateControl(nil, page)
     warning:SetHeight(58)
+    warning:SetFrameLevel(page:GetFrameLevel() + 50)
+    warning:EnableMouse(true)
     MOS.UI.Components.Window.ApplyProjectSurface(warning)
     warning.badge = MOS.UI.Components.CreateLabel(warning, nil, "OVERLAY", "GameFontDisableSmall")
     warning.badge:SetPoint("TOPLEFT", warning, "TOPLEFT", 8, -5); warning.badge:SetText("Warning")

@@ -23,7 +23,7 @@ end
 local function MeasureHistory(width, controls)
     local page, snapshots, actionY = controls.historyPage, controls.historyPage.raidHistorySnapshots, controls.historyActionY
     local dataWidth = math.max(60, width - 48)
-    local nameWidth, raidWidth = math.floor(dataWidth * 0.34), math.floor(dataWidth * 0.34)
+    local nameWidth, raidWidth = math.floor(dataWidth * 0.34), math.floor(dataWidth * 0.30)
     local timeWidth = dataWidth - nameWidth - raidWidth
     local widths = {nameWidth, raidWidth, timeWidth}
     local x = 8

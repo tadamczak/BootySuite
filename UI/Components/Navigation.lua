@@ -118,7 +118,7 @@ function Navigation.Create(options)
         if tabs then
             options.sidebar:Hide(); options.toggleButton:Hide()
             local margin = MOS.UI.Components.IsClassicSkin() and 4 or 9
-            local bottom = options.get("hideStatusVersionBar") and 4 or (MOS.UI.Components.IsClassicSkin() and 4 or 9) + 22
+            local bottom = options.get("hideStatusVersionBar") and 4 or ((bottomTabs or MOS.UI.Components.IsClassicSkin()) and 4 or 9) + 22
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
             local classic = MOS.UI.Components.IsClassicSkin()
@@ -131,7 +131,7 @@ function Navigation.Create(options)
                 button.navigationBottom = bottomTabs
                 button.navigationEdgeInset = bottomTabs and 1 or not bottomTabs and not options.get("hideHeaderBar") and options.get("hideHeaderLogo") and options.get("hideHeaderName") and 1 or 2
                 button.navigationMode = "tabs"
-                button.navigationContent = not bottomTabs and not options.get("hideHeaderBar") and not (options.get("hideHeaderLogo") and options.get("hideHeaderName")) and options.contentPanel.mosHeaderAnchor or options.contentPanel
+                button.navigationContent = bottomTabs and not options.get("hideStatusVersionBar") and options.dashboard.mosStatusBar or not bottomTabs and not options.get("hideHeaderBar") and not (options.get("hideHeaderLogo") and options.get("hideHeaderName")) and options.contentPanel.mosHeaderAnchor or options.contentPanel
                 button.navigationX = 6 + ((index - 1) * width)
                 button.SetTabBorderVisible(false)
                 button:SetScale(1); button:ClearAllPoints(); button:SetPoint(bottomTabs and "BOTTOMLEFT" or "TOPLEFT", options.dashboard, bottomTabs and "BOTTOMLEFT" or "TOPLEFT", 20 + ((index - 1) * width), bottomTabs and bottom or tabTop)
@@ -181,6 +181,8 @@ function Navigation.Create(options)
                 options.toggleButtonClassicIcon:Show()
             else options.toggleButton:SetText(collapsed and ">>" or "<<") end
         end
+        local leftInset = tabs and (MOS.UI.Components.IsClassicSkin() and 4 or 9) or (MOS.UI.Components.IsClassicSkin() and (options.get("sidebarCollapsed") and 49 or 153) or (options.get("sidebarCollapsed") and 64 or 184))
+        options.contentPanel.mosMinimumWidth = 350 - leftInset - 4 - 3
         if options.applyChrome then options.applyChrome() end
         Navigation.SetActive(controller.buttons, controller.activeName or options.order[1])
         if options.refreshLayout then options.refreshLayout() end
