@@ -189,8 +189,9 @@ function RaidStatistics.Create(page, getEntries, deleteEntry, updateEntry)
             if raid and index <= visibleRaids then
                 button.raidId = raid.id
                 button.allText:SetText(tostring(raid.id) .. "  |  " .. tostring(raid.raidName or "Unknown") .. "  |  " .. date("%Y-%m-%d", tonumber(raid.savedAt) or 0)); button.allText:Show(); button.idText:Hide(); button.zoneText:Hide(); button.dateText:Hide()
-                local selected = self.selectedId == raid.id; button:SetBackdropColor(selected and 0.32 or 0.12, selected and 0.19 or 0.07, 0.02, 0.96); button:Show()
+                local selected = self.selectedId == raid.id; button:Show()
                 MOS.UI.Components.SetClassicButtonSelected(button, selected)
+                MOS.UI.Components.StyleWarmListRow(button, selected)
             else MOS.UI.Components.SetClassicButtonSelected(button, false); button:Hide() end
         end
         local summary = MOS.Services.RaidStatistics.BuildSummary(entries, self.selectedId)

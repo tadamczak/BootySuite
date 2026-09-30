@@ -94,7 +94,9 @@ function Settings.LayoutRaidGrid(page, offset)
     At(shell.groupHeading, 48, y); y = y - 38
     At(group.displayHeading, 52, y); y = y - 26
     At(group.columnsLabel, 52, y - 6); At(group.columnsButton, 104, y); y = y - 28
-    y = y - C.LayoutGrid(page, group.displayChecks, 52, y, width, 26) - 8
+    y = y - C.LayoutGrid(page, group.memberDisplayChecks, 52, y, width, 26)
+    At(group.showHeader, 52, y); y = y - 26
+    At(group.showBorder, 52, y); y = y - 34
     At(group.sizeHeading, 52, y); y = y - 24
     y = y - C.LayoutGrid(page, group.autoChecks, 52, y, width, 26) - 22
     y = y - C.LayoutGrid(page, group.sliders, 52, y, width, 56, true)
@@ -103,6 +105,8 @@ function Settings.LayoutRaidGrid(page, offset)
     y = y - C.LayoutGrid(page, group.colors, 52, y, width, 28) - 16
     At(group.lightnessLabel,52,y); y=y-34
     if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting("raidGroupOddLightness") or 5) end
+    At(group.tileColorHeading, 52, y); y = y - 26
+    y = y - C.LayoutGrid(page, group.tileColors, 52, y, width, 28) - 24
     At(shell.listHeading, 48, y); At(shell.listDivider, 48, y - 20); shell.listDivider:SetWidth(math.max(1, page:GetWidth() - 84)); y = y - 44
     At(list.displayHeading,52,y);y=y-26
     y = y - C.LayoutGrid(page, list.checks, 52, y, width, 26) - 24
@@ -357,6 +361,7 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local showClass = factory.Checkbox(40, -410, "Show class", "raidGroupShowClass")
     local showLevel = factory.Checkbox(300, -410, "Show lvl", "raidGroupShowLevel")
     local showHeader = factory.Checkbox(40, -434, "Show group header", "raidGroupShowHeader")
+    local showBorder = factory.Checkbox(40, -460, "Show group border", "raidGroupShowBorder")
     local showLootMaster = factory.Checkbox(300, -434, "Show LM icon", "raidGroupShowLootMaster")
     local showRole = factory.Checkbox(40, -458, "Show role icon", "raidGroupShowRoleIcon")
     local sizeHeading = Heading("Size", -492)
@@ -383,17 +388,22 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local background = factory.Color(40, -774, "Background color", "raidGroupBackgroundColor")
     local text = factory.Color(230, -774, "Main text color", "raidGroupTextColor")
     local hover = factory.Color(40, -802, "Hover color", "raidGroupHoverColor")
-    local pressed = factory.Color(230, -802, "Collapsed color", "raidGroupPressedColor")
+    local tileColorHeading = Heading("Group tile color", -860)
+    local headerText = factory.Color(40, -886, "Header text color", "raidGroupHeaderTextColor")
+    local headerBackground = factory.Color(230, -886, "Header background color", "raidGroupHeaderBackgroundColor")
+    local border = factory.Color(40, -914, "Border color", "raidGroupBorderColor")
     local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteGroupLightness", "raidGroupOddLightness", shell.panel)
     return {
         lightnessLabel = lightnessLabel, lightnessField = lightnessField,
         displayHeading = displayHeading, sizeHeading = sizeHeading, colorHeading = colorHeading,
-        displayChecks = { showClass, showLevel, showHeader, showLootMaster, showRole },
+        displayChecks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole },
+        memberDisplayChecks = {showClass, showLevel, showLootMaster, showRole}, showHeader = showHeader, showBorder = showBorder,
         autoChecks = {autoWidth}, colorChecks = {classColors}, sliders = {width, height, headerHeight, margin, tileTextSize, headerTextSize},
         columnsLabel = columnsLabel, columnsButton = columnsButton, columnsPanel = columnsPanel,
-        checks = { showClass, showLevel, showHeader, showLootMaster, showRole, autoWidth, classColors },
-        width = width, height = height, headerHeight = headerHeight, margin = margin, tileTextSize = tileTextSize, headerTextSize = headerTextSize, autoWidth = autoWidth, colors = { background, text, hover, pressed },
-        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, columnsLabel, columnsButton, showClass, showLevel, showHeader, showLootMaster, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, pressed, lightnessLabel, lightnessField },
+        checks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, autoWidth, classColors },
+        width = width, height = height, headerHeight = headerHeight, margin = margin, tileTextSize = tileTextSize, headerTextSize = headerTextSize, autoWidth = autoWidth, colors = { background, text, hover },
+        tileColorHeading = tileColorHeading, tileColors = {headerText, headerBackground, border},
+        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, columnsLabel, columnsButton, showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, lightnessLabel, lightnessField, tileColorHeading, headerText, headerBackground, border },
     }
 end
 
@@ -476,6 +486,7 @@ function Settings.AttachSectionResets(page, callbacks)
     Add(group, group.displayHeading, {group.displayChecks, {{settingKey="raidGroupColumns"}}}, callbacks.refreshGroup)
     Add(group, group.sizeHeading, {group.autoChecks, group.sliders}, callbacks.refreshGroup)
     Add(group, group.colorHeading, {group.colorChecks, group.colors, {group.lightnessField}}, callbacks.refreshGroup)
+    Add(group, group.tileColorHeading, {group.tileColors}, callbacks.refreshGroup)
     Add(list, list.displayHeading, {list.checks}, callbacks.refreshList)
     Add(list, list.sizeHeading, {list.sliders}, callbacks.refreshList)
     Add(list, list.colorHeading, {list.colors, {list.lightnessField}}, callbacks.refreshList)
@@ -526,7 +537,7 @@ function Settings.CreateRaidSettings(page, callbacks)
         listWidth = listControls.width,
         listHeight = listControls.height,
         percentages = {groupControls.lightnessField, listControls.lightnessField},
-        colors = Settings.MergeControls(Settings.MergeControls({}, groupControls.colors), listControls.colors),
+        colors = Settings.MergeControls(Settings.MergeControls(Settings.MergeControls({}, groupControls.colors), groupControls.tileColors), listControls.colors),
     }
     Settings.BindRaidViewControls(page, viewControls, shell.groupReset, shell.listReset, callbacks)
     Settings.BindRaidAccordions(page, { page = page, layout = layout, general = general, generalControls = { liveTracking, page.raidHideHeaderCheck }, leader = leader, loot = loot, debugHeading = primarySections.debugHeading, layoutControls = layoutControls, columnsPanel = groupControls.columnsPanel })

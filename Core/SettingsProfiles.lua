@@ -10,7 +10,7 @@ local keys = {
     "raidGroupOddLightness", "raidListOddLightness",
     "rosterBackgroundColor", "rosterTextColor", "rosterHoverColor", "rosterOddLightness",
     "playerDetailsStyle", "raidClassColors", "rosterClassColors", "rosterLiveTrackingEnabled", "raidLiveTrackingEnabled", "showOfflineMembers", "menuStyle", "useIconTabs", "uiSkin",
-    "raidGroupColumns", "raidGroupShowClass", "raidGroupShowLevel", "raidGroupShowHeader", "raidGroupShowLootMaster", "raidGroupShowRoleIcon",
+    "raidGroupColumns", "raidGroupShowClass", "raidGroupShowLevel", "raidGroupShowHeader", "raidGroupShowBorder", "raidGroupHeaderTextColor", "raidGroupHeaderBackgroundColor", "raidGroupBorderColor", "raidGroupShowLootMaster", "raidGroupShowRoleIcon",
     "raidGroupClassColors", "raidGroupAutoTileWidth", "raidGroupTileWidth", "raidGroupTileHeight", "raidGroupHeaderHeight", "raidGroupMargin",
     "raidGroupTileTextSize", "raidGroupHeaderTextSize", "raidGroupBackgroundColor", "raidGroupTextColor", "raidGroupHoverColor", "raidGroupPressedColor",
     "raidListShowName", "raidListShowLevel", "raidListShowStatus", "raidListShowGroup", "raidListShowClass", "raidListShowGuildRank", "raidListShowSR",

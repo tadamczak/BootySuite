@@ -12,7 +12,7 @@ function RaidManagement.HideRaidHistoryControls(controls)
 end
 
 local function Cell(label, parent, x, width, text)
-    label:ClearAllPoints(); label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -5)
+    label:ClearAllPoints(); label:SetPoint("LEFT", parent, "LEFT", x, 0); label:SetJustifyV("MIDDLE")
     label:SetWidth(width); label:SetHeight(0); label:SetJustifyH("LEFT")
     if label.SetWordWrap then label:SetWordWrap(true) end
     if label.SetNonSpaceWrap then label:SetNonSpaceWrap(true) end
@@ -37,14 +37,14 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     controls.historyTitle:ClearAllPoints(); controls.historyTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 8, actionY - 38); controls.historyTitle:Show()
     local snapshots = page.getRaidHistory and page.getRaidHistory() or {}; page.raidHistorySnapshots = snapshots
     if not MOS.UI.Components.ApplySelectionListStyle(controls.historyButtons, snapshots, page.selectedRaidHistoryId, controls.loadRaid) then page.selectedRaidHistoryId = nil end
-    local dataWidth = math.max(60, width - 64)
+    local dataWidth = math.max(60, width - 68)
     local nameWidth, raidWidth = math.floor(dataWidth * 0.34), math.floor(dataWidth * 0.34)
     local timeWidth = dataWidth - nameWidth - raidWidth
     local widths = {nameWidth, raidWidth, timeWidth}
     local x = 8
     for index = 1, 3 do
         local heading = controls.historyHeaders[index]
-        heading:ClearAllPoints(); heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, actionY - 62); heading:SetWidth(widths[index] - 6); heading:Show()
+        heading:ClearAllPoints(); heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, actionY - 62); heading:SetWidth(widths[index] - 6); heading:SetJustifyH("LEFT"); heading:Show()
         x = x + widths[index]
     end
     controls.historyScroll:ClearAllPoints(); controls.historyScroll:SetPoint("TOPLEFT",page,"TOPLEFT",8,actionY-82);controls.historyScroll:SetPoint("BOTTOMRIGHT",page,"BOTTOMRIGHT",-28,8)
@@ -61,9 +61,11 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
                 Cell(button.raidName, button, nameWidth + 4, raidWidth - 6, snapshot.raidName or "Unknown zone"),
                 Cell(button.savedAt, button, nameWidth + raidWidth + 4, timeWidth - 6, savedAt and date("%Y-%m-%d %H:%M", savedAt) or ""))
             button:SetHeight(height); button:Show()
+            MOS.UI.Components.StyleWarmListRow(button, page.selectedRaidHistoryId == snapshot.id)
+            load:SetWidth(24); load:SetHeight(24); deleteButton:SetWidth(16); deleteButton:SetHeight(16)
             load:ClearAllPoints(); load:SetPoint("LEFT", button, "RIGHT", 4, 0); load:Show()
             deleteButton:ClearAllPoints(); deleteButton:SetPoint("LEFT", load, "RIGHT", 4, 0); deleteButton:Show()
-            y = y - height - 4
+            y = y - height - 2
         else button:Hide(); load:Hide(); deleteButton:Hide() end
     end
     controls.historyCanvas:SetHeight(math.max(1,-y))

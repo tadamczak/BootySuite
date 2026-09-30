@@ -62,6 +62,10 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.raidGroupShowClass == nil then MuklaOfficerSuiteDB.raidGroupShowClass = true end
     if MuklaOfficerSuiteDB.raidGroupShowLevel == nil then MuklaOfficerSuiteDB.raidGroupShowLevel = true end
     if MuklaOfficerSuiteDB.raidGroupShowHeader == nil then MuklaOfficerSuiteDB.raidGroupShowHeader = true end
+    if MuklaOfficerSuiteDB.raidGroupShowBorder == nil then MuklaOfficerSuiteDB.raidGroupShowBorder = true end
+    if type(MuklaOfficerSuiteDB.raidGroupHeaderTextColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupHeaderTextColor = { 1, 0.82, 0 } end
+    if type(MuklaOfficerSuiteDB.raidGroupHeaderBackgroundColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupHeaderBackgroundColor = { 0.025, 0.025, 0.025 } end
+    if type(MuklaOfficerSuiteDB.raidGroupBorderColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupBorderColor = { 0.48, 0.38, 0.20 } end
     if MuklaOfficerSuiteDB.raidGroupShowLootMaster == nil then MuklaOfficerSuiteDB.raidGroupShowLootMaster = true end
     if MuklaOfficerSuiteDB.raidGroupShowRoleIcon == nil then MuklaOfficerSuiteDB.raidGroupShowRoleIcon = true end
     if MuklaOfficerSuiteDB.raidGroupClassColors == nil then MuklaOfficerSuiteDB.raidGroupClassColors = true end
@@ -304,6 +308,10 @@ function Database.ResetRaidGroupView()
     MuklaOfficerSuiteDB.raidGroupShowClass = true
     MuklaOfficerSuiteDB.raidGroupShowLevel = true
     MuklaOfficerSuiteDB.raidGroupShowHeader = true
+    MuklaOfficerSuiteDB.raidGroupShowBorder = true
+    MuklaOfficerSuiteDB.raidGroupHeaderTextColor = { 1, 0.82, 0 }
+    MuklaOfficerSuiteDB.raidGroupHeaderBackgroundColor = { 0.025, 0.025, 0.025 }
+    MuklaOfficerSuiteDB.raidGroupBorderColor = { 0.48, 0.38, 0.20 }
     MuklaOfficerSuiteDB.raidGroupClassColors = true
     MuklaOfficerSuiteDB.raidGroupShowLootMaster = true
     MuklaOfficerSuiteDB.raidGroupShowRoleIcon = true
