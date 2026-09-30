@@ -23,6 +23,7 @@ end
 
 function RosterManagement.CreateShell(page, contentPanel)
     RosterManagement.CreateSections(page)
+    page.detailsOwner = contentPanel:GetParent()
     local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10)
     title:SetText("Roster"); page.sectionTitle = title
@@ -136,11 +137,24 @@ function RosterManagement.CreateGuildActionHandler(options)
         OnCancel = function() pendingAction = nil end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
+    StaticPopupDialogs["MUKLA_OFFICER_SUITE_REMOVE"] = {
+        text = "%s", button1 = "Remove", button2 = "Cancel",
+        OnAccept = function() Finish(GuildUninvite, "Removal") end,
+        OnCancel = function() pendingAction = nil end,
+        timeout = 0, whileDead = 1, hideOnEscape = 1,
+    }
     return function(action, requestedMember)
         if action == "refresh" then options.queueRefresh(); return end
         local data = options.getData()
         local member = requestedMember or options.findMember(data, options.getSelectedName())
         if not member or not MOS.Services.Roster.CanManage(action, member) then return end
+        if action == "group" then
+            MOS.Services.Roster.PerformMemberAction("group", member.name); return
+        elseif action == "remove" then
+            pendingAction = { name = member.name, action = action }
+            MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_REMOVE", "Remove " .. member.name .. " from the guild?")
+            return
+        end
         local direction = action == "promote" and -1 or 1
         local targetRank = options.findRankName(data, (tonumber(member.rankIndex) or 0) + direction) or "the next rank"
         if action == "promote" or action == "demote" then
@@ -205,6 +219,7 @@ function RosterManagement.MountList(page, filterView, options)
     })
     RosterManagement.CreateHeaders(page, options.onSort)
     page.rowController = {
+        page = page,
         onAction = options.onAction,
         onSelect = options.onSelect,
         isSelected = options.isSelected,
@@ -420,7 +435,7 @@ local function OnRowClick()
 end
 
 local function OnRowEnter()
-    if this.displayedMember and not this.expanded then
+    if this.displayedMember and not this.expanded and not this.controller.isSelected(this.displayedMember) then
         this.hover:Show()
     end
 end
@@ -491,7 +506,7 @@ function RosterManagement.CreateRow(parent, index, rowHeight, controller)
     row.actionViewport:SetWidth(640)
     row.actionViewport:SetHeight(204)
     row.actionPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
-    row.actionPanel:SetBackdropColor(0.07, 0.08, 0.07, 0.92)
+    row.actionPanel:SetBackdropColor(0, 0, 0, 0)
     row.actionPanel:SetBackdropBorderColor(0.30, 0.34, 0.30, 1)
     row.actionPanel:Hide()
     row.promoteButton = CreateActionButton(row, "Promote", "promote", -28)
@@ -638,11 +653,11 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
             row.class:SetTextColor(classColor.r * shade, classColor.g * shade, classColor.b * shade)
         end
     end
-    row.expanded = member.name == selectedName
+    row.expanded = member.name == selectedName and MuklaOfficerSuiteDB.playerDetailsStyle ~= "window"
     if row.expanded then
         row.selection:Show()
-        row:SetBackdropColor(0.16, 0.20, 0.17, 0.82)
-        row:SetBackdropBorderColor(0.46, 0.55, 0.47, 0.90)
+        row:SetBackdropColor(0, 0, 0, 0)
+        row:SetBackdropBorderColor(0, 0, 0, 0)
         row.actionPanel:Show()
         local expandedHeight = math.min(rowHeight + 208, row.availableHeight or (rowHeight + 208))
         row.actionViewport:SetHeight(math.max(1, expandedHeight - rowHeight - 4))
@@ -657,7 +672,7 @@ function RosterManagement.BindRow(row, member, visibleIndex, selectedName, rowHe
         MOS.UI.Components.RefreshClippedContent(row.actionViewport)
         return expandedHeight
     end
-    row.selection:Hide()
+    if member.name == selectedName then row.selection:Show() else row.selection:Hide() end
     row:SetBackdropColor(0, 0, 0, 0)
     row:SetBackdropBorderColor(0, 0, 0, 0)
     row.actionPanel:Hide(); row.actionViewport:Hide()
@@ -738,6 +753,7 @@ end
 function RosterManagement.SetDataVisible(controller, visible)
     local method = visible and "Show" or "Hide"
     local page = controller.page
+    if not visible and page.detailsWindow then page.detailsWindow.displayedMember = nil; page.detailsWindow:Hide() end
     local controls = controller.controls
     page.fittedPanel:Hide()
     if page.tablePanel then page.tablePanel[method](page.tablePanel); page.actionsPanel[method](page.actionsPanel) end
@@ -792,7 +808,7 @@ function RosterManagement.RenderList(page, visibleMembers, columns, selectedName
         if top and bottomEdge and top > bottomEdge then panelHeight = top - bottomEdge end
     end
     local availableHeight = page.tablePanel and math.max(0, panelHeight + rowsTop - bottom) or math.max(0, page.tableViewport:GetHeight())
-    local visibleRowCount = RosterManagement.CalculateVisibleRows(availableHeight, rowHeight, selectedName ~= nil)
+    local visibleRowCount = RosterManagement.CalculateVisibleRows(availableHeight, rowHeight, selectedName ~= nil and MuklaOfficerSuiteDB.playerDetailsStyle ~= "window")
     local needsScroll = table.getn(visibleMembers) > visibleRowCount
     local rightInset = needsScroll and 24 or 6
     controller.viewportRightInset = rightInset
@@ -978,6 +994,16 @@ function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, so
     local columns = RosterManagement.GetVisibleColumns(page, MuklaOfficerSuiteDB)
     local lowestRankIndex = renderer.getLowestRankIndex(data)
     RosterManagement.RenderList(page, renderer.visibleMembers, columns, selectedMemberName, lowestRankIndex, MuklaOfficerSuiteDB.rosterClassColors, resetScroll, rosterShift)
+    if RosterManagement.UpdateDetailsWindow then
+        local selected
+        if MuklaOfficerSuiteDB.playerDetailsStyle == "window" then
+            local index
+            for index = 1, table.getn(renderer.visibleMembers) do
+                if renderer.visibleMembers[index].name == selectedMemberName then selected = renderer.visibleMembers[index]; break end
+            end
+        end
+        RosterManagement.UpdateDetailsWindow(page, selected)
+    end
     RosterManagement.LayoutSummary(page, renderer.summaryText)
     RosterManagement.UpdateSortHeaders(page, sortKey)
 end
@@ -1258,7 +1284,7 @@ function RosterManagement.CreateMemberDetails(row)
 end
 
 function RosterManagement.OpenNoteEditor(row, key)
-    local page, C, service = row:GetParent(), MOS.UI.Components, MOS.Services.Roster
+    local page, C, service = row.controller.page or row:GetParent(), MOS.UI.Components, MOS.Services.Roster
     local member = row.displayedMember
     if not member or not service.CanManage(key) then return end
     if not page.noteEditor then
@@ -1315,6 +1341,7 @@ function RosterManagement.BindMemberDetails(row, member)
     row.details.name:ClearAllPoints()
     row.details.name:SetPoint("TOPLEFT", row.actionPanel, "TOPLEFT", 12, -10)
     row.details.name:SetPoint("TOPRIGHT", row.actionPanel, "TOPRIGHT", arrowX - 4, -10)
+    if row.detailsWindow then RosterManagement.LayoutDetailsWindow(row, member) end
 end
 
 function RosterManagement.OpenMemberMenu(row)
@@ -1350,6 +1377,10 @@ function RosterManagement.BindPermissionEvents(page)
         if service.CanManage("invite") then page.guildAddButton:Show() else page.guildAddButton:Hide() end
         if service.CanManage("control") then page.guildControlButton:Show() else page.guildControlButton:Hide() end
         if page.layoutControls then RosterManagement.LayoutChrome(page, page.layoutControls, page.footer.motd:GetText()) end
+        if page.noteTarget and not service.CanManage(page.noteTarget.key) and page.noteEditor then page.noteEditor:Hide(); page.noteTarget = nil end
+        if page.detailsWindow and page.detailsWindow:IsVisible() and page.detailsWindow.displayedMember then
+            RosterManagement.BindMemberDetails(page.detailsWindow, page.detailsWindow.displayedMember)
+        end
         if page.listController then
             local _, row
             for _, row in ipairs(page.listController.rows) do

@@ -1,5 +1,6 @@
 local MOS = MuklaOfficerSuite
 local Window = {}
+local projectBackdrop = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
 MOS.UI.Components.Window = Window
 
 function Window.Create(options)
@@ -13,7 +14,7 @@ function Window.Create(options)
     window:EnableMouse(true); window:RegisterForDrag("LeftButton")
     window:SetScript("OnDragStart", function() this:StartMoving() end)
     window:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    local windowBackdrop = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
+    local windowBackdrop = projectBackdrop
     window:SetBackdrop(windowBackdrop)
     window:SetBackdropColor(0.015, 0.015, 0.015, 1); window:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
 
@@ -102,4 +103,22 @@ function Window.Create(options)
     window.ApplyResizeBounds = ApplyResizeBounds
     window:Hide()
     return window
+end
+
+-- Attached panels inherit visibility from their feature page and follow the owner's anchors.
+function Window.CreateAttached(parent, owner, width, height, onClose)
+    local C = MOS.UI.Components
+    local frame = C.CreateContainer(nil, parent)
+    frame:SetWidth(width); frame:SetHeight(height)
+    frame:SetPoint("TOPLEFT", owner, "TOPRIGHT", 0, 0)
+    frame:SetBackdrop(projectBackdrop)
+    frame:SetBackdropColor(0.015, 0.015, 0.015, 1)
+    frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
+    frame:SetFrameStrata(owner:GetFrameStrata()); frame:SetFrameLevel(owner:GetFrameLevel() + 30)
+    frame:EnableMouse(true)
+    frame.close = C.CreateWindowButton(frame, nil, "close")
+    frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
+    frame.close:SetScript("OnClick", function() frame:Hide(); if onClose then onClose() end end)
+    frame:Hide()
+    return frame
 end
