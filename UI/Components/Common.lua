@@ -779,3 +779,27 @@ function UI.ApplyScrollRange(viewport, slider, maximum)
         UI.SetScrollBarVisible(slider, maximum > 0.5)
     end
 end
+
+-- Only visible, unacknowledged controls run this animation; no data refreshes.
+local function AttentionPulseTick()
+    this.mosAttentionElapsed = math.mod((this.mosAttentionElapsed or 0) + (arg1 or 0), 1)
+    if this.mosAttentionElapsed < 0.5 then this.mosAttentionTexture:Show() else this.mosAttentionTexture:Hide() end
+end
+local function AttentionPulseHide()
+    this:SetScript("OnUpdate", nil)
+    if this.mosAttentionTexture then this.mosAttentionTexture:Hide() end
+end
+local function AttentionPulseShow()
+    if this.mosAttentionPending then this:SetScript("OnUpdate", AttentionPulseTick) end
+end
+function UI.SetAttentionPulse(button, pending)
+    if not button.mosAttentionTexture then
+        local texture = button:CreateTexture(nil, "ARTWORK")
+        texture:SetAllPoints(button); UI.ApplyGoldRadialHighlight(texture); texture:Hide()
+        button.mosAttentionTexture = texture
+        button:SetScript("OnHide", AttentionPulseHide); button:SetScript("OnShow", AttentionPulseShow)
+    end
+    button.mosAttentionPending = pending and true or false
+    if pending and button:IsVisible() then button:SetScript("OnUpdate", AttentionPulseTick)
+    else button:SetScript("OnUpdate", nil); button.mosAttentionTexture:Hide() end
+end

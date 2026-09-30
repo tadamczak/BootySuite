@@ -42,8 +42,8 @@ local function MeasureHistory(width, controls)
             local savedAt = snapshot.savedAt or snapshot.updatedAt
             local height = math.max(26,
                 Cell(button.label, button, 4, nameWidth - 6, tostring(snapshot.id or "Unknown")),
-                Cell(button.raidName, button, nameWidth + 4, raidWidth - 6, snapshot.raidName or "Unknown zone"),
-                Cell(button.savedAt, button, nameWidth + raidWidth + 4, timeWidth - 6, savedAt and date("%Y-%m-%d %H:%M", savedAt) or ""))
+                Cell(button.raidName, button, nameWidth, raidWidth, snapshot.raidName or "Unknown zone"),
+                Cell(button.savedAt, button, nameWidth + raidWidth, timeWidth, savedAt and date("%Y-%m-%d %H:%M", savedAt) or ""))
             button:SetHeight(height); button:Show()
             MOS.UI.Components.StyleWarmListRow(button, page.selectedRaidHistoryId == snapshot.id)
             load:SetWidth(24); load:SetHeight(24); deleteButton:SetWidth(16); deleteButton:SetHeight(16)
@@ -57,7 +57,7 @@ end
 
 function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     local fullWidth = math.max(1, MOS.UI.Components.GetFrameSpan(page) - 16)
-    local width = math.min(800, fullWidth)
+    local width = math.min(500, fullWidth)
     local rightInset = 8 + fullWidth - width
     local buttonWidth = math.min(110, (width - 8) / 2)
     local textY = MuklaOfficerSuiteDB.raidHideSectionHeader and -8 or -48

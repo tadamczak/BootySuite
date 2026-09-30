@@ -3,6 +3,12 @@ local Window = {}
 local projectBackdrop = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
 MOS.UI.Components.Window = Window
 
+function Window.ApplyProjectSurface(frame)
+    frame:SetBackdrop(projectBackdrop)
+    frame:SetBackdropColor(0.015, 0.015, 0.015, 1)
+    frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
+end
+
 function Window.Create(options)
     local view
     local window = MOS.UI.Components.CreateContainer(options.name, UIParent)
@@ -15,8 +21,7 @@ function Window.Create(options)
     window:SetScript("OnDragStart", function() this:StartMoving() end)
     window:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
     local windowBackdrop = projectBackdrop
-    window:SetBackdrop(windowBackdrop)
-    window:SetBackdropColor(0.015, 0.015, 0.015, 1); window:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
+    Window.ApplyProjectSurface(window)
 
     local titleBar = MOS.UI.Components.CreateContainer(nil, window)
     titleBar:SetFrameLevel(window:GetFrameLevel() + 1)
