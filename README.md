@@ -242,3 +242,5 @@ Disabling **Save attendance** keeps the raid record but marks Attendance as Off.
 5. Use **Remove** to delete a raid and recalculate dependent statistics.
 
 Raid warnings overlay the content without shrinking lists or groups. They can be minimized to a bottom row and restored with the header button or **X issues**. The **X issues** button pulses for half a second every second until clicked; new issues or loading a session restart the pulse. The text turns light red during each pulse.
+
+Raid column headers shrink together when space is tight. List and Group views reserve scrollbar space only when scrolling is needed. **Raid Leader Tools** and **Loot Master Tools** open action dropdowns; click an option or outside the menu to close it.

@@ -165,7 +165,7 @@ end
 
 function UI.RefreshDropdownLayers(panel, toggle)
     local strata = toggle:GetFrameStrata()
-    local level = math.max(toggle:GetFrameLevel(), toggle:GetParent():GetFrameLevel()) + 20
+    local level = math.max(math.max(toggle:GetFrameLevel(), toggle:GetParent():GetFrameLevel()) + 20, panel.mosMinimumFrameLevel or 0)
     panel:SetFrameStrata(strata); panel:SetFrameLevel(level)
     panel.dismiss:SetFrameStrata(strata); panel.dismiss:SetFrameLevel(level - 1)
     local index
