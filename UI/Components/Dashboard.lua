@@ -7,7 +7,7 @@ function Dashboard.GetChromeLayout(get, classic)
     local compact = get("hideHeaderLogo") and get("hideHeaderName")
     local normalHeight = classic and 44 or 32
     local topTabs = get("menuStyle") == "tabs"
-    local headerHeight = topTabs and 20 or (compact and 30 or normalHeight)
+    local headerHeight = (topTabs and 20 or (compact and 30 or normalHeight)) + 4
     local bottom = get("hideStatusVersionBar") and (classic and 4 or 9) or (classic and 26 or 31)
     if get("hideHeaderBar") then return 0, -1, bottom, -1 end
     local top = -(topTabs and 1 or (classic and 8 or 14)) - headerHeight
@@ -39,8 +39,8 @@ end
 function Dashboard.PlaceWindowControls(view, inContent)
     local controls = view.windowControls
     controls:ClearAllPoints()
-    if inContent then controls:SetPoint("TOPRIGHT", view.contentPanel, "TOPRIGHT", -1, -1)
-    else controls:SetPoint("RIGHT", view.titleBar, "RIGHT", -6, 0) end
+    if inContent then controls:SetPoint("TOPRIGHT", view.contentPanel, "TOPRIGHT", -3, -3)
+    else controls:SetPoint("RIGHT", view.titleBar, "RIGHT", -8, 0) end
     controls:Show()
 end
 
@@ -50,7 +50,7 @@ function Dashboard.ApplyChrome(view, get)
     local height = Dashboard.GetChromeLayout(get, classic)
     view.titleBar:ClearAllPoints()
     view.titleBar:SetPoint("TOPLEFT", view.frame, "TOPLEFT", classic and 4 or 9, get("menuStyle") == "tabs" and -1 or (classic and -8 or -14))
-    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", 0, get("menuStyle") == "tabs" and -1 or (classic and -8 or -14))
+    view.titleBar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", -4, get("menuStyle") == "tabs" and -1 or (classic and -8 or -14))
     view.titleBar:SetHeight(height)
     SetChromeVisible(view.title, not classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
     SetChromeVisible(view.classicTitle, classic and not get("hideHeaderName") and get("menuStyle") ~= "tabs")
@@ -61,13 +61,13 @@ function Dashboard.ApplyChrome(view, get)
     SetChromeVisible(view.titleBar, not hiddenHeader)
     Dashboard.PlaceWindowControls(view, hiddenHeader)
     if view.pageHost then
-        view.pageHost:ClearAllPoints(); view.pageHost:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 0, hiddenHeader and -20 or 0)
+        view.pageHost:ClearAllPoints(); view.pageHost:SetPoint("TOPLEFT", view.contentPanel, "TOPLEFT", 0, hiddenHeader and -24 or 0)
         view.pageHost:SetPoint("BOTTOMRIGHT", view.contentPanel, "BOTTOMRIGHT", 0, 0)
     end
     if not classic then
         view.sidebarToggle:SetParent(hiddenHeader and view.sidebar or view.titleBar); view.sidebarToggle:ClearAllPoints()
         if hiddenHeader then view.sidebarToggle:SetPoint("TOPRIGHT", view.sidebar, "TOPRIGHT", -6, -6)
-        else view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 5, 0) end
+        else view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 7, 0) end
     end
     local footer = not get("hideStatusVersionBar")
     Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()))
@@ -111,7 +111,7 @@ function Dashboard.CreateWindow(version)
     view.titleBar:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     view.titleBar:SetBackdropColor(0.025, 0.022, 0.018, 0.98); view.titleBar:SetBackdropBorderColor(0.42, 0.42, 0.40, 1)
     MOS.UI.Components.RegisterSkinnedSurface(view.titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
-    MOS.UI.Components.SetSurfaceHorizontalBorders(view.titleBar)
+    MOS.UI.Components.SetSurfaceHorizontalBorders(view.titleBar, false, true)
     view.title = view.titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     view.title:SetPoint("CENTER", view.titleBar, "CENTER", 0, 2); view.title:SetText("Mukla Officer Suite")
     view.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
@@ -120,21 +120,21 @@ function Dashboard.CreateWindow(version)
     view.classicTitle:SetWidth(220); view.classicTitle:SetHeight(19); view.classicTitle:SetPoint("CENTER", view.titleBar, "CENTER", 0, 1); view.classicTitle:Hide()
     view.classicLogo = view.titleBar:CreateTexture(nil, "ARTWORK")
     view.classicLogo:SetTexture(MOS.UI.Components.ClassicAsset("logo.tga")); view.classicLogo:SetTexCoord(0, 1, 0.08203125, 0.9140625)
-    view.classicLogo:SetWidth(100); view.classicLogo:SetHeight(40); view.classicLogo:SetPoint("LEFT", view.titleBar, "LEFT", 18, 0); view.classicLogo:Hide()
+    view.classicLogo:SetWidth(100); view.classicLogo:SetHeight(40); view.classicLogo:SetPoint("LEFT", view.titleBar, "LEFT", 20, 0); view.classicLogo:Hide()
     view.classicTitleLeft = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleLeft:SetTexture(MOS.UI.Components.ClassicAsset("Decor\\title-left.tga")); view.classicTitleLeft:SetWidth(65); view.classicTitleLeft:SetHeight(8); view.classicTitleLeft:SetPoint("RIGHT", view.classicTitle, "LEFT", -12, 0); view.classicTitleLeft:Hide()
     view.classicTitleRight = view.titleBar:CreateTexture(nil, "ARTWORK"); view.classicTitleRight:SetTexture(MOS.UI.Components.ClassicAsset("Decor\\title-right.tga")); view.classicTitleRight:SetWidth(65); view.classicTitleRight:SetHeight(8); view.classicTitleRight:SetPoint("LEFT", view.classicTitle, "RIGHT", 12, 0); view.classicTitleRight:Hide()
     view.windowControls = MOS.UI.Components.CreateContainer(nil, frame)
-    view.windowControls:SetWidth(62); view.windowControls:SetHeight(18); view.windowControls:SetFrameLevel(frame:GetFrameLevel() + 60)
+    view.windowControls:SetWidth(58); view.windowControls:SetHeight(18); view.windowControls:SetFrameLevel(frame:GetFrameLevel() + 60)
     frame.mosWindowControls = view.windowControls
     view.windowControls:SetPoint("RIGHT", view.titleBar, "RIGHT", -6, 0)
     view.closeButton = MOS.UI.Components.CreateWindowButton(view.windowControls, nil, "close")
     view.closeButton:SetPoint("RIGHT", view.windowControls, "RIGHT", 0, 0)
     view.closeButton:SetScript("OnClick", function() frame:Hide() end)
     view.minimizeButton = MOS.UI.Components.CreateWindowButton(view.windowControls, nil, "minimize")
-    view.minimizeButton:SetPoint("RIGHT", view.closeButton, "LEFT", -4, 0)
+    view.minimizeButton:SetPoint("RIGHT", view.closeButton, "LEFT", -2, 0)
     view.settingsButton = MOS.UI.Components.CreateButton(view.windowControls, nil, "", 18, 18)
     MOS.UI.Components.SetClassicButtonCompact(view.settingsButton, true)
-    view.settingsButton:SetPoint("RIGHT", view.minimizeButton, "LEFT", -4, 0)
+    view.settingsButton:SetPoint("RIGHT", view.minimizeButton, "LEFT", -2, 0)
     view.settingsButton.icon = view.settingsButton:CreateTexture(nil, "OVERLAY")
     view.settingsButton.icon:SetPoint("CENTER", view.settingsButton, "CENTER", 0, 0)
     view.settingsButton.icon:SetWidth(13); view.settingsButton.icon:SetHeight(13)
@@ -240,7 +240,7 @@ function Dashboard.CreateStatusBar(parent)
     bar:SetBackdropColor(0.025, 0.022, 0.018, 0.94)
     bar:SetBackdropBorderColor(0.30, 0.30, 0.28, 1)
     MOS.UI.Components.RegisterSkinnedSurface(bar, "status", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0.025, 0.022, 0.018, 0.94 }, { 0.30, 0.30, 0.28, 1 })
-    MOS.UI.Components.SetSurfaceHorizontalBorders(bar)
+    MOS.UI.Components.SetSurfaceHorizontalBorders(bar, true, false, true)
     bar.message = bar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     bar.message:SetPoint("LEFT", bar, "LEFT", 8, 0)
     bar.message:SetWidth(270)

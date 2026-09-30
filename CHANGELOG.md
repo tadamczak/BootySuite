@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.43 - 2026-09-30
+
+- Remove header top/status bottom borders and restore the status right border.
+- Expose the project gold right outline, add 2px header padding and halve window-control gaps.
+
 ## 0.5.0-dev.42 - 2026-09-30
 
 - Keep the project gold outer window frame and remove vertical sides/corners from dashboard header, shared content and status bar, retaining horizontal separators.
