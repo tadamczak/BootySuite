@@ -2735,8 +2735,12 @@ function RaidManagement.CreateLootMasterController(options)
         end)
         grip:SetScript("OnHide", function() panel:StopMovingOrSizing(); controller.ReanchorPanels() end)
     end
-    SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 260, 260)
+    SetupSidePanelResize(options.page.lmConfigPanel, "lmConfigWidth", "lmConfigHeight", 260, 360)
     SetupSidePanelResize(options.page.reyCoinPanel, "reyCoinPanelWidth", "reyCoinPanelHeight", 240, 120)
+    local configGrip = options.page.lmConfigPanel.resizeGrip
+    configGrip:ClearAllPoints(); configGrip:SetPoint("BOTTOMRIGHT", options.page.lmConfigPanel, "BOTTOMRIGHT", 0, 0)
+    configGrip:SetWidth(12); configGrip:SetHeight(12); configGrip.texture:Hide()
+    UI.RegisterSkinCallback(function() configGrip.texture:Hide() end)
     local reyGrip = options.page.reyCoinPanel.resizeGrip
     reyGrip:ClearAllPoints(); reyGrip:SetPoint("BOTTOMRIGHT", options.page.reyCoinPanel, "BOTTOMRIGHT", 0, 0)
     reyGrip:SetWidth(12); reyGrip:SetHeight(12)
@@ -3304,20 +3308,27 @@ function RaidManagement.CreateAutoLootControls(page, view)
         end
     end)
     view.lmAutoLootRarity = rarity; rarity.panel = choices
-    local exceptionsLabel = UI.CreateComponentLabel(panel, "Auto Loot Exceptions", "white")
+    local exceptionsLabel = UI.CreateComponentLabel(panel, "Auto Loot Exclusions:", "white")
     exceptionsLabel:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -96)
     local exceptions = UI.CreateTextArea(panel, 324, 76, 2048)
     exceptions:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -116)
-    exceptions:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -8, 64)
+    exceptions:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -8, -116)
     exceptions:SetTextInsets(8, 8, 8, 8)
-    local tooltipHit = UI.AttachLabelTooltip(panel, exceptionsLabel, "Auto Loot Exceptions", "Item names separated by commas are never auto looted, regardless of other settings. Ignores letter case and extra spaces.")
+    local tooltipHit = UI.AttachLabelTooltip(panel, exceptionsLabel, "Auto Loot Exclusions:", "Item names separated by commas are never auto looted, regardless of other settings. Ignores letter case and extra spaces. Use * for any part of a name. Exclusions override inclusions.")
     exceptions:SetScript("OnTextChanged", function() MOS.Database.SetSetting("lmAutoLootExceptions", this:GetText()) end)
     exceptions:SetScript("OnEditFocusLost", Apply)
+    local inclusionsLabel = UI.CreateComponentLabel(panel, "Auto Loot Inclusions:", "white")
+    local inclusions = UI.CreateTextArea(panel, 324, 76, 2048)
+    inclusions:SetTextInsets(8, 8, 8, 8)
+    inclusions:SetScript("OnTextChanged", function() MOS.Database.SetSetting("lmAutoLootInclusions", this:GetText()) end)
+    inclusions:SetScript("OnEditFocusLost", Apply)
+    view.lmAutoLootInclusions = inclusions
     view.lmAutoLootExceptions = exceptions
     view.lmExceptionsTooltip = tooltipHit
     local font, size, flags = view.lmConfigTitle:GetFont()
     modeLabel:SetFont(font, size, flags); label:SetFont(font, size, flags); exceptionsLabel:SetFont(font, size, flags)
-    view.lmConfigLabels = { modeLabel, label, exceptionsLabel }
+    inclusionsLabel:SetFont(font, size, flags)
+    view.lmConfigLabels = { modeLabel, label, exceptionsLabel, inclusionsLabel }
     local presetLabel = UI.CreateComponentLabel(panel, "Exception Presets:", "white")
     presetLabel:SetFont(font, size, flags); table.insert(view.lmConfigLabels, presetLabel)
     presetLabel:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 8, 34)
@@ -3325,11 +3336,26 @@ function RaidManagement.CreateAutoLootControls(page, view)
     presets:SetPoint("LEFT", presetLabel, "LEFT", 134, 0)
     local presetPanel = UI.CreateDropdownPanel(panel, presets, 184, 138, 20)
     presets.panel = presetPanel; view.lmExceptionPresets = presets
-    UI.Window.ApplyProjectSurface(presetPanel)
-    UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(presetPanel) end)
+    local function StylePanels()
+        UI.Window.ApplyProjectSurface(presetPanel); UI.Window.ApplyProjectSurface(mode.panel)
+    end
+    StylePanels(); UI.RegisterSkinCallback(StylePanels)
+    presetPanel.contentPadding = 4
+    local optionIndex
+    mode.panel:SetHeight(70)
+    for optionIndex = 1, table.getn(mode.panel.options) do
+        local option = mode.panel.options[optionIndex]
+        option:ClearAllPoints(); option:SetPoint("TOPLEFT", mode.panel, "TOPLEFT", 4, -4 - (optionIndex - 1) * 22)
+        option:SetPoint("TOPRIGHT", mode.panel, "TOPRIGHT", -4, -4 - (optionIndex - 1) * 22)
+    end
     local function LayoutConfig()
         local width = math.max(94, panel:GetWidth() - 150)
         mode:SetWidth(width); rarity:SetWidth(width); presets:SetWidth(width)
+        local areaHeight = math.max(64, (panel:GetHeight() - 204) / 2)
+        exceptions:SetHeight(areaHeight)
+        inclusionsLabel:ClearAllPoints(); inclusionsLabel:SetPoint("TOPLEFT", exceptions, "BOTTOMLEFT", 0, -8)
+        inclusions:ClearAllPoints(); inclusions:SetPoint("TOPLEFT", inclusionsLabel, "BOTTOMLEFT", 0, -4)
+        inclusions:SetPoint("RIGHT", panel, "RIGHT", -8, 0); inclusions:SetHeight(areaHeight)
     end
     panel:SetScript("OnSizeChanged", LayoutConfig)
     LayoutConfig()
@@ -3367,12 +3393,14 @@ function RaidManagement.CreateAutoLootControls(page, view)
         mode:SetFrameStrata(strata); mode:SetFrameLevel(level)
         rarity:SetFrameStrata(strata); rarity:SetFrameLevel(level)
         exceptions:SetFrameStrata(strata); exceptions:SetFrameLevel(level)
+        inclusions:SetFrameStrata(strata); inclusions:SetFrameLevel(level)
         tooltipHit:SetFrameStrata(strata); tooltipHit:SetFrameLevel(level)
         presets:SetFrameStrata(strata); presets:SetFrameLevel(level)
         RefreshPresets()
         local value = MOS.Database.GetSetting("lmAutoLootMode")
         mode:SetText(value == "auto" and "Auto Loot" or value == "shift" and "Shift Loot" or "Off")
         RefreshRarity(); exceptions:SetText(MOS.Database.GetSetting("lmAutoLootExceptions"))
+        inclusions:SetText(MOS.Database.GetSetting("lmAutoLootInclusions"))
     end)
-    panel:SetScript("OnHide", function() mode.panel:Hide(); choices:Hide(); presetPanel:Hide(); exceptions:ClearFocus() end)
+    panel:SetScript("OnHide", function() mode.panel:Hide(); choices:Hide(); presetPanel:Hide(); exceptions:ClearFocus(); inclusions:ClearFocus() end)
 end

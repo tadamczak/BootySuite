@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.83 - 2026-09-30
+
+- Add wildcard auto loot exclusions, real raid presets and rarity-independent inclusions with exclusions taking priority.
+- Fix LM Config corner resizing and compact project-framed dropdowns.
+
 ## 0.5.0-dev.82 - 2026-09-30
 
 - Present warning details as class-colored player rows and unify warning header/content spacing.

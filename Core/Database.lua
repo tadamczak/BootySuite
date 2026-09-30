@@ -26,6 +26,7 @@ function Database.Ensure()
     if type(MuklaOfficerSuiteDB.lmAutoLootRarities) ~= "number" or MuklaOfficerSuiteDB.lmAutoLootRarities < 0 or MuklaOfficerSuiteDB.lmAutoLootRarities > 31 then MuklaOfficerSuiteDB.lmAutoLootRarities = 7 end
     if type(MuklaOfficerSuiteDB.lmAutoLootPresets) ~= "number" then MuklaOfficerSuiteDB.lmAutoLootPresets = 0 end
     if type(MuklaOfficerSuiteDB.lmAutoLootExceptions) ~= "string" then MuklaOfficerSuiteDB.lmAutoLootExceptions = "" end
+    if type(MuklaOfficerSuiteDB.lmAutoLootInclusions) ~= "string" then MuklaOfficerSuiteDB.lmAutoLootInclusions = "" end
     if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 30 end
     if MuklaOfficerSuiteDB.chatActionLogs == nil then MuklaOfficerSuiteDB.chatActionLogs = false end
     if MuklaOfficerSuiteDB.raidClassColors == nil then MuklaOfficerSuiteDB.raidClassColors = true end

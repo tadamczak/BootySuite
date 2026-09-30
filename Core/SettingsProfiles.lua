@@ -6,7 +6,7 @@ local Profiles = MOS.Core.SettingsProfiles
 local keys = {
     "rosterHideSectionHeader", "raidHideSectionHeader",
     "rosterShowClass", "rosterShowLevel", "rosterShowZone", "rosterShowRank", "rosterShowPublicNote", "rosterShowOfficerNote", "rosterShowLastOnline", "rosterShowClassFilter", "rosterShowRankFilter", "rosterShowSearch", "rosterShowOffline", "rosterShowColumnHeaders",
-    "hideHeaderBar", "hideMinimapIcon", "hideStatusVersionBar", "hideHeaderLogo", "hideHeaderName", "suppressLoginMessage", "lootMasterOpacity", "lmAutoLoot", "lmAutoLootMode", "lmAutoLootRarities", "lmAutoLootExceptions", "lmAutoLootPresets", "outOfFocusOpacity", "chatActionLogs",
+    "hideHeaderBar", "hideMinimapIcon", "hideStatusVersionBar", "hideHeaderLogo", "hideHeaderName", "suppressLoginMessage", "lootMasterOpacity", "lmAutoLoot", "lmAutoLootMode", "lmAutoLootRarities", "lmAutoLootExceptions", "lmAutoLootInclusions", "lmAutoLootPresets", "outOfFocusOpacity", "chatActionLogs",
     "raidGroupOddLightness", "raidListOddLightness",
     "rosterBackgroundColor", "rosterTextColor", "rosterHoverColor", "rosterOddLightness",
     "playerDetailsStyle", "raidClassColors", "rosterClassColors", "rosterLiveTrackingEnabled", "raidLiveTrackingEnabled", "showOfflineMembers", "menuStyle", "useIconTabs", "uiSkin",
@@ -131,6 +131,7 @@ function Profiles.Load(name)
     if profile.settings.lmAutoLootRarities == nil then MuklaOfficerSuiteDB.lmAutoLootRarities = 7 end
     if profile.settings.lmAutoLootPresets == nil then MuklaOfficerSuiteDB.lmAutoLootPresets = 0 end
     if profile.settings.lmAutoLootExceptions == nil then MuklaOfficerSuiteDB.lmAutoLootExceptions = "" end
+    if profile.settings.lmAutoLootInclusions == nil then MuklaOfficerSuiteDB.lmAutoLootInclusions = "" end
     MOS.Database.Ensure()
     MuklaOfficerSuiteDB.currentSettingsProfile = Name(name)
     return true, "Loaded profile: " .. Name(name)
