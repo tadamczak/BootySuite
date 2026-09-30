@@ -118,7 +118,7 @@ function Navigation.Create(options)
         if tabs then
             options.sidebar:Hide(); options.toggleButton:Hide()
             local margin = MOS.UI.Components.IsClassicSkin() and 4 or 9
-            local bottom = options.get("hideStatusVersionBar") and margin or (MOS.UI.Components.IsClassicSkin() and 4 or 9) + 22
+            local bottom = options.get("hideStatusVersionBar") and 4 or (MOS.UI.Components.IsClassicSkin() and 4 or 9) + 22
             options.contentPanel:ClearAllPoints(); options.contentPanel:SetPoint("TOPLEFT", options.dashboard, "TOPLEFT", margin, sectionTop); options.contentPanel:SetPoint("BOTTOMRIGHT", options.dashboard, "BOTTOMRIGHT", -4, bottomTabs and bottom + 30 or bottom)
             local iconTabs = options.get("useIconTabs")
             local classic = MOS.UI.Components.IsClassicSkin()
