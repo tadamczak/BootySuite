@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.75 - 2026-09-30
+
+- Keep LM above main-window controls and reserve a separate resize footer.
+- Fix Reycoin input/button layering and show Add validation feedback; add a close control to Loot Master Config.
+- Restyle Set Loot Rules with the project frame, compact title, inset separators and minimize/restore.
+
 ## 0.5.0-dev.74 - 2026-09-30
 
 - Keep the LM player list visible and scrollable when expanding loot details.
