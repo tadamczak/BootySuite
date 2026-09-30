@@ -106,6 +106,7 @@ local function ApplySolidButton(entry)
     SetNineSliceShown(entry.classicSkin, false); SetNineSliceShown(entry.classicHoverBorder, false)
     SetNineSliceShown(entry.classicSelectedBorder, false)
     if entry.classicRedFill then entry.classicRedFill:Hide() end
+    if entry.redHover then entry.redHover:Hide() end
     button:SetHighlightTexture(nil); button:SetPushedTexture(nil); button:SetDisabledTexture(nil)
 end
 
@@ -248,7 +249,7 @@ local function ApplyControl(entry)
         if button.label and entry.labelColor then button.label:SetTextColor(unpack(entry.labelColor)) end
         if button.mosHighlight then button.mosHighlight:Show(); button.mosHighlight:SetAlpha(1); button.mosHighlight:SetTexture(unpack(entry.highlight)); button.mosHighlight:SetVertexColor(1, 1, 1, 1) end
     end
-    if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosTextColor)) end
+    if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosClassicSelected and button.mosSelectedTextColor or button.mosTextColor)) end
     if solid then
         ApplySolidButton(entry)
     elseif Skins.current == "classic" and not button.mosClassicCompactControl then
