@@ -1181,7 +1181,12 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     local filterWrap = hasFilters and (settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false) and x + (settings.rosterShowSearch ~= false and 88 or 0) + (settings.rosterShowOffline ~= false and 118 or 0) > width - 6
     if filterWrap then x = 6; y = y - 28 end
     x = PlaceRosterFilter(page, controls.searchLabel, settings.rosterShowSearch ~= false, 40, x, y)
-    x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, width - x - (settings.rosterShowOffline ~= false and 128 or 6))), x, y)
+    local searchAvailable = width - x - (settings.rosterShowOffline ~= false and 128 or 6)
+    x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, searchAvailable)), x, y)
+    if settings.rosterShowSearch ~= false and settings.rosterShowOffline == false and searchAvailable < 178 then
+        -- Resolve the right edge natively; sampled parent widths can lag a resize.
+        controls.searchBox:SetPoint("TOPRIGHT", page.tablePanel or page, "TOPRIGHT", -6, y)
+    end
     x = PlaceRosterFilter(page, controls.showOffline.label, settings.rosterShowOffline ~= false, 76, x, y)
     x = PlaceRosterFilter(page, controls.showOffline, settings.rosterShowOffline ~= false, nil, x, y)
     controls.searchLabel:SetTextColor(1, 1, 1)

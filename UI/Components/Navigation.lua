@@ -29,7 +29,7 @@ function Navigation.SetActive(buttons, activeName)
             else button:SetBackdropColor(0.04, 0.03, 0.02, 0.98) end; button:SetBackdropBorderColor(0, 0, 0, 0)
             button:SetHeight(selected and 30 or 26)
             button:ClearAllPoints()
-            button:SetPoint(button.navigationBottom and "TOPLEFT" or "BOTTOMLEFT", button.navigationContent, button.navigationBottom and "BOTTOMLEFT" or "TOPLEFT", button.navigationX, selected and (button.navigationBottom and 2 or -2) or (button.navigationBottom and -5 or 5))
+            button:SetPoint(button.navigationBottom and "TOPLEFT" or "BOTTOMLEFT", button.navigationContent, button.navigationBottom and "BOTTOMLEFT" or "TOPLEFT", button.navigationX, selected and (button.navigationBottom and 2 or -2) or (button.navigationBottom and -(button.navigationEdgeInset or 4) or (button.navigationEdgeInset or 4)))
             if selected then button.selectedFill:Show(); button.hoverFill:Hide() end
             if button.icon then button.icon:SetVertexColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43) end
             button:SetFrameLevel(button:GetParent():GetFrameLevel() + (selected and 24 or 20))
@@ -127,6 +127,7 @@ function Navigation.Create(options)
             for index, name in ipairs(order) do
                 local button = controller.buttons[name]
                 button.navigationBottom = bottomTabs
+                button.navigationEdgeInset = not bottomTabs and not options.get("hideHeaderBar") and options.get("hideHeaderLogo") and options.get("hideHeaderName") and 3 or 4
                 button.navigationMode = "tabs"
                 button.navigationContent = not bottomTabs and not options.get("hideHeaderBar") and not (options.get("hideHeaderLogo") and options.get("hideHeaderName")) and options.contentPanel.mosHeaderAnchor or options.contentPanel
                 button.navigationX = 6 + ((index - 1) * width)

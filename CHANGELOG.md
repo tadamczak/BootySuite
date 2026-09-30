@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.50 - 2026-09-30
+
+- Anchor narrow Search fields to the live right edge when offline controls are hidden.
+- Balance controls-only header padding, vertically center its name, and join inactive tabs to the border.
+
 ## 0.5.0-dev.49 - 2026-09-30
 
 - Match text/icon tab spacing and recess inactive tabs from section edges.
