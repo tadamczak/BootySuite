@@ -747,3 +747,35 @@ function UI.ApplyGoldRadialHighlight(texture)
     texture:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Buttons\\red-hover-radial.tga")
     texture:SetVertexColor(1, 0.8742857, 0.17, 0.42)
 end
+
+-- Resolve content width and overflow together, always starting without a gutter.
+-- A second measurement is only needed if full-width content really overflows.
+function UI.ResolveScrollLayout(fullWidth, viewportHeight, gutter, measure, context)
+    fullWidth = math.max(1, fullWidth)
+    viewportHeight = math.max(1, viewportHeight)
+    local contentHeight = math.max(1, measure(fullWidth, context))
+    local overflow = contentHeight > viewportHeight + 0.5
+    local width = fullWidth
+    if overflow then
+        width = math.max(1, fullWidth - gutter)
+        contentHeight = math.max(1, measure(width, context))
+    end
+    return width, contentHeight, overflow, math.max(0, contentHeight - viewportHeight)
+end
+
+function UI.GetFrameSpan(frame)
+    local left = frame.GetLeft and frame:GetLeft()
+    local right = frame.GetRight and frame:GetRight()
+    local bottom = frame.GetBottom and frame:GetBottom()
+    local top = frame.GetTop and frame:GetTop()
+    return left and right and right - left or frame:GetWidth(), bottom and top and top - bottom or frame:GetHeight()
+end
+
+function UI.ApplyScrollRange(viewport, slider, maximum)
+    local value = math.max(0, math.min(maximum, viewport:GetVerticalScroll()))
+    viewport:SetVerticalScroll(value)
+    if slider then
+        slider:SetMinMaxValues(0, maximum); slider:SetValue(value)
+        UI.SetScrollBarVisible(slider, maximum > 0.5)
+    end
+end

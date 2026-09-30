@@ -125,7 +125,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     local viewport = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteSettingsScroll", parent, "UIPanelScrollFrameTemplate")
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteSettingsScrollScrollBar"))
     viewport:SetPoint("TOPLEFT", anchorPage, "TOPLEFT", 4, -4)
-    viewport:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -24, 4)
+    viewport:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -4, 4)
+    viewport.mosScrollAnchor = anchorPage
     viewport:EnableMouseWheel(true)
     local page = MOS.UI.Components.CreateContainer(nil, viewport)
     page.mosTextSizeDelta = -2
@@ -765,7 +766,7 @@ function Settings.ApplyRaidAccordions(controls)
         Settings.ApplyUIVisibility(controls)
     end
     if controls.page.globalReset then
-        controls.page.globalReset:ClearAllPoints(); controls.page.globalReset:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", -12, -controls.page.settingsContentHeight - 8)
+        controls.page.globalReset:ClearAllPoints(); controls.page.globalReset:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", 0, -controls.page.settingsContentHeight - 8)
         controls.page.settingsContentHeight = controls.page.settingsContentHeight + 40
     end
     Settings.UpdateScroll(controls.page.settingsViewport, controls.page, controls.page.settingsContentHeight)
@@ -925,7 +926,8 @@ function Settings.AttachShell(view, parent, anchor, detached)
     view.page:SetFrameStrata(parent:GetFrameStrata()); view.page:SetFrameLevel(view.viewport:GetFrameLevel() + 2)
     view.viewport:ClearAllPoints()
     view.viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 4, -4)
-    view.viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -24, 4)
+    view.viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -4, 4)
+    view.viewport.mosScrollAnchor = anchor
     if view.scrollBar then
         view.scrollBar:ClearAllPoints()
         view.scrollBar:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -4, -20)
@@ -937,7 +939,7 @@ end
 
 function Settings.CreateDetachedWindow()
     return MOS.UI.Components.Window.Create({
-        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings", compact = true, plainHeader = true, viewportWidthInset = 36,
+        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings", compact = true, plainHeader = true, viewportWidthInset = 16, viewportHeightInset = 42,
         update = function(view) Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end,
         refresh = function(view) if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end end,
         attach = function(view, content) Settings.AttachShell(view, content, content, true) end,

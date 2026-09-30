@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.63 - 2026-09-30
+
+- Share conditional scrollbar layout between Settings and saved raids: fitting content uses full width.
+- Align raid actions and scrollbar from resolved bounds; clamp scrolling when content shrinks.
+
 ## 0.5.0-dev.62 - 2026-09-30
 
 - Match saved raid outlines to current buttons and derive Settings content width from the window.

@@ -142,7 +142,7 @@ Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can 
 - **Saved raids -** The Raid start screen lists Name, Raid and Time. Use the load or delete icon on each row; New Raid creates a session while grouped in a raid.
 - **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live. The skins are named **Default** (formerly Classic) and **Classic WIP** (formerly Default). Existing profile appearances are preserved.
 - **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them.
-- **Settings window -** Settings reopen from the top with your current saved values.
+- **Settings window -** Settings reopen from the top with your current saved values. Settings and saved raid lists use the full content width when scrolling is unnecessary; the scrollbar only takes space while needed.
 - **Resizable window -** Settings can be resized within the available game screen; long sections remain available through scrolling.
 - **Raid group interaction -** Drop a member on another member or on free group background. Hidden role icons release name space; hiding the group border and setting group spacing to zero joins the tiles.
 - **Raid group appearance -** Group View > Display can hide the group border independently of its header. Group tile color controls header text, header background and border colors, with its own confirmed reset. These choices are included in settings profiles.
