@@ -282,7 +282,7 @@ local SURFACE_STYLES = {
 
 local function ApplySurface(entry)
     local frame = entry.frame
-    if not frame.mosUseNativeSurface and (Skins.current == "classic" or frame.mosJoinedTop ~= nil) then
+    if not frame.mosUseNativeSurface and (Skins.current == "classic" or frame.mosJoinedTop ~= nil or frame.mosHorizontalBorders) then
         local style = SURFACE_STYLES[entry.kind] or SURFACE_STYLES.panel
         if entry.kind == "row" and not entry.classicFill then
             -- Rows have a fixed height and a horizontally authored surface.
@@ -324,6 +324,12 @@ local function ApplySurface(entry)
         local index
         for index = 1, 9 do if index ~= 2 or not frame.mosJoinedTop then t[index]:Hide() end end
         if entry.classicFill then entry.classicFill:Hide() end
+    end
+    if frame.mosHorizontalBorders and entry.classicSkin then
+        local t = entry.classicSkin.textures
+        t[1]:Hide(); t[3]:Hide(); t[4]:Hide(); t[6]:Hide(); t[7]:Hide(); t[9]:Hide()
+        t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
+        t[8]:ClearAllPoints(); t[8]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0); t[8]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
     end
     if frame.mosSurfaceBorderHidden then
         SetNineSliceShown(entry.classicSkin, false); frame:SetBackdropBorderColor(0,0,0,0)
@@ -611,6 +617,11 @@ end
 function UI.SetSurfaceBorderVisible(frame, visible)
     if frame.mosSurfaceBorderHidden == not visible then return end
     frame.mosSurfaceBorderHidden = not visible
+    if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
+end
+
+function UI.SetSurfaceHorizontalBorders(frame)
+    frame.mosHorizontalBorders = true
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
 

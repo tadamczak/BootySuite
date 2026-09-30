@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.42 - 2026-09-30
+
+- Keep the project gold outer window frame and remove vertical sides/corners from dashboard header, shared content and status bar, retaining horizontal separators.
+
 ## 0.5.0-dev.41 - 2026-09-30
 
 - Replace the improvised Settings border with the existing project gold window frame, shared unchanged across skins.
