@@ -19,7 +19,7 @@ end
 local function ResolveLootRank(member)
     local guildRank = string.lower(tostring(member and member.guildRank or ""))
     if guildRank ~= "officer wukong" then return member and member.guildRank or "Guest" end
-    return FindLootRank(member.officerNote)
+    return "chimp"
 end
 
 function RaidStatistics.BuildEntry(attendance, saveOptions)
@@ -89,7 +89,7 @@ function RaidStatistics.BuildSummary(entries, selectedId)
                 local key = string.lower(member.name or "")
                 local player = byName[key]
                 if not player then
-                    player = { name = member.name, class = member.class, guildRank = member.guildRank, raids = 0, sr = 0, loot = 0, srItems = {}, lootItems = {} }
+                    player = { name = member.name, class = member.class, guildRank = string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or member.guildRank, raids = 0, sr = 0, loot = 0, srItems = {}, lootItems = {} }
                     byName[key] = player; summary.players[table.getn(summary.players) + 1] = player
                 end
                 if raid.attendanceEnabled ~= false then player.raids = player.raids + 1

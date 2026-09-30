@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.85 - 2026-10-01
+
+- Improve LM Config scrolling, field order, focus handling and short help tooltips.
+- Treat Officer Wukong as Chimp for loot rights and confirm live updates when loading saved raids.
+- Fix warning dismissal, SR confirmation styling, raid header visibility and group/list layout regressions.
+
 ## 0.5.0-dev.84 - 2026-09-30
 
 - Refine warning header colors, control positions and SR rank explanations.

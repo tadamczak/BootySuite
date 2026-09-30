@@ -51,11 +51,7 @@ local lootRankNames = { macaque = true, guest = true, alt = true, baboon = true,
 local function GetSoftReserveRank(member)
     local rank = string.lower(member.guildRank or "")
     if rank ~= "officer wukong" then return rank ~= "" and rank or "guest" end
-    local word
-    for word in string.gfind(string.lower(member.officerNote or ""), "%a+") do
-        if lootRankNames[word] then return word end
-    end
-    return nil
+    return "chimp"
 end
 
 local contestedSource, contestedNames = nil, {}
@@ -169,7 +165,7 @@ function RaidService.GetSoftReserveRollRights(itemLink)
                 local rank = GetSoftReserveRank(member)
                 local rule = rules and rules[rank]
                 local name = string.lower(member.name)
-                rankNames[name] = (rank and rank ~= "" and rank) or (member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest"
+                rankNames[name] = string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or (rank and rank ~= "" and rank) or (member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest"
                 if (rule and rule.sr) or (not rule and defaultSoftReserveRanks[rank]) then
                     rankRights[name] = true
                 end

@@ -583,7 +583,8 @@ function UI.CreateReadOnlyDialog(name, titleText, width, height, backgroundColor
     frame.text:SetPoint("TOPLEFT", frame.canvas, "TOPLEFT", 4, -4); frame.text:SetWidth((width or 520) - 72); frame.text:SetJustifyH("LEFT"); frame.text:SetJustifyV("TOP")
 
     local function CloseDialog() frame:Hide() end
-    dismiss:SetScript("OnClick", CloseDialog); frame.close:SetScript("OnClick", CloseDialog); frame.ok:SetScript("OnClick", CloseDialog)
+    frame.dismiss = dismiss
+    dismiss:SetScript("OnClick", nil); frame:EnableMouse(true); frame.close:SetScript("OnClick", CloseDialog); frame.ok:SetScript("OnClick", CloseDialog)
     frame:SetScript("OnShow", function() dismiss:Show() end)
     frame:SetScript("OnHide", function() dismiss:Hide() end)
     frame.Open = function(self, value)
@@ -852,4 +853,49 @@ function UI.AttachPlaceholder(field, text)
     field:SetScript("OnEditFocusGained", function() field.mosHasFocus=true; if gained then gained() end; Refresh() end)
     field:SetScript("OnEditFocusLost", function() field.mosHasFocus=false; if lost then lost() end; Refresh() end)
     Refresh()
+end
+
+-- Border and clipping viewport are separate; gutter is reserved only on overflow.
+local textAreaSerial = 0
+function UI.MakeTextAreaScrollable(field, parent)
+    textAreaSerial = textAreaSerial + 1
+    local area = UI.CreateContainer(nil, parent)
+    area:SetBackdrop(field:GetBackdrop()); area:SetBackdropColor(0.018, 0.018, 0.016, 1)
+    area:SetBackdropBorderColor(0.48, 0.34, 0.10, 1)
+    local scroll = CreateFrame("ScrollFrame", "MOSScrollTextArea" .. textAreaSerial, area, "UIPanelScrollFrameTemplate")
+    local bar = getglobal(scroll:GetName() .. "ScrollBar")
+    field:SetBackdrop(nil); field:SetParent(scroll); field:ClearAllPoints(); scroll:SetScrollChild(field)
+    field:SetTextInsets(2, 2, 2, 2)
+    local measure = area:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    measure:SetAlpha(0)
+    local function Measure(width)
+        local font, size, flags = field:GetFont(); measure:SetFont(font, size, flags)
+        measure:SetWidth(math.max(1, width - 4)); measure:SetText(field:GetText() or "")
+        return measure:GetStringHeight() + 8
+    end
+    local function Layout()
+        local height = math.max(1, area:GetHeight() - 12)
+        local width, contentHeight, overflow, maximum = UI.ResolveScrollLayout(math.max(1, area:GetWidth() - 12), height, 20, Measure)
+        scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", area, "TOPLEFT", 6, -6)
+        scroll:SetWidth(width); scroll:SetHeight(height)
+        field:SetWidth(width); field:SetHeight(math.max(height, contentHeight))
+        if bar then
+            bar:ClearAllPoints(); bar:SetPoint("TOPRIGHT", area, "TOPRIGHT", -6, -22)
+            bar:SetPoint("BOTTOMRIGHT", area, "BOTTOMRIGHT", -6, 22)
+        end
+        UI.ApplyScrollRange(scroll, bar, maximum)
+    end
+    local changed = field:GetScript("OnTextChanged")
+    field:SetScript("OnTextChanged", function() if changed then changed() end; Layout() end)
+    field:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+    field:SetScript("OnCursorChanged", function()
+        local top = scroll:GetVerticalScroll() or 0
+        local cursor = -(arg2 or 0)
+        if cursor < top then scroll:SetVerticalScroll(math.max(0, cursor))
+        elseif cursor + (arg4 or 14) > top + scroll:GetHeight() then scroll:SetVerticalScroll(math.max(0, cursor + (arg4 or 14) - scroll:GetHeight())) end
+    end)
+    area:SetScript("OnSizeChanged", Layout)
+    field.scrollMeasure = measure
+    field.area, field.viewport, field.scrollBar, field.LayoutScroll = area, scroll, bar, Layout
+    return area
 end

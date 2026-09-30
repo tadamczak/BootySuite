@@ -60,6 +60,10 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     local width = math.min(500, fullWidth)
     local rightInset = 8 + fullWidth - width
     local buttonWidth = math.min(110, (width - 8) / 2)
+    if controls.title then
+        controls.title:SetText("Raid")
+        if MuklaOfficerSuiteDB.raidHideSectionHeader then controls.title:Hide() else controls.title:Show() end
+    end
     local textY = MuklaOfficerSuiteDB.raidHideSectionHeader and -8 or -48
     local actionY = textY - 38
     if controls.unavailable then
