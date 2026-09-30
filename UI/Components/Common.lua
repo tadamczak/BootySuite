@@ -235,23 +235,23 @@ end
 
 function UI.CreateDatePicker(name)
     local frame = CreateFrame("Frame", name, UIParent)
-    frame:SetWidth(232); frame:SetHeight(206); frame:SetFrameStrata("FULLSCREEN_DIALOG"); frame:SetFrameLevel(235); frame:EnableMouse(true)
+    frame:SetWidth(224); frame:SetHeight(206); frame:SetFrameStrata("FULLSCREEN_DIALOG"); frame:SetFrameLevel(235); frame:EnableMouse(true)
     frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 14, insets = { left = 5, right = 5, top = 5, bottom = 5 } })
     frame:SetBackdropColor(0.025, 0.025, 0.022, 1)
     UI.RegisterDialogSurface(frame, "panel")
     if frame.SetClampedToScreen then frame:SetClampedToScreen(true) end
-    frame.previous = UI.CreateButton(frame, nil, "<", 24, 22); frame.previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
-    frame.next = UI.CreateButton(frame, nil, ">", 24, 22); frame.next:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -10)
+    frame.previous = UI.CreateButton(frame, nil, "<", 24, 22); frame.previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
+    frame.next = UI.CreateButton(frame, nil, ">", 24, 22); frame.next:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
     frame.monthLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal"); frame.monthLabel:SetPoint("LEFT", frame.previous, "RIGHT", 5, 0); frame.monthLabel:SetPoint("RIGHT", frame.next, "LEFT", -5, 0); frame.monthLabel:SetJustifyH("CENTER")
     local weekdayNames = { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" }
     local index
     for index = 1, 7 do
-        local label = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); label:SetPoint("TOPLEFT", frame, "TOPLEFT", 10 + ((index - 1) * 30), -41); label:SetWidth(28); label:SetJustifyH("CENTER"); label:SetText(weekdayNames[index])
+        local label = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); label:SetPoint("TOPLEFT", frame, "TOPLEFT", 8 + ((index - 1) * 30), -41); label:SetWidth(28); label:SetJustifyH("CENTER"); label:SetText(weekdayNames[index])
     end
     frame.days = {}
     for index = 1, 42 do
         local column, row = math.mod(index - 1, 7), math.floor((index - 1) / 7)
-        local button = UI.CreateButton(frame, nil, "", 28, 22); button:SetPoint("TOPLEFT", frame, "TOPLEFT", 10 + (column * 30), -57 - (row * 23)); button.datePicker = frame
+        local button = UI.CreateButton(frame, nil, "", 28, 22); button:SetPoint("TOPLEFT", frame, "TOPLEFT", 8 + (column * 30), -57 - (row * 23)); button.datePicker = frame
         button:SetScript("OnClick", function()
             local picker = this.datePicker
             if this.day and picker.target then picker.target:SetText(string.format("%04d-%02d-%02d", picker.year, picker.month, this.day)); picker:Hide() end
@@ -434,6 +434,7 @@ function UI.CreateItemListDialog(name)
     frame.scroll = CreateFrame("ScrollFrame", name .. "Scroll", frame, "FauxScrollFrameTemplate")
     frame.scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -44); frame.scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
     frame.scroll.ownerDialog = frame
+    UI.RegisterSkinnedScrollBar(getglobal(name.."ScrollScrollBar"))
     frame.rows = {}; frame.items = {}
     local index
     for index = 1, 28 do
@@ -445,13 +446,20 @@ function UI.CreateItemListDialog(name)
         row:SetScript("OnEnter", function() UI.ShowItemTooltip(this) end); row:SetScript("OnLeave", function() GameTooltip:Hide() end); row:SetScript("OnClick", function() UI.HandleItemClick(this) end)
         row:Hide(); frame.rows[index] = row
     end
+    UI.Window.StyleProjectDialog(frame)
+    frame.title:SetPoint("RIGHT",frame.close,"LEFT",-8,0)
+    UI.StyleActionButton(frame.ok);frame.ok:ClearAllPoints();frame.ok:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",-24,8)
     frame.Refresh = function(self)
-        local visible = math.max(1, math.min(table.getn(self.rows), math.floor(math.max(24, self.scroll:GetHeight()) / 24)))
-        local offset = UI.UpdateScrollFrame(self.scroll, table.getn(self.items), visible, 24)
+        if self.refreshing then return end
+        self.refreshing=true
+        local offset,visible,width=UI.Table.LayoutViewport(self.scroll,self,8,36,self:GetWidth()-16,self:GetHeight()-78,table.getn(self.items),24,table.getn(self.rows))
         local rowIndex
         for rowIndex = 1, table.getn(self.rows) do
             local row, item = self.rows[rowIndex], self.items[offset + rowIndex]
             if item and rowIndex <= visible then
+                row:ClearAllPoints();row:SetPoint("TOPLEFT",self,"TOPLEFT",8,-36-(rowIndex-1)*24);row:SetWidth(width)
+                UI.ApplyRowBackground(row,offset+rowIndex,false)
+                row.context:SetWidth(math.floor(width*0.35));row.label:SetJustifyV("MIDDLE")
                 row.itemId = item.itemId; row.itemName = item.name; row.itemCount = item.count; row.labelSuffix = (tonumber(item.count) or 1) > 1 and (" x " .. item.count) or ""
                 row.context:SetText(item.context or "")
                 if item.missing or not item.itemId then
@@ -464,12 +472,13 @@ function UI.CreateItemListDialog(name)
                 row:Show()
             else row.itemId = nil; row.iconRegion:Hide(); row:Hide() end
         end
+        self.refreshing=false
     end
     frame.scroll.refreshCallback = function() frame:Refresh() end
     frame.scroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end)
     frame:SetScript("OnSizeChanged", function() this:Refresh() end)
-    frame.grip = CreateFrame("Button", nil, frame); frame.grip:SetWidth(20); frame.grip:SetHeight(20); frame.grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -4, 4)
-    frame.grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    frame.grip = CreateFrame("Button", nil, frame); frame.grip:SetWidth(12); frame.grip:SetHeight(12); frame.grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+
     frame.grip:SetScript("OnMouseDown", function() frame:StartSizing("BOTTOMRIGHT") end); frame.grip:SetScript("OnMouseUp", function() frame:StopMovingOrSizing(); frame:Refresh() end)
     frame.close:SetScript("OnClick", function() frame:Hide() end); frame.ok:SetScript("OnClick", function() frame:Hide() end)
     frame.Open = function(self, title, items)
@@ -487,9 +496,22 @@ function UI.CreateItemListDialog(name)
 end
 
 function UI.ShowOpaquePopup(dialogKey, textArg1, textArg2)
-    -- StaticPopup frames are pooled and reused by Blizzard. Styling or
-    -- registering one here would also skin unrelated dialogs later, such as
-    -- Release Spirit. Only dedicated MOS frames belong in the skin registry.
+    local definition = StaticPopupDialogs and StaticPopupDialogs[dialogKey]
+    if definition and definition.mosProjectTitle then
+        local frame = definition.mosProjectFrame
+        if not frame then
+            frame = UI.Window.CreateProjectConfirmation(nil, definition.mosProjectTitle, definition.button1)
+            UI.StyleActionButton(frame.yes); UI.StyleActionButton(frame.no)
+            frame.no:SetText(definition.button2 or "Cancel")
+            frame.close:SetScript("OnClick", function()
+                local callback=frame.onNo;frame:Hide();if callback then callback() end
+            end)
+            definition.mosProjectFrame = frame
+        end
+        frame:Open(definition.text, definition.OnAccept, definition.OnCancel)
+        return frame
+    end
+    -- Never skin Blizzard's shared popup pool (including death/release dialogs).
     return StaticPopup_Show(dialogKey, textArg1, textArg2)
 end
 
@@ -733,15 +755,15 @@ function UI.SetOpenButtonBorder(button, visible, openEdge)
 end
 
 function UI.FitButtonLabel(button, available)
-    local label = button.label
-    if not label then return end
+    local label = button.label or button
+    if not label or not label.GetFont then return end
     local font, size, flags = label:GetFont()
     button.mosFitFontSize = button.mosFitFontSize or size
     label:SetFont(font, button.mosFitFontSize, flags); label:SetWidth(0)
     label:SetHeight(button.mosFitFontSize + 3)
     local width = math.max(1, label:GetStringWidth())
     local fitted = math.max(1, button.mosFitFontSize * math.min(1, math.max(1, available) / width))
-    label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH("CENTER")
+    label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH(button.label and "CENTER" or "LEFT")
 end
 
 function UI.ApplyGoldRadialHighlight(texture)
@@ -898,4 +920,60 @@ function UI.MakeTextAreaScrollable(field, parent)
     field.scrollMeasure = measure
     field.area, field.viewport, field.scrollBar, field.LayoutScroll = area, scroll, bar, Layout
     return area
+end
+
+-- Flow atomic controls left to right; wrapped rows release space immediately.
+function UI.LayoutFlow(parent, controls, x, top, width, gap)
+    local used, rowHeight, y = 0, 0, top
+    gap = gap or 8
+    for index=1,table.getn(controls) do
+        local control=controls[index]
+        local desired=math.min(width,control.mosFlowWidth or control:GetWidth())
+        if used > 0 and used + desired > width then y=y+rowHeight+gap; used=0; rowHeight=0 end
+        control:ClearAllPoints(); control:SetPoint("TOPLEFT",parent,"TOPLEFT",x+used,-y)
+        control:SetWidth(math.max(1,desired)); rowHeight=math.max(rowHeight,control:GetHeight())
+        if control.mosFlowFitLabel then UI.FitButtonLabel(control,math.max(1,desired-16));control.label:SetJustifyV("MIDDLE") end
+        used=used+desired+gap
+    end
+    return y+rowHeight
+end
+function UI.StyleActionButton(button)
+    button.mosClassicKeepNormalSurface=true;button.mosFlowFitLabel=true
+    UI.ApplyDropdownChoiceSurface(button); UI.AttachGoldHoverBorder(button,0.35,0.35,0.35,1)
+    UI.SizeClassicButton(button,button:GetWidth(),26,1)
+end
+function UI.StyleProjectPopup(panel)
+    UI.Window.ApplyProjectSurface(panel)
+    UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(panel) end)
+end
+
+-- Only unusually short/narrow pages scroll as a whole. Normal layouts retain
+-- the full host width and their independent table scroll positions.
+function UI.CreateResponsiveCanvas(host, name)
+    local viewport = UI.CreateScrollFrame(name, host, "UIPanelScrollFrameTemplate")
+    local canvas = UI.CreateContainer(nil, viewport)
+    viewport:SetScrollChild(canvas)
+    canvas.layoutHost, canvas.layoutViewport = host, viewport
+    UI.RegisterSkinnedScrollBar(getglobal(name .. "ScrollBar"))
+    return canvas
+end
+
+function UI.LayoutResponsiveCanvas(canvas, measure, context)
+    local width, height = UI.GetFrameSpan(canvas.layoutHost)
+    canvas.layoutHeight = height
+    local function Measure(available)
+        canvas:SetWidth(available)
+        return math.max(height, measure(available, height, context))
+    end
+    local contentWidth, contentHeight, _, maximum = UI.ResolveScrollLayout(width, height, 20, Measure)
+    local viewport = canvas.layoutViewport
+    viewport:ClearAllPoints(); viewport:SetPoint("TOPLEFT", canvas.layoutHost, "TOPLEFT", 0, 0)
+    viewport:SetWidth(contentWidth); viewport:SetHeight(height)
+    canvas:SetWidth(contentWidth); canvas:SetHeight(contentHeight)
+    local bar = getglobal(viewport:GetName() .. "ScrollBar")
+    if bar then
+        bar:ClearAllPoints(); bar:SetPoint("TOPLEFT", canvas.layoutHost, "TOPLEFT", contentWidth + 4, -16)
+        bar:SetWidth(16); bar:SetHeight(math.max(1, height - 32))
+    end
+    UI.ApplyScrollRange(viewport, bar, maximum)
 end

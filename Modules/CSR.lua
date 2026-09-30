@@ -1,78 +1,105 @@
 local MOS = MuklaOfficerSuite
+local UI = MOS.UI.Components
 
 MOS.Modules = MOS.Modules or {}
 local CSR = {}
 MOS.Modules.CSR = CSR
 
 local function CreateTestLab(onChanged, onExit)
-    local dialog = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteCSRTestLab", UIParent)
-    dialog:SetWidth(590); dialog:SetHeight(420); dialog:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-    dialog:SetFrameStrata("FULLSCREEN_DIALOG"); dialog:SetFrameLevel(230); dialog:SetMovable(true); dialog:SetResizable(true); dialog:EnableMouse(true); dialog:RegisterForDrag("LeftButton")
-    dialog:SetMinResize(590, 420); dialog:SetMaxResize(850, 700)
+    local dialog = UI.CreateContainer("MuklaOfficerSuiteCSRTestLab", UIParent)
+    dialog:SetWidth(500); dialog:SetHeight(420); dialog:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
+    dialog:SetFrameStrata("FULLSCREEN_DIALOG"); dialog:SetFrameLevel(230)
+    dialog:SetResizable(true); dialog:SetMinResize(280, 240); dialog:SetMaxResize(850, 700)
     if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
-    dialog:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
-    MOS.UI.Components.RegisterDialogSurface(dialog, "panel")
-    dialog:SetBackdropColor(0.025, 0.025, 0.022, 1)
-    dialog:SetScript("OnDragStart", function() this:StartMoving() end); dialog:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    dialog:SetScript("OnSizeChanged", function()
-        if this:GetWidth() < 590 then this:SetWidth(590) end
-        if this:GetHeight() < 420 then this:SetHeight(420) end
-    end)
-    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -16); dialog.title:SetText("CSR Test Lab")
-    dialog.help = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.help:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -47); dialog.help:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.help:SetJustifyH("LEFT")
-    dialog.help:SetText("Transient simulation only. Add players and independent item reservations, award items, change rank, or advance beyond the 60-day window.")
+    dialog.title = UI.CreateHeading(dialog, "CSR Test Lab", 1, "gold")
+    dialog.close = UI.CreateWindowButton(dialog, nil, "close")
+    UI.Window.StyleProjectDialog(dialog)
+    dialog.host = UI.CreateContainer(nil, dialog)
+    dialog.body = UI.CreateResponsiveCanvas(dialog.host, "MOSCSRTestLabBody")
+    local body = dialog.body
+    dialog.help = UI.CreateLabel(body, nil, "OVERLAY", "GameFontHighlightSmall")
+    dialog.help:SetText("Temporary simulation: add players and reserves, award items, change rank or advance time. Saved raids are unchanged.")
     dialog.state = MOS.Services.CSRTest.Create(); dialog.summary = { players = {} }
-    dialog.status = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.status:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -88); dialog.status:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.status:SetJustifyH("LEFT")
-    dialog.item = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlight"); dialog.item:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -116); dialog.item:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.item:SetJustifyH("LEFT")
-    dialog.result = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.result:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -148); dialog.result:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); dialog.result:SetJustifyH("LEFT")
-    dialog.logTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.logTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -262); dialog.logTitle:SetText("Simulation log")
+    dialog.status = UI.CreateLabel(body, nil, "OVERLAY", "GameFontHighlightSmall")
+    dialog.item = UI.CreateLabel(body, nil, "OVERLAY", "GameFontHighlightSmall")
+    dialog.result = UI.CreateLabel(body, nil, "OVERLAY", "GameFontNormal")
+    dialog.logTitle = UI.CreateLabel(body, nil, "OVERLAY", "GameFontNormal")
+    dialog.logTitle:SetText("Simulation log")
     dialog.logLines = {}
-    local index
-    for index = 1, 5 do
-        local line = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); line:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -282 - ((index - 1) * 19)); line:SetPoint("RIGHT", dialog, "RIGHT", -16, 0); line:SetJustifyH("LEFT"); dialog.logLines[index] = line
+    for index = 1, 5 do dialog.logLines[index] = UI.CreateLabel(body, nil, "OVERLAY", "GameFontHighlightSmall") end
+    local function Action(text, width, callback)
+        local button = UI.CreateButton(body, nil, text, width, 26)
+        UI.StyleActionButton(button); button.mosFlowWidth = width
+        button:SetScript("OnClick", function() callback(dialog.state); dialog:Refresh() end)
+        return button
     end
-    local addPlayer = MOS.UI.Components.CreateButton(dialog, nil, "Add player", 84, 24); addPlayer:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -190)
-    local missed = MOS.UI.Components.CreateButton(dialog, nil, "Add unsuccessful SR", 126, 24); missed:SetPoint("LEFT", addPlayer, "RIGHT", 7, 0)
-    local award = MOS.UI.Components.CreateButton(dialog, nil, "Award item", 90, 24); award:SetPoint("LEFT", missed, "RIGHT", 7, 0)
-    local nextItem = MOS.UI.Components.CreateButton(dialog, nil, "Next item", 82, 24); nextItem:SetPoint("LEFT", award, "RIGHT", 7, 0)
-    local rank = MOS.UI.Components.CreateButton(dialog, nil, "Toggle rank", 88, 24); rank:SetPoint("TOPLEFT", dialog, "TOPLEFT", 16, -224)
-    local days = MOS.UI.Components.CreateButton(dialog, nil, "+7 days", 72, 24); days:SetPoint("LEFT", rank, "RIGHT", 7, 0)
-    local reset = MOS.UI.Components.CreateButton(dialog, nil, "Reset Test", 84, 22); reset:SetPoint("BOTTOMLEFT", dialog, "BOTTOMLEFT", 16, 14)
-    local exit = MOS.UI.Components.CreateButton(dialog, nil, "Exit Test", 76, 22); exit:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -16, 14)
-    dialog.grip = MOS.UI.Components.CreateControl(nil, dialog); dialog.grip:SetWidth(20); dialog.grip:SetHeight(20); dialog.grip:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -2, 2)
-    dialog.grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    dialog.actions = {
+        Action("Add player", 90, MOS.Services.CSRTest.AddPlayer),
+        Action("Add unsuccessful SR", 142, MOS.Services.CSRTest.AddMissedReserve),
+        Action("Award item", 94, MOS.Services.CSRTest.AwardItem),
+        Action("Next item", 84, MOS.Services.CSRTest.NextItem),
+        Action("Toggle rank", 94, MOS.Services.CSRTest.ToggleRank),
+        Action("+7 days", 76, function(state) MOS.Services.CSRTest.AdvanceDays(state, 7) end),
+    }
+    dialog.reset = UI.CreateButton(dialog, nil, "Reset Test", 90, 26)
+    dialog.exit = UI.CreateButton(dialog, nil, "Exit Test", 80, 26)
+    UI.StyleActionButton(dialog.reset); UI.StyleActionButton(dialog.exit)
+    dialog.exit:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -20, 8)
+    dialog.reset:SetPoint("RIGHT", dialog.exit, "LEFT", -8, 0)
+    local function Exit() dialog:Hide(); if onExit then onExit() end end
+    dialog.close:SetScript("OnClick", Exit); dialog.exit:SetScript("OnClick", Exit)
+    dialog.reset:SetScript("OnClick", function() MOS.Services.CSRTest.Reset(dialog.state); dialog:Refresh() end)
+    dialog.grip = UI.CreateControl(nil, dialog)
+    dialog.grip:SetWidth(12); dialog.grip:SetHeight(12); dialog.grip:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", 0, 0)
+    dialog.grip:SetFrameLevel(dialog:GetFrameLevel()+100)
     dialog.grip:SetScript("OnMouseDown", function() dialog:StartSizing("BOTTOMRIGHT") end)
-    dialog.grip:SetScript("OnMouseUp", function() dialog:StopMovingOrSizing(); dialog:Refresh() end)
-    exit:ClearAllPoints(); exit:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -28, 14)
-    dialog.Refresh = function(self)
+    dialog.grip:SetScript("OnMouseUp", function() dialog:StopMovingOrSizing() end)
+    local function LayoutContent(width)
+        local y = 0
+        local function Line(line)
+            line:ClearAllPoints(); line:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -y)
+            line:SetWidth(width); line:SetHeight(0); line:SetJustifyH("LEFT")
+            if line.SetWordWrap then line:SetWordWrap(true) end
+            y = y + math.max(16, line:GetStringHeight()) + 8
+        end
+        Line(dialog.help); Line(dialog.status); Line(dialog.item); Line(dialog.result)
+        y = UI.LayoutFlow(body, dialog.actions, 0, y, width, 8) + 8
+        Line(dialog.logTitle)
+        for i = 1, table.getn(dialog.logLines) do
+            if dialog.logLines[i]:GetText() ~= "" then Line(dialog.logLines[i]); dialog.logLines[i]:Show() else dialog.logLines[i]:Hide() end
+        end
+        return y
+    end
+    function dialog:Layout()
+        self.host:ClearAllPoints(); self.host:SetPoint("TOPLEFT", self, "TOPLEFT", 8, -36)
+        self.host:SetWidth(self:GetWidth()-16); self.host:SetHeight(self:GetHeight()-78)
+        UI.LayoutResponsiveCanvas(body, LayoutContent)
+    end
+    dialog:SetScript("OnSizeChanged", function() dialog:Layout() end)
+    function dialog:Refresh()
         MOS.Services.CSRTest.BuildSummary(self.state, self.summary)
-        local totalItems, totalCsr, rowIndex = 0, 0, nil
-        for rowIndex = 1, table.getn(self.summary.players) do totalItems = totalItems + self.summary.players[rowIndex].items; totalCsr = totalCsr + self.summary.players[rowIndex].csr end
+        local totalItems, totalCsr = 0, 0
+        for _, player in ipairs(self.summary.players) do totalItems=totalItems+player.items; totalCsr=totalCsr+player.csr end
         local selected = self.state.currentPlayer
-        self.status:SetText("Selected player: " .. (selected or "none") .. "   Rank: " .. (selected and self.state.ranks[selected] or "-") .. "   Date: " .. date("%Y-%m-%d", self.state.now))
-        self.item:SetText("Selected item: " .. MOS.UI.Components.GetItemLabel(MOS.Services.CSRTest.GetItemId(self.state)))
-        self.result:SetText("Table rows: " .. table.getn(self.summary.players) .. "     Outstanding reserves: " .. totalItems .. "     CSR: " .. totalCsr)
-        for rowIndex = 1, table.getn(self.logLines) do self.logLines[rowIndex]:SetText(self.state.log[rowIndex] or "") end
+        self.status:SetText("Player: " .. (selected or "none") .. "   Rank: " .. (selected and self.state.ranks[selected] or "-") .. "   Date: " .. date("%Y-%m-%d", self.state.now))
+        self.item:SetText("Item: " .. UI.GetItemLabel(MOS.Services.CSRTest.GetItemId(self.state)))
+        self.result:SetText("Rows: " .. table.getn(self.summary.players) .. "   Reserves: " .. totalItems .. "   CSR: " .. totalCsr)
+        for i=1,table.getn(self.logLines) do self.logLines[i]:SetText(self.state.log[i] or "") end
+        self:Layout()
         if onChanged then onChanged() end
     end
-    addPlayer:SetScript("OnClick", function() MOS.Services.CSRTest.AddPlayer(dialog.state); dialog:Refresh() end)
-    missed:SetScript("OnClick", function() MOS.Services.CSRTest.AddMissedReserve(dialog.state); dialog:Refresh() end)
-    award:SetScript("OnClick", function() MOS.Services.CSRTest.AwardItem(dialog.state); dialog:Refresh() end)
-    nextItem:SetScript("OnClick", function() MOS.Services.CSRTest.NextItem(dialog.state); dialog:Refresh() end)
-    rank:SetScript("OnClick", function() MOS.Services.CSRTest.ToggleRank(dialog.state); dialog:Refresh() end)
-    days:SetScript("OnClick", function() MOS.Services.CSRTest.AdvanceDays(dialog.state, 7); dialog:Refresh() end)
-    reset:SetScript("OnClick", function() MOS.Services.CSRTest.Reset(dialog.state); dialog:Refresh() end)
-    exit:SetScript("OnClick", function() dialog:Hide(); if onExit then onExit() end end)
-    dialog.Open = function(self) self:Refresh(); self:Show() end
+    function dialog:Open() self:Refresh(); self:Show() end
     dialog:Hide()
     return dialog
 end
 
-function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistics)
+function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistics)
+    local page=UI.CreateResponsiveCanvas(host,"MOSCSRPage")
     local controller = { page = page, rows = {}, summary = { players = {} }, testMode = false, selectedRaids = {}, expandedKey = nil }
     local raidNames = MOS.Services.RaidStatistics.GetRaidNames()
     local raidFilterIndex
     for raidFilterIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[raidFilterIndex]] = true end
+    page.csrController=controller;host.csrController=controller
     controller.testLab = CreateTestLab(function() controller.testMode = true; controller:Refresh() end, function() controller.testMode = false; controller:Refresh() end)
     controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); controller.title:SetText("CSR")
     controller.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.description:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -40); controller.description:SetPoint("RIGHT", page, "RIGHT", -6, 0); controller.description:SetJustifyH("LEFT")
@@ -114,11 +141,13 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
     controller.csrHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "CSR", 0, -108, 60, nil, false)
     controller.csrHeader:ClearAllPoints(); controller.csrHeader:SetPoint("TOPRIGHT", page, "TOPRIGHT", -24, -108)
     controller.playerHeader:SetHeight(16); controller.itemsHeader:SetHeight(16); controller.csrHeader:SetHeight(16)
-    controller.scroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteCSRScroll", page, "FauxScrollFrameTemplate"); controller.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 2, -124); controller.scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -22, 5)
+    controller.scroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteCSRScroll", page, "UIPanelScrollFrameTemplate"); controller.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 2, -124); controller.scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -22, 5)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteCSRScrollScrollBar"))
+    controller.canvas=UI.CreateContainer(nil,controller.scroll);controller.scroll:SetScrollChild(controller.canvas)
+    controller.detailRows={};controller.detailLines={};controller.viewButtons={}
     local index
     for index = 1, 30 do
-        local row = MOS.UI.Components.CreateControl(nil, page); row:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -98 - ((index - 1) * 24)); row:SetPoint("RIGHT", page, "RIGHT", -26, 0); row:SetHeight(23)
+        local row = MOS.UI.Components.CreateControl(nil, controller.canvas); row:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -98 - ((index - 1) * 24)); row:SetPoint("RIGHT", page, "RIGHT", -26, 0); row:SetHeight(23)
         row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" }); row:SetBackdropColor(0.035, 0.035, 0.032, math.mod(index, 2) == 0 and 0.82 or 0.58)
         MOS.UI.Components.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8" }, { 0.035, 0.035, 0.032, math.mod(index, 2) == 0 and 0.82 or 0.58 }, { 0, 0, 0, 0 })
         row.name = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall"); row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 5, -4); row.name:SetWidth(150); row.name:SetJustifyH("LEFT")
@@ -127,14 +156,16 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
         row.csr = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall"); row.csr:SetPoint("TOPRIGHT", row, "TOPRIGHT", -6, -4); row.csr:SetWidth(60)
         row.itemHit = MOS.UI.Components.CreateControl(nil, row); row.itemHit:SetPoint("TOPLEFT", row, "TOPLEFT", 160, 0); row.itemHit:SetPoint("TOPRIGHT", row, "TOPRIGHT", -78, 0); row.itemHit:SetHeight(23); row.itemHit.ownerRow = row
         row.itemHit:SetScript("OnEnter", function() MOS.UI.Components.ShowItemTooltip(this.ownerRow) end); row.itemHit:SetScript("OnLeave", function() GameTooltip:Hide() end); row.itemHit:SetScript("OnClick", function() this.ownerRow:Click() end)
-        row.detailRows = {}; row.detailLines = {}; row.viewButtons = {}
+        row.detailRows=controller.detailRows;row.detailLines=controller.detailLines;row.viewButtons=controller.viewButtons
         local detailIndex
-        for detailIndex = 1, 8 do
+        function row:AcquireDetail(detailIndex)
+            if self.detailRows[detailIndex] then self.detailRows[detailIndex]:SetParent(self);return self.detailRows[detailIndex] end
             local detail = MOS.UI.Components.CreateContainer(nil, row); detail:SetPoint("TOPLEFT", row, "TOPLEFT", 6, -29 - ((detailIndex - 1) * 22)); detail:SetPoint("RIGHT", row, "RIGHT", -6, 0); detail:SetHeight(21)
             detail:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" }); detail.normalAlpha = math.mod(detailIndex, 2) == 0 and 0.28 or 0.16; detail:SetBackdropColor(0.20, 0.16, 0.08, detail.normalAlpha); detail:EnableMouse(true)
             detail:SetScript("OnEnter", function() this:SetBackdropColor(0.34, 0.25, 0.08, 0.55) end); detail:SetScript("OnLeave", function() this:SetBackdropColor(0.20, 0.16, 0.08, this.normalAlpha) end); detail:Hide(); row.detailRows[detailIndex] = detail
             local line = MOS.UI.Components.CreateLabel(detail, nil, "OVERLAY", "GameFontDisableSmall"); line:SetPoint("LEFT", detail, "LEFT", 7, 0); line:SetPoint("RIGHT", detail, "RIGHT", -60, 0); line:SetJustifyH("LEFT"); row.detailLines[detailIndex] = line
-            local view = MOS.UI.Components.CreateButton(detail, nil, "View", 52, 19); view:SetPoint("RIGHT", detail, "RIGHT", -1, 0); view:SetScript("OnClick", function() if openRaidStatistics and this.raidId then openRaidStatistics(this.raidId) end end); row.viewButtons[detailIndex] = view
+            local view = MOS.UI.Components.CreateButton(detail, nil, "View", 52, 20); UI.StyleActionButton(view);view:SetHeight(20); view:SetPoint("RIGHT", detail, "RIGHT", -1, 0); view:SetScript("OnClick", function() if openRaidStatistics and this.raidId then openRaidStatistics(this.raidId) end end); row.viewButtons[detailIndex] = view
+            return detail
         end
         row:SetScript("OnClick", function()
             if not this.player then return end
@@ -151,39 +182,128 @@ function CSR.Create(page, getEntries, getRules, getRosterData, openRaidStatistic
         end)
         row:Hide(); controller.rows[index] = row
     end
-    function controller:Refresh()
-        MOS.Diagnostics.Count("uiRefreshes")
-        if self.testMode then MOS.Services.CSRTest.BuildSummary(self.testLab.state, self.summary) else MOS.Services.CSR.BuildSummary(getEntries(), getRules(), time(), self.summary, getRosterData(), self.selectedRaids, self.search:GetText()) end
-        local visible = math.max(1, math.min(table.getn(self.rows), math.floor(math.max(24, self.scroll:GetHeight()) / 24)))
-        local offset = MOS.UI.Components.UpdateScrollFrame(self.scroll, table.getn(self.summary.players), visible, 24)
-        local rowIndex
-        local nextY = -128
-        for rowIndex = 1, table.getn(self.rows) do
-            local row, player = self.rows[rowIndex], self.summary.players[offset + rowIndex]
-            if player and rowIndex <= visible then
-                row.player = player; row.itemId = player.itemId; row.name:SetText(player.name); row.label:SetText(MOS.UI.Components.GetItemLabel(player.itemId) .. (player.items > 1 and (" x " .. player.items) or "")); row.csr:SetText(player.csr)
-                local texture = type(GetItemIcon) == "function" and GetItemIcon(player.itemId) or nil; row.iconRegion:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark"); row:Show()
-                local key = string.lower(player.name or "") .. ":" .. tostring(player.itemId or "")
-                local expanded = self.expandedKey == key
-                local detailCount = expanded and math.min(8, table.getn(player.raids or {})) or 0
-                row:ClearAllPoints(); row:SetPoint("TOPLEFT", page, "TOPLEFT", 6, nextY); row:SetPoint("RIGHT", page, "RIGHT", -26, 0); row:SetHeight(23 + (detailCount > 0 and 12 or 0) + (detailCount * 22))
-                local detailIndex
-                for detailIndex = 1, 8 do
-                    local raid = player.raids and player.raids[detailIndex]
-                    if expanded and raid then
-                        row.detailLines[detailIndex]:SetText(tostring(detailIndex) .. ".  " .. tostring(raid.id or "-") .. " | " .. tostring(raid.raidName or "Other") .. " | " .. date("%Y-%m-%d", tonumber(raid.savedAt) or 0))
-                        row.viewButtons[detailIndex].raidId = raid.id; row.detailRows[detailIndex]:Show()
-                    else row.detailRows[detailIndex]:Hide() end
-                end
-                nextY = nextY - row:GetHeight() - 1
-            else
-                row.player = nil; row.itemId = nil
-                local detailIndex; for detailIndex = 1, 8 do row.detailRows[detailIndex]:Hide() end
-                row:Hide()
-            end
-        end
+    UI.StyleProjectPopup(controller.raidPanel);controller.raidPanel:SetHeight(8+20+table.getn(controller.raidChecks)*23)
+    controller.raidPanel.options=controller.raidChecks;controller.raidPanel.selectAll=allCheckbox
+    local choiceWidth=130
+    for _,check in ipairs(controller.raidChecks) do choiceWidth=math.max(choiceWidth,check.label:GetStringWidth()+30) end
+    controller.raidPanel:SetWidth(choiceWidth)
+    allCheckbox:ClearAllPoints();allCheckbox:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4)
+    for i=1,table.getn(controller.raidChecks) do controller.raidChecks[i]:ClearAllPoints();controller.raidChecks[i]:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4-i*23) end
+    UI.StyleActionButton(controller.testButton)
+    controller.searchGroup=UI.CreateContainer(nil,page);controller.searchGroup:SetWidth(206);controller.searchGroup:SetHeight(26);controller.searchGroup.mosFlowWidth=206
+    controller.searchLabel:ClearAllPoints();controller.searchLabel:SetPoint("LEFT",controller.searchGroup,"LEFT",0,0)
+    controller.search:SetParent(controller.searchGroup);controller.search:ClearAllPoints();controller.search:SetPoint("LEFT",controller.searchGroup,"LEFT",44,0);controller.search:SetWidth(162)
+    controller.raidFilter.mosFlowWidth=130;controller.raidFilter:SetHeight(26)
+    controller.flow={controller.raidFilter,controller.searchGroup}
+    controller.headers={controller.playerHeader,controller.itemsHeader,controller.csrHeader}
+    controller.measure=UI.CreateLabel(page,nil,"ARTWORK","GameFontHighlightSmall");controller.measure:SetAlpha(0)
+    controller.detailHeights={};controller.detailTexts={};controller.layoutRows={}
+    controller.empty=UI.CreateLabel(page,nil,"OVERLAY","GameFontDisableSmall");controller.empty:SetText("No matching Soft Reserves.")
+    local function DetailText(raid,index)
+        return tostring(index) .. ".  " .. tostring(raid.id or "-") .. " | " .. tostring(raid.raidName or "Other") .. " | " .. date("%Y-%m-%d",tonumber(raid.savedAt) or 0)
     end
-    controller.scroll.refreshCallback = function() controller:Refresh() end
-    controller.scroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end)
-    return { Show = function(self) page:Show(); controller:Refresh() end, Hide = function(self) controller.testLab:Hide(); controller.raidPanel:Hide(); controller.raidDismiss:Hide(); page:Hide() end, Refresh = function(self) controller:Refresh() end, OnResize = function(self) controller:Refresh() end }
+    local function MeasureRows(width,self)
+        local total=0
+        for index,player in ipairs(self.summary.players) do
+            local entry=self.layoutRows[index]
+            if not entry then entry={};self.layoutRows[index]=entry end
+            entry.y=total;entry.player=player;entry.count=0
+            local height=24
+            if self.expandedKey==string.lower(player.name or "")..":"..tostring(player.itemId or "") then
+                entry.count=table.getn(player.raids or {})
+                for i,raid in ipairs(player.raids or {}) do
+                    self.detailTexts[i]=DetailText(raid,i)
+                    self.measure:SetWidth(math.max(1,width-78));self.measure:SetText(self.detailTexts[i])
+                    self.detailHeights[i]=math.max(24,self.measure:GetStringHeight()+8);height=height+self.detailHeights[i]
+                end
+            end
+            entry.height=height
+            total=total+height
+        end
+        for i=table.getn(self.layoutRows),table.getn(self.summary.players)+1,-1 do self.layoutRows[i]=nil end
+        return total
+    end
+    local function LayoutContent(width,height,self)
+        local available=math.max(80,width-16)
+        self.title:ClearAllPoints();self.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);UI.FitButtonLabel(self.title,math.max(1,available-104))
+        self.testButton:ClearAllPoints();self.testButton:SetPoint("TOPRIGHT",page,"TOPRIGHT",-8,-8)
+        self.description:ClearAllPoints();self.description:SetPoint("TOPLEFT",page,"TOPLEFT",8,-42);self.description:SetWidth(available);self.description:SetHeight(0)
+        local top=42+math.max(24,self.description:GetStringHeight())+8
+        self.filterLabel:Hide()
+        top=UI.LayoutFlow(page,self.flow,8,top,available,8)+8
+        self.search:SetWidth(math.max(24,self.searchGroup:GetWidth()-44))
+        self.headerTop=top;self.bodyTop=top+24;self.bodyHeight=math.max(48,height-self.bodyTop-8);self.bodyWidth=available
+        return self.bodyTop+self.bodyHeight+8
+    end
+    function controller:Layout() UI.LayoutResponsiveCanvas(page,LayoutContent,self) end
+    function controller:Render(changed)
+        if self.rendering then return end
+        self.rendering=true
+        if changed or not self.renderWidth or self.renderedExpandedKey~=self.expandedKey then
+            local width,total,_,maximum=UI.ResolveScrollLayout(self.bodyWidth,self.bodyHeight,20,MeasureRows,self)
+            self.renderWidth,self.renderHeight,self.renderMaximum=width,total,maximum
+            self.renderedExpandedKey=self.expandedKey
+        end
+        local width,contentHeight,maximum=self.renderWidth,self.renderHeight,self.renderMaximum
+        self.scroll:ClearAllPoints();self.scroll:SetPoint("TOPLEFT",page,"TOPLEFT",8,-self.bodyTop);self.scroll:SetWidth(width);self.scroll:SetHeight(self.bodyHeight)
+        self.canvas:SetWidth(width);self.canvas:SetHeight(contentHeight)
+        local bar=getglobal(self.scroll:GetName().."ScrollBar")
+        if bar then bar:ClearAllPoints();bar:SetPoint("TOPLEFT",page,"TOPLEFT",12+width,-self.bodyTop-16);bar:SetHeight(math.max(1,self.bodyHeight-32));bar:SetWidth(16) end
+        UI.ApplyScrollRange(self.scroll,bar,maximum)
+        local nameWidth=math.floor(width*0.32);local csrWidth=40;local itemWidth=width-nameWidth-csrWidth
+        local starts={0,nameWidth,width-csrWidth};local widths={nameWidth,itemWidth,csrWidth}
+        for i=1,3 do local header=self.headers[i];header:ClearAllPoints();header:SetPoint("TOPLEFT",page,"TOPLEFT",8+starts[i],-self.headerTop);header:SetWidth(widths[i]);header:SetHeight(20) end
+        self.playerHeader.label:SetText(width<420 and "Player" or "Player name")
+        UI.Table.FitHeaders(self.headers,12)
+        local top=self.scroll:GetVerticalScroll();local bottom=top+self.bodyHeight
+        local y,used=0,0
+        for _,detail in ipairs(self.detailRows) do detail:Hide() end
+        for logicalIndex,entry in ipairs(self.layoutRows) do
+            local player,count,rowHeight=entry.player,entry.count,entry.height
+            local expanded=count>0
+            y=entry.y
+            if y>=bottom then break end
+            if y+rowHeight>top and y<bottom and used<table.getn(self.rows) then
+                used=used+1;local row=self.rows[used]
+                row:ClearAllPoints();row:SetPoint("TOPLEFT",self.canvas,"TOPLEFT",0,-y);row:SetWidth(width);row:SetHeight(rowHeight-1)
+                row.player=player;row.itemId=player.itemId
+                UI.Table.Cell(row.name,row,6,nameWidth-8,23,player.name)
+                row.iconRegion:ClearAllPoints();row.iconRegion:SetPoint("TOPLEFT",row,"TOPLEFT",nameWidth,-2)
+                UI.Table.Cell(row.label,row,nameWidth+24,itemWidth-28,23,UI.GetItemLabel(player.itemId)..(player.items>1 and (" x "..player.items) or ""))
+                UI.Table.Cell(row.csr,row,width-csrWidth,csrWidth-4,23,tostring(player.csr))
+                row.itemHit:ClearAllPoints();row.itemHit:SetPoint("TOPLEFT",row,"TOPLEFT",nameWidth,0);row.itemHit:SetWidth(itemWidth);row.itemHit:SetHeight(23)
+                local texture=type(GetItemIcon)=="function" and GetItemIcon(player.itemId) or nil;row.iconRegion:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
+                UI.ApplyRowBackground(row,logicalIndex,expanded)
+                local detailY,detailUsed=24,0
+                for i=1,count do
+                    local detailHeight=self.detailHeights[i]
+                    if y+detailY+detailHeight>top and y+detailY<bottom then
+                        detailUsed=detailUsed+1
+                        local detail=row:AcquireDetail(detailUsed)
+                        detail:ClearAllPoints();detail:SetPoint("TOPLEFT",row,"TOPLEFT",4,-detailY);detail:SetWidth(width-8);detail:SetHeight(detailHeight-2)
+                        self.detailLines[detailUsed]:SetText(self.detailTexts[i]);self.detailLines[detailUsed]:SetJustifyV("MIDDLE")
+                        self.viewButtons[detailUsed].raidId=player.raids[i].id
+                        detail:Show()
+                    end
+                    detailY=detailY+detailHeight
+                end
+                row:Show()
+            end
+            y=y+rowHeight
+        end
+        for i=used+1,table.getn(self.rows) do self.rows[i].player=nil;self.rows[i]:Hide() end
+        self.empty:ClearAllPoints();self.empty:SetPoint("TOPLEFT",page,"TOPLEFT",8,-self.bodyTop-4);self.empty:SetWidth(width)
+        if table.getn(self.summary.players)==0 then self.empty:Show() else self.empty:Hide() end
+        self.rendering=false
+    end
+    function controller:Refresh()
+        if not host:IsShown() then return end
+        MOS.Diagnostics.Count("uiRefreshes")
+        if self.testMode then MOS.Services.CSRTest.BuildSummary(self.testLab.state,self.summary) else MOS.Services.CSR.BuildSummary(getEntries(),getRules(),time(),self.summary,getRosterData(),self.selectedRaids,self.search:GetText()) end
+        self:Layout();self:Render(true)
+    end
+    controller.scroll:SetScript("OnVerticalScroll",function() this:SetVerticalScroll(arg1 or 0);controller:Render() end)
+    return { Show=function(self) host:Show();page:Show();controller:Refresh() end,
+        Hide=function(self) controller.testLab:Hide();controller.raidPanel:Hide();controller.raidDismiss:Hide();page:Hide();host:Hide() end,
+        Refresh=function(self) controller:Refresh() end,OnResize=function(self) controller.raidPanel:Hide();controller:Refresh() end }
 end

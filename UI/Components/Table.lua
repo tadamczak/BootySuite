@@ -132,3 +132,46 @@ function UI.ApplyRowBackground(row, absoluteIndex, selected)
         row:SetBackdropColor(0, 0, 0, 0); row:SetBackdropBorderColor(0, 0, 0, 0)
     end
 end
+
+-- A single rectangle owns rows and the optional scrollbar gutter.
+local function MeasureFixedRows(_, context) return context.totalHeight end
+function Table.LayoutViewport(scroll, parent, x, y, width, height, count, step, poolSize)
+    height = math.max(step, height)
+    local visible = math.max(1, math.min(poolSize, math.floor(height / step)))
+    scroll.totalHeight = count * step
+    local contentWidth = UI.ResolveScrollLayout(math.max(1, width), visible * step, 20, MeasureFixedRows, scroll)
+    scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -y)
+    scroll:SetWidth(contentWidth); scroll:SetHeight(visible * step)
+    local offset = UI.UpdateScrollFrame(scroll, count, visible, step)
+    local bar = scroll:GetName() and getglobal(scroll:GetName() .. "ScrollBar")
+    if bar then
+        bar:ClearAllPoints(); bar:SetPoint("TOPLEFT", parent, "TOPLEFT", x + contentWidth + 4, -y - 16)
+        bar:SetHeight(math.max(1, visible * step - 32)); bar:SetWidth(16)
+        -- Faux scrolling is a logical row offset, not a native scroll child.
+        local maximum=math.max(0,count-visible)*step
+        bar:SetMinMaxValues(0,maximum)
+        if bar:GetValue()~=offset*step then bar:SetValue(offset*step) end
+        UI.SetScrollBarVisible(bar,maximum>0)
+    end
+    return offset, visible, contentWidth
+end
+function Table.Cell(label, owner, x, width, height, text)
+    label:ClearAllPoints(); label:SetPoint("TOPLEFT", owner, "TOPLEFT", x, 0)
+    label:SetWidth(math.max(1,width)); label:SetHeight(height); label:SetJustifyH("LEFT"); label:SetJustifyV("MIDDLE")
+    if label.SetWordWrap then label:SetWordWrap(false) end
+    if label.SetNonSpaceWrap then label:SetNonSpaceWrap(false) end
+    if text ~= nil then label:SetText(text) end
+end
+function Table.FitHeaders(headers, baseSize)
+    local scale, index = 1, nil
+    for index=1,table.getn(headers) do
+        local label=headers[index].label
+        local font, _, flags=label:GetFont(); label:SetFont(font,baseSize or 12,flags); label:SetWidth(0)
+        scale=math.min(scale,math.max(1,headers[index]:GetWidth()-4)/math.max(1,label:GetStringWidth()))
+    end
+    for index=1,table.getn(headers) do
+        local header=headers[index]; local font, _, flags=header.label:GetFont()
+        header.label:SetFont(font,(baseSize or 12)*scale,flags)
+        Table.Cell(header.label,header,0,header:GetWidth(),header:GetHeight())
+    end
+end
