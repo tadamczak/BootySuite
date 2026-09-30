@@ -323,13 +323,14 @@ local function ApplySurface(entry)
         local t = entry.classicSkin.textures
         local index
         for index = 1, 9 do if index ~= 2 or not frame.mosJoinedTop then t[index]:Hide() end end
+        t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",-(frame.mosBorderOutsetLeft or 0),0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",frame.mosBorderOutsetRight or 0,0)
         if entry.classicFill then entry.classicFill:Hide() end
     end
     if frame.mosHorizontalBorders and entry.classicSkin then
         local t = entry.classicSkin.textures
         t[1]:Hide(); t[3]:Hide(); t[4]:Hide(); t[6]:Hide(); t[7]:Hide(); t[9]:Hide()
-        t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
-        t[8]:ClearAllPoints(); t[8]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0); t[8]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
+        t[2]:ClearAllPoints(); t[2]:SetPoint("TOPLEFT",frame,"TOPLEFT",-(frame.mosBorderOutsetLeft or 0),0); t[2]:SetPoint("TOPRIGHT",frame,"TOPRIGHT",frame.mosBorderOutsetRight or 0,0)
+        t[8]:ClearAllPoints(); t[8]:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",-(frame.mosBorderOutsetLeft or 0),0); t[8]:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",frame.mosBorderOutsetRight or 0,0)
         if not frame.mosBorderTop then t[2]:Hide() end
         if not frame.mosBorderBottom then t[8]:Hide() end
         if frame.mosBorderRight then
@@ -631,7 +632,9 @@ function UI.SetSurfaceHorizontalBorders(frame, top, bottom, right)
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
 
-function UI.JoinSurfaceEdges(frame, top, bottom)
+function UI.JoinSurfaceEdges(frame, top, bottom, leftOutset, rightOutset)
+    if frame.mosJoinedTop == top and frame.mosJoinedBottom == bottom and frame.mosBorderOutsetLeft == leftOutset and frame.mosBorderOutsetRight == rightOutset then return end
+    frame.mosBorderOutsetLeft = leftOutset; frame.mosBorderOutsetRight = rightOutset
     frame.mosJoinedTop = top; frame.mosJoinedBottom = bottom
     frame.mosSeparatorsOnly = true
     if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end

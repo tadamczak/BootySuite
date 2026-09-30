@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.45 - 2026-09-30
+
+- Extend section separators beyond content padding and remove doubled header/footer seams.
+- Match header control padding and align roster status artwork with the scrollbar.
+
 ## 0.5.0-dev.44 - 2026-09-30
 
 - Preserve the project gold top/side outline when toggling the header.

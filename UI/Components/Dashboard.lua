@@ -44,7 +44,7 @@ function Dashboard.PlaceWindowControls(view, inContent)
     local controls = view.windowControls
     controls:ClearAllPoints()
     if inContent then controls:SetPoint("TOPRIGHT", view.contentPanel, "TOPRIGHT", -3, -3)
-    else controls:SetPoint("RIGHT", view.titleBar, "RIGHT", -8, 0) end
+    else controls:SetPoint("RIGHT", view.titleBar, "RIGHT", -3, 0) end
     controls:Show()
 end
 
@@ -74,6 +74,19 @@ function Dashboard.ApplyChrome(view, get)
         else view.sidebarToggle:SetPoint("LEFT", view.titleBar, "LEFT", 7, 0) end
     end
     local footer = not get("hideStatusVersionBar")
+    local tabs = get("menuStyle") == "tabs" or get("menuStyle") == "bottomTabs"
+    view.titleBar.mosBorderOutsetLeft = (classic and 4 or 9) - 1
+    view.titleBar.mosBorderOutsetRight = 3
+    view.contentPanel.mosBorderOutsetLeft = tabs and ((classic and 4 or 9) - 1) or 0
+    view.contentPanel.mosBorderOutsetRight = 3
+    MOS.UI.Components.SetSurfaceHorizontalBorders(view.titleBar, false, true)
+    -- Each shared seam has one owner; adjacent strips must not overlap.
+    MOS.UI.Components.SetSurfaceHorizontalBorders(view.contentPanel, hiddenHeader, not footer)
+    if view.frame.mosStatusBar then
+        view.frame.mosStatusBar.mosBorderOutsetLeft = (classic and 4 or 9) - 1
+        view.frame.mosStatusBar.mosBorderOutsetRight = 0
+        MOS.UI.Components.SetSurfaceHorizontalBorders(view.frame.mosStatusBar, true, false, true)
+    end
     Dashboard.SetTabBody(view, get("menuStyle") == "bottomTabs" and not footer and not (view.lootBorder and view.lootBorder:IsVisible()), hiddenHeader and get("menuStyle") == "tabs" and 24 or 0)
     if view.frame.mosStatusBar then SetChromeVisible(view.frame.mosStatusBar, footer) end
     SetChromeVisible(view.versionText, footer)
