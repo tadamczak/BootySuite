@@ -120,8 +120,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     options = options or {}
     local viewport = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteSettingsScroll", parent, "UIPanelScrollFrameTemplate")
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteSettingsScrollScrollBar"))
-    viewport:SetPoint("TOPLEFT", anchorPage, "TOPLEFT", 4, -8)
-    viewport:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -32, 4)
+    viewport:SetPoint("TOPLEFT", anchorPage, "TOPLEFT", 4, -4)
+    viewport:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -24, 4)
     viewport:EnableMouseWheel(true)
     local page = MOS.UI.Components.CreateContainer(nil, viewport)
     page.mosTextSizeDelta = -2
@@ -142,7 +142,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     uiContent:SetHeight(224); page.uiContent = uiContent
     local generalHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "General", -38)
     generalHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -38)
-    page.uiGeneralHeading = generalHeading; page.uiSectionState = { general = true, layout = true }
+    page.uiGeneralHeading = generalHeading; page.uiSectionState = { general = false, layout = false }
     generalHeading:SetScript("OnClick", function() page.uiSectionState.general = not page.uiSectionState.general; Settings.ApplyTopSections(page) end)
     local skinControl = Settings.CreateSkinControl(uiContent, 24, -66)
     local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 224, -94, "Turn off addon login message", "suppressLoginMessage")
@@ -445,11 +445,20 @@ function Settings.CreateSectionReset(page, heading, groups, refresh)
     local button = MOS.UI.Components.CreateButton(heading:GetParent(), nil, "Reset to default", 100, 18)
     MOS.UI.Components.SizeClassicButton(button, 100, 18, 0.8)
     button:SetPoint("LEFT", heading, "RIGHT", 12, 0)
-    button:SetScript("OnClick", function()
+    button.ResetConfirmed = function()
         MOS.Core.SettingsProfiles.ResetDefaults(keys)
         if page.RefreshAllSettings then page.RefreshAllSettings() end
         if refresh then refresh() end
-    end)
+    end
+    if not StaticPopupDialogs.MUKLA_OFFICER_SUITE_RESET_SUBSECTION then
+        StaticPopupDialogs.MUKLA_OFFICER_SUITE_RESET_SUBSECTION = {
+            text="Reset this subsection to default settings?", button1="Reset", button2="Cancel",
+            timeout=0, whileDead=1, hideOnEscape=1,
+            OnAccept=function() local pending=Settings.pendingReset; Settings.pendingReset=nil; if pending then pending.ResetConfirmed() end end,
+            OnCancel=function() Settings.pendingReset=nil end,
+        }
+    end
+    button:SetScript("OnClick", function() Settings.pendingReset=this; MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RESET_SUBSECTION") end)
     heading.resetButton = button
     return button
 end
@@ -710,8 +719,8 @@ function Settings.ApplyRaidAccordions(controls)
         chatY = debugY - 30
     end
     controls.debugHeading:ClearAllPoints()
-    controls.debugHeading:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 12, debugY)
-    controls.debugHeading:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", -12, debugY)
+    controls.debugHeading:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 0, debugY)
+    controls.debugHeading:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", 0, debugY)
 
     if controls.opacityLabel then
         controls.opacityLabel:ClearAllPoints()
@@ -903,12 +912,12 @@ function Settings.AttachShell(view, parent, anchor, detached)
     view.viewport:SetFrameStrata(parent:GetFrameStrata()); view.viewport:SetFrameLevel(parent:GetFrameLevel() + 2)
     view.page:SetFrameStrata(parent:GetFrameStrata()); view.page:SetFrameLevel(view.viewport:GetFrameLevel() + 2)
     view.viewport:ClearAllPoints()
-    view.viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 8, -8)
-    view.viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -36, 8)
+    view.viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 4, -4)
+    view.viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -24, 4)
     if view.scrollBar then
         view.scrollBar:ClearAllPoints()
-        view.scrollBar:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -8, -24)
-        view.scrollBar:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -8, 24)
+        view.scrollBar:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -4, -20)
+        view.scrollBar:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -4, 20)
     end
     view.viewport.settingsDetached = detached and true or false
     Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960)

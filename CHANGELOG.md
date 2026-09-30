@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.58 - 2026-09-30
+
+- Confirm subsection resets, compact Settings margins and start every accordion collapsed.
+- Present saved raids in Name/Raid/Time columns with compact load/delete actions and responsive New Raid controls.
+
 ## 0.5.0-dev.57 - 2026-09-30
 
 - Add subsection and global Settings resets; rename On press color to Collapsed color.
