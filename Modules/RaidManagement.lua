@@ -1347,6 +1347,16 @@ function RaidManagement.PrintListLayoutDiagnostics(page, members, selectedName)
     DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS raid edges: page right=%.0f bottom=%.0f; row right=%.0f last bottom=%.0f; scroll right=%.0f bottom=%.0f", number(page:GetRight()), number(page:GetBottom()), first and number(first:GetRight()) or 0, last and number(last:GetBottom()) or 0, page.listScrollBar and number(page.listScrollBar:GetRight()) or 0, page.listScrollBar and number(page.listScrollBar:GetBottom()) or 0))
 end
 
+function RaidManagement.ApplyGroupTileAppearance(panel, header, height)
+    local settings = MuklaOfficerSuiteDB
+    local text, background, border = settings.raidGroupHeaderTextColor, settings.raidGroupHeaderBackgroundColor, settings.raidGroupBorderColor
+    header:SetTextColor(text[1], text[2], text[3], 1)
+    panel:SetBackdropBorderColor(border[1], border[2], border[3], settings.raidGroupShowBorder and 1 or 0)
+    panel.headerBackground:SetTexture(background[1], background[2], background[3], 1)
+    panel.headerBackground:SetHeight(math.max(1, height - 3))
+    if settings.raidGroupShowHeader then panel.headerBackground:Show() else panel.headerBackground:Hide() end
+end
+
 function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin)
     local columnCount = math.max(1, math.min(4, tonumber(columns) or 2))
     local groupRows = math.ceil(8 / columnCount)
@@ -1861,6 +1871,7 @@ function RaidManagement.RefreshGroupView(page)
         local panel = page.groupPanels[groupIndex]
         panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(columnWidth); panel:SetHeight(groupHeight)
         local header = page.groupHeaders[groupIndex]
+        RaidManagement.ApplyGroupTileAppearance(panel, header, headerHeight)
         SetFontSize(header, headerTextSize)
         header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -4, -4)
         if MuklaOfficerSuiteDB.raidGroupShowHeader then header:Show() else header:Hide() end
@@ -1997,7 +2008,9 @@ function RaidManagement.CreateGroupGrid(page)
     for groupIndex = 1, 8 do
         local panel = MOS.UI.Components.CreateContainer(nil, page.groupCanvas)
         panel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }); panel:SetBackdropColor(0, 0, 0, 0); panel:SetBackdropBorderColor(0, 0, 0, 0)
-        MOS.UI.Components.RegisterSkinnedSurface(panel, "panel", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 })
+        panel.headerBackground = MOS.UI.Components.CreateTexture(panel, nil, "BACKGROUND")
+        panel.headerBackground:SetPoint("TOPLEFT", panel, "TOPLEFT", 3, -3)
+        panel.headerBackground:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -3, -3)
         page.groupPanels[groupIndex] = panel
         local header = MOS.UI.Components.CreateLabel(panel, nil, "OVERLAY", "GameFontNormalSmall")
         header:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, -4)

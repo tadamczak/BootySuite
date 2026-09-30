@@ -244,6 +244,7 @@ local function ApplyControl(entry)
         button.label:SetPoint("TOPLEFT", button, "TOPLEFT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)
         button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)
     end
+    if button.mosWarmListRow then UI.StyleWarmListRow(button, button.mosWarmListSelected) end
 end
 
 function UI.SetButtonTextColor(button, color)

@@ -176,3 +176,19 @@ function UI.SetAlternatingRowColor(row, background, index, percentage)
     color[3] = background[3] + (1 - background[3]) * amount
     UI.SetRowColor(row, color, 1)
 end
+
+local warmListNormal = {0.12, 0.07, 0.02}
+local warmListSelected = {0.32, 0.19, 0.02}
+function UI.StyleWarmListRow(button, selected)
+    button.mosWarmListRow = true; button.mosWarmListSelected = selected
+    local entry = button.mosSkinEntry
+    if entry and entry.classicSkin then entry.classicSkin.textures[5]:Hide() end
+    UI.SetRowColor(button, selected and warmListSelected or warmListNormal, 0.96)
+    button:SetNormalTexture(""); button:SetPushedTexture(""); button:SetHighlightTexture("")
+    if button.mosHighlight then button.mosHighlight:Hide() end
+    if not button.warmListHover then
+        button.warmListHover = button:CreateTexture(nil, "HIGHLIGHT")
+        button.warmListHover:SetAllPoints(button)
+        button.warmListHover:SetTexture(0.32, 0.19, 0.02, 0.75)
+    end
+end

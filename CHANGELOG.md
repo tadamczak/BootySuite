@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.59 - 2026-09-30
+
+- Match saved raid table colors, hover and spacing to Raid Statistics; align labels and resize row actions.
+- Add group border visibility and independent group header/background/border colors with a scoped reset.
+- Remove the unused Group View Collapsed color control.
+
 ## 0.5.0-dev.58 - 2026-09-30
 
 - Confirm subsection resets, compact Settings margins and start every accordion collapsed.
