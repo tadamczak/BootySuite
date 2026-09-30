@@ -43,8 +43,8 @@ function Dashboard.SetTabBody(view, protruding, topInset)
         frame:SetBackdropColor(0, 0, 0, 0); frame:SetBackdropBorderColor(0, 0, 0, 0)
         view.tabBody:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
         view.tabBody:Show()
-    elseif view.tabBody then
-        view.tabBody:Hide()
+    else
+        if view.tabBody then view.tabBody:Hide() end
         frame:SetBackdropColor(0.02, 0.02, 0.02, 0.98); frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
     end
     view.tabsProtruding = protruding
@@ -82,7 +82,13 @@ function Dashboard.PlaceWindowControls(view, inContent)
 end
 
 function Dashboard.ApplyChrome(view, get)
-    if view.minimized then return end
+    if view.minimized then
+        Dashboard.SetTabBody(view, false); Dashboard.SetBottomTabSeam(view, false)
+        view.frame:SetBackdropColor(0,0,0,0)
+        MOS.UI.Components.SetSurfaceTransparent(view.titleBar, true)
+        view.sidebar:Hide(); view.contentPanel:Hide()
+        return
+    end
     local classic = MOS.UI.Components.IsClassicSkin()
     local height = Dashboard.GetChromeLayout(get, classic, view.frame:GetWidth())
     view.titleBar:ClearAllPoints()
@@ -261,6 +267,10 @@ function Dashboard.CreateWindow(version)
     view.contentShade:SetTexture(0.025, 0.022, 0.018, 0.96)
     MOS.UI.Components.RegisterSkinCallback(function(skin)
         local classic = skin == "classic"
+        if view.minimized then
+            Dashboard.ApplyChrome(view, function() end)
+            return
+        end
         if classic and not view.minimized then view.title:Hide(); view.classicTitle:Show() else view.classicTitle:Hide(); view.title:Show() end
         if classic and not view.minimized then view.classicLogo:Show(); view.classicTitleLeft:Show(); view.classicTitleRight:Show(); view.classicMenuTitle:Show()
         else view.classicLogo:Hide(); view.classicTitleLeft:Hide(); view.classicTitleRight:Hide(); view.classicMenuTitle:Hide() end
@@ -396,7 +406,9 @@ function Dashboard.BindWindow(view, options)
         if options.isLootMasterMode() then return end
         if view.minimized then
             view.minimizedLeft, view.minimizedBottom = frame:GetLeft(), frame:GetBottom()
-            view.minimized = false
+            view.minimized = false; frame.mosMinimized = false
+            MOS.UI.Components.SetSurfaceTransparent(view.titleBar, false)
+            Dashboard.SetTabBody(view, false)
             frame:SetMinResize(350, 380); frame:SetMaxResize(1100, 760)
             frame:SetWidth(view.widthBeforeMinimize or 840); frame:SetHeight(view.heightBeforeMinimize or 540)
             frame:ClearAllPoints()
@@ -418,7 +430,9 @@ function Dashboard.BindWindow(view, options)
             options.saveGeometry()
             Dashboard.SetTabBody(view, false)
             view.titleBar:Show(); Dashboard.PlaceWindowControls(view, false)
-            view.minimized = true
+            view.minimized = true; frame.mosMinimized = true
+            MOS.UI.Components.SetSurfaceTransparent(view.titleBar, true)
+            frame:SetBackdropColor(0,0,0,0)
             Dashboard.SetBottomTabSeam(view, false)
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end

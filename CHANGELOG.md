@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.76 - 2026-09-30
+
+- Keep minimized dashboard content/navigation hidden and remove compact header fill and separator.
+- Reattach LM side panels after resize/hide/move; allow narrower config and color rarity options by item quality.
+- Use the project gold border for exception presets.
+
 ## 0.5.0-dev.75 - 2026-09-30
 
 - Keep LM above main-window controls and reserve a separate resize footer.
