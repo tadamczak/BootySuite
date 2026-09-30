@@ -292,9 +292,11 @@ end
 local function GoldHoverEnter()
     if this.IsEnabled and not this:IsEnabled() then return end
     this:SetBackdropBorderColor(1, 0.78, 0.2, 1)
+    if this.mosHoverTextColor and this.label then this.label:SetTextColor(unpack(this.mosHoverTextColor)) end
 end
 
 local function GoldHoverLeave()
+    if this.mosHoverTextColor and this.label then this.label:SetTextColor(unpack(this.mosClassicSelected and this.mosHoverTextColor or this.mosTextColor or {1,1,1})) end
     if this.mosClassicKeepNormalSurface and this.mosClassicSelected then this:SetBackdropBorderColor(1, 0.78, 0.2, 1); return end
     local color = this.mosNormalBorder
     if color then this:SetBackdropBorderColor(color[1], color[2], color[3], color[4]) end

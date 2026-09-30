@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.84 - 2026-09-30
+
+- Refine warning header colors, control positions and SR rank explanations.
+- Correct toolbar hover text, Reset Filters alignment, player placeholder and SR export clipping.
+
 ## 0.5.0-dev.83 - 2026-09-30
 
 - Add wildcard auto loot exclusions, real raid presets and rarity-independent inclusions with exclusions taking priority.
