@@ -61,11 +61,11 @@ function Settings.LayoutGeneral(page)
     menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY - 54)
     local check = page.iconTabsCheck
     local iconVisible = state.layout and (MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs")
-    check:ClearAllPoints(); check:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",20,headingY-80)
+    check:ClearAllPoints(); check:SetPoint("LEFT",menu,"RIGHT",12,0)
     if iconVisible then check:Show() else check:Hide() end
     if state.layout then menu:Show(); menu.fieldLabel:Show()
     else menu:Hide(); menu.fieldLabel:Hide(); menu.panel:Hide() end
-    local displayY = headingY - (iconVisible and 114 or 86)
+    local displayY = headingY - 86
     page.uiLayoutDisplayHeading:ClearAllPoints();page.uiLayoutDisplayHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",24,displayY)
     for index = 1, table.getn(page.chromeChecks) do page.chromeChecks[index][method](page.chromeChecks[index]) end
     local layoutHeight = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.chromeChecks, 20, displayY - 26, page:GetWidth() - 56, 28)
@@ -188,7 +188,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         MOS.Database.Ensure()
         detailsControl:SetText(MOS.Database.GetSetting("playerDetailsStyle") == "window" and "Window" or "Collapsible")
         skinControl:SetText(MOS.UI.Components.IsClassicSkin() and "Default" or "Classic WIP")
-        menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Tab view" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" and "Bottom Tab view" or "Button view")
+        menuStyleControl:SetText(MuklaOfficerSuiteDB.menuStyle == "tabs" and "Top tab view" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" and "Bottom tab view" or "Right side view")
         iconTabsCheck:SetChecked(MuklaOfficerSuiteDB.useIconTabs and 1 or nil)
         if MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs" then iconTabsCheck:Show() else iconTabsCheck:Hide() end
         local index
@@ -571,8 +571,8 @@ end
 function Settings.CreateMenuStyleControl(parent, x, y, onChanged)
     local _, button = MOS.UI.Components.CreateChoiceField({
         parent = parent, x = x, y = y, label = "Menu type", width = 126, height = 72,
-        initialText = "Button view", firstY = -7, step = 19,
-        choices = { { text = "Tab view", value = "tabs" }, { text = "Button view", value = "buttons" }, { text = "Bottom Tab view", value = "bottomTabs" } },
+        initialText = "Right side view", firstY = -7, step = 19,
+        choices = { { text = "Right side view", value = "buttons" }, { text = "Top tab view", value = "tabs" }, { text = "Bottom tab view", value = "bottomTabs" } },
         getValue = function() MOS.Database.Ensure(); return MOS.Database.GetSetting("menuStyle") end,
         onSelect = function(value) MOS.Database.Ensure(); MOS.Database.SetSetting("menuStyle", value) end,
         onChanged = onChanged,

@@ -56,7 +56,9 @@ local function MeasureHistory(width, controls)
 end
 
 function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
-    local width = math.max(1, MOS.UI.Components.GetFrameSpan(page) - 16)
+    local fullWidth = math.max(1, MOS.UI.Components.GetFrameSpan(page) - 16)
+    local width = math.min(800, fullWidth)
+    local rightInset = 8 + fullWidth - width
     local buttonWidth = math.min(110, (width - 8) / 2)
     local textY = MuklaOfficerSuiteDB.raidHideSectionHeader and -8 or -48
     local actionY = textY - 38
@@ -86,14 +88,14 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     local contentWidth, contentHeight, overflow, maximum = MOS.UI.Components.ResolveScrollLayout(width, viewportHeight, 20, MeasureHistory, controls)
     controls.historyScroll:ClearAllPoints()
     controls.historyScroll:SetPoint("TOPLEFT", page, "TOPLEFT", 8, actionY - 82)
-    controls.historyScroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", overflow and -28 or -8, 8)
+    controls.historyScroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -rightInset - (overflow and 20 or 0), 8)
     controls.historyCanvas:SetWidth(contentWidth); controls.historyCanvas:SetHeight(contentHeight)
     controls.historyScroll:Show()
     local bar = getglobal("MuklaOfficerSuiteRaidHistoryScrollScrollBar")
     if bar then
         bar:ClearAllPoints(); bar:SetWidth(16)
-        bar:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, actionY - 98)
-        bar:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -8, 24)
+        bar:SetPoint("TOPRIGHT", page, "TOPRIGHT", -rightInset, actionY - 98)
+        bar:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -rightInset, 24)
     end
     if controls.historyScroll.UpdateScrollChildRect then controls.historyScroll:UpdateScrollChildRect() end
     MOS.UI.Components.ApplyScrollRange(controls.historyScroll, bar, maximum)
