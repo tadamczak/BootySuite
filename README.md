@@ -80,6 +80,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Soft Reserve warnings -** Review missing SR, imported SR outside the raid, and SR without loot rights.
 - **Loot rules -** Configure SR, Highly Contested Items, Reycoin, and CSR rights by guild rank.
 - **Reycoin list -** Review used Reycoins and pending item trades.
+- **Raid header -** In narrow windows, saved date, warning count, Save Session and Quit move together to a second row aligned to the left.
 - **Saved raids -** Select and load an earlier raid session.
 
 ### Loot Master Mode

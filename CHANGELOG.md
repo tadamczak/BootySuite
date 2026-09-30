@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.61 - 2026-09-30
+
+- Use the addon button outline and one shared hover/selection gradient on saved raid rows.
+- Reflow Settings on actual viewport resize and remove duplicate section padding.
+- Balance warning gutters and wrap raid metadata with Save Session and Quit into a left-aligned row.
+
 ## 0.5.0-dev.60 - 2026-09-30
 
 - Reconcile group drops, remove unused icon/border spacing and keep the scrollbar clear of warnings.

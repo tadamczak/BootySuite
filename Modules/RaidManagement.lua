@@ -1162,7 +1162,8 @@ function RaidManagement.ShowGroupView(page, rows)
     if MOS.UI.Components.IsClassicSkin() then
         local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
         if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then warningWidth = 0 end
-        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(warningWidth + 40), 4)
+        -- 2px warning inset + 7.5px outer clearance (4px window + 1.5px page + 2px warning) + 20px scrollbar/gap.
+        page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0) - (page.activeToolMenu and 32 or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(warningWidth + 29.5), 4)
         if page.groupScrollBar then
             page.groupScrollBar:ClearAllPoints(); page.groupScrollBar:SetWidth(16)
             page.groupScrollBar:SetPoint("TOPLEFT", page.groupFrame, "TOPRIGHT", 4, -12)
@@ -2182,6 +2183,24 @@ function RaidManagement.LayoutActions(page)
         MOS.UI.Components.SizeClassicButton(page.classicIssues, math.floor(96 * scale), math.floor(26 * math.max(0.85, scale)), scale)
         page.classicSaved:ClearAllPoints(); page.classicSaved:SetPoint("LEFT", page.classicMeta, "RIGHT", 8, 0); page.classicSaved:SetPoint("TOP", page, "TOP", 0, -9)
         page.classicIssues:ClearAllPoints(); page.classicIssues:SetPoint("LEFT", page.classicSaved, "RIGHT", 8, 0); page.classicIssues:SetPoint("TOP", page, "TOP", 0, -9)
+        if actionOffset > 0 then
+            local left = 6
+            local secondRow = {page.classicSaved, page.classicIssues, page.exportButton, page.quitButton}
+            local available = math.max(1, PageSpan(page) - 12)
+            local total = 108 + 118 + 72 + (page.classicIssues:IsShown() and 96 or 0)
+            local gaps = page.classicIssues:IsShown() and 24 or 16
+            local rowScale = math.min(1, math.max(1, available - gaps) / total)
+            local widths = {108, 96, 118, 72}
+            for index = 1, 4 do
+                local button = secondRow[index]
+                if index ~= 2 or button:IsShown() then
+                    local width = math.floor(widths[index] * rowScale)
+                    button:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(button, width, 26, rowScale)
+                    button:SetPoint("TOPLEFT", page, "TOPLEFT", left, -9 - actionOffset)
+                    left = left + width + 8
+                end
+            end
+        end
         page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", -3, -48 - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 3, -48 - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
         page.classicListButton:ClearAllPoints(); page.classicListButton:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -57 - actionOffset)
         page.classicGroupButton:ClearAllPoints(); page.classicGroupButton:SetPoint("LEFT", page.classicListButton, "RIGHT", 8, 0)
