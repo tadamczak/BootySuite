@@ -281,6 +281,7 @@ local function ApplyControl(entry)
     end
     ApplySizedButtonGeometry(button, entry)
     if button.mosWarmListRow then UI.StyleWarmListRow(button, button.mosWarmListSelected) end
+    if button.mosSelectableTableRow and UI.StyleSelectableTableRow then UI.StyleSelectableTableRow(button,button.mosTableRowEven,button.mosTableRowSelected) end
 end
 
 function UI.SetButtonTextColor(button, color)

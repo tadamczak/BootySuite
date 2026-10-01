@@ -996,6 +996,16 @@ function UI.CreateToolbarSurface(parent, topBorder, bottomBorder)
     UI.SetSurfaceHorizontalBorders(toolbar, topBorder, bottomBorder)
     return toolbar
 end
+function UI.AddToolbarBackground(toolbar, alpha)
+    if not toolbar.mosToolbarBackground then
+        toolbar.mosToolbarBackground=UI.CreateTexture(toolbar,nil,"BACKGROUND")
+        toolbar.mosToolbarBackground:SetAllPoints(toolbar)
+        toolbar.mosToolbarBackground:SetTexture("Interface\\Buttons\\WHITE8X8")
+        toolbar.mosToolbarBackground:SetVertexColor(0.11,0.09,0.055,1)
+    end
+    toolbar.mosToolbarBackground:SetAlpha(alpha or 0.45);toolbar.mosToolbarBackground:Show()
+    return toolbar.mosToolbarBackground
+end
 function UI.StyleActionButton(button)
     button.mosClassicKeepNormalSurface=true;button.mosFlowFitLabel=true
     UI.ApplyDropdownChoiceSurface(button); UI.AttachGoldHoverBorder(button,0.35,0.35,0.35,1)

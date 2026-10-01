@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.99 - 2026-10-01
+
+- Fix minimized dashboard and first-open Roster details geometry.
+- Correct Guild Statistics empty-filter semantics, raw counts, stripes, class colors and toolbar state.
+- Keep collapsed Raid Statistics results on one row and standardize saved-raid selection styling.
+
 ## 0.5.0-dev.98 - 2026-10-01
 
 - Refine Guild Statistics accordions, row striping, hover states, action order and result-count sizing.
