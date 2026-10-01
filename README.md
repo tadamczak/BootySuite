@@ -83,7 +83,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Reycoin list -** Review used Reycoins and pending item trades.
 - **Narrow raid windows -** Raid Leader Tools and Loot Master Tools wrap to a left-aligned row. Warnings move below the roster as compact headers when space is limited.
 - **Raid header -** The Raid section label has its own row. Save Session and Quit remain right aligned while the row fits; in narrow windows, saved date, warning count and both actions move together to a left-aligned second row.
-- **Saved raids -** Keep up to ten numbered snapshots. Loading and saving a historical raid creates a new snapshot while preserving the original.
+- **Saved raids -** Keep up to ten numbered snapshots. Saving requires a unique Raid ID. Loading, editing and saving a historical raid creates a new snapshot under that exact ID while preserving the original.
 
 ### Loot Master Mode
 
@@ -106,8 +106,8 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 
 - **Saved raid list -** Browse date-only saved raid rows, select one or several sessions for combined results, or collapse the list to give the result table the full width.
 - **Filters -** Filter by raid, date range, session name, or player; calendar choices apply immediately.
-- **Raid details -** Review class-colored players, attendance, Soft Reserves, received loot, and stored roll information.
-- **Edit -** Change whether a saved raid contributes to attendance or CSR.
+- **Raid details -** Review class-colored players, attendance, Soft Reserves, received loot, and stored roll information. With no selected raid, the result table stays empty.
+- **Edit -** Change player names, attendance values and SR item IDs, add manual entries, then confirm whether Attendance and CSR are saved.
 - **Remove -** Delete a saved raid and recalculate affected statistics.
 
 ### CSR
@@ -126,7 +126,7 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 - **Performance diagnosis -** Capture scoped addon activity when investigating performance problems.
 - **Memory by Addon -** Compare addon memory usage when the client exposes the required data. Long addon and operation lists are scrollable.
 
-Statistics, CSR and Performance adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, **Clear date** in the calendar removes a date filter; **Apply** refreshes the results.
+Statistics, CSR and Performance adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, choosing or clearing a calendar date refreshes the results immediately.
 
 ### Settings
 
@@ -233,10 +233,11 @@ Common scenarios:
 ### 6. Save the raid
 
 1. Choose **Save Session**.
-2. Enable **Save raid statistics** to add the raid to Raid Statistics.
-3. Enable **Save attendance** if attendance should contribute to player statistics.
-4. Enable **Save CSR** if this raid should contribute to CSR.
-5. Confirm **Save Session** and complete the requested reload when shown.
+2. Enter a unique **Raid ID**. The exact value is saved; no timestamp suffix is added.
+3. Enable **Save raid statistics** to add the raid to Raid Statistics.
+4. Enable **Save attendance** if attendance should contribute to player statistics.
+5. Enable **Save CSR** if this raid should contribute to CSR.
+6. Confirm **Save Session** and complete the requested reload when shown.
 
 Disabling **Save attendance** keeps the raid record but marks Attendance as Off. Attendance can only be enabled when raid statistics are saved.
 
@@ -245,7 +246,7 @@ Disabling **Save attendance** keeps the raid record but marks Attendance as Off.
 1. Open **Raid** to load and continue an unfinished saved session.
 2. Select the raid under **Saved raids** and choose **Load**.
 3. Open **Raid Statistics** to review completed saved raids.
-4. Use **Edit** to change Attendance or CSR participation.
+4. Use **Edit** to change player attendance/SR values or add a manual entry, then confirm Attendance and CSR participation.
 5. Use **Remove** to delete a raid and recalculate dependent statistics.
 
 Raid warnings overlay the content without shrinking lists or groups. They can be minimized to a bottom row and restored with the header button or **X issues**. The **X issues** button pulses for half a second every second until clicked; new issues or loading a session restart the pulse. The text turns light red during each pulse.

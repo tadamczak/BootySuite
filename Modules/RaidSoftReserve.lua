@@ -5,7 +5,7 @@ local RaidManagement = MOS.Modules.RaidManagement
 local function ShowItemTooltip() MOS.UI.Components.ShowItemTooltip(this) end
 local function HideItemTooltip() GameTooltip:Hide() end
 local function HandleItemClick() MOS.UI.Components.HandleItemClick(this) end
-local warningRowColor = {0.035, 0.035, 0.03}
+local warningRowColor = {0.10, 0.085, 0.055}
 
 local function CenterOnScreen(frame)
     frame:ClearAllPoints()

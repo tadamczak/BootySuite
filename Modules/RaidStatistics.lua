@@ -7,9 +7,32 @@ MOS.Modules.RaidStatistics = RaidStatistics
 
 local function OnRaidSelect()
     local controller = this.statisticsController
+    controller.editMode=false;controller.editMembers=nil
     if controller.selectedHistoryIds[this.raidId] then controller.selectedHistoryIds[this.raidId] = nil
     else controller.selectedHistoryIds[this.raidId] = true end
     controller:Refresh()
+end
+
+local function CopyItems(source)
+    local target,index={},nil
+    for index=1,table.getn(source or {}) do local item={};local key,value;for key,value in pairs(source[index]) do item[key]=value end;target[index]=item end
+    return target
+end
+
+local function CopyEditableMember(source)
+    local target={};local key,value
+    for key,value in pairs(source or {}) do if key~="srItems" and key~="lootItems" then target[key]=value end end
+    target.srItems=CopyItems(source and source.srItems);target.lootItems=CopyItems(source and source.lootItems)
+    target.attendance=tonumber(target.attendance);if target.attendance==nil then target.attendance=1 end
+    return target
+end
+
+local function UpdateEditMember(row)
+    local member=row and row.editMember
+    if not member then return end
+    member.name=row.nameEdit:GetText() or ""
+    member.attendanceText=row.attendanceEdit:GetText() or ""
+    member.srItemText=row.srEdit:GetText() or ""
 end
 
 local function OnItemsClick()
@@ -51,8 +74,9 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         controller.raidChecks[raidNameIndex] = check
     end
     controller.listTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controller.listTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -120); controller.listTitle:SetText("Raids")
-    controller.historyToggle = MOS.UI.Components.CreateButton(page, nil, "<<", 22, 20)
+    controller.historyToggle = MOS.UI.Components.CreateButton(page, nil, "", 22, 20)
     MOS.UI.Components.SetClassicButtonCompact(controller.historyToggle, true); MOS.UI.Components.AttachGoldHoverBorder(controller.historyToggle, 0.35, 0.35, 0.35, 1)
+    UI.SetChevronButtonIcon(controller.historyToggle,"left",13)
     MOS.UI.Components.AttachTooltip(controller.historyToggle, "Saved raids", "Collapse or restore the saved raid list.")
     controller.historyToggle:SetScript("OnClick", function() controller.historyCollapsed = not controller.historyCollapsed; controller:Refresh() end)
     controller.historyHeaders = {}
@@ -88,6 +112,9 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     controller.filterStatus = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.filterStatus:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -120); controller.filterStatus:SetPoint("TOPRIGHT", page, "TOPRIGHT", -72, -120); controller.filterStatus:SetJustifyH("LEFT")
     controller.headerRemove = MOS.UI.Components.CreateDeleteButton(page, nil, 22, 2); controller.headerRemove:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -115); controller.headerRemove.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerRemove, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerRemove, "Remove raid", "Remove the selected raid from Raid Statistics and CSR history."); controller.headerRemove:Hide()
     controller.headerEdit = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Icons\\INV_Misc_Note_01", 22, 2); controller.headerEdit:SetPoint("RIGHT", controller.headerRemove, "LEFT", -5, 0); controller.headerEdit.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerEdit, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerEdit, "Edit raid", "Edit statistics options for the selected raid."); controller.headerEdit:Hide()
+    controller.editAdd=UI.CreateButton(page,nil,"Add Entry",82,22);controller.editSave=UI.CreateButton(page,nil,"Save",62,22);controller.editCancel=UI.CreateButton(page,nil,"Cancel",68,22)
+    for _,button in ipairs({controller.editAdd,controller.editSave,controller.editCancel}) do UI.StyleActionButton(button);button:Hide() end
+    controller.editError=UI.CreateLabel(page,nil,"OVERLAY","GameFontHighlightSmall");controller.editError:SetTextColor(1,0.35,0.30);controller.editError:SetJustifyH("RIGHT");controller.editError:Hide()
     controller.raidScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidStatisticsHistoryScroll", page, "FauxScrollFrameTemplate"); controller.raidScroll:SetPoint("TOPLEFT", page, "TOPLEFT", 2, -140); controller.raidScroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", 246, 5)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRaidStatisticsHistoryScrollScrollBar"))
     controller.raidScroll.refreshCallback = function() controller:Refresh() end; controller.raidScroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(28, this.refreshCallback) end)
@@ -125,15 +152,16 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
             controller:Refresh()
         end
     end)
-    controller.editDialog = CreateModal("MuklaOfficerSuiteEditRaidStatisticDialog", "Edit raid options", 175)
+    controller.editDialog = CreateModal("MuklaOfficerSuiteEditRaidStatisticDialog", "Save raid changes", 205)
     local function CreateEditCheckbox(label, y)
         local checkbox = MOS.UI.Components.CreateCheckButton(nil, controller.editDialog, "UICheckButtonTemplate")
         checkbox:SetPoint("TOPLEFT", controller.editDialog, "TOPLEFT", 18, y); checkbox:SetWidth(22); checkbox:SetHeight(22)
         checkbox.label = MOS.UI.Components.CreateLabel(controller.editDialog, nil, "OVERLAY", "GameFontHighlightSmall"); checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 3, 0); checkbox.label:SetText(label)
         return checkbox
     end
-    controller.editDialog.attendance = CreateEditCheckbox("Save attendance", -54)
-    controller.editDialog.csr = CreateEditCheckbox("Save CSR", -84)
+    controller.editDialog.message=UI.CreateLabel(controller.editDialog,nil,"OVERLAY","GameFontHighlightSmall");controller.editDialog.message:SetPoint("TOPLEFT",controller.editDialog,"TOPLEFT",18,-46);controller.editDialog.message:SetWidth(324);controller.editDialog.message:SetText("Save the edited attendance and Soft Reserve values for this raid?")
+    controller.editDialog.attendance = CreateEditCheckbox("Save Attendance", -86)
+    controller.editDialog.csr = CreateEditCheckbox("Save CSR", -116)
     controller.editDialog.cancel = MOS.UI.Components.CreateButton(controller.editDialog, nil, "Cancel", 86, 24); controller.editDialog.cancel:SetPoint("BOTTOMLEFT", controller.editDialog, "BOTTOMLEFT", 72, 18)
     controller.editDialog.save = MOS.UI.Components.CreateButton(controller.editDialog, nil, "Save", 86, 24); controller.editDialog.save:SetPoint("BOTTOMRIGHT", controller.editDialog, "BOTTOMRIGHT", -72, 18)
     controller.editDialog.cancel:SetScript("OnClick", function() controller.editDialog:Hide() end)
@@ -142,7 +170,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local attendanceEnabled = controller.editDialog.attendance:GetChecked() and true or false
         local csrEnabled = controller.editDialog.csr:GetChecked() and true or false
         controller.editDialog:Hide()
-        if raidId and controller.updateEntry and controller.updateEntry(raidId, attendanceEnabled, csrEnabled) then controller:Refresh() end
+        if raidId and controller.updateEntry and controller.updateEntry(raidId,controller.editMembers or {},attendanceEnabled,csrEnabled) then controller.editMode=false;controller.editMembers=nil;controller:Refresh() end
     end)
     local function OnEditRaid()
         local raidId = this.raidId
@@ -150,10 +178,9 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local entry, entryIndex
         for entryIndex = 1, table.getn(entries) do if entries[entryIndex].id == raidId then entry = entries[entryIndex]; break end end
         if not entry then return end
-        controller.editDialog.raidId = raidId
-        controller.editDialog.attendance:SetChecked(entry.attendanceEnabled ~= false and 1 or nil)
-        controller.editDialog.csr:SetChecked(entry.csrEnabled ~= false and 1 or nil)
-        controller.editDialog:Show()
+        controller.editingEntry=entry;controller.editingRaidId=raidId;controller.editMembers={}
+        for entryIndex=1,table.getn(entry.members or {}) do controller.editMembers[entryIndex]=CopyEditableMember(entry.members[entryIndex]) end
+        controller.editMode=true;controller.editError:Hide();controller:Refresh()
     end
     local function OnRemoveRaid()
         controller.removeDialog.raidId = this.raidId
@@ -163,6 +190,24 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         controller.removeDialog:Show()
     end
     controller.headerEdit:SetScript("OnClick", OnEditRaid); controller.headerRemove:SetScript("OnClick", OnRemoveRaid)
+    controller.editCancel:SetScript("OnClick",function() controller.editMode=false;controller.editMembers=nil;controller.editError:Hide();controller:Refresh() end)
+    controller.editAdd:SetScript("OnClick",function()
+        local member={name="",class="",guildRank="Guest",lootRank="Guest",attendance=1,attendanceText="1",srItemText="",srCount=0,lootCount=0,srItems={},lootItems={}}
+        table.insert(controller.editMembers,member);controller.scroll.offset=math.max(0,table.getn(controller.editMembers)-table.getn(controller.rows));controller:Refresh()
+    end)
+    controller.editSave:SetScript("OnClick",function()
+        local rowIndex
+        for rowIndex=1,table.getn(controller.rows) do UpdateEditMember(controller.rows[rowIndex]) end
+        for rowIndex=1,table.getn(controller.editMembers or {}) do
+            local member=controller.editMembers[rowIndex];local name=string.gsub(tostring(member.name or ""),"^%s+","");name=string.gsub(name,"%s+$","")
+            local attendance=tonumber(member.attendanceText or member.attendance);local itemText=string.gsub(tostring(member.srItemText or ""),"%s","");local itemId=itemText~="" and tonumber(itemText) or nil
+            if name=="" then controller.editError:SetText("Player name is required.");controller.editError:Show();return end
+            if not attendance or attendance<0 then controller.editError:SetText("Attendance must be a non-negative number.");controller.editError:Show();return end
+            if itemText~="" and not itemId then controller.editError:SetText("SR must contain a numeric Item ID.");controller.editError:Show();return end
+            member.name=name;member.attendance=attendance;member.attendanceText=nil;member.srItemText=nil;member.srItems=itemId and {{itemId=itemId,count=1}} or {};member.srCount=itemId and 1 or 0
+        end
+        controller.editError:Hide();controller.editDialog.raidId=controller.editingRaidId;controller.editDialog.attendance:SetChecked(controller.editingEntry.attendanceEnabled~=false and 1 or nil);controller.editDialog.csr:SetChecked(controller.editingEntry.csrEnabled~=false and 1 or nil);controller.editDialog:Show()
+    end)
     UI.Window.StyleProjectDialog(controller.removeDialog); UI.Window.StyleProjectDialog(controller.editDialog)
     controller.playerHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Player", 264, -150, 120, nil, false)
     controller.attendanceHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Attendance", 386, -150, 66, nil, false)
@@ -186,6 +231,9 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         row.srDirect:SetScript("OnEnter", OnDirectItemEnter); row.srDirect:SetScript("OnLeave", function() GameTooltip:Hide() end); row.srDirect:SetScript("OnClick", function() MOS.UI.Components.HandleItemClick(this) end); row.srDirect:Hide()
         row.srMissing = MOS.UI.Components.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall"); row.srMissing:SetPoint("LEFT", row, "LEFT", 190, 0); row.srMissing:SetText("-"); row.srMissing:Hide()
         row.loot = MOS.UI.Components.CreateIconButton(row, nil, "Interface\\Icons\\INV_Misc_Bag_10", 20, 2); row.loot:SetPoint("RIGHT", row, "RIGHT", -8, 0); row.loot.ownerRow = row; row.loot.itemKind = "loot"; row.loot.statisticsController = controller; row.loot:SetScript("OnClick", OnItemsClick)
+        row.nameEdit=UI.CreateFramedEditBox(row,nil,110);row.nameEdit.ownerRow=row;row.nameEdit:SetScript("OnTextChanged",function() UpdateEditMember(this.ownerRow) end);row.nameEdit:Hide()
+        row.attendanceEdit=UI.CreateFramedEditBox(row,nil,54);row.attendanceEdit.ownerRow=row;row.attendanceEdit:SetMaxLetters(8);row.attendanceEdit:SetScript("OnTextChanged",function() UpdateEditMember(this.ownerRow) end);row.attendanceEdit:Hide()
+        row.srEdit=UI.CreateFramedEditBox(row,nil,70);row.srEdit.ownerRow=row;row.srEdit:SetMaxLetters(10);row.srEdit:SetScript("OnTextChanged",function() UpdateEditMember(this.ownerRow) end);row.srEdit:Hide()
         MOS.UI.Components.AttachTooltip(row.sr, "Soft Reserves", "Show every item reserved by this player in the selected raids."); MOS.UI.Components.AttachTooltip(row.loot, "Loot received", "Show every recorded item received by this player in the selected raids.")
         row:Hide(); controller.rows[index] = row
     end
@@ -226,10 +274,11 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         dialog.cancel:ClearAllPoints();dialog.cancel:SetPoint("RIGHT",action,"LEFT",-8,0)
     end
     controller.removeDialog.message:ClearAllPoints();controller.removeDialog.message:SetPoint("TOPLEFT",controller.removeDialog,"TOPLEFT",8,-36);controller.removeDialog.message:SetWidth(304);controller.removeDialog.message:SetJustifyH("CENTER")
-    controller.editDialog.attendance:ClearAllPoints();controller.editDialog.attendance:SetPoint("TOPLEFT",controller.editDialog,"TOPLEFT",8,-36)
-    controller.editDialog.csr:ClearAllPoints();controller.editDialog.csr:SetPoint("TOPLEFT",controller.editDialog,"TOPLEFT",8,-66)
+    controller.editDialog.message:ClearAllPoints();controller.editDialog.message:SetPoint("TOPLEFT",controller.editDialog,"TOPLEFT",8,-36);controller.editDialog.message:SetWidth(304)
+    controller.editDialog.attendance:ClearAllPoints();controller.editDialog.attendance:SetPoint("TOPLEFT",controller.editDialog,"TOPLEFT",8,-84)
+    controller.editDialog.csr:ClearAllPoints();controller.editDialog.csr:SetPoint("TOPLEFT",controller.editDialog,"TOPLEFT",8,-114)
     UI.BindCheckboxLabel(controller.editDialog.attendance,function() end);UI.BindCheckboxLabel(controller.editDialog.csr,function() end)
-    controller.editDialog:SetHeight(128)
+    controller.editDialog:SetHeight(178)
     controller.datePicker:SetHeight(236)
     controller.datePicker.clear=UI.CreateButton(controller.datePicker,nil,"Clear date",100,26)
     UI.StyleActionButton(controller.datePicker.clear)
@@ -261,42 +310,53 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local historyWidth=stacked and available or math.min(270,available*0.34)
         local remaining=math.max(96,height-top-8)
         local historyHeight=stacked and math.max(56,math.min(84,math.floor((remaining-100)/28)*28)) or remaining-44
-        self.listTitle:ClearAllPoints();self.listTitle:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);self.listTitle:SetWidth(historyWidth)
-        self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8+historyWidth-22,-top+1);self.historyToggle:SetText(self.historyCollapsed and ">>" or "<<")
+        self.listTitle:ClearAllPoints();self.listTitle:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);self.listTitle:SetWidth(historyWidth);self.listTitle:SetJustifyH("LEFT")
+        self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8+historyWidth-22,-top+1);UI.SetChevronButtonIcon(self.historyToggle,self.historyCollapsed and "right" or "left",13)
         local headerX=8
         local headerName=math.floor(historyWidth*0.38);local headerRaid=math.floor(historyWidth*0.34);local headerTime=historyWidth-headerName-headerRaid
         local headerWidths={headerName,headerRaid,headerTime}
         for index=1,3 do local header=self.historyHeaders[index];header:ClearAllPoints();header:SetPoint("TOPLEFT",page,"TOPLEFT",headerX,-top-24);header:SetWidth(headerWidths[index]);header:SetHeight(18);headerX=headerX+headerWidths[index] end
         self.historyRect=self.historyRect or {}
         self.historyRect.x=8;self.historyRect.y=top+44;self.historyRect.width=historyWidth;self.historyRect.height=historyHeight
-        local playerX=self.historyCollapsed and 8 or (stacked and 8 or 8+historyWidth+12)
+        local playerX=self.historyCollapsed and 38 or (stacked and 8 or 8+historyWidth+12)
         local playerTop=self.historyCollapsed and top+28 or (stacked and top+44+historyHeight+8 or top)
-        local playerWidth=self.historyCollapsed and available or (stacked and available or available-historyWidth-12)
+        local playerWidth=self.historyCollapsed and math.max(1,available-30) or (stacked and available or available-historyWidth-12)
         if self.historyCollapsed then
-            self.listTitle:SetWidth(math.max(1,available-28));self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPRIGHT",page,"TOPRIGHT",-8,-top+1)
+            self.listTitle:Hide();self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top+1)
             for index=1,3 do self.historyHeaders[index]:Hide() end
-        else for index=1,3 do self.historyHeaders[index]:Show() end end
+        else self.listTitle:Show();for index=1,3 do self.historyHeaders[index]:Show() end end
         local statusHeight=self.showResultStatus and 22 or 0
-        self.filterStatus:ClearAllPoints();self.filterStatus:SetPoint("TOPLEFT",page,"TOPLEFT",playerX,-playerTop);self.filterStatus:SetWidth(math.max(1,playerWidth-54))
+        local editReserve=self.editMode and math.min(playerWidth*0.58,226) or 54
+        self.filterStatus:ClearAllPoints();self.filterStatus:SetPoint("TOPLEFT",page,"TOPLEFT",playerX,-playerTop);self.filterStatus:SetWidth(math.max(1,playerWidth-editReserve))
         local font,_,flags=self.filterStatus:GetFont();self.filterStatus:SetFont(font,12,flags);self.filterStatus:SetHeight(18)
         if self.filterStatus.SetWordWrap then self.filterStatus:SetWordWrap(false) end
         self.headerRemove:ClearAllPoints();self.headerRemove:SetPoint("TOPLEFT",page,"TOPLEFT",playerX+playerWidth-18,-playerTop);self.headerRemove:SetWidth(16);self.headerRemove:SetHeight(16)
         self.headerEdit:SetWidth(18);self.headerEdit:SetHeight(18)
+        local editScale=self.editMode and math.min(1,math.max(1,playerWidth-8)/220) or 1
+        UI.SizeClassicButton(self.editSave,62*editScale,22,editScale);UI.SizeClassicButton(self.editCancel,68*editScale,22,editScale);UI.SizeClassicButton(self.editAdd,82*editScale,22,editScale)
+        self.editSave:ClearAllPoints();self.editSave:SetPoint("TOPRIGHT",page,"TOPLEFT",playerX+playerWidth,-playerTop)
+        self.editCancel:ClearAllPoints();self.editCancel:SetPoint("RIGHT",self.editSave,"LEFT",-4,0)
+        self.editAdd:ClearAllPoints();self.editAdd:SetPoint("RIGHT",self.editCancel,"LEFT",-4,0)
+        self.editError:ClearAllPoints();self.editError:SetPoint("TOPRIGHT",page,"TOPLEFT",playerX+playerWidth,-playerTop-24);self.editError:SetWidth(playerWidth)
         self.playerRect=self.playerRect or {}
         self.playerRect.x=playerX;self.playerRect.y=playerTop+statusHeight+22;self.playerRect.width=playerWidth;self.playerRect.height=math.max(48,height-playerTop-statusHeight-30)
         return self.playerRect.y+self.playerRect.height+8
     end
     function controller:Layout() UI.LayoutResponsiveCanvas(page,LayoutContent,self) end
     function controller:LayoutColumns(width)
-        local nameWidth=math.floor(width*0.30);local attendanceWidth=math.floor(width*0.23);local lootWidth=32
+        local nameWidth=math.floor(width*0.30);local attendanceWidth=math.floor(width*0.23);local lootWidth=self.editMode and 0 or 32
         local srX=nameWidth+attendanceWidth;local srWidth=math.max(24,width-srX-lootWidth)
         self.directItemLabel=srWidth>=90
         local starts={0,nameWidth,srX,width-lootWidth};local widths={nameWidth,attendanceWidth,srWidth,lootWidth}
         for i=1,4 do local header=self.headers[i];header:ClearAllPoints();header:SetPoint("TOPLEFT",page,"TOPLEFT",self.playerRect.x+starts[i],-self.playerRect.y+22);header:SetWidth(widths[i]);header:SetHeight(20) end
+        if self.editMode then self.lootHeader:Hide() else self.lootHeader:Show() end
         self.attendanceHeader.label:SetText(width<420 and "Raids" or "Attendance")
         UI.Table.FitHeaders(self.headers,12)
         for _,row in ipairs(self.rows) do
             UI.Table.Cell(row.name,row,4,nameWidth-6,23);UI.Table.Cell(row.attendance,row,nameWidth,attendanceWidth-4,23)
+            row.nameEdit:ClearAllPoints();row.nameEdit:SetPoint("LEFT",row,"LEFT",2,0);row.nameEdit:SetWidth(math.max(20,nameWidth-4))
+            row.attendanceEdit:ClearAllPoints();row.attendanceEdit:SetPoint("LEFT",row,"LEFT",nameWidth,0);row.attendanceEdit:SetWidth(math.max(20,attendanceWidth-4))
+            row.srEdit:ClearAllPoints();row.srEdit:SetPoint("LEFT",row,"LEFT",srX,0);row.srEdit:SetWidth(math.max(20,srWidth-4))
             row.sr:ClearAllPoints();row.sr:SetPoint("LEFT",row,"LEFT",srX,0)
             row.srDirect:ClearAllPoints();row.srDirect:SetPoint("LEFT",row,"LEFT",srX,0);row.srDirect:SetWidth(srWidth-4)
             UI.Table.Cell(row.srMissing,row,srX,srWidth-4,23)
@@ -322,6 +382,8 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         elseif singleRaid then self.filterStatus:SetText("|cffffd147" .. tostring(singleRaid.raidName or "Unknown zone") .. "|r |cffffffff| " .. tostring(singleRaid.id) .. " | " .. date("%Y-%m-%d", tonumber(singleRaid.savedAt) or 0) .. "|r"); self.filterStatus:Show();self.headerEdit.raidId = singleRaid.id; self.headerRemove.raidId = singleRaid.id; self.headerEdit:Show(); self.headerRemove:Show()
         elseif selectedCount > 1 then self.filterStatus:SetText("|cffffd147Selected:|r |cffffffff" .. selectedCount .. "|r");self.filterStatus:Show();self.headerEdit:Hide();self.headerRemove:Hide()
         else self.filterStatus:SetText("");self.filterStatus:Hide(); self.headerEdit:Hide(); self.headerRemove:Hide() end
+        if self.editMode then self.headerEdit:Hide();self.headerRemove:Hide();self.editAdd:Show();self.editSave:Show();self.editCancel:Show()
+        else self.editAdd:Hide();self.editSave:Hide();self.editCancel:Hide();self.editError:Hide() end
         self:Layout()
         local rect=self.historyRect
         local raidOffset,visibleRaids,historyWidth=0,0,rect.width
@@ -344,20 +406,27 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
                 MOS.UI.Components.StyleWarmListRow(button, selected)
             else MOS.UI.Components.SetClassicButtonSelected(button, false); button:Hide() end
         end
-        local summary = MOS.Services.RaidStatistics.BuildSummary(entries, selectedFilter)
+        local summary = selectedCount>0 and MOS.Services.RaidStatistics.BuildSummary(entries, selectedFilter) or {players={}}
+        local displayPlayers=self.editMode and (self.editMembers or {}) or summary.players
         local body=self.playerRect
-        local offset,visible,rowWidth=UI.Table.LayoutViewport(self.scroll,page,body.x,body.y,body.width,body.height,table.getn(summary.players),24,table.getn(self.rows))
+        local offset,visible,rowWidth=UI.Table.LayoutViewport(self.scroll,page,body.x,body.y,body.width,body.height,table.getn(displayPlayers),24,table.getn(self.rows))
         self:LayoutColumns(rowWidth)
         self.emptyHistory:ClearAllPoints();self.emptyHistory:SetPoint("TOPLEFT",page,"TOPLEFT",rect.x,-rect.y-4);self.emptyHistory:SetWidth(historyWidth)
         self.emptyPlayers:ClearAllPoints();self.emptyPlayers:SetPoint("TOPLEFT",page,"TOPLEFT",body.x,-body.y-4);self.emptyPlayers:SetWidth(rowWidth)
         if not self.historyCollapsed and table.getn(entries)==0 then self.emptyHistory:Show() else self.emptyHistory:Hide() end
-        if table.getn(summary.players)==0 then self.emptyPlayers:Show() else self.emptyPlayers:Hide() end
+        self.emptyPlayers:SetText(selectedCount==0 and "No selected raid." or "No matching players.");self.emptyPlayers:SetJustifyH("CENTER")
+        if table.getn(displayPlayers)==0 then self.emptyPlayers:Show() else self.emptyPlayers:Hide() end
         for index = 1, table.getn(self.rows) do
-            local row, player = self.rows[index], summary.players[offset + index]
+            local row, player = self.rows[index], displayPlayers[offset + index]
             if player and index <= visible then
                 row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",body.x,-body.y-(index-1)*24);row:SetWidth(rowWidth)
                 UI.ApplyRowBackground(row,offset+index,false)
-                row.player = player; row.name:SetText(player.name)
+                row.player = player
+                if self.editMode then
+                    row.editMember=player;row.name:Hide();row.attendance:Hide();row.sr:Hide();row.srDirect:Hide();row.srMissing:Hide();row.loot:Hide()
+                    row.nameEdit:SetText(player.name or "");row.attendanceEdit:SetText(tostring(player.attendanceText or player.attendance or 1));local editItem=player.srItemText or (player.srItems and player.srItems[1] and player.srItems[1].itemId) or "";row.srEdit:SetText(tostring(editItem));row.nameEdit:Show();row.attendanceEdit:Show();row.srEdit:Show();row:Show()
+                else
+                row.editMember=nil;row.nameEdit:Hide();row.attendanceEdit:Hide();row.srEdit:Hide();row.name:Show();row.attendance:Show();row.loot:Show();row.name:SetText(player.name)
                 local classKey=string.upper(tostring(player.class or ""));local classColor=(RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or UI.Theme.classColors[classKey]
                 if classColor then row.name:SetTextColor(classColor.r,classColor.g,classColor.b) else row.name:SetTextColor(1,1,1) end
                 row.attendance:SetText(player.attendanceOff and "Off" or player.raids); row.loot:SetInactive(table.getn(player.lootItems or {}) == 0)
@@ -365,10 +434,11 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
                 if singleRaid and self.directItemLabel and player.srItems and player.srItems[1] and player.srItems[1].itemId then
                     local item = player.srItems[1]; row.sr:Hide(); row.srDirect.itemId = item.itemId; row.srDirect.itemName = item.name; row.srDirect.label:SetText(MOS.UI.Components.GetItemLabel(item.itemId) .. (table.getn(player.srItems) > 1 and (" +" .. (table.getn(player.srItems) - 1)) or "")); row.srDirect:Show()
                     local texture = type(GetItemIcon) == "function" and GetItemIcon(item.itemId) or nil; row.srDirect.iconRegion:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
-                elseif singleRaid and table.getn(player.srItems or {})==0 then row.srDirect.itemId = nil; row.srDirect:Hide(); row.sr:Hide(); row.srMissing:Show()
+                elseif singleRaid then row.srDirect.itemId = nil; row.srDirect:Hide(); row.sr:Hide(); row.srMissing:Show()
                 else row.srDirect.itemId = nil; row.srDirect:Hide(); row.sr:SetInactive(table.getn(player.srItems or {}) == 0); row.sr:Show() end
                 row:Show()
-            else row.player = nil; row.srDirect.itemId = nil; row.srDirect:Hide(); row.srMissing:Hide(); row:Hide() end
+                end
+            else row.player=nil;row.editMember=nil;row.nameEdit:Hide();row.attendanceEdit:Hide();row.srEdit:Hide();row.srDirect.itemId=nil;row.srDirect:Hide();row.srMissing:Hide();row:Hide() end
         end
         self.refreshing=false
     end

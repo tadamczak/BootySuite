@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.91 - 2026-10-01
+
+- Keep active Raid metadata and actions on one aligned row and strengthen warning record backgrounds.
+- Require a unique Raid ID when saving, preserve source snapshots and retain removed Soft Reserves in new snapshots.
+- Add editable attendance/SR rows and manual entries to Raid Statistics, with project confirmation before saving.
+- Refine empty-selection and collapsed-history behavior in Raid Statistics.
+
 ## 0.5.0-dev.90 - 2026-10-01
 
 - Add sortable Guild Statistics columns, collapsible grouped rows and a filtered Raw Data summary.

@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.90"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.91"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -203,7 +203,7 @@ local rosterScrollFrame = rosterListController.scrollFrame
 
 local statisticsView = MOS.Modules.GuildStatistics.CreateView(statisticsPage, MOS.UI.Components.StyleButton, function() RefreshStatisticsPage() end)
 MOS.Modules.GuildStatistics.AttachExport(statisticsView, scanSaveButton)
-dashboardPages.raidStatistics.module = MOS.Modules.RaidStatistics.Create(dashboardPages.raidStatistics, MOS.Database.GetRaidStatistics, MOS.Database.DeleteRaidStatistic, MOS.Database.UpdateRaidStatisticFlags)
+dashboardPages.raidStatistics.module = MOS.Modules.RaidStatistics.Create(dashboardPages.raidStatistics, MOS.Database.GetRaidStatistics, MOS.Database.DeleteRaidStatistic, MOS.Database.UpdateRaidStatistic)
 dashboardPages.csr.module = MOS.Modules.CSR.Create(dashboardPages.csr, MOS.Database.GetRaidStatistics, MOS.Database.GetLootRules, MOS.Database.GetRosterData, function(raidId)
     if MOS.OpenRaidStatistics then MOS.OpenRaidStatistics(raidId) end
 end)
@@ -594,9 +594,9 @@ MOS.CompleteRaidSession = function(saveOptions)
         local attendance = MOS.Database.GetRaidAttendance()
         if attendance then
             local savedAt = time()
-            if attendance._loadedSnapshotId then
-                MOS.Services.RaidRes.PrepareDerivedSnapshot(attendance, MOS.Database.HasSoftReserveSnapshot, savedAt)
-            end
+            local requestedRaidId=string.gsub(tostring(saveOptions.raidId or attendance.snapshotId or ""),"^%s+","");requestedRaidId=string.gsub(requestedRaidId,"%s+$","")
+            if requestedRaidId=="" or MOS.Database.HasSoftReserveSnapshot(requestedRaidId) or MOS.Database.HasRaidStatistic(requestedRaidId) then return false end
+            attendance.snapshotId=requestedRaidId;attendance._loadedSnapshotId=nil
             attendance.lastSavedAt = savedAt; attendance._sessionDraft = nil
             MOS.Services.RaidRes.SyncHistory(attendance)
             if saveOptions.saveRaidStatistics or saveOptions.saveCSR then
@@ -613,6 +613,7 @@ MOS.CompleteRaidSession = function(saveOptions)
     MOS.raidScanReady = false; MOS.raidSessionContinuedContext = nil
     raidHistoricalLoaded = false; selectedRaidMemberName = nil
     MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD")
+    return true
 end
 
 MOS.Modules.RaidManagement.AttachActionHandlers({
@@ -626,7 +627,7 @@ MOS.Modules.RaidManagement.AttachActionHandlers({
     shareMissingSrNames = MOS.Services.Raid.SendRaidWarningList,
     getAttendance = GetRaidAttendance,
     getRaidHistory = MOS.Database.GetSoftReserveHistory,
-    raidIdExists = MOS.Database.HasSoftReserveSnapshot,
+    raidIdExists = function(raidId) return MOS.Database.HasSoftReserveSnapshot(raidId) or MOS.Database.HasRaidStatistic(raidId) end,
     deleteRaidSnapshot = MOS.Database.DeleteSoftReserveSnapshot,
     loadRaidSnapshot = function(snapshotId)
         local snapshots = MOS.Database.GetSoftReserveHistory()
@@ -671,8 +672,7 @@ MOS.Modules.RaidManagement.AttachActionHandlers({
         raidHistoricalLoaded = false
         MOS.raidSessionPaused = false; MOS.raidSessionDraft = true
     end,
-    saveRaidSession = function(saveOptions) MOS.CompleteRaidSession(saveOptions) end,
-    addRaidToStatistics = function() MOS.CompleteRaidSession(true) end,
+    saveRaidSession = function(saveOptions) return MOS.CompleteRaidSession(saveOptions) end,
     quitRaidSession = function()
         local wasTestRaid = IsTestRaid()
         MOS.Services.TestRaid.Stop()

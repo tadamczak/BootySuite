@@ -887,6 +887,13 @@ function UI.CreateClassIcon(parent, size)
     local icon=UI.CreateTexture(parent,nil,"ARTWORK");icon:SetWidth(size or 16);icon:SetHeight(size or 16);icon:Hide();return icon
 end
 
+function UI.SetChevronButtonIcon(button,direction,size)
+    if not button.chevronIcon then button.chevronIcon=UI.CreateTexture(button,nil,"ARTWORK") end
+    button.chevronIcon:ClearAllPoints();button.chevronIcon:SetPoint("CENTER",button,"CENTER",0,0);button.chevronIcon:SetWidth(size or 13);button.chevronIcon:SetHeight(size or 13)
+    button.chevronIcon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Icons\\chevron_"..(direction=="right" and "right" or "left")..".tga");button.chevronIcon:Show()
+    if button.SetText then button:SetText("") end
+end
+
 function UI.AttachPlaceholder(field, text)
     local label = UI.CreateLabel(field, nil, "OVERLAY", "GameFontDisableSmall")
     label:SetPoint("LEFT", field, "LEFT", 6, 0); label:SetText(text)
