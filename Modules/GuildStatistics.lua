@@ -85,7 +85,7 @@ local function CreateMemberTable(page, refresh)
         tableView.headers[index] = UI.Table.CreateHeader(page, tableView, column.text, 0, 0, column.desiredWidth, column.key, true)
     end
     for index = 1, 30 do
-        local row = UI.CreateContainer(nil, page); row:SetHeight(23)
+        local row = UI.CreateControl(nil, page); row:SetHeight(23)
         row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" }); row:SetBackdropColor(0, 0, 0, 0)
         UI.RegisterSkinnedSurface(row, "row", { bgFile = "Interface\\Buttons\\WHITE8X8" }, {0,0,0,0}, {0,0,0,0})
         row.name = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
