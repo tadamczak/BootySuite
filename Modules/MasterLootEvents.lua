@@ -8,6 +8,8 @@ function MasterLootEvents.Create(raid, announce)
     local lootEvents = MOS.UI.Components.CreateContainer(nil, UIParent)
     local bagEvents = MOS.UI.Components.CreateContainer(nil, UIParent)
     local messageEvents = MOS.UI.Components.CreateContainer(nil, UIParent)
+    local expiryTimer = MOS.UI.Components.CreateContainer(nil, UIParent)
+    expiryTimer:Hide()
     local pendingBagLink, pendingBagCount, pendingLocalTrade
     local listeningForLoot, listeningForTrade, listeningForSay = false, false, false
 
@@ -53,6 +55,27 @@ function MasterLootEvents.Create(raid, announce)
     end
 
     raid.onReyCoinPendingChanged = Sync
+
+    local function OnExpiryUpdate()
+        this.remaining = this.remaining - arg1
+        if this.remaining > 0 then return end
+        this.deadline = nil
+        raid.PrunePendingLoot()
+    end
+
+    local function SyncExpiry()
+        local deadline = raid.GetNextPendingLootExpiry()
+        if not deadline then
+            expiryTimer.deadline = nil
+            expiryTimer:SetScript("OnUpdate", nil); expiryTimer:Hide()
+        elseif expiryTimer.deadline ~= deadline then
+            expiryTimer.deadline = deadline
+            expiryTimer.remaining = math.max(0, deadline - GetTime())
+            expiryTimer:SetScript("OnUpdate", OnExpiryUpdate); expiryTimer:Show()
+        end
+    end
+    raid.onPendingLootExpiryChanged = SyncExpiry
+    SyncExpiry()
 
     messageEvents:SetScript("OnEvent", function()
         if event ~= "CHAT_MSG_SYSTEM" and not (event == "CHAT_MSG_SAY" and raid.allowReyCoinSayTests) then return end

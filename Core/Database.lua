@@ -145,7 +145,9 @@ end
 
 function Database.StoreRaidAttendance(attendance)
     Database.Ensure()
+    local previous = MuklaOfficerSuiteDB.raidAttendance
     MuklaOfficerSuiteDB.raidAttendance = attendance
+    if Database.onRaidAttendanceChanged then Database.onRaidAttendanceChanged(previous, attendance) end
     return attendance
 end
 

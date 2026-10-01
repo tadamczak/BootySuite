@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.101 - 2026-10-01
+
+- Isolate pending SR, Reycoin and loot confirmations across raid start, load, quit and test sessions; keep valid trades through roster refresh and window closure.
+- Cancel obsolete LM rolls and listeners; release expired award histories and chat echoes without permanent idle polling.
+
 ## 0.5.0-dev.100 - 2026-10-01
 
 - Complete the performance, lifecycle, architecture and WoW 1.12 compatibility audit; record verified findings and follow-up verification locally.
