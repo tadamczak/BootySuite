@@ -108,10 +108,15 @@ function TestRaid.Start()
         },
     }
     state.lootMasterIndex = 1; state.active = true
+    if MOS.Services.Raid and MOS.Services.Raid.ResetLootSession then MOS.Services.Raid.ResetLootSession() end
     return state.attendance
 end
 
-function TestRaid.Stop() state.active = false; state.attendance = nil; state.lootMasterIndex = nil; state.lootRules = nil; state.highlyContestedItems = nil end
+function TestRaid.Stop()
+    local wasActive = state.active
+    state.active = false; state.attendance = nil; state.lootMasterIndex = nil; state.lootRules = nil; state.highlyContestedItems = nil
+    if wasActive and MOS.Services.Raid and MOS.Services.Raid.ResetLootSession then MOS.Services.Raid.ResetLootSession() end
+end
 function TestRaid.IsActive() return state.active end
 function TestRaid.GetAttendance() return state.attendance end
 function TestRaid.GetLootRules(defaultRules)

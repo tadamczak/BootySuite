@@ -322,6 +322,7 @@ end
 
 local function CanGive(roll, name)
     if not roll or not panel:IsShown() or not RaidService.IsPlayerLootMaster() then return nil, nil, "Master Loot is not open." end
+    if not RaidService.IsLootSessionCurrent(roll.lootSessionToken) then return nil, nil, "This roll belongs to a previous raid session." end
     if roll.manual then return nil, nil, "A linked item roll cannot be awarded through Master Loot." end
     if roll.source and roll.source ~= currentLootSession then return nil, nil, "Return to the original loot source to give this item." end
     local slot
@@ -350,6 +351,7 @@ local function AwardToPlayer(roll, name)
         RaidService.QueueRollHistoryForAward(name, roll.link, history.lines)
     end
     pendingAward = { source = roll.source, slot = slot, link = roll.link,
+        lootSessionToken = roll.lootSessionToken,
         historyKey = roll.historyKey or (roll.source .. ":" .. slot .. ":award:" .. roll.link),
         icon = GetLootSlotInfo(slot), winner = name,
         softReserve = roll.winnerResult and roll.winnerResult.range == 102 and roll.winner == name }
@@ -602,7 +604,8 @@ local function OpenCandidateMenu(slot, link)
     if not slot or not link or not RaidService.IsPlayerLootMaster() then return end
     if not LootSlotIsItem(slot) or GetLootSlotLink(slot) ~= link then return end
     local _, historyKey = FindHistoryForItem(currentLootSession, slot, link)
-    candidateMenu.lootRef = { slot = slot, link = link, source = currentLootSession, historyKey = historyKey }
+    candidateMenu.lootRef = { slot = slot, link = link, source = currentLootSession, historyKey = historyKey,
+        lootSessionToken = RaidService.GetLootSessionToken() }
     local index
     for index in pairs(eligibleCandidates) do eligibleCandidates[index] = nil end
     for index = 1, 40 do
@@ -1252,6 +1255,7 @@ local function StartRoll(slot, link)
     end
     local srRestricted, srReserved, srAllowed, srNames, srRankRights, srRankNames, reyCoinRights, reyCoinUsed = RaidService.GetSoftReserveRollRights(link)
     activeRoll = { slot = slot, link = link, icon = icon, source = currentLootSession,
+        lootSessionToken = RaidService.GetLootSessionToken(),
         historyKey = historyKey or (currentLootSession .. ":" .. tostring(slot or "manual")), manual = manual,
         duration = seconds, endsAt = GetTime() + seconds, lastRemaining = seconds, seen = {}, results = {}, highest = -1, highestPriority = -1, transmogHighest = -1, srRestricted = srRestricted, srReserved = srReserved, srAllowed = srAllowed, srNames = srNames, srRankRights = srRankRights, srRankNames = srRankNames, reyCoinRights = reyCoinRights, reyCoinUsed = reyCoinUsed }
     events:RegisterEvent("CHAT_MSG_SYSTEM")
@@ -1290,6 +1294,7 @@ local function ResolveRaidRoll(value)
     history.latestWinner = name
     history.lines[table.getn(history.lines) + 1] = "Raid roll " .. value .. "/" .. pending.count .. ": " .. name
     lastRoll = { source = pending.source, link = pending.link, icon = pending.icon, historyKey = pending.historyKey,
+        lootSessionToken = pending.lootSessionToken,
         results = { { name = name, value = value } }, winner = name, highest = value,
         raidRoll = true, raidCount = pending.count, awardable = candidate and true or false }
     lastRollBySource[pending.source] = lastRoll
@@ -1309,6 +1314,7 @@ local function StartRaidRoll(slot, link)
     for index = 1, count do players[index] = GetRaidRosterInfo(index) end
     local _, historyKey = FindHistoryForItem(currentLootSession, slot, link)
     raidRollPending = { slot = slot, link = link, source = currentLootSession,
+        lootSessionToken = RaidService.GetLootSessionToken(),
         historyKey = historyKey or (currentLootSession .. ":" .. slot), icon = GetLootSlotInfo(slot),
         count = count, players = players, endsAt = GetTime() + 8 }
     events:RegisterEvent("CHAT_MSG_SYSTEM")
@@ -1808,10 +1814,12 @@ events:SetScript("OnEvent", function()
                 lastRollBySource[currentLootSession] = nil
             end
             if completedRolls[pendingAward.historyKey] then completedRolls[pendingAward.historyKey].awarded = true end
-            RaidService.RecordPendingAwardReceipt(pendingAward.winner, pendingAward.link)
-            if pendingAward.softReserve then RaidService.ConfirmSoftReserveReceipt(pendingAward.winner, pendingAward.link) end
-            RaidService.ConfirmSoftReserveCarrierReceipt(pendingAward.winner, pendingAward.link)
-            reyCoinEvents.ConfirmAwardReceipt(pendingAward.winner, pendingAward.link)
+            if RaidService.IsLootSessionCurrent(pendingAward.lootSessionToken) then
+                RaidService.RecordPendingAwardReceipt(pendingAward.winner, pendingAward.link)
+                if pendingAward.softReserve then RaidService.ConfirmSoftReserveReceipt(pendingAward.winner, pendingAward.link, pendingAward.lootSessionToken) end
+                RaidService.ConfirmSoftReserveCarrierReceipt(pendingAward.winner, pendingAward.link)
+                reyCoinEvents.ConfirmAwardReceipt(pendingAward.winner, pendingAward.link)
+            end
             pendingAward = nil
             if not activeRoll and not raidRollPending then events:UnregisterEvent("CHAT_MSG_SYSTEM") end
             if not panel:IsShown() then events:UnregisterEvent("LOOT_SLOT_CLEARED") end
@@ -1867,6 +1875,18 @@ events:SetScript("OnEvent", function()
         end
     end
 end)
+
+RaidService.onLootSessionChanged = function()
+    activeRoll = nil; raidRollPending = nil; pendingAward = nil; lastRoll = nil
+    local source
+    for source in pairs(lastRollBySource) do lastRollBySource[source] = nil end
+    timer:SetScript("OnUpdate", nil); timer:Hide()
+    events:UnregisterEvent("CHAT_MSG_SYSTEM")
+    if not panel:IsShown() then events:UnregisterEvent("LOOT_SLOT_CLEARED") end
+    candidateMenu:Hide(); tracker:Hide()
+    status:SetText("")
+    if panel:IsShown() then Refresh() end
+end
 
 -- Hiding the Blizzard frame calls CloseLoot in 1.12. Intercept only its
 -- LOOT_OPENED handler instead, leaving the actual loot session untouched.

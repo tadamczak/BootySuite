@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.100"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.101"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -9,6 +9,7 @@ end
 
 local MOS = MuklaOfficerSuite
 MOS.version = VERSION
+MOS.Database.onRaidAttendanceChanged = MOS.Services.Raid.OnRaidAttendanceChanged
 -- Transient presentation modes never survive a UI reload. Their geometry is
 -- stored separately and is restored only when the user enters the mode again.
 MOS.lootMasterMode = false
