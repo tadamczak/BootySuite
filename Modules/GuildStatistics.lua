@@ -93,7 +93,8 @@ local function CreateMemberTable(page, refresh)
         row.rank = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
         row.level = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
         row.classIcon = UI.CreateClassIcon(row,16)
-        row.groupBorder,row.childBorder=UI.CreateProjectRowDecorations(row); row.tableController = tableView; row:SetScript("OnClick", OnGuildRowClick)
+        UI.SetProjectButtonOutline(row, false)
+        row.childBorder=UI.CreateProjectLeftAccent(row); row.tableController = tableView; row:SetScript("OnClick", OnGuildRowClick)
         row:Hide(); tableView.rows[index] = row
     end
     return tableView
@@ -201,15 +202,13 @@ local function SetClassIcon(texture, className)
 end
 
 local function SetRowDecorations(row, kind, child)
-    local index
-    for index=1,4 do row.groupBorder[index]:Hide() end
+    UI.SetProjectButtonOutline(row, kind=="group")
     row.childBorder:Hide();row.classIcon:Hide()
     if kind=="group" then
         row:SetBackdropColor(0.15,0.115,0.035,0.92)
-        for index=1,4 do row.groupBorder[index]:Show() end
     elseif kind=="rawHeader" then row:SetBackdropColor(0.13,0.10,0.03,0.9)
     elseif child then
-        row.childBorder:ClearAllPoints();row.childBorder:SetPoint("TOPLEFT",row,"TOPLEFT",0,0);row.childBorder:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",0,0);row.childBorder:Show()
+        row.childBorder:ClearAllPoints();row.childBorder:SetPoint("TOPLEFT",row,"TOPLEFT",12,0);row.childBorder:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",12,0);row.childBorder:Show()
     end
 end
 
@@ -238,7 +237,7 @@ local function RenderTable(controller)
             else
                 local member, columns = entry.member, controller.table.columns
                 local x = 0
-                local nameInset=entry.child and 12 or 6
+                local nameInset=entry.child and 18 or 6
                 UI.Table.Cell(row.name, row, x + nameInset, columns[1].width - nameInset - 4, 23, member.name); x = x + columns[1].width
                 local color = ClassColor(member.class); row.name:SetTextColor(color.r or color[1], color.g or color[2], color.b or color[3])
                 UI.Table.Cell(row.class, row, x, columns[2].width - 4, 23, DisplayClass(member.class)); x = x + columns[2].width
@@ -269,18 +268,19 @@ function GuildStatistics.CreateView(host, styleButton, refresh)
     UI.SetClassicButtonIcon(view.refreshButton, "reset", 13, 7, 0); UI.SetClassicButtonLabelOffset(view.refreshButton, 2)
     view.rawButton=UI.CreateControl(nil,view.actionPanel);view.rawButton:SetWidth(92);view.rawButton:SetHeight(26);styleButton(view.rawButton,"Raw Data");view.rawButton:Hide()
     UI.SetClassicButtonIcon(view.rawButton,"list",13,7,0);UI.SetClassicButtonLabelOffset(view.rawButton,2)
-    view.showing = UI.CreateLabel(view.actionPanel, nil, "OVERLAY", "GameFontHighlightSmall"); view.showing:SetJustifyH("RIGHT"); view.showing:Hide()
+    view.showingLabel = UI.CreateLabel(view.actionPanel, nil, "OVERLAY", "GameFontHighlightSmall"); view.showingLabel:SetText("Showing members:"); view.showingLabel:SetTextColor(unpack(UI.Theme.colors.goldText)); view.showingLabel:SetJustifyH("RIGHT"); view.showingLabel:Hide()
+    view.showing = UI.CreateLabel(view.actionPanel, nil, "OVERLAY", "GameFontHighlightSmall"); view.showing:SetTextColor(1,1,1); view.showing:SetJustifyH("RIGHT"); view.showing:Hide()
     view.lastScan = UI.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall"); view.lastScan:Hide()
     view.scanButton = UI.CreateControl(nil, page); view.scanButton:SetWidth(160); view.scanButton:SetHeight(26); styleButton(view.scanButton, "Scan Guild Statistics")
     view.empty = UI.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall"); view.empty:SetJustifyH("CENTER"); view.empty:Hide()
     view.filterPanel = UI.CreateContainer(nil, page); view.filterPanel:SetBackdrop({ bgFile="Interface\\Buttons\\WHITE8X8", edgeFile="Interface\\Tooltips\\UI-Tooltip-Border", edgeSize=8, insets={left=2,right=2,top=2,bottom=2} }); view.filterPanel:SetBackdropColor(0.035,0.03,0.02,0.94)
     UI.RegisterSkinnedSurface(view.filterPanel, "content"); UI.SetSurfaceHorizontalBorders(view.filterPanel, true, true)
-    view.rankGroup = CreateFilterGroup(view.filterPanel, "Rank", 132)
-    view.classGroup = CreateFilterGroup(view.filterPanel, "Class", 132)
-    view.groupGroup = UI.CreateContainer(nil, view.filterPanel); view.groupGroup:SetWidth(174); view.groupGroup:SetHeight(26); view.groupGroup.mosFlowWidth=174
+    view.rankGroup = CreateFilterGroup(view.filterPanel, "Rank", 88)
+    view.classGroup = CreateFilterGroup(view.filterPanel, "Class", 88)
+    view.groupGroup = UI.CreateContainer(nil, view.filterPanel); view.groupGroup:SetWidth(112); view.groupGroup:SetHeight(26); view.groupGroup.mosFlowWidth=112
     local groupChoices={{value="none",text="None"},{value="class",text="Class"},{value="rank",text="Rank"},{value="level",text="Level"}}
     view.groupLabel=UI.CreateLabel(view.groupGroup,nil,"OVERLAY","GameFontHighlightSmall");view.groupLabel:SetPoint("LEFT",view.groupGroup,"LEFT",0,0);view.groupLabel:SetText("Group by:")
-    view.groupButton=UI.CreateDropdownButton(view.groupGroup,nil,"None",104);view.groupButton:SetPoint("RIGHT",view.groupGroup,"RIGHT",0,0);view.groupButton:SetHeight(26)
+    view.groupButton=UI.CreateDropdownButton(view.groupGroup,nil,"None",52);view.groupButton:SetPoint("RIGHT",view.groupGroup,"RIGHT",0,0);view.groupButton:SetHeight(26)
     view.groupPanel=UI.CreateDropdownPanel(view.filterPanel,view.groupButton,104,88,50)
     local choiceIndex
     for choiceIndex=1,table.getn(groupChoices) do
@@ -291,9 +291,9 @@ function GuildStatistics.CreateView(host, styleButton, refresh)
     end
     view.groupButton:SetScript("OnClick",function() if view.groupPanel:IsVisible() then view.groupPanel:Hide() else view.groupPanel:Show() end end)
     UI.StyleProjectPopup(view.groupPanel)
-    view.levelGroup=UI.CreateContainer(nil,view.filterPanel);view.levelGroup:SetWidth(104);view.levelGroup:SetHeight(26);view.levelGroup.mosFlowWidth=104
+    view.levelGroup=UI.CreateContainer(nil,view.filterPanel);view.levelGroup:SetWidth(64);view.levelGroup:SetHeight(26);view.levelGroup.mosFlowWidth=64
     view.levelLabel=UI.CreateLabel(view.levelGroup,nil,"OVERLAY","GameFontHighlightSmall");view.levelLabel:SetPoint("LEFT",view.levelGroup,"LEFT",0,0);view.levelLabel:SetText("Level:")
-    view.level=UI.CreateFramedEditBox(view.levelGroup,nil,48);view.level:SetPoint("RIGHT",view.levelGroup,"RIGHT",0,0);view.level:SetMaxLetters(2);view.level:SetScript("OnTextChanged",function() view.onFilterChanged() end)
+    view.level=UI.CreateFramedEditBox(view.levelGroup,nil,24);view.level:SetPoint("RIGHT",view.levelGroup,"RIGHT",0,0);view.level:SetMaxLetters(2);view.level:SetScript("OnTextChanged",function() view.onFilterChanged() end)
     view.searchGroup=UI.CreateContainer(nil,view.filterPanel);view.searchGroup:SetWidth(188);view.searchGroup:SetHeight(26);view.searchGroup.mosFlowWidth=188
     view.searchLabel=UI.CreateLabel(view.searchGroup,nil,"OVERLAY","GameFontHighlightSmall");view.searchLabel:SetPoint("LEFT",view.searchGroup,"LEFT",0,0);view.searchLabel:SetText("Search:")
     view.search=UI.CreateFramedEditBox(view.searchGroup,nil,132);view.search:SetPoint("RIGHT",view.searchGroup,"RIGHT",0,0);view.search:SetScript("OnTextChanged",function() view.onFilterChanged() end)
@@ -326,7 +326,7 @@ function GuildStatistics.SetReady(controller,ready) controller.ready=ready and t
 function GuildStatistics.IsReady(controller) return controller.ready end
 
 local function HideResults(controller)
-    controller.view.showing:Hide();controller.view.lastScan:Hide();controller.view.actionPanel:Hide();controller.view.rawButton:Hide();controller.view.filterPanel:Hide();controller.table.scroll:Hide()
+    controller.view.showingLabel:Hide();controller.view.showing:Hide();controller.view.lastScan:Hide();controller.view.actionPanel:Hide();controller.view.rawButton:Hide();controller.view.filterPanel:Hide();controller.table.scroll:Hide()
     local index
     for index=1,table.getn(controller.table.headers) do controller.table.headers[index]:Hide() end
     for index=1,table.getn(controller.table.rows) do controller.table.rows[index]:Hide() end
@@ -343,12 +343,14 @@ local function LayoutContent(width,height,controller)
     local available=math.max(80,width-16)
     local titleWidth=math.min(view.title:GetStringWidth()+2,available*0.55)
     view.title:ClearAllPoints();view.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);view.title:SetWidth(titleWidth)
-    view.titleSeparator:ClearAllPoints();view.titleSeparator:SetPoint("BOTTOMLEFT",view.title,"BOTTOMRIGHT",8,2);view.titleSeparator:SetWidth(8);view.titleSeparator:SetHeight(16)
+    view.titleSeparator:ClearAllPoints();view.titleSeparator:SetPoint("BOTTOMLEFT",view.title,"BOTTOMRIGHT",8,0);view.titleSeparator:SetWidth(8);view.titleSeparator:SetHeight(16)
     local guildWidth=math.max(1,available-titleWidth-32)
     view.guildTitle:ClearAllPoints();view.guildTitle:SetPoint("BOTTOMLEFT",view.titleSeparator,"BOTTOMRIGHT",8,0);view.guildTitle:SetWidth(guildWidth);view.guildTitle:SetHeight(16);UI.FitButtonLabel(view.guildTitle,guildWidth)
     local top=36
     if controller.ready then
-        local showingWidth=math.min(available,math.ceil(view.showing:GetStringWidth()+4))
+        local showingLabelWidth=math.ceil(view.showingLabel:GetStringWidth())
+        local showingCountWidth=math.ceil(view.showing:GetStringWidth())
+        local showingWidth=math.min(available,showingLabelWidth+4+showingCountWidth)
         local actionAvailable=math.max(72,available-showingWidth-12)
         local baseActionWidth=(view.exportButton and 100 or 0)+104+92+(view.exportButton and 16 or 8)
         local actionScale=math.min(1,math.max(0.52,actionAvailable/math.max(1,baseActionWidth)))
@@ -359,14 +361,29 @@ local function LayoutContent(width,height,controller)
         if view.exportButton then UI.SizeClassicButton(view.exportButton,math.floor(100*actionScale),26,actionScale);view.exportButton:ClearAllPoints();view.exportButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6);actionX=actionX+view.exportButton:GetWidth()+8 end
         UI.SizeClassicButton(view.refreshButton,math.floor(104*actionScale),26,actionScale);view.refreshButton:ClearAllPoints();view.refreshButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6);actionX=actionX+view.refreshButton:GetWidth()+8
         UI.SizeClassicButton(view.rawButton,math.floor(92*actionScale),26,actionScale);view.rawButton:ClearAllPoints();view.rawButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6)
-        view.showing:ClearAllPoints();view.showing:SetPoint("TOPRIGHT",view.actionPanel,"TOPRIGHT",-8,actionHeight==38 and -10 or -44);view.showing:SetWidth(showingWidth);view.showing:SetHeight(18)
+        view.showing:ClearAllPoints();view.showing:SetPoint("TOPRIGHT",view.actionPanel,"TOPRIGHT",-8,actionHeight==38 and -10 or -44);view.showing:SetWidth(showingCountWidth);view.showing:SetHeight(18)
+        view.showingLabel:ClearAllPoints();view.showingLabel:SetPoint("RIGHT",view.showing,"LEFT",-4,0);view.showingLabel:SetWidth(math.max(1,showingWidth-showingCountWidth-4));view.showingLabel:SetHeight(18)
         top=top+actionHeight+4
         view.filterPanel:ClearAllPoints();view.filterPanel:SetPoint("TOPLEFT",page,"TOPLEFT",0,-top);view.filterPanel:SetWidth(width)
-        local filterBottom=UI.LayoutFlow(view.filterPanel,view.flow,8,8,math.max(1,width-16),6)+8;view.filterPanel:SetHeight(filterBottom)
+        local flowWidth=math.max(1,width-16)
+        local groupLabelWidth=math.ceil(view.groupLabel:GetStringWidth())
+        local levelLabelWidth=math.ceil(view.levelLabel:GetStringWidth())
+        view.groupGroup.mosFlowWidth=groupLabelWidth+4+52
+        view.levelGroup.mosFlowWidth=levelLabelWidth+4+24
+        local searchLabelWidth=math.ceil(view.searchLabel:GetStringWidth())
+        local searchMinimum=searchLabelWidth+4+66
+        local searchMaximum=searchLabelWidth+4+132
+        local precedingWidth=view.rankGroup.mosFlowWidth+view.classGroup.mosFlowWidth+view.groupGroup.mosFlowWidth+view.levelGroup.mosFlowWidth+24
+        local sameRowWidth=flowWidth-precedingWidth
+        local searchGroupWidth
+        if sameRowWidth>=searchMinimum then searchGroupWidth=math.min(searchMaximum,sameRowWidth)
+        else searchGroupWidth=math.min(searchMaximum,math.max(searchMinimum,flowWidth)) end
+        view.searchGroup.mosFlowWidth=searchGroupWidth
+        local filterBottom=UI.LayoutFlow(view.filterPanel,view.flow,8,8,flowWidth,6)+8;view.filterPanel:SetHeight(filterBottom)
         view.rankGroup.button:SetWidth(view.rankGroup:GetWidth());view.classGroup.button:SetWidth(view.classGroup:GetWidth())
-        local groupLabelWidth=math.ceil(view.groupLabel:GetStringWidth());view.groupButton:SetWidth(math.max(32,view.groupGroup:GetWidth()-groupLabelWidth-4));view.groupButton:ClearAllPoints();view.groupButton:SetPoint("LEFT",view.groupLabel,"RIGHT",4,0)
-        local levelLabelWidth=math.ceil(view.levelLabel:GetStringWidth());view.level:SetWidth(math.max(28,view.levelGroup:GetWidth()-levelLabelWidth-4));view.level:ClearAllPoints();view.level:SetPoint("LEFT",view.levelLabel,"RIGHT",4,0)
-        local searchLabelWidth=math.ceil(view.searchLabel:GetStringWidth());view.search:SetWidth(math.max(32,view.searchGroup:GetWidth()-searchLabelWidth-4));view.search:ClearAllPoints();view.search:SetPoint("LEFT",view.searchLabel,"RIGHT",4,0)
+        view.groupButton:SetWidth(52);view.groupButton:ClearAllPoints();view.groupButton:SetPoint("LEFT",view.groupLabel,"RIGHT",4,0)
+        view.level:SetWidth(24);view.level:ClearAllPoints();view.level:SetPoint("LEFT",view.levelLabel,"RIGHT",4,0)
+        view.search:SetWidth(math.max(66,math.min(132,view.searchGroup:GetWidth()-searchLabelWidth-4)));view.search:ClearAllPoints();view.search:SetPoint("LEFT",view.searchLabel,"RIGHT",4,0)
         top=top+filterBottom+8
         controller.tableRect=controller.tableRect or {};controller.tableRect.x=8;controller.tableRect.y=top;controller.tableRect.width=available;controller.tableRect.height=math.max(24,height-top-8)
         return controller.tableRect.y+controller.tableRect.height+8
@@ -389,7 +406,7 @@ function GuildStatistics.Refresh(controller)
     end
     controller.groupBy=controller.view.groupBy or "none"
     local count=BuildEntries(controller,data)
-    controller.view.showing:SetText("Showing members: "..count);controller.view.showing:Show()
+    controller.view.showing:SetText(tostring(count));controller.view.showingLabel:Show();controller.view.showing:Show()
     controller.view.lastScan:SetText("Last scan: "..(data.scannedAtText or "Unknown"))
     controller.view.empty:Hide();controller.view.scanButton:Hide();controller.view.refreshButton:Show();controller.view.rawButton:Show();controller.view.actionPanel:Show();controller.view.filterPanel:Show()
     GuildStatistics.Layout(controller);RenderTable(controller)

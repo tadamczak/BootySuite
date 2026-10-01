@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.94 - 2026-10-01
+
+- Refine Guild Statistics heading, result count and compact responsive filters.
+- Give multiselect dropdowns selection-aware captions by default.
+- Replace the custom accordion outline with the project button border and correct child indentation.
+
 ## 0.5.0-dev.93 - 2026-10-01
 
 - Compact and align the Window-style player details panel, including shorter note fields and smaller metadata labels.

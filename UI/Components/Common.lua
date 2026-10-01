@@ -179,6 +179,7 @@ end
 
 function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     local panel = CreateFrame("Frame", nil, UIParent)
+    panel.toggle = toggle
     panel.mosTextSizeDelta = UI.GetTextSizeDelta(parent)
     panel:SetPoint("TOPLEFT", toggle, "BOTTOMLEFT", 0, -2)
     panel:SetWidth(width or 130); panel:SetHeight(height or 230)
@@ -867,20 +868,15 @@ function UI.CreateGoldToolbarButton(parent, iconKey)
     return button
 end
 
--- Reusable lightweight table-row accents. These avoid a full nine-slice per
--- pooled row while retaining the project's one-pixel gold treatment.
-function UI.CreateProjectRowDecorations(row)
-    local border, index = {}, nil
-    for index = 1, 4 do
-        local texture = UI.CreateTexture(row, nil, "BORDER")
-        texture:SetTexture("Interface\\Buttons\\WHITE8X8"); texture:SetVertexColor(0.95, 0.72, 0.18, 1); texture:Hide(); border[index] = texture
-    end
-    border[1]:SetPoint("TOPLEFT",row,"TOPLEFT",0,0);border[1]:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0);border[1]:SetHeight(1)
-    border[2]:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",0,0);border[2]:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",0,0);border[2]:SetHeight(1)
-    border[3]:SetPoint("TOPLEFT",row,"TOPLEFT",0,0);border[3]:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",0,0);border[3]:SetWidth(1)
-    border[4]:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0);border[4]:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",0,0);border[4]:SetWidth(1)
-    local left = UI.CreateTexture(row,nil,"BORDER");left:SetTexture("Interface\\Buttons\\WHITE8X8");left:SetVertexColor(0.95,0.72,0.18,1);left:SetWidth(1);left:Hide()
-    return border,left
+-- A left-only accordion accent still uses the authored project border atlas.
+-- Full interactive row outlines use SetProjectButtonOutline.
+function UI.CreateProjectLeftAccent(row)
+    local accent = UI.CreateTexture(row, nil, "BORDER")
+    accent:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
+    accent:SetTexCoord(1 / 128, 15 / 128, 1 / 16, 15 / 16)
+    accent:SetVertexColor(1, 0.78, 0.2, 1)
+    accent:SetWidth(2); accent:Hide()
+    return accent
 end
 
 function UI.CreateClassIcon(parent, size)
