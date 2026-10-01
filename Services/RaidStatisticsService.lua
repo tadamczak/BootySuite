@@ -18,7 +18,7 @@ end
 
 local function ResolveLootRank(member)
     local guildRank = string.lower(tostring(member and member.guildRank or ""))
-    if guildRank ~= "officer wukong" then return member and member.guildRank or "Guest" end
+    if guildRank ~= "officer wukong" and guildRank ~= "chimp banker" then return member and member.guildRank or "Guest" end
     return "chimp"
 end
 

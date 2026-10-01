@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.106 - 2026-10-01
+
+- Always apply Chimp loot rights to Chimp Banker, including saved raid and CSR calculations.
+
 ## 0.5.0-dev.105 - 2026-10-01
 
 - Remove parser and reusable-table dependencies on extension-specific Lua behavior.

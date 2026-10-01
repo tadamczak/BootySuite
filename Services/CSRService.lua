@@ -21,7 +21,8 @@ local function NormalizeLootRank(value)
 end
 
 local function HasCsrRights(member, rules)
-    local key = Normalize(member.guildRank) == "officer wukong" and "chimp" or NormalizeLootRank(member.lootRank)
+    local guildRank = Normalize(member.guildRank)
+    local key = (guildRank == "officer wukong" or guildRank == "chimp banker") and "chimp" or NormalizeLootRank(member.lootRank)
     key = key or NormalizeLootRank(member.guildRank)
     if not key then return false end
     local rule = rules and rules[key]
