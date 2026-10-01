@@ -768,7 +768,7 @@ function UI.FitButtonLabel(button, available)
     label:SetHeight(button.mosFitFontSize + 3)
     local width = math.max(1, label:GetStringWidth())
     local fitted = math.max(1, button.mosFitFontSize * math.min(1, math.max(1, available) / width))
-    label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH(button.label and "CENTER" or "LEFT")
+    label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH(button.mosLabelJustify or (button.label and "CENTER" or "LEFT"))
 end
 
 function UI.ApplyGoldRadialHighlight(texture)

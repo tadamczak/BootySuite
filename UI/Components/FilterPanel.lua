@@ -17,7 +17,8 @@ local function RefreshToggleCaption(panel)
     for index = 1, table.getn(panel.values or {}) do
         if panel.selected[panel.values[index]] then table.insert(captions, tostring(panel.values[index])) end
     end
-    if table.getn(captions) == 0 then panel.toggle:SetText("None")
+    if table.getn(captions) == table.getn(panel.values or {}) and table.getn(captions) > 0 and panel.allSelectedCaption then panel.toggle:SetText(panel.allSelectedCaption)
+    elseif table.getn(captions) == 0 then panel.toggle:SetText("None")
     elseif table.getn(captions) <= 2 then panel.toggle:SetText(table.concat(captions, ", "))
     else panel.toggle:SetText(table.getn(captions) .. " selected") end
     if UI.FitButtonLabel then UI.FitButtonLabel(panel.toggle, math.max(1, panel.toggle:GetWidth() - 28)) end
@@ -34,6 +35,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
         panel.selectAll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 9)
         panel.selectAll:SetScript("OnClick", function()
             local owner = this:GetParent()
+            owner.selectionTouched = true
             local optionIndex, allSelected = nil, true
             for optionIndex = 1, table.getn(owner.values or {}) do
                 if not owner.selected[owner.values[optionIndex]] then allSelected = false; break end
@@ -74,6 +76,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
             checkbox.label:SetJustifyH("LEFT")
             UI.BindCheckboxLabel(checkbox, function(check)
                 local owner = check:GetParent()
+                owner.selectionTouched = true
                 owner.selected[check.value] = check:GetChecked() and true or false
                 RefreshToggleCaption(owner)
                 if owner.onChanged then owner.onChanged(true) end

@@ -63,9 +63,13 @@ end
 
 local function OnGuildRowClick()
     local row = this
-    if not row.entry or row.entry.kind ~= "group" then return end
+    if not row.entry then return end
     local controller = row.tableController.controller
-    controller.expandedGroups[row.entry.value] = not controller.expandedGroups[row.entry.value]
+    if row.entry.kind == "group" then
+        controller.expandedGroups[row.entry.value] = not controller.expandedGroups[row.entry.value]
+    elseif row.entry.kind == "rawHeader" then
+        controller.expandedRawSections[row.entry.rawKey] = not controller.expandedRawSections[row.entry.rawKey]
+    else return end
     GuildStatistics.Refresh(controller)
 end
 
@@ -131,8 +135,8 @@ end
 
 local function BuildEntries(controller, data)
     ClearArray(controller.table.memberScratch); ClearArray(controller.table.entries)
-    controller.rawRanks = controller.rawRanks or {}; controller.rawClasses = controller.rawClasses or {}; controller.rawLevels = controller.rawLevels or {0,0,0}
-    controller.rawRanks = {}; controller.rawClasses = {}; controller.rawLevels[1]=0;controller.rawLevels[2]=0;controller.rawLevels[3]=0
+    controller.rawRanks = controller.rawRanks or {}; controller.rawRankOrder = controller.rawRankOrder or {}; controller.rawClasses = controller.rawClasses or {}; controller.rawLevels = controller.rawLevels or {0,0,0}
+    controller.rawRanks = {}; controller.rawRankOrder = {}; controller.rawClasses = {}; controller.rawLevels[1]=0;controller.rawLevels[2]=0;controller.rawLevels[3]=0
     local ranks, classes, rankSeen, classSeen = {}, {}, {}, {}
     local query = Lower(controller.search:GetText())
     local level = tonumber(controller.level:GetText())
@@ -145,9 +149,12 @@ local function BuildEntries(controller, data)
         if controller.knownRanks[rank] == nil then controller.knownRanks[rank] = true; controller.selectedRanks[rank] = true end
         if controller.knownClasses[className] == nil then controller.knownClasses[className] = true; controller.selectedClasses[className] = true end
         local matchesQuery = query == "" or string.find(Lower(member.name), query, 1, true) or string.find(Lower(rank), query, 1, true) or string.find(Lower(className), query, 1, true)
-        if controller.selectedRanks[rank] and controller.selectedClasses[className] and (not level or tonumber(member.level) == level) and matchesQuery then
+        local rankMatches = not controller.rankGroup.panel.selectionTouched or controller.selectedRanks[rank]
+        local classMatches = not controller.classGroup.panel.selectionTouched or controller.selectedClasses[className]
+        if rankMatches and classMatches and (not level or tonumber(member.level) == level) and matchesQuery then
             table.insert(controller.table.memberScratch,CreateWrappedMember(member,MemberGroupValue(member,controller.groupBy),controller.groupBy=="level" and tonumber(member.level) or nil,controller))
             controller.rawRanks[rank]=(controller.rawRanks[rank] or 0)+1;controller.rawClasses[className]=(controller.rawClasses[className] or 0)+1
+            controller.rawRankOrder[rank]=math.min(controller.rawRankOrder[rank] or 999,tonumber(member.rankIndex) or 999)
             local memberLevel=tonumber(member.level) or 0
             if memberLevel<=30 then controller.rawLevels[1]=controller.rawLevels[1]+1 elseif memberLevel<60 then controller.rawLevels[2]=controller.rawLevels[2]+1 else controller.rawLevels[3]=controller.rawLevels[3]+1 end
         end
@@ -171,15 +178,23 @@ local function BuildEntries(controller, data)
         ClearArray(controller.table.entries)
         local rawRankList,rawClassList={},{}
         local name,value
-        for name,value in pairs(controller.rawRanks) do table.insert(rawRankList,{name=name,count=value}) end
+        for name,value in pairs(controller.rawRanks) do table.insert(rawRankList,{name=name,count=value,index=controller.rawRankOrder[name] or 999}) end
         for name,value in pairs(controller.rawClasses) do table.insert(rawClassList,{name=name,count=value}) end
-        table.sort(rawRankList,function(a,b)return Lower(a.name)<Lower(b.name) end);table.sort(rawClassList,function(a,b)return Lower(a.name)<Lower(b.name) end)
-        table.insert(controller.table.entries,{kind="rawHeader",value="Members by Rank"})
-        for index=1,table.getn(rawRankList) do table.insert(controller.table.entries,{kind="raw",value=rawRankList[index].name.." - "..rawRankList[index].count.." members"}) end
-        table.insert(controller.table.entries,{kind="rawHeader",value="Members by Class"})
-        for index=1,table.getn(rawClassList) do table.insert(controller.table.entries,{kind="rawClass",className=rawClassList[index].name,value=rawClassList[index].name.." - "..rawClassList[index].count.." members"}) end
-        table.insert(controller.table.entries,{kind="rawHeader",value="Members by Level"})
-        table.insert(controller.table.entries,{kind="raw",value="1 - 30lvl - "..controller.rawLevels[1].." members"});table.insert(controller.table.entries,{kind="raw",value="31 - 59lvl - "..controller.rawLevels[2].." members"});table.insert(controller.table.entries,{kind="raw",value="60lvl - "..controller.rawLevels[3].." members"})
+        table.sort(rawRankList,function(a,b) if a.index==b.index then return Lower(a.name)<Lower(b.name) end return a.index>b.index end);table.sort(rawClassList,function(a,b)return Lower(a.name)<Lower(b.name) end)
+        local function AddRawSection(rawKey,title,entries,kind)
+            table.insert(controller.table.entries,{kind="rawHeader",value=title,rawKey=rawKey,count=table.getn(entries)})
+            if controller.expandedRawSections[rawKey] then
+                local rawIndex
+                for rawIndex=1,table.getn(entries) do
+                    local item=entries[rawIndex]
+                    table.insert(controller.table.entries,{kind=kind or "raw",className=item.className,label=item.name,countText="- "..item.count.." members",rawIndex=rawIndex})
+                end
+            end
+        end
+        AddRawSection("rank","Members by Rank",rawRankList,"raw")
+        local classEntries={};for index=1,table.getn(rawClassList) do table.insert(classEntries,{name=rawClassList[index].name,count=rawClassList[index].count,className=rawClassList[index].name}) end
+        AddRawSection("class","Members by Class",classEntries,"rawClass")
+        AddRawSection("level","Members by Level",{{name="1 - 30lvl",count=controller.rawLevels[1]},{name="31 - 59lvl",count=controller.rawLevels[2]},{name="60lvl",count=controller.rawLevels[3]}},"raw")
     end
     return count
 end
@@ -201,12 +216,15 @@ local function SetClassIcon(texture, className)
     if coordinates then texture:SetTexCoord(coordinates[1],coordinates[2],coordinates[3],coordinates[4]) else texture:SetTexCoord(0,1,0,1) end
 end
 
-local function SetRowDecorations(row, kind, child)
-    UI.SetProjectButtonOutline(row, kind=="group")
+local function SetRowDecorations(row, kind, child, rawIndex)
+    UI.SetProjectButtonOutline(row, kind=="group" or kind=="rawHeader")
     row.childBorder:Hide();row.classIcon:Hide()
     if kind=="group" then
         row:SetBackdropColor(0.15,0.115,0.035,0.92)
     elseif kind=="rawHeader" then row:SetBackdropColor(0.13,0.10,0.03,0.9)
+    elseif rawIndex then
+        if math.mod(rawIndex,2)==0 then row:SetBackdropColor(unpack(UI.Theme.colors.rowAlternate))
+        else row:SetBackdropColor(0,0,0,0) end
     elseif child then
         row.childBorder:ClearAllPoints();row.childBorder:SetPoint("TOPLEFT",row,"TOPLEFT",12,0);row.childBorder:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",12,0);row.childBorder:Show()
     end
@@ -223,21 +241,26 @@ local function RenderTable(controller)
         if entry and index <= visible then
             row:ClearAllPoints(); row:SetPoint("TOPLEFT", controller.page, "TOPLEFT", rect.x, -rect.y - headerHeight - (index - 1) * 24); row:SetWidth(rowWidth);row.entry=entry
             UI.ApplyRowBackground(row, offset + index, false)
-            SetRowDecorations(row,entry.kind,entry.child)
+            SetRowDecorations(row,entry.kind,entry.child,entry.rawIndex)
             if entry.kind == "group" then
                 local marker=controller.expandedGroups[entry.value] and "- " or "+ "
                 UI.Table.Cell(row.name, row, 6, rowWidth - 12, 23, marker..entry.value .. "  (" .. entry.count .. ")")
                 row.name:SetTextColor(unpack(UI.Theme.colors.goldText)); row.class:Hide(); row.rank:Hide(); row.level:Hide()
             elseif entry.kind=="rawHeader" then
-                UI.Table.Cell(row.name,row,6,rowWidth-12,23,entry.value);row.name:SetTextColor(unpack(UI.Theme.colors.goldText));row.class:Hide();row.rank:Hide();row.level:Hide()
+                local marker=controller.expandedRawSections[entry.rawKey] and "- " or "+ "
+                UI.Table.Cell(row.name,row,6,rowWidth-12,23,marker..entry.value);row.name:SetTextColor(unpack(UI.Theme.colors.goldText));row.class:Hide();row.rank:Hide();row.level:Hide()
             elseif entry.kind=="raw" or entry.kind=="rawClass" then
                 local left=entry.kind=="rawClass" and 28 or 12
-                UI.Table.Cell(row.name,row,left,rowWidth-left-6,23,entry.value);row.name:SetTextColor(1,1,1);row.class:Hide();row.rank:Hide();row.level:Hide()
+                local valueX=math.min(190,math.max(110,math.floor(rowWidth*0.42)))
+                UI.Table.Cell(row.name,row,left,valueX-left-6,23,entry.label);UI.Table.Cell(row.class,row,valueX,rowWidth-valueX-6,23,entry.countText);row.rank:Hide();row.level:Hide();row.class:Show()
+                if entry.kind=="rawClass" then local rawColor=ClassColor(entry.className);row.name:SetTextColor(rawColor.r or rawColor[1],rawColor.g or rawColor[2],rawColor.b or rawColor[3]) else row.name:SetTextColor(1,1,1) end
                 if entry.kind=="rawClass" then row.classIcon:ClearAllPoints();row.classIcon:SetPoint("LEFT",row,"LEFT",8,0);SetClassIcon(row.classIcon,entry.className);row.classIcon:Show() end
             else
                 local member, columns = entry.member, controller.table.columns
                 local x = 0
-                local nameInset=entry.child and 18 or 6
+                local iconInset=entry.child and 18 or 6
+                local nameInset=iconInset+20
+                row.classIcon:ClearAllPoints();row.classIcon:SetPoint("LEFT",row,"LEFT",iconInset,0);SetClassIcon(row.classIcon,member.class);row.classIcon:Show()
                 UI.Table.Cell(row.name, row, x + nameInset, columns[1].width - nameInset - 4, 23, member.name); x = x + columns[1].width
                 local color = ClassColor(member.class); row.name:SetTextColor(color.r or color[1], color.g or color[2], color.b or color[3])
                 UI.Table.Cell(row.class, row, x, columns[2].width - 4, 23, DisplayClass(member.class)); x = x + columns[2].width
@@ -274,8 +297,8 @@ function GuildStatistics.CreateView(host, styleButton, refresh)
     view.scanButton = UI.CreateControl(nil, page); view.scanButton:SetWidth(160); view.scanButton:SetHeight(26); styleButton(view.scanButton, "Scan Guild Statistics")
     view.empty = UI.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall"); view.empty:SetJustifyH("CENTER"); view.empty:Hide()
     view.filterPanel = UI.CreateToolbarSurface(page, false, true)
-    view.rankGroup = CreateFilterGroup(view.filterPanel, "Rank", 88)
-    view.classGroup = CreateFilterGroup(view.filterPanel, "Class", 88)
+    view.rankGroup = CreateFilterGroup(view.filterPanel, "Rank", 88);view.rankGroup.panel.allSelectedCaption="Rank";view.rankGroup.button.mosLabelJustify="LEFT"
+    view.classGroup = CreateFilterGroup(view.filterPanel, "Class", 96);view.classGroup.panel.allSelectedCaption="Class";view.classGroup.button.mosLabelJustify="LEFT"
     view.groupGroup = UI.CreateContainer(nil, view.filterPanel); view.groupGroup:SetWidth(112); view.groupGroup:SetHeight(24); view.groupGroup.mosFlowWidth=112
     local groupChoices={{value="none",text="None"},{value="class",text="Class"},{value="rank",text="Rank"},{value="level",text="Level"}}
     view.groupLabel=UI.CreateLabel(view.groupGroup,nil,"OVERLAY","GameFontHighlightSmall");view.groupLabel:SetPoint("LEFT",view.groupGroup,"LEFT",0,0);view.groupLabel:SetText("Group by:")
@@ -290,9 +313,9 @@ function GuildStatistics.CreateView(host, styleButton, refresh)
     end
     view.groupButton:SetScript("OnClick",function() if view.groupPanel:IsVisible() then view.groupPanel:Hide() else view.groupPanel:Show() end end)
     UI.StyleProjectPopup(view.groupPanel)
-    view.levelGroup=UI.CreateContainer(nil,view.filterPanel);view.levelGroup:SetWidth(64);view.levelGroup:SetHeight(24);view.levelGroup.mosFlowWidth=64
+    view.levelGroup=UI.CreateContainer(nil,view.filterPanel);view.levelGroup:SetWidth(72);view.levelGroup:SetHeight(24);view.levelGroup.mosFlowWidth=72
     view.levelLabel=UI.CreateLabel(view.levelGroup,nil,"OVERLAY","GameFontHighlightSmall");view.levelLabel:SetPoint("LEFT",view.levelGroup,"LEFT",0,0);view.levelLabel:SetText("Level:")
-    view.level=UI.CreateFramedEditBox(view.levelGroup,nil,24);view.level:SetPoint("RIGHT",view.levelGroup,"RIGHT",0,0);view.level:SetMaxLetters(2);view.level:SetScript("OnTextChanged",function() view.onFilterChanged() end)
+    view.level=UI.CreateFramedEditBox(view.levelGroup,nil,32);view.level:SetPoint("RIGHT",view.levelGroup,"RIGHT",0,0);view.level:SetMaxLetters(2);view.level:SetScript("OnTextChanged",function() view.onFilterChanged() end)
     view.searchGroup=UI.CreateContainer(nil,view.filterPanel);view.searchGroup:SetWidth(188);view.searchGroup:SetHeight(24);view.searchGroup.mosFlowWidth=188
     view.searchLabel=UI.CreateLabel(view.searchGroup,nil,"OVERLAY","GameFontHighlightSmall");view.searchLabel:SetPoint("LEFT",view.searchGroup,"LEFT",0,0);view.searchLabel:SetText("Search:")
     view.search=UI.CreateFramedEditBox(view.searchGroup,nil,132);view.search:SetPoint("RIGHT",view.searchGroup,"RIGHT",0,0);view.search:SetScript("OnTextChanged",function() view.onFilterChanged() end)
@@ -307,7 +330,7 @@ local function SetControlText(control,text) if control.label then control.label:
 function GuildStatistics.CreateController(options)
     local view=options.view
     options.page=view.page;options.view=view;options.rankGroup=view.rankGroup;options.classGroup=view.classGroup;options.level=view.level;options.search=view.search;options.table=view.table
-    options.ready=false;options.groupBy="none";options.selectedRanks={};options.selectedClasses={};options.knownRanks={};options.knownClasses={};options.expandedGroups={};options.sortKey="name";options.sortAscending=true;options.rawMode=false
+    options.ready=false;options.groupBy="none";options.selectedRanks={};options.selectedClasses={};options.knownRanks={};options.knownClasses={};options.expandedGroups={};options.expandedRawSections={rank=true,class=true,level=true};options.sortKey="name";options.sortAscending=true;options.rawMode=false
     view.groupBy="none";options.filterChanged=function() options.expandedGroups={};GuildStatistics.Refresh(options) end;view.onFilterChanged=options.filterChanged
     options.table.controller=options;options.table.onSort=function(key)
         if options.sortKey==key then options.sortAscending=not options.sortAscending else options.sortKey=key;options.sortAscending=true end
@@ -347,8 +370,8 @@ local function LayoutContent(width,height,controller)
     view.guildTitle:ClearAllPoints();view.guildTitle:SetPoint("BOTTOMLEFT",view.titleSeparator,"BOTTOMRIGHT",8,0);view.guildTitle:SetWidth(guildWidth);view.guildTitle:SetHeight(16);UI.FitButtonLabel(view.guildTitle,guildWidth)
     local top=36
     if controller.ready then
-        local showingLabelWidth=math.ceil(view.showingLabel:GetStringWidth())
-        local showingCountWidth=math.ceil(view.showing:GetStringWidth())
+        local showingLabelWidth=math.ceil(view.showingLabel:GetStringWidth())+4
+        local showingCountWidth=math.ceil(view.showing:GetStringWidth())+4
         local showingWidth=math.min(available,showingLabelWidth+4+showingCountWidth)
         local actionAvailable=math.max(72,available-showingWidth-12)
         local baseActionWidth=(view.exportButton and 100 or 0)+104+92+(view.exportButton and 16 or 8)
@@ -368,7 +391,7 @@ local function LayoutContent(width,height,controller)
         local groupLabelWidth=math.ceil(view.groupLabel:GetStringWidth())
         local levelLabelWidth=math.ceil(view.levelLabel:GetStringWidth())
         view.groupGroup.mosFlowWidth=groupLabelWidth+4+52
-        view.levelGroup.mosFlowWidth=levelLabelWidth+4+24
+        view.levelGroup.mosFlowWidth=levelLabelWidth+4+32
         local searchLabelWidth=math.ceil(view.searchLabel:GetStringWidth())
         local searchMinimum=searchLabelWidth+4+66
         local searchMaximum=searchLabelWidth+4+132
@@ -381,7 +404,7 @@ local function LayoutContent(width,height,controller)
         local filterBottom=UI.LayoutFlow(view.filterPanel,view.flow,8,8,flowWidth,6)+8;view.filterPanel:SetHeight(filterBottom)
         view.rankGroup.button:SetWidth(view.rankGroup:GetWidth());view.classGroup.button:SetWidth(view.classGroup:GetWidth())
         view.groupButton:SetWidth(52);view.groupButton:ClearAllPoints();view.groupButton:SetPoint("LEFT",view.groupLabel,"RIGHT",4,0)
-        view.level:SetWidth(24);view.level:ClearAllPoints();view.level:SetPoint("LEFT",view.levelLabel,"RIGHT",4,0)
+        view.level:SetWidth(32);view.level:ClearAllPoints();view.level:SetPoint("LEFT",view.levelLabel,"RIGHT",4,0)
         view.search:SetWidth(math.max(66,math.min(132,view.searchGroup:GetWidth()-searchLabelWidth-4)));view.search:ClearAllPoints();view.search:SetPoint("LEFT",view.searchLabel,"RIGHT",4,0)
         top=top+filterBottom+8
         controller.tableRect=controller.tableRect or {};controller.tableRect.x=8;controller.tableRect.y=top;controller.tableRect.width=available;controller.tableRect.height=math.max(24,height-top-8)

@@ -66,9 +66,9 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 ### Guild Statistics
 
 - **Export Roster -** Scan the guild roster and confirm a reload to save it to disk.
-- **Member filters -** Filter the saved roster by rank, class, exact level, or search text. Multiselect captions show the selected value, selected pair, count, or None. **Select all** toggles every option on or off.
+- **Member filters -** Filter the saved roster independently by rank, class, exact level, or search text. Rank and Class remain as the default captions when every option is active; a narrower selection appears in the field. **Select all** toggles every option on or off.
 - **Grouping and sorting -** Sort by any column, or group by class, rank, or level. Group rows expand as accordions; sorting applies inside each group.
-- **Raw Data -** Toggle the table to review member totals by rank, class, and level band.
+- **Raw Data -** Toggle the table to review collapsible member totals by rank, class, and level band.
 - **Visible count -** Review the number of members currently included by the filters beside the Export Roster and Refresh Data actions.
 
 ### Raid
