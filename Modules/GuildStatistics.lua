@@ -316,9 +316,9 @@ function GuildStatistics.CreateView(host, styleButton, refresh)
     view.levelGroup=UI.CreateContainer(nil,view.filterPanel);view.levelGroup:SetWidth(72);view.levelGroup:SetHeight(24);view.levelGroup.mosFlowWidth=72
     view.levelLabel=UI.CreateLabel(view.levelGroup,nil,"OVERLAY","GameFontHighlightSmall");view.levelLabel:SetPoint("LEFT",view.levelGroup,"LEFT",0,0);view.levelLabel:SetText("Level:")
     view.level=UI.CreateFramedEditBox(view.levelGroup,nil,32);view.level:SetPoint("RIGHT",view.levelGroup,"RIGHT",0,0);view.level:SetMaxLetters(2);view.level:SetScript("OnTextChanged",function() view.onFilterChanged() end)
-    view.searchGroup=UI.CreateContainer(nil,view.filterPanel);view.searchGroup:SetWidth(188);view.searchGroup:SetHeight(24);view.searchGroup.mosFlowWidth=188
-    view.searchLabel=UI.CreateLabel(view.searchGroup,nil,"OVERLAY","GameFontHighlightSmall");view.searchLabel:SetPoint("LEFT",view.searchGroup,"LEFT",0,0);view.searchLabel:SetText("Search:")
-    view.search=UI.CreateFramedEditBox(view.searchGroup,nil,132);view.search:SetPoint("RIGHT",view.searchGroup,"RIGHT",0,0);view.search:SetScript("OnTextChanged",function() view.onFilterChanged() end)
+    view.searchGroup=UI.CreateContainer(nil,view.filterPanel);view.searchGroup:SetWidth(132);view.searchGroup:SetHeight(24);view.searchGroup.mosFlowWidth=132
+    view.searchLabel=UI.CreateLabel(view.searchGroup,nil,"OVERLAY","GameFontHighlightSmall");view.searchLabel:SetText("");view.searchLabel:Hide()
+    view.search=UI.CreateFramedEditBox(view.searchGroup,nil,132);view.search:SetPoint("LEFT",view.searchGroup,"LEFT",0,0);view.search:SetScript("OnTextChanged",function() view.onFilterChanged() end);UI.AttachPlaceholder(view.search,"Search...")
     view.flow={view.rankGroup,view.classGroup,view.groupGroup,view.levelGroup,view.searchGroup}
     view.table=CreateMemberTable(page,refresh)
     return view
@@ -392,9 +392,8 @@ local function LayoutContent(width,height,controller)
         local levelLabelWidth=math.ceil(view.levelLabel:GetStringWidth())
         view.groupGroup.mosFlowWidth=groupLabelWidth+4+52
         view.levelGroup.mosFlowWidth=levelLabelWidth+4+32
-        local searchLabelWidth=math.ceil(view.searchLabel:GetStringWidth())
-        local searchMinimum=searchLabelWidth+4+66
-        local searchMaximum=searchLabelWidth+4+132
+        local searchMinimum=66
+        local searchMaximum=132
         local precedingWidth=view.rankGroup.mosFlowWidth+view.classGroup.mosFlowWidth+view.groupGroup.mosFlowWidth+view.levelGroup.mosFlowWidth+24
         local sameRowWidth=flowWidth-precedingWidth
         local searchGroupWidth
@@ -405,7 +404,7 @@ local function LayoutContent(width,height,controller)
         view.rankGroup.button:SetWidth(view.rankGroup:GetWidth());view.classGroup.button:SetWidth(view.classGroup:GetWidth())
         view.groupButton:SetWidth(52);view.groupButton:ClearAllPoints();view.groupButton:SetPoint("LEFT",view.groupLabel,"RIGHT",4,0)
         view.level:SetWidth(32);view.level:ClearAllPoints();view.level:SetPoint("LEFT",view.levelLabel,"RIGHT",4,0)
-        view.search:SetWidth(math.max(66,math.min(132,view.searchGroup:GetWidth()-searchLabelWidth-4)));view.search:ClearAllPoints();view.search:SetPoint("LEFT",view.searchLabel,"RIGHT",4,0)
+        view.search:SetWidth(math.max(66,math.min(132,view.searchGroup:GetWidth())));view.search:ClearAllPoints();view.search:SetPoint("LEFT",view.searchGroup,"LEFT",0,0)
         top=top+filterBottom+8
         controller.tableRect=controller.tableRect or {};controller.tableRect.x=8;controller.tableRect.y=top;controller.tableRect.width=available;controller.tableRect.height=math.max(24,height-top-8)
         return controller.tableRect.y+controller.tableRect.height+8

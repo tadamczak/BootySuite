@@ -265,9 +265,10 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.info:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -15); view.info:SetText(""); view.info:Hide()
 
     view.searchLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
-    view.searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -82); view.searchLabel:SetText("Search"); view.searchLabel:Hide()
+    view.searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -82); view.searchLabel:SetText(""); view.searchLabel:Hide()
     view.searchBox = MOS.UI.Components.CreateFramedEditBox(page, "MuklaOfficerSuiteRaidSearch", 178)
     view.searchBox:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -76); view.searchBox:Hide()
+    MOS.UI.Components.AttachPlaceholder(view.searchBox,"Search...")
     view.refreshButton = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Buttons\\UI-RotationRight-Button-Up", 24)
     view.refreshButton:SetPoint("LEFT", view.searchBox, "RIGHT", 4, 0); view.refreshButton:Hide()
     MOS.UI.Components.AttachTooltip(view.refreshButton, "Refresh raid data", "Refresh the raid roster now. Disabled while Raid live tracking is active.")
@@ -278,9 +279,6 @@ function RaidManagement.CreateChrome(page, callbacks)
     local function CreateFilterButton(text, x)
         local button = MOS.UI.Components.CreateDropdownButton(page, nil, text, 84)
         button:SetPoint("TOPLEFT", page, "TOPLEFT", x, -76)
-        button.SetText = function(self, value) self.label:SetText(value) end
-        button.arrow:SetWidth(14); button.arrow:SetHeight(14)
-        button.arrow:ClearAllPoints(); button.arrow:SetPoint("RIGHT", button, "RIGHT", -4, 0)
         button:Hide()
         return button
     end
@@ -874,27 +872,23 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
     local filterWidth = pageWidth < 650 and 60 or 84
     local toolbar = page.filterToolbar or page
     if page.filterToolbar then
+        page.filterToolbar.mosBorderOutsetLeft=4;page.filterToolbar.mosBorderOutsetRight=4;MOS.UI.Components.SetSurfaceHorizontalBorders(page.filterToolbar,false,true)
         page.filterToolbar:ClearAllPoints(); page.filterToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -92 - submenuOffset); page.filterToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -92 - submenuOffset)
         page.filterToolbar:SetHeight(38 + (page.classicSearchOffset or 0))
     end
     controls.filterLabel:Hide()
-    controls.classButton:ClearAllPoints(); controls.classButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -8); controls.classButton:SetWidth(filterWidth); controls.classButton:SetHeight(24)
+    controls.classButton:ClearAllPoints(); controls.classButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -7); controls.classButton:SetWidth(filterWidth); controls.classButton:SetHeight(24)
     controls.rankButton:ClearAllPoints(); controls.rankButton:SetPoint("LEFT", controls.classButton, "RIGHT", 8, 0); controls.rankButton:SetWidth(filterWidth)
     controls.rankButton:SetHeight(24)
     controls.resetButton:ClearAllPoints(); controls.resetButton:SetPoint("LEFT", controls.rankButton, "RIGHT", 8, 0); controls.resetButton:SetHeight(24)
     MOS.UI.Components.SetClassicButtonCompact(controls.modeButton, false)
     controls.modeButton:SetWidth(96); controls.modeButton:SetHeight(22)
     if not controls.modeButton.mosClassicIconKey then MOS.UI.Components.SetClassicButtonIcon(controls.modeButton, "loot_tools", 13, 7, 0) end
-    controls.searchLabel:SetText("Search")
-    controls.searchLabel:SetTextColor(1,1,1)
-    controls.searchLabel:SetWidth(42)
-    controls.searchLabel:SetHeight(24); controls.searchLabel:SetJustifyV("MIDDLE")
-    controls.searchLabel:ClearAllPoints()
-    if (page.classicSearchOffset or 0) > 0 then controls.searchLabel:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -38)
-    elseif settings.raidListShowFilters then controls.searchLabel:SetPoint("LEFT", controls.resetButton, "RIGHT", 10, 0)
-    else controls.searchLabel:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -8) end
+    controls.searchLabel:Hide()
     controls.searchBox:ClearAllPoints()
-    controls.searchBox:SetPoint("LEFT", controls.searchLabel, "RIGHT", 4, 0)
+    if (page.classicSearchOffset or 0) > 0 then controls.searchBox:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -37)
+    elseif settings.raidListShowFilters then controls.searchBox:SetPoint("LEFT", controls.resetButton, "RIGHT", 10, 0)
+    else controls.searchBox:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -7) end
     controls.searchBox:SetHeight(24)
     controls.searchBox:SetWidth(math.min(110, page.classicSearchWidth or 110))
     controls.refreshButton:ClearAllPoints(); controls.refreshButton:SetPoint("LEFT", controls.searchBox, "RIGHT", 4, 0)
@@ -903,7 +897,7 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
     else
         controls.filterLabel:Hide(); controls.classButton:Hide(); controls.rankButton:Hide(); controls.resetButton:Hide()
     end
-    if settings.raidListShowSearch then controls.searchLabel:Show(); controls.searchBox:Show(); controls.refreshButton:Show()
+    if settings.raidListShowSearch then controls.searchLabel:Hide(); controls.searchBox:Show(); controls.refreshButton:Show()
     else controls.searchLabel:Hide(); controls.searchBox:Hide(); controls.refreshButton:Hide() end
     if page.filterToolbar then
         if settings.raidListShowFilters or settings.raidListShowSearch then page.filterToolbar:Show() else page.filterToolbar:Hide() end
@@ -1371,11 +1365,11 @@ function RaidManagement.RefreshListView(page, rows, members, selectedName, sortK
     local pageWidth = PageSpan(page)
     local filterWidth = pageWidth < 650 and 60 or 84
     local searchSpace = pageWidth - (page.classicWarningWidth or 0) - ((page.classicWarningWidth or 0) > 0 and 8 or 12)
-    local searchFixed = 50 + (filterWidth * 2) + 16 + 104 + 10 + 45 + 8 + 4 + 24
+    local searchFixed = (filterWidth * 2) + 174
     local searchWidth = searchSpace - searchFixed
     page.classicSearchOffset = not lootMasterMode and MOS.UI.Components.IsClassicSkin() and settings.raidListShowFilters and settings.raidListShowSearch and searchWidth < 90 and 30 or 0
     page.classicSearchWidth = (page.classicSearchOffset or 0) > 0 and math.max(60, math.min(178, searchSpace - 93)) or math.max(90, math.min(178, searchWidth))
-    if not settings.raidListShowFilters then page.classicSearchWidth = math.max(90, math.min(178, searchSpace - 93)) end
+    if not settings.raidListShowFilters then page.classicSearchWidth = math.max(90, math.min(178, searchSpace - 40)) end
     if not page.detachedLootMaster then RaidManagement.LayoutListToolbar(page, lootMasterMode, settings) end
     local rowStartY, tableLeft, tableWidth = RaidManagement.LayoutListHeaders(page, page.listHeaderUI.buttons, sortKey, lootMasterMode, settings.raidListRowWidth, table.getn(members), selectedName)
     local warningHeight = 0
@@ -3117,6 +3111,7 @@ function RaidManagement.AttachActionHandlers(options)
         end)
     end
     controls.searchBox:SetScript("OnTextChanged", function() options.refresh() end)
+    MOS.UI.Components.AttachPlaceholder(controls.searchBox,"Search...")
     controls.refreshButton:SetScript("OnClick", function()
         if this.inactive or not options.isInRaid() then return end
         this:SetInactive(true)
@@ -3313,12 +3308,11 @@ function RaidManagement.CreateAutoLootControls(page, view)
     local choices = UI.CreateDropdownPanel(panel, rarity, 184, 138, 20)
     local function RefreshRarity()
         local mask = MOS.Database.GetSetting("lmAutoLootRarities")
-        local captions, index = {}, nil
+        local index
         for index = 1, table.getn(names) do
             selected[names[index]] = math.mod(math.floor(mask / (2 ^ (index - 1))), 2) == 1
-            if selected[names[index]] then table.insert(captions, names[index]) end
         end
-        rarity:SetText(table.getn(captions) == 0 and "None" or (table.getn(captions) > 2 and (table.getn(captions) .. " selected") or table.concat(captions, ", ")))
+        UI.FilterPanel.SetCaption(rarity,names,selected)
     end
     local function SaveRarity()
         local mask, index = 0, nil
@@ -3412,13 +3406,12 @@ function RaidManagement.CreateAutoLootControls(page, view)
     LayoutConfig()
     local presetNames, presetSelected = MOS.Services.AutoLoot.PresetNames, {}
     local function RefreshPresets()
-        local mask, captions = MOS.Database.GetSetting("lmAutoLootPresets"), {}
+        local mask = MOS.Database.GetSetting("lmAutoLootPresets")
         local index
         for index = 1, table.getn(presetNames) do
             presetSelected[presetNames[index]] = math.mod(math.floor(mask / 2 ^ (index - 1)), 2) == 1
-            if presetSelected[presetNames[index]] then table.insert(captions, presetNames[index]) end
         end
-        presets:SetText(table.getn(captions) == 0 and "None" or (table.getn(captions) > 2 and (table.getn(captions) .. " selected") or table.concat(captions, ", ")))
+        UI.FilterPanel.SetCaption(presets,presetNames,presetSelected)
     end
     local function SavePresets()
         local mask, index = 0, nil
