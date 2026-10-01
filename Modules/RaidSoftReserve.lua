@@ -5,6 +5,12 @@ local RaidManagement = MOS.Modules.RaidManagement
 local function ShowItemTooltip() MOS.UI.Components.ShowItemTooltip(this) end
 local function HideItemTooltip() GameTooltip:Hide() end
 local function HandleItemClick() MOS.UI.Components.HandleItemClick(this) end
+local warningRowColor = {0.035, 0.035, 0.03}
+
+local function CenterOnScreen(frame)
+    frame:ClearAllPoints()
+    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+end
 
 local function IsCursorOverFrame(frame)
     if not frame or not frame:IsVisible() or not frame:GetLeft() then return false end
@@ -148,6 +154,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
         }
         dialog.description:SetText(descriptions[key])
         dialog:SetHeight(math.min(300, math.max(150, 106 + table.getn(names) * 24)))
+        CenterOnScreen(dialog)
         dialog:Open(""); dialog.text:Hide()
         local contentHeight = table.getn(names) * 24
         local overflow = contentHeight > dialog:GetHeight() - 98
@@ -161,6 +168,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
             if not row then
                 row = MOS.UI.Components.CreateButton(dialog.canvas, nil, "", width, 22)
                 MOS.UI.Components.SetButtonLabelInsets(row, 6, 6)
+                MOS.UI.Components.SetRowColor(row, warningRowColor, 1)
                 dialog.playerRows[index] = row
             end
             row:ClearAllPoints(); row:SetPoint("TOPLEFT", dialog.canvas, "TOPLEFT", 0, -(index-1)*24)
@@ -196,7 +204,7 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
     local confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SRDialog", "Fix Soft Reserves", "Remove")
-    page.softReserveWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR; confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR:Open(spec.text, spec.OnAccept) end)
+    page.softReserveWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR; CenterOnScreen(confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR); confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR:Open(spec.text, spec.OnAccept) end)
     page.missingSoftReserveWarning = CreateWarningCard(page, "MuklaOfficerSuiteMissingSoftReserveDetails", "Raid members without Soft Reserve", { 0.18, 0.08, 0.01 }, { 1, 0.55, 0.08 }, { 1, 0.72, 0.18 })
     page.missingSoftReserveWarning.onDismiss = refresh
     page.missingSoftReserveWarning.text:ClearAllPoints(); page.missingSoftReserveWarning.text:SetPoint("LEFT", page.missingSoftReserveWarning, "LEFT", 9, -5); page.missingSoftReserveWarning.text:SetPoint("RIGHT", page.missingSoftReserveWarning, "RIGHT", -84, -5)
@@ -209,7 +217,7 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
     MOS.UI.Components.SetClassicButtonVariant(page.missingSoftReserveWarning.ping, "red")
     MOS.UI.Components.SetClassicButtonIcon(page.missingSoftReserveWarning.ping, "ping", 10, 5)
     page.missingSoftReserveWarning.ping:SetPoint("TOPRIGHT", page.missingSoftReserveWarning, "TOPRIGHT", -8, -38); page.missingSoftReserveWarning.ping:SetFrameLevel(page.missingSoftReserveWarning:GetFrameLevel() + 2)
-    page.missingSoftReserveWarning.fix:SetScript("OnClick", function() if page.softReserveFixDialog then page.softReserveFixDialog:Open(getAttendance()) end end)
+    page.missingSoftReserveWarning.fix:SetScript("OnClick", function() if page.softReserveFixDialog then CenterOnScreen(page.softReserveFixDialog); page.softReserveFixDialog:Open(getAttendance()) end end)
     page.missingSoftReserveWarning.ping:SetScript("OnClick", function() if page.pingMissingSoftReserves then page.pingMissingSoftReserves() end end)
     page.invalidSoftReserveWarning = CreateWarningCard(page, "MuklaOfficerSuiteInvalidSoftReserveDetails", "Soft Reserve without loot rights", { 0.18, 0.08, 0.01 }, { 1, 0.55, 0.08 }, { 1, 0.72, 0.18 })
     page.invalidSoftReserveWarning.onDismiss = refresh
@@ -231,7 +239,7 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
     }
     local confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SRDialog", "Fix Soft Reserves", "Remove SR")
     confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:SetWidth(300)
-    invalidWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_INVALID_SR; confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:Open(spec.text, spec.OnAccept) end)
+    invalidWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_INVALID_SR; CenterOnScreen(confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR); confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:Open(spec.text, spec.OnAccept) end)
     invalidWarning.ping:SetScript("OnClick", function()
         local names = MOS.Services.Raid.GetSoftReserveIssues(getAttendance(), page.getSoftReserveRules and page.getSoftReserveRules()).invalidNames
         if table.getn(names) == 0 then return end
@@ -284,6 +292,7 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     for rowIndex = 1, 12 do
         local left = MOS.UI.Components.CreateButton(dialog.leftPanel, nil, "", 324, 20); left:SetPoint("TOPLEFT", dialog.leftPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); left.label:SetJustifyH("LEFT")
         local right = MOS.UI.Components.CreateButton(dialog.rightPanel, nil, "", 324, 20); right:SetPoint("TOPLEFT", dialog.rightPanel, "TOPLEFT", 7, -7 - ((rowIndex - 1) * 22)); right.label:SetJustifyH("LEFT"); right:RegisterForDrag("LeftButton")
+        MOS.UI.Components.SetRowColor(left, warningRowColor, 1); MOS.UI.Components.SetRowColor(right, warningRowColor, 1)
         MOS.UI.Components.SetButtonLabelInsets(left, 6, 6); MOS.UI.Components.SetButtonLabelInsets(right, 6, 6)
         right.itemHit = MOS.UI.Components.CreateControl(nil, right)
         right.itemHit:SetHeight(20); right.itemHit:RegisterForDrag("LeftButton")
@@ -361,7 +370,7 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
         self.attendance = attendance; self.importInfo = importInfo; self.missing = importInfo.missingNames; self.assignments = {}; self.leftOffset = 0; self.rightOffset = 0
         self.reservationByName = {}
         for _, reservation in ipairs(importInfo.unmatchedReservations) do self.reservationByName[string.lower(reservation.name or "")] = reservation end
-        RefreshDialog(); dismiss:Show(); self:Show()
+        CenterOnScreen(self); RefreshDialog(); dismiss:Show(); self:Show()
     end
     page.softReserveFixDialog = dialog
 end

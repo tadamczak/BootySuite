@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.89 - 2026-10-01
+
+- Keep saved raid snapshots immutable when loaded sessions are saved again, and retain ten loadable snapshots.
+- Refine Raid action wrapping, manual refresh state, saved-raid numbering and centered warning dialogs.
+- Add immediate date filtering and multi-raid aggregation with selection-aware headings to Raid Statistics.
+
 ## 0.5.0-dev.88 - 2026-10-01
 
 - Rebuild Guild Statistics around one responsive member table with rank, class, level, search and grouping controls.

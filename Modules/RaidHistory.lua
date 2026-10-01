@@ -23,34 +23,37 @@ end
 local function MeasureHistory(width, controls)
     local page, snapshots, actionY = controls.historyPage, controls.historyPage.raidHistorySnapshots, controls.historyActionY
     local dataWidth = math.max(60, width - 48)
-    local nameWidth, raidWidth = math.floor(dataWidth * 0.34), math.floor(dataWidth * 0.30)
-    local timeWidth = dataWidth - nameWidth - raidWidth
-    local widths = {nameWidth, raidWidth, timeWidth}
+    local numberWidth = 28
+    local remainingWidth = math.max(32, dataWidth - numberWidth)
+    local nameWidth, raidWidth = math.floor(remainingWidth * 0.34), math.floor(remainingWidth * 0.30)
+    local timeWidth = remainingWidth - nameWidth - raidWidth
+    local widths = {numberWidth, nameWidth, raidWidth, timeWidth}
     local x = 8
-    for index = 1, 3 do
+    for index = 1, 4 do
         local heading = controls.historyHeaders[index]
         heading:ClearAllPoints(); heading:SetPoint("TOPLEFT", page, "TOPLEFT", x, actionY - 62); heading:SetWidth(widths[index] - 6); heading:SetJustifyH("LEFT"); heading:Show()
         x = x + widths[index]
     end
     controls.historyCanvas:SetWidth(width)
     local y = 0
-    for index = 1, 5 do
+    for index = 1, 10 do
         local snapshot, button = snapshots[index], controls.historyButtons[index]
         local deleteButton, load = controls.historyDeleteButtons[index], controls.historyLoadButtons[index]
         button:ClearAllPoints(); button:SetPoint("TOPLEFT", controls.historyCanvas, "TOPLEFT", 0, y); button:SetWidth(dataWidth)
         if snapshot then
             local savedAt = snapshot.savedAt or snapshot.updatedAt
             local height = math.max(26,
-                Cell(button.label, button, 4, nameWidth - 6, tostring(snapshot.id or "Unknown")),
-                Cell(button.raidName, button, nameWidth, raidWidth, snapshot.raidName or "Unknown zone"),
-                Cell(button.savedAt, button, nameWidth + raidWidth, timeWidth, savedAt and date("%Y-%m-%d %H:%M", savedAt) or ""))
+                Cell(button.number, button, 4, numberWidth - 6, tostring(index)),
+                Cell(button.label, button, numberWidth, nameWidth, tostring(snapshot.id or "Unknown")),
+                Cell(button.raidName, button, numberWidth + nameWidth, raidWidth, snapshot.raidName or "Unknown zone"),
+                Cell(button.savedAt, button, numberWidth + nameWidth + raidWidth, timeWidth, savedAt and date("%Y-%m-%d %H:%M", savedAt) or ""))
             button:SetHeight(height); button:Show()
             MOS.UI.Components.StyleWarmListRow(button, page.selectedRaidHistoryId == snapshot.id)
             load:SetWidth(24); load:SetHeight(24); deleteButton:SetWidth(16); deleteButton:SetHeight(16)
             load:ClearAllPoints(); load:SetPoint("LEFT", button, "RIGHT", 4, 0); load:Show()
             deleteButton:ClearAllPoints(); deleteButton:SetPoint("LEFT", load, "RIGHT", 4, 0); deleteButton:Show()
             y = y - height - 2
-        else button:Hide(); load:Hide(); deleteButton:Hide() end
+        else button.number:Hide(); button:Hide(); load:Hide(); deleteButton:Hide() end
     end
     return math.max(1, -y - 2)
 end

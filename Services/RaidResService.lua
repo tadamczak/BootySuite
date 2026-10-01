@@ -450,8 +450,25 @@ function RaidResService.RestoreSnapshot(snapshot)
         addonVersion = MOS.version, scannedAt = snapshot.updatedAt, scannedAtText = snapshot.updatedAt and date("%Y-%m-%d %H:%M:%S", snapshot.updatedAt) or "", sessionStartedAt = snapshot.startedAt or snapshot.updatedAt, lastSavedAt = snapshot.savedAt or snapshot.updatedAt,
         raidName = snapshot.raidName, snapshotId = snapshot.id, updatedBy = UnitName("player"), members = members,
         softReserveImport = { id = snapshot.raidResId or snapshot.id, origin = snapshot.source, url = snapshot.srUrl or "", rollForExport = snapshot.rollForExport or "", importedAt = snapshot.updatedAt, unmatchedNames = unmatchedNames, unmatchedReservations = unmatched, missingNames = snapshot.missingNames or {} },
+        _loadedSnapshotId = snapshot.id,
     }
     return MOS.Database.StoreRaidAttendance(attendance)
+end
+
+function RaidResService.PrepareDerivedSnapshot(attendance, idExists, savedAt)
+    if not attendance or not attendance._loadedSnapshotId then return nil end
+    savedAt = tonumber(savedAt) or time()
+    local base = tostring(attendance._loadedSnapshotId or attendance.snapshotId or "raid")
+    local stamp = date("%Y%m%d-%H%M%S", savedAt)
+    local candidate, suffix = base .. "-" .. stamp, 2
+    while idExists and idExists(candidate) do
+        candidate = base .. "-" .. stamp .. "-" .. suffix
+        suffix = suffix + 1
+    end
+    attendance.snapshotId = candidate
+    attendance.sessionStartedAt = savedAt
+    attendance._loadedSnapshotId = nil
+    return candidate
 end
 
 function RaidResService.SyncHistory(attendance)

@@ -81,8 +81,8 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Loot rules -** Configure SR, Highly Contested Items, Reycoin, and CSR rights by guild rank.
 - **Reycoin list -** Review used Reycoins and pending item trades.
 - **Narrow raid windows -** Raid Leader Tools and Loot Master Tools wrap to a left-aligned row. Warnings move below the roster as compact headers when space is limited.
-- **Raid header -** The Raid section label has its own row. In narrow windows, saved date, warning count, Save Session and Quit move together to a second row aligned to the left.
-- **Saved raids -** Select and load an earlier raid session.
+- **Raid header -** The Raid section label has its own row. Save Session and Quit remain right aligned while the row fits; in narrow windows, saved date, warning count and both actions move together to a left-aligned second row.
+- **Saved raids -** Keep up to ten numbered snapshots. Loading and saving a historical raid creates a new snapshot while preserving the original.
 
 ### Loot Master Mode
 
@@ -103,8 +103,8 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 
 ### Raid Statistics
 
-- **Saved raid list -** Browse date-only saved raid rows using the same visual design as Raid loading, or collapse the list to give the result table the full width.
-- **Filters -** Filter by raid, date range, session name, or player.
+- **Saved raid list -** Browse date-only saved raid rows, select one or several sessions for combined results, or collapse the list to give the result table the full width.
+- **Filters -** Filter by raid, date range, session name, or player; calendar choices apply immediately.
 - **Raid details -** Review class-colored players, attendance, Soft Reserves, received loot, and stored roll information.
 - **Edit -** Change whether a saved raid contributes to attendance or CSR.
 - **Remove -** Delete a saved raid and recalculate affected statistics.

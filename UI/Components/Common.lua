@@ -254,7 +254,11 @@ function UI.CreateDatePicker(name)
         local button = UI.CreateButton(frame, nil, "", 28, 22); button:SetPoint("TOPLEFT", frame, "TOPLEFT", 8 + (column * 30), -57 - (row * 23)); button.datePicker = frame
         button:SetScript("OnClick", function()
             local picker = this.datePicker
-            if this.day and picker.target then picker.target:SetText(string.format("%04d-%02d-%02d", picker.year, picker.month, this.day)); picker:Hide() end
+            if this.day and picker.target then
+                picker.target:SetText(string.format("%04d-%02d-%02d", picker.year, picker.month, this.day))
+                picker:Hide()
+                if picker.OnDateSelected then picker:OnDateSelected(picker.target) end
+            end
         end)
         frame.days[index] = button
     end

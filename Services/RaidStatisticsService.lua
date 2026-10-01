@@ -76,13 +76,14 @@ local function AppendMissingReserve(target, raid)
     }
 end
 
-function RaidStatistics.BuildSummary(entries, selectedId)
+function RaidStatistics.BuildSummary(entries, selectedRaids)
     local summary = { raids = 0, participations = 0, uniquePlayers = 0, sr = 0, loot = 0, players = {} }
     local byName = {}
     local raidIndex, memberIndex
     for raidIndex = 1, table.getn(entries or {}) do
         local raid = entries[raidIndex]
-        if not selectedId or raid.id == selectedId then
+        local selected = type(selectedRaids) == "table" and selectedRaids[raid.id] or (not selectedRaids or raid.id == selectedRaids)
+        if selected then
             summary.raids = summary.raids + 1
             for memberIndex = 1, table.getn(raid.members or {}) do
                 local member = raid.members[memberIndex]
@@ -93,7 +94,7 @@ function RaidStatistics.BuildSummary(entries, selectedId)
                     byName[key] = player; summary.players[table.getn(summary.players) + 1] = player
                 end
                 if raid.attendanceEnabled ~= false then player.raids = player.raids + 1
-                elseif selectedId then player.attendanceOff = true end
+                elseif selectedRaids then player.attendanceOff = true end
                 player.sr = player.sr + (tonumber(member.srCount) or 0); player.loot = player.loot + (tonumber(member.lootCount) or 0)
                 if table.getn(member.srItems or {}) > 0 then AppendItems(player.srItems, member.srItems, raid) else AppendMissingReserve(player.srItems, raid) end
                 AppendItems(player.lootItems, member.lootItems, raid)

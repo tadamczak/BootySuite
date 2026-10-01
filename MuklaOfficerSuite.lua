@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.88"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.89"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -591,10 +591,13 @@ MOS.CompleteRaidSession = function(saveOptions)
     if IsTestRaid() then
         MOS.Services.TestRaid.Stop()
     else
-        if MOS.Services.Raid.IsInRaid() then SaveActiveRaidRoster() end
         local attendance = MOS.Database.GetRaidAttendance()
         if attendance then
-            attendance.lastSavedAt = time(); attendance._sessionDraft = nil
+            local savedAt = time()
+            if attendance._loadedSnapshotId then
+                MOS.Services.RaidRes.PrepareDerivedSnapshot(attendance, MOS.Database.HasSoftReserveSnapshot, savedAt)
+            end
+            attendance.lastSavedAt = savedAt; attendance._sessionDraft = nil
             MOS.Services.RaidRes.SyncHistory(attendance)
             if saveOptions.saveRaidStatistics or saveOptions.saveCSR then
                 local entry = MOS.Services.RaidStatistics.BuildEntry(attendance, saveOptions)
