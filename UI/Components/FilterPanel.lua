@@ -8,6 +8,21 @@ local function SortText(a, b)
     return string.lower(a) < string.lower(b)
 end
 
+local function RefreshToggleCaption(panel)
+    if not panel.toggle then return end
+    panel.captionScratch = panel.captionScratch or {}
+    local captions = panel.captionScratch
+    local index
+    for index = table.getn(captions), 1, -1 do captions[index] = nil end
+    for index = 1, table.getn(panel.values or {}) do
+        if panel.selected[panel.values[index]] then table.insert(captions, tostring(panel.values[index])) end
+    end
+    if table.getn(captions) == 0 then panel.toggle:SetText("None")
+    elseif table.getn(captions) <= 2 then panel.toggle:SetText(table.concat(captions, ", "))
+    else panel.toggle:SetText(table.getn(captions) .. " selected") end
+    if UI.FitButtonLabel then UI.FitButtonLabel(panel.toggle, math.max(1, panel.toggle:GetWidth() - 28)) end
+end
+
 function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, preserveOrder)
     if not preserveOrder then table.sort(values, SortText) end
     panel.values = values
@@ -27,6 +42,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
                 owner.selected[owner.values[optionIndex]] = not allSelected
                 if owner.options[optionIndex] then owner.options[optionIndex]:SetChecked(not allSelected and 1 or nil) end
             end
+            RefreshToggleCaption(owner)
             if owner.onChanged then owner.onChanged(true) end
         end)
     end
@@ -59,6 +75,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
             UI.BindCheckboxLabel(checkbox, function(check)
                 local owner = check:GetParent()
                 owner.selected[check.value] = check:GetChecked() and true or false
+                RefreshToggleCaption(owner)
                 if owner.onChanged then owner.onChanged(true) end
             end)
             panel.options[optionIndex] = checkbox
@@ -75,4 +92,5 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
     for optionIndex = table.getn(values) + 1, table.getn(panel.options) do
         panel.options[optionIndex]:Hide()
     end
+    RefreshToggleCaption(panel)
 end
