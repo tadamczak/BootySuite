@@ -566,11 +566,14 @@ function UI.CreateTextEditor(name, titleText, maxLetters, onSave)
     frame.save = UI.CreateButton(frame, nil, "Save", 72, 20); frame.save:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -92, 18)
     frame.cancel = UI.CreateButton(frame, nil, "Cancel", 72, 20); frame.cancel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 18)
     local function UpdateEditorGeometry()
-        local viewportWidth = math.max(40, frame.scroll:GetWidth() - 4)
+        -- Resolve the existing anchored rectangle from its owner; child bounds
+        -- may still reflect the previous size during first-open/text callbacks.
+        local viewportWidth = math.max(40, frame:GetWidth() - 16 - 32 - 4)
+        local viewportHeight = math.max(1, frame:GetHeight() - 42 - 52)
         frame.edit:SetWidth(viewportWidth)
         frame.measure:SetWidth(math.max(20, viewportWidth - 12)); frame.measure:SetText(frame.edit:GetText() or "")
-        local textHeight = frame.measure:GetStringHeight() or 0
-        frame.edit:SetHeight(math.max(frame.scroll:GetHeight(), textHeight + 14))
+        local textHeight = UI.MeasureTextHeight(frame.measure, math.max(20, viewportWidth - 12))
+        frame.edit:SetHeight(math.max(viewportHeight, textHeight + 14))
     end
     frame.edit:SetScript("OnTextChanged", function() frame.counter:SetText(string.len(this:GetText() or "") .. " / " .. (maxLetters or 500)); UpdateEditorGeometry() end)
     frame.scroll:SetScript("OnSizeChanged", UpdateEditorGeometry)
@@ -638,7 +641,7 @@ function UI.CreateReadOnlyDialog(name, titleText, width, height, backgroundColor
     frame:SetScript("OnHide", function() dismiss:Hide() end)
     frame.Open = function(self, value)
         self.text:SetText(value or "")
-        local contentHeight = self.text:GetStringHeight() + 12
+        local contentHeight = UI.MeasureTextHeight(self.text, (width or 520) - 72) + 12
         self.canvas:SetHeight(math.max(self.scroll:GetHeight(), contentHeight))
         if self.scrollBar then if contentHeight > self.scroll:GetHeight() then self.scrollBar:Show() else self.scrollBar:Hide() end end
         self.scroll:SetVerticalScroll(0)
@@ -944,7 +947,7 @@ function UI.MakeTextAreaScrollable(field, parent)
     local function Measure(width)
         local font, size, flags = field:GetFont(); measure:SetFont(font, size, flags)
         measure:SetWidth(math.max(1, width - 4)); measure:SetText(field:GetText() or "")
-        return measure:GetStringHeight() + 8
+        return UI.MeasureTextHeight(measure, math.max(1, width - 4)) + 8
     end
     local function Layout()
         local height = math.max(1, area:GetHeight() - 12)

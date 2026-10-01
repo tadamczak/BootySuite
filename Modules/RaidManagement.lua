@@ -1,4 +1,5 @@
 local MOS = MuklaOfficerSuite
+local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Match or string.match
 
 MOS.Modules.RaidManagement = MOS.Modules.RaidManagement or {}
 local RaidManagement = MOS.Modules.RaidManagement
@@ -174,7 +175,7 @@ function RaidManagement.CreateChrome(page, callbacks)
                 count = count + 1
                 local row = view.reyCoinRows[count]
                 row.pendingTransfer = nil; row.playerName = member.name
-                row.label:SetText((member.name or "Unknown") .. " - " .. (member.reyCoinItemLink and (string.match(member.reyCoinItemLink, "%[([^%]]+)%]") or member.reyCoinItemLink) or "Manual"))
+                row.label:SetText((member.name or "Unknown") .. " - " .. (member.reyCoinItemLink and (Match(member.reyCoinItemLink, "%[([^%]]+)%]") or member.reyCoinItemLink) or "Manual"))
                 row.remove.text:SetText("X")
                 row:Show()
             end
@@ -1512,7 +1513,7 @@ end
 
 function RaidManagement.FilterMembers(target, members, query, selectedClasses, selectedRanks)
     local targetIndex
-    for targetIndex = table.getn(target), 1, -1 do target[targetIndex] = nil end
+    for targetIndex = table.getn(target), 1, -1 do table.remove(target, targetIndex) end
     local memberIndex
     for memberIndex = 1, table.getn(members) do
         local member = members[memberIndex]
@@ -1520,10 +1521,10 @@ function RaidManagement.FilterMembers(target, members, query, selectedClasses, s
         local rankName = member.guildRank ~= "" and member.guildRank or "Guest"
         if selectedClasses[className] and selectedRanks[rankName] then
             if query == "" then
-                target[table.getn(target) + 1] = member
+                table.insert(target, member)
             else
                 local searchable = string.lower((member.name or "") .. " " .. tostring(member.subgroup or "") .. " " .. className .. " " .. rankName .. " " .. tostring(member.sr or ""))
-                if string.find(searchable, query, 1, true) then target[table.getn(target) + 1] = member end
+                if string.find(searchable, query, 1, true) then table.insert(target, member) end
             end
         end
     end
@@ -1794,7 +1795,7 @@ function RaidManagement.ExpandListRow(row, member, lootMasterMode, requestedHeig
         local item = lootIndex <= visibleLootRows and loot[lootOffset + lootIndex] or nil
         local lootRow = row.lootRows[lootIndex]
         if item then
-            local itemId = tonumber(item.itemId) or tonumber(string.match(tostring(item.link or ""), "item:(%d+)"))
+            local itemId = tonumber(item.itemId) or tonumber(Match(tostring(item.link or ""), "item:(%d+)"))
             local realName, realLink, _, _, _, _, _, _, _, refreshedTexture = GetItemInfo(itemId or item.link)
             if itemId and type(GetItemIcon) == "function" then refreshedTexture = GetItemIcon(itemId) or refreshedTexture end
             if realName then item.name = realName end; if realLink then item.link = realLink end; if refreshedTexture then item.icon = refreshedTexture end
@@ -2809,10 +2810,10 @@ function RaidManagement.CreateLootMasterController(options)
         if window.minimized then return end
         local data = options.page.listRenderer.getData()
         local source = data and data.members or emptyFilters
-        for index = table.getn(members), 1, -1 do members[index] = nil end
+        for index = table.getn(members), 1, -1 do table.remove(members, index) end
         local found = false
         for index = 1, table.getn(source) do
-            members[index] = source[index]
+            table.insert(members, source[index])
             if source[index].name == selectedName then found = true end
         end
         if not found then selectedName = nil end

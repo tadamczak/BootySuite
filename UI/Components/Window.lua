@@ -178,7 +178,7 @@ function Window.CreateProjectConfirmation(name, title, action)
     frame.Open = function(self, message, onYes, onNo)
         open(self, message, onYes, onNo)
         self.label:SetText(message)
-        local textHeight = math.max(32, self.label:GetStringHeight())
+        local textHeight = math.max(32, UI.MeasureTextHeight(self.label, self:GetWidth() - 16))
         self.label:SetHeight(textHeight)
         self:SetHeight(textHeight + 78)
     end

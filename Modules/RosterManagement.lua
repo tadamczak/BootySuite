@@ -302,14 +302,14 @@ end
 
 function RosterManagement.FilterMembers(target, data, query, selectedClasses, selectedRanks, showOffline)
     local targetIndex
-    for targetIndex = table.getn(target), 1, -1 do target[targetIndex] = nil end
+    for targetIndex = table.getn(target), 1, -1 do table.remove(target, targetIndex) end
     if not data or not data.members then return target end
     local memberIndex
     for memberIndex = 1, table.getn(data.members) do
         local member = data.members[memberIndex]
         if RosterManagement.MatchesSearch(member, query)
             and RosterManagement.MatchesFilters(member, selectedClasses, selectedRanks, showOffline) then
-            target[table.getn(target) + 1] = member
+            table.insert(target, member)
         end
     end
     return target
@@ -585,13 +585,14 @@ function RosterManagement.GetVisibleColumns(page, settings)
             local column = source[index]
             if ((page.statusMode and group == 2) or (not page.statusMode and group == 1)) and (column.key == "name" or settings["rosterShow" .. rosterColumnSettings[column.key]] ~= false) and (column.key ~= "officer" or MOS.Services.Roster.CanManage("viewOfficerNote")) then
                 count = count + 1
-                local target = visible[count] or {}; visible[count] = target
+                local target = visible[count]
+                if not target then target = {}; table.insert(visible, target) end
                 target.key = column.key; target.header = column.header; target.fraction = column.fraction
                 total = total + column.fraction
             end
         end
     end
-    for index = table.getn(visible), count + 1, -1 do visible[index] = nil end
+    for index = table.getn(visible), count + 1, -1 do table.remove(visible, index) end
     for index = 1, count do visible[index].fraction = visible[index].fraction / total end
     return visible
 end
@@ -1231,7 +1232,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
         controls.footer:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -42 + headerShift)
         controls.footer:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -42 + headerShift)
     end
-    controls.footer:SetHeight(17 + controls.footer.guild:GetStringHeight() + controls.footer.motd:GetStringHeight())
+    controls.footer:SetHeight(17 + MOS.UI.Components.MeasureTextHeight(controls.footer.guild, math.max(1, width - 16)) + MOS.UI.Components.MeasureTextHeight(controls.footer.motd, math.max(1, width - 16), true))
 
     if controls.footer.rule then controls.footer.rule:Hide() end
     if page.tablePanel then

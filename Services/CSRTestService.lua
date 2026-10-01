@@ -13,10 +13,10 @@ local function AddEntry(state, srItemId, lootItemId)
     local member = { name = state.currentPlayer, guildRank = state.ranks[state.currentPlayer], srItems = {}, lootItems = {} }
     if srItemId then member.srItems[1] = { itemId = srItemId, count = 1 } end
     if lootItemId then member.lootItems[1] = { itemId = lootItemId, count = 1 } end
-    state.entries[table.getn(state.entries) + 1] = {
+    table.insert(state.entries, {
         id = "csr-test-" .. state.sequence, raidName = "CSR Test Raid", savedAt = state.now,
         members = { member },
-    }
+    })
     state.now = state.now + 60
     return true
 end
@@ -29,12 +29,12 @@ end
 
 function TestLab.Reset(state)
     local index
-    for index = table.getn(state.entries), 1, -1 do state.entries[index] = nil end
-    for index = table.getn(state.log), 1, -1 do state.log[index] = nil end
+    for index = table.getn(state.entries), 1, -1 do table.remove(state.entries, index) end
+    for index = table.getn(state.log), 1, -1 do table.remove(state.log, index) end
     local key
     for key in pairs(state.ranks) do state.ranks[key] = nil end
     state.now = time(); state.sequence = 0; state.playerSequence = 0; state.itemIndex = 1; state.currentPlayer = nil
-    state.log[1] = "Test reset. Add a player to begin."
+    table.insert(state.log, "Test reset. Add a player to begin.")
 end
 
 function TestLab.AddPlayer(state)

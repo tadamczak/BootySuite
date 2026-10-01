@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.104"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.105"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -770,6 +770,12 @@ MOS.Core.Commands.Attach({
     toggleDashboard = ToggleDashboard,
     printMessage = Print,
     countSavedMembers = CountSavedMembers,
+    printCapabilities = function()
+        local snapshot = MOS.Core.ClientCapabilities.Collect(rosterStatusText)
+        local runtime, extensions = MOS.Core.ClientCapabilities.Describe(snapshot)
+        DEFAULT_CHAT_FRAME:AddMessage("MOS " .. runtime)
+        DEFAULT_CHAT_FRAME:AddMessage("MOS " .. extensions)
+    end,
     startLinkedItemRoll = function(itemLink)
         local window = MOS.Modules.MasterLootWindow
         if window and window.OpenLinkedItemRoll then window.OpenLinkedItemRoll(itemLink) end

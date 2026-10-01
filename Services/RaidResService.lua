@@ -282,8 +282,8 @@ function RaidResService.RemoveMemberReservation(attendance, memberName)
         if NormalizeName(unmatchedReservations[index].name) == NormalizeName(releasedName) then reservationExists = true; break end
     end
     if not reservationExists then
-        unmatchedReservations[table.getn(unmatchedReservations) + 1] = { name = releasedName, itemIds = releasedItemIds }
-        unmatchedNames[table.getn(unmatchedNames) + 1] = releasedName
+        table.insert(unmatchedReservations, { name = releasedName, itemIds = releasedItemIds })
+        table.insert(unmatchedNames, releasedName)
         table.sort(unmatchedReservations, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
         table.sort(unmatchedNames)
     end
@@ -293,7 +293,7 @@ function RaidResService.RemoveMemberReservation(attendance, memberName)
     for index = 1, table.getn(missing) do
         if NormalizeName(missing[index]) == NormalizeName(member.name) then alreadyMissing = true; break end
     end
-    if not alreadyMissing then missing[table.getn(missing) + 1] = member.name; table.sort(missing) end
+    if not alreadyMissing then table.insert(missing, member.name); table.sort(missing) end
     importInfo.missingNames = missing
     SyncMutation(attendance)
     return true
