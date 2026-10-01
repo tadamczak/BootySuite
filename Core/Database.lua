@@ -214,7 +214,7 @@ function Database.StoreSoftReserveSnapshot(snapshot)
     local index
     for index = table.getn(history.order), 1, -1 do if history.order[index] == snapshot.id then table.remove(history.order, index) end end
     table.insert(history.order, 1, snapshot.id); history.raids[snapshot.id] = snapshot
-    while table.getn(history.order) > 5 do
+    while table.getn(history.order) > 10 do
         local expiredId = table.remove(history.order); history.raids[expiredId] = nil
     end
     return true
@@ -226,7 +226,7 @@ function Database.GetSoftReserveHistory()
     local snapshots = {}
     if not history or not history.order or not history.raids then return snapshots end
     local index
-    for index = 1, math.min(5, table.getn(history.order)) do
+    for index = 1, math.min(10, table.getn(history.order)) do
         local snapshot = history.raids[history.order[index]]
         if snapshot then table.insert(snapshots, snapshot) end
     end

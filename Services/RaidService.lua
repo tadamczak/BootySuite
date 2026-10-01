@@ -793,6 +793,7 @@ function RaidService.SaveRoster()
         updatedBy = UnitName("player"),
         members = members,
         snapshotId = previousAttendance and previousAttendance.snapshotId or nil,
+        _loadedSnapshotId = previousAttendance and previousAttendance._loadedSnapshotId or nil,
         sessionStartedAt = previousAttendance and previousAttendance.sessionStartedAt or nil,
         lastSavedAt = previousAttendance and previousAttendance.lastSavedAt or nil,
         softReserveImport = preservePrevious and previousAttendance.softReserveImport or nil,
