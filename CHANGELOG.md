@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.97 - 2026-10-01
+
+- Standardize Search placeholders and dropdown geometry, captions, spacing and project popup borders.
+- Reclaim Roster filter space and correct Raid filter toolbar margins and separator span.
+
 ## 0.5.0-dev.96 - 2026-10-01
 
 - Fix independent Guild Statistics class/rank filtering and stabilize the visible-member count.

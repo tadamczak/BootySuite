@@ -146,20 +146,22 @@ end
 
 function UI.CreateDropdownButton(parent, name, text, width)
     local button = CreateFrame("Button", name, parent)
-    button:SetWidth(width or 84); button:SetHeight(19)
+    button:SetWidth(width or 84); button:SetHeight(24)
     button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     button:SetBackdropColor(0.08, 0.07, 0.05, 0.95)
     button:SetBackdropBorderColor(0.42, 0.35, 0.20, 1)
     button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     local font, size, flags = button.label:GetFont()
     if font then button.label:SetFont(font, size + math.min(0, UI.GetTextSizeDelta(parent) + 1), flags) end
-    button.label:SetPoint("LEFT", button, "LEFT", 8, 0); button.label:SetText(text)
-    button.SetText = function(self, value) self.label:SetText(value) end
+    button.mosLabelJustify = "LEFT"
+    button.label:SetPoint("LEFT", button, "LEFT", 4, 0); button.label:SetWidth(math.max(1,(width or 84)-28));button.label:SetJustifyH("LEFT");button.label:SetJustifyV("MIDDLE");button.label:SetText(text)
+    button.SetText = function(self, value) self.label:SetText(value); if UI.FitButtonLabel then UI.FitButtonLabel(self,math.max(1,self:GetWidth()-28)) end end
     button.GetText = function(self) return self.label:GetText() end
     button.arrow = button:CreateTexture(nil, "OVERLAY")
-    button.arrow:SetWidth(16); button.arrow:SetHeight(16); button.arrow:SetPoint("RIGHT", button, "RIGHT", -5, 0)
+    button.arrow:SetWidth(14); button.arrow:SetHeight(14); button.arrow:SetPoint("RIGHT", button, "RIGHT", -4, 0)
     button.arrow:SetTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Up")
     button.arrow:SetTexCoord(0.20, 0.80, 0.20, 0.80)
+    button:SetScript("OnSizeChanged",function() this.label:SetWidth(math.max(1,this:GetWidth()-28)) end)
     return button
 end
 
@@ -183,13 +185,13 @@ function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     panel.mosTextSizeDelta = UI.GetTextSizeDelta(parent)
     panel:SetPoint("TOPLEFT", toggle, "BOTTOMLEFT", 0, -2)
     panel:SetWidth(width or 130); panel:SetHeight(height or 230)
+    panel.contentPadding = 4
     if panel.SetFrameStrata and toggle.GetFrameStrata then panel:SetFrameStrata(toggle:GetFrameStrata()) end
     panel:SetFrameLevel(math.max(parent:GetFrameLevel(), toggle:GetFrameLevel()) + (levelOffset or 50) + 100)
     if panel.SetToplevel then panel:SetToplevel(true) end
     panel:EnableMouse(true)
     panel:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 5, right = 5, top = 5, bottom = 5 } })
     panel:SetBackdropColor(0.04, 0.03, 0.02, 0.98)
-    UI.RegisterDialogSurface(panel, "panel", { 0.04, 0.03, 0.02, 0.98 })
     local dismiss = CreateFrame("Button", nil, UIParent)
     dismiss:SetAllPoints(UIParent)
     if dismiss.SetFrameStrata and toggle.GetFrameStrata then dismiss:SetFrameStrata(toggle:GetFrameStrata()) end
@@ -201,6 +203,7 @@ function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     panel.options = {}
     panel:SetScript("OnShow", function() UI.RefreshDropdownLayers(panel, toggle); dismiss:Show() end)
     panel:SetScript("OnHide", function() dismiss:Hide() end)
+    UI.StyleProjectPopup(panel)
     panel:Hide()
     return panel
 end
@@ -891,8 +894,9 @@ function UI.SetChevronButtonIcon(button,direction,size)
 end
 
 function UI.AttachPlaceholder(field, text)
-    local label = UI.CreateLabel(field, nil, "OVERLAY", "GameFontDisableSmall")
-    label:SetPoint("LEFT", field, "LEFT", 6, 0); label:SetText(text)
+    local label = field.placeholder or UI.CreateLabel(field, nil, "OVERLAY", "GameFontDisableSmall")
+    if not field.placeholder then label:SetPoint("LEFT", field, "LEFT", 6, 0) end
+    label:SetText(text)
     field.placeholder = label
     local function Refresh()
         if field.mosHasFocus or (field:GetText() or "") ~= "" then label:Hide() else label:Show() end
@@ -978,7 +982,11 @@ function UI.StyleActionButton(button)
     UI.SizeClassicButton(button,button:GetWidth(),26,1)
 end
 function UI.StyleProjectPopup(panel)
+    if not UI.Window then panel.mosProjectPopupPending=true; return end
+    if panel.mosProjectPopupStyled then UI.Window.ApplyProjectSurface(panel); return end
+    panel.mosProjectPopupStyled=true
     UI.Window.ApplyProjectSurface(panel)
+    UI.RegisterDialogSurface(panel,"panel",{0.015,0.015,0.015,1})
     UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(panel) end)
 end
 

@@ -34,9 +34,10 @@ function RosterManagement.CreateShell(page, contentPanel)
 
     local searchLabel = MOS.UI.Components.CreateLabel(page.tablePanel or page, nil, "OVERLAY", "GameFontNormalSmall")
     searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -87)
-    searchLabel:SetText("Search")
+    searchLabel:SetText("");searchLabel:Hide()
     local searchBox = MOS.UI.Components.CreateFramedEditBox(page.tablePanel or page, "MuklaOfficerSuiteRosterSearch", 178)
     searchBox:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -81)
+    MOS.UI.Components.AttachPlaceholder(searchBox,"Search...")
 
     local status = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     status:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -40)
@@ -1128,6 +1129,7 @@ function RosterManagement.AttachInteractions(options)
         options.refresh(false)
     end)
     options.searchBox:SetScript("OnTextChanged", function() options.refresh(true) end)
+    MOS.UI.Components.AttachPlaceholder(options.searchBox,"Search...")
     RosterManagement.SetListRefreshCallback(options.listController, options.refresh)
 
     page.layoutElapsed = 0; page.layoutWidth = 0; page.layoutHeight = 0
@@ -1224,12 +1226,13 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.filtersLabel:Hide()
     x = PlaceRosterFilter(page, controls.classFilter, settings.rosterShowClassFilter ~= false, width < 650 and 60 or 84, x, y)
     x = PlaceRosterFilter(page, controls.rankFilter, settings.rosterShowRankFilter ~= false, width < 650 and 60 or 84, x, y)
-    local filterWrap = hasFilters and (settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false) and x + (settings.rosterShowSearch ~= false and 88 or 0) + (settings.rosterShowOffline ~= false and 118 or 0) > width - 6
+    local offlineWidth=(settings.rosterShowOffline ~= false) and 112 or 6
+    local filterWrap = hasFilters and (settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false) and x + (settings.rosterShowSearch ~= false and 48 or 0) + offlineWidth > width - 6
     if filterWrap then x = 6; y = y - 28 end
-    x = PlaceRosterFilter(page, controls.searchLabel, settings.rosterShowSearch ~= false, 40, x, y)
-    local searchAvailable = width - x - (settings.rosterShowOffline ~= false and 114 or 6)
-    x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, searchAvailable)), x, y)
-    if settings.rosterShowSearch ~= false and settings.rosterShowOffline == false and searchAvailable < 178 then
+    controls.searchLabel:Hide()
+    local searchAvailable = width - x - offlineWidth
+    x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(218, searchAvailable)), x, y)
+    if settings.rosterShowSearch ~= false and settings.rosterShowOffline == false and searchAvailable < 218 then
         -- Resolve the right edge natively; sampled parent widths can lag a resize.
         controls.searchBox:SetPoint("TOPRIGHT", page.tablePanel or page, "TOPRIGHT", -6, y)
     end
@@ -1237,8 +1240,6 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     if settings.rosterShowOffline ~= false then x = x - 6 end
     x = PlaceRosterFilter(page, controls.showOffline, settings.rosterShowOffline ~= false, nil, x, y)
     controls.classFilter:SetHeight(24); controls.rankFilter:SetHeight(24); controls.searchBox:SetHeight(24); controls.showOffline:SetWidth(24); controls.showOffline:SetHeight(24)
-    controls.searchLabel:SetTextColor(1, 1, 1)
-    controls.searchLabel:SetHeight(24); controls.searchLabel:SetJustifyV("MIDDLE")
     controls.showOffline.label:SetTextColor(1, 1, 1)
     controls.showOffline.label:SetHeight(24); controls.showOffline.label:SetJustifyV("MIDDLE")
     if page.filterController and ((settings.rosterShowClassFilter == false and page.filterController.classPanel:IsVisible()) or (settings.rosterShowRankFilter == false and page.filterController.rankPanel:IsVisible())) then page.filterController:Hide() end

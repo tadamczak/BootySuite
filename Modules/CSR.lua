@@ -118,11 +118,12 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
     local allCheckbox = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); allCheckbox:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheckbox:SetWidth(20); allCheckbox:SetHeight(20); allCheckbox:SetChecked(1)
     allCheckbox.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); allCheckbox.label:SetPoint("LEFT", allCheckbox, "RIGHT", 2, 0); allCheckbox.label:SetText("All")
     controller.raidChecks = {}
+    local function RefreshRaidCaption() UI.FilterPanel.SetCaption(controller.raidFilter,raidNames,controller.selectedRaids) end
     MOS.UI.Components.BindCheckboxLabel(allCheckbox, function(owner)
         local enabled = owner:GetChecked() and true or false
         local optionIndex
         for optionIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[optionIndex]] = enabled and true or nil; controller.raidChecks[optionIndex]:SetChecked(enabled and 1 or nil) end
-        controller:Refresh()
+        RefreshRaidCaption();controller:Refresh()
     end)
     for raidFilterIndex = 1, table.getn(raidNames) do
         local checkbox = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); checkbox:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6 - (raidFilterIndex * 23)); checkbox:SetWidth(20); checkbox:SetHeight(20); checkbox.raidName = raidNames[raidFilterIndex]; checkbox:SetChecked(1)
@@ -131,11 +132,13 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
             controller.selectedRaids[owner.raidName] = owner:GetChecked() and true or nil
             local allSelected, optionIndex = true, nil
             for optionIndex = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[optionIndex]] then allSelected = false; break end end
-            allCheckbox:SetChecked(allSelected and 1 or nil); controller:Refresh()
+            allCheckbox:SetChecked(allSelected and 1 or nil);RefreshRaidCaption();controller:Refresh()
         end)
         controller.raidChecks[raidFilterIndex] = checkbox
     end
     controller.search:SetScript("OnTextChanged", function() controller:Refresh() end)
+    RefreshRaidCaption()
+    UI.AttachPlaceholder(controller.search,"Search...");controller.searchLabel:SetText("");controller.searchLabel:Hide()
     controller.playerHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Player name", 16, -108, 154, nil, false)
     controller.itemsHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Item", 180, -108, 140, nil, false)
     controller.csrHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "CSR", 0, -108, 60, nil, false)
@@ -190,9 +193,9 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
     allCheckbox:ClearAllPoints();allCheckbox:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4)
     for i=1,table.getn(controller.raidChecks) do controller.raidChecks[i]:ClearAllPoints();controller.raidChecks[i]:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4-i*23) end
     UI.StyleActionButton(controller.testButton)
-    controller.searchGroup=UI.CreateContainer(nil,page);controller.searchGroup:SetWidth(206);controller.searchGroup:SetHeight(26);controller.searchGroup.mosFlowWidth=206
-    controller.searchLabel:ClearAllPoints();controller.searchLabel:SetPoint("LEFT",controller.searchGroup,"LEFT",0,0)
-    controller.search:SetParent(controller.searchGroup);controller.search:ClearAllPoints();controller.search:SetPoint("LEFT",controller.searchGroup,"LEFT",44,0);controller.search:SetWidth(162)
+    controller.searchGroup=UI.CreateContainer(nil,page);controller.searchGroup:SetWidth(162);controller.searchGroup:SetHeight(26);controller.searchGroup.mosFlowWidth=162
+    controller.searchLabel:Hide()
+    controller.search:SetParent(controller.searchGroup);controller.search:ClearAllPoints();controller.search:SetPoint("LEFT",controller.searchGroup,"LEFT",0,0);controller.search:SetWidth(162)
     controller.raidFilter.mosFlowWidth=130;controller.raidFilter:SetHeight(26)
     controller.flow={controller.raidFilter,controller.searchGroup}
     controller.headers={controller.playerHeader,controller.itemsHeader,controller.csrHeader}
@@ -231,7 +234,7 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
         local top=42+math.max(24,self.description:GetStringHeight())+8
         self.filterLabel:Hide()
         top=UI.LayoutFlow(page,self.flow,8,top,available,8)+8
-        self.search:SetWidth(math.max(24,self.searchGroup:GetWidth()-44))
+        self.search:SetWidth(math.max(24,self.searchGroup:GetWidth()))
         self.headerTop=top;self.bodyTop=top+24;self.bodyHeight=math.max(48,height-self.bodyTop-8);self.bodyWidth=available
         return self.bodyTop+self.bodyHeight+8
     end

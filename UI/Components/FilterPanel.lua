@@ -8,20 +8,29 @@ local function SortText(a, b)
     return string.lower(a) < string.lower(b)
 end
 
-local function RefreshToggleCaption(panel)
-    if not panel.toggle then return end
-    panel.captionScratch = panel.captionScratch or {}
-    local captions = panel.captionScratch
+local function SetCaption(toggle, values, selected, allSelectedCaption, owner)
+    if not toggle then return end
+    owner.captionScratch = owner.captionScratch or {}
+    local captions = owner.captionScratch
     local index
     for index = table.getn(captions), 1, -1 do captions[index] = nil end
-    for index = 1, table.getn(panel.values or {}) do
-        if panel.selected[panel.values[index]] then table.insert(captions, tostring(panel.values[index])) end
+    for index = 1, table.getn(values or {}) do
+        if selected[values[index]] then table.insert(captions, tostring(values[index])) end
     end
-    if table.getn(captions) == table.getn(panel.values or {}) and table.getn(captions) > 0 and panel.allSelectedCaption then panel.toggle:SetText(panel.allSelectedCaption)
-    elseif table.getn(captions) == 0 then panel.toggle:SetText("None")
-    elseif table.getn(captions) <= 2 then panel.toggle:SetText(table.concat(captions, ", "))
-    else panel.toggle:SetText(table.getn(captions) .. " selected") end
-    if UI.FitButtonLabel then UI.FitButtonLabel(panel.toggle, math.max(1, panel.toggle:GetWidth() - 28)) end
+    if table.getn(captions) == table.getn(values or {}) and table.getn(captions) > 0 and allSelectedCaption then toggle:SetText(allSelectedCaption)
+    elseif table.getn(captions) == 0 then toggle:SetText("None")
+    elseif table.getn(captions) == 1 then toggle:SetText(captions[1])
+    else toggle:SetText(table.getn(captions) .. " selected") end
+    if UI.FitButtonLabel then UI.FitButtonLabel(toggle, math.max(1, toggle:GetWidth() - 28)) end
+end
+
+local function RefreshToggleCaption(panel)
+    SetCaption(panel.toggle,panel.values,panel.selected,panel.allSelectedCaption,panel)
+end
+
+function FilterPanel.SetCaption(toggle,values,selected,allSelectedCaption)
+    toggle.mosCaptionOwner=toggle.mosCaptionOwner or {}
+    SetCaption(toggle,values,selected,allSelectedCaption,toggle.mosCaptionOwner)
 end
 
 function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, preserveOrder)

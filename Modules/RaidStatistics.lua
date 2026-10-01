@@ -66,11 +66,12 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     local allCheck = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); allCheck:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheck:SetWidth(20); allCheck:SetHeight(20); allCheck:SetChecked(1)
     allCheck.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); allCheck.label:SetPoint("LEFT", allCheck, "RIGHT", 2, 0); allCheck.label:SetText("All")
     controller.raidChecks = {}
-    MOS.UI.Components.BindCheckboxLabel(allCheck, function(owner) local enabled = owner:GetChecked() and true or false; local i; for i = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[i]] = enabled and true or nil; controller.raidChecks[i]:SetChecked(enabled and 1 or nil) end; controller:Refresh() end)
+    local function RefreshRaidCaption() UI.FilterPanel.SetCaption(controller.raidFilter,raidNames,controller.selectedRaids) end
+    MOS.UI.Components.BindCheckboxLabel(allCheck, function(owner) local enabled = owner:GetChecked() and true or false; local i; for i = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[i]] = enabled and true or nil; controller.raidChecks[i]:SetChecked(enabled and 1 or nil) end;RefreshRaidCaption();controller:Refresh() end)
     for raidNameIndex = 1, table.getn(raidNames) do
         local check = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); check:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6 - (raidNameIndex * 23)); check:SetWidth(20); check:SetHeight(20); check:SetChecked(1); check.raidName = raidNames[raidNameIndex]
         check.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); check.label:SetPoint("LEFT", check, "RIGHT", 2, 0); check.label:SetText(check.raidName)
-        MOS.UI.Components.BindCheckboxLabel(check, function(owner) controller.selectedRaids[owner.raidName] = owner:GetChecked() and true or nil; local allSelected, i = true, nil; for i = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[i]] then allSelected = false; break end end; allCheck:SetChecked(allSelected and 1 or nil); controller:Refresh() end)
+        MOS.UI.Components.BindCheckboxLabel(check, function(owner) controller.selectedRaids[owner.raidName] = owner:GetChecked() and true or nil; local allSelected, i = true, nil; for i = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[i]] then allSelected = false; break end end; allCheck:SetChecked(allSelected and 1 or nil);RefreshRaidCaption();controller:Refresh() end)
         controller.raidChecks[raidNameIndex] = check
     end
     controller.listTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controller.listTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -120); controller.listTitle:SetText("Raids")
@@ -105,7 +106,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     controller.toPicker = MOS.UI.Components.CreateIconButton(controller.filterPanel, nil, "Interface\\Icons\\INV_Misc_PocketWatch_01", 20, 2); controller.toPicker:SetPoint("LEFT", controller.toDate, "RIGHT", 2, 0)
     controller.toPicker:SetScript("OnClick", function() ToggleDatePicker(this, controller.toDate) end)
     controller.searchLabel = MOS.UI.Components.CreateLabel(controller.filterPanel, nil, "OVERLAY", "GameFontHighlightSmall"); controller.searchLabel:SetPoint("LEFT", controller.raidFilter, "RIGHT", 14, 0); controller.searchLabel:SetText("Search")
-    controller.search = MOS.UI.Components.CreateFramedEditBox(controller.filterPanel, nil, 160); controller.search:SetPoint("LEFT", controller.searchLabel, "RIGHT", 6, 0); controller.search:SetScript("OnTextChanged", function() controller:Refresh() end)
+    controller.search = MOS.UI.Components.CreateFramedEditBox(controller.filterPanel, nil, 160); controller.search:SetPoint("LEFT", controller.searchLabel, "RIGHT", 6, 0); controller.search:SetScript("OnTextChanged", function() controller:Refresh() end);MOS.UI.Components.AttachPlaceholder(controller.search,"Search...");controller.searchLabel:SetText("");controller.searchLabel:Hide()
     controller.fromDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.fromDate) end); controller.toDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.toDate) end)
     MOS.UI.Components.AttachTooltip(controller.fromDate, "From date", "Optional date in YYYY-MM-DD format."); MOS.UI.Components.AttachTooltip(controller.toDate, "To date", "Optional date in YYYY-MM-DD format.")
     MOS.UI.Components.AttachTooltip(controller.fromPicker, "Choose From date", "Open the calendar."); MOS.UI.Components.AttachTooltip(controller.toPicker, "Choose To date", "Open the calendar.")
@@ -242,6 +243,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     UI.ApplyDropdownChoiceSurface(controller.datePicker.previous);UI.ApplyDropdownChoiceSurface(controller.datePicker.next)
     controller.raidPanel:SetHeight(8+20+table.getn(controller.raidChecks)*23)
     controller.raidPanel.options=controller.raidChecks;controller.raidPanel.selectAll=allCheck
+    RefreshRaidCaption()
     local choiceWidth=130
     for _,check in ipairs(controller.raidChecks) do choiceWidth=math.max(choiceWidth,check.label:GetStringWidth()+30) end
     controller.raidPanel:SetWidth(choiceWidth)
@@ -254,8 +256,8 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local group=UI.CreateContainer(nil,controller.filterPanel);group:SetWidth(width);group:SetHeight(26);group.mosFlowWidth=width;return group
     end
     controller.searchGroup=Group(166)
-    controller.searchLabel:ClearAllPoints();controller.searchLabel:SetPoint("LEFT",controller.searchGroup,"LEFT",0,0)
-    controller.search:SetParent(controller.searchGroup);controller.search:ClearAllPoints();controller.search:SetPoint("LEFT",controller.searchGroup,"LEFT",42,0);controller.search:SetWidth(124)
+    controller.searchLabel:Hide()
+    controller.search:SetParent(controller.searchGroup);controller.search:ClearAllPoints();controller.search:SetPoint("LEFT",controller.searchGroup,"LEFT",0,0);controller.search:SetWidth(166)
     controller.fromGroup=Group(130);controller.toGroup=Group(114)
     for _,key in ipairs({"from","to"}) do
         local group=controller[key.."Group"];local label=controller[key.."Label"];local field=controller[key.."Date"];local picker=controller[key.."Picker"]
@@ -301,7 +303,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         self.filterPanel:ClearAllPoints();self.filterPanel:SetPoint("TOPLEFT",page,"TOPLEFT",0,-38);self.filterPanel:SetWidth(width)
         local filterBottom=UI.LayoutFlow(self.filterPanel,self.flow,4,8,available,6)+8
         self.filterPanel:SetHeight(filterBottom)
-        self.search:SetWidth(math.max(24,self.searchGroup:GetWidth()-42))
+        self.search:SetWidth(math.max(24,self.searchGroup:GetWidth()))
         for _,key in ipairs({"from","to"}) do
             self[key.."Date"]:SetWidth(math.max(24,self[key.."Group"]:GetWidth()-(key=="from" and 54 or 38)))
         end
