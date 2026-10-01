@@ -4,22 +4,12 @@ MOS.Services = MOS.Services or {}
 local RaidStatistics = {}
 MOS.Services.RaidStatistics = RaidStatistics
 
-local LOOT_RANKS = { macaque = true, guest = true, alt = true, baboon = true, chimp = true, silverback = true }
 local RAID_NAMES = { "Blackwing Lair", "Molten Core", "Onyxia's Lair", "Karazhan10", "Zul'Gurub", "Other" }
 
 function RaidStatistics.GetRaidNames() return RAID_NAMES end
 
-local function FindLootRank(value)
-    local note = string.lower(tostring(value or ""))
-    local word
-    for word in string.gfind(note, "%a+") do if LOOT_RANKS[word] then return word end end
-    return nil
-end
-
 local function ResolveLootRank(member)
-    local guildRank = string.lower(tostring(member and member.guildRank or ""))
-    if guildRank ~= "officer wukong" and guildRank ~= "chimp banker" then return member and member.guildRank or "Guest" end
-    return "chimp"
+    return MOS.Services.RankPolicy.GetLootAlias(member and member.guildRank) or (member and member.guildRank) or "Guest"
 end
 
 function RaidStatistics.BuildEntry(attendance, saveOptions)
@@ -90,7 +80,7 @@ function RaidStatistics.BuildSummary(entries, selectedRaids)
                 local key = string.lower(member.name or "")
                 local player = byName[key]
                 if not player then
-                    player = { name = member.name, class = member.class, guildRank = string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or member.guildRank, raids = 0, sr = 0, loot = 0, srItems = {}, lootItems = {} }
+                    player = { name = member.name, class = member.class, guildRank = MOS.Services.RankPolicy.GetDisplayName(member.guildRank), raids = 0, sr = 0, loot = 0, srItems = {}, lootItems = {} }
                     byName[key] = player; summary.players[table.getn(summary.players) + 1] = player
                 end
                 local attendanceValue=tonumber(member.attendance);if attendanceValue==nil then attendanceValue=1 end

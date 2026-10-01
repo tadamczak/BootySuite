@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.107 - 2026-10-01
+
+- Separate raid-session persistence and lifecycle state from addon composition, preserving existing workflows.
+- Centralize loot-rank aliases and display names; strengthen architecture and session regression checks.
+
 ## 0.5.0-dev.106 - 2026-10-01
 
 - Always apply Chimp loot rights to Chimp Banker, including saved raid and CSR calculations.

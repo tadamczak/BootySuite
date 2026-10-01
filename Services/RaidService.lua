@@ -219,12 +219,9 @@ local raidNameScratch = {}
 local defaultSoftReserveRanks = { silverback = true, chimp = true, baboon = true }
 local defaultHighlyContestedRanks = { silverback = true, chimp = true }
 local defaultReyCoinRanks = { silverback = true, chimp = true, baboon = true }
-local lootRankNames = { macaque = true, guest = true, alt = true, baboon = true, chimp = true, silverback = true }
-
 local function GetSoftReserveRank(member)
     local rank = string.lower(member.guildRank or "")
-    if rank ~= "officer wukong" and rank ~= "chimp banker" then return rank ~= "" and rank or "guest" end
-    return "chimp"
+    return MOS.Services.RankPolicy.GetLootAlias(rank) or (rank ~= "" and rank) or "guest"
 end
 
 local contestedSource, contestedNames = nil, {}
@@ -338,7 +335,8 @@ function RaidService.GetSoftReserveRollRights(itemLink)
                 local rank = GetSoftReserveRank(member)
                 local rule = rules and rules[rank]
                 local name = string.lower(member.name)
-                rankNames[name] = string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or (rank and rank ~= "" and rank) or (member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest"
+                local displayRank = MOS.Services.RankPolicy.GetDisplayName(member.guildRank)
+                rankNames[name] = (displayRank ~= member.guildRank and displayRank) or (rank and rank ~= "" and rank) or (member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest"
                 if (rule and rule.sr) or (not rule and defaultSoftReserveRanks[rank]) then
                     rankRights[name] = true
                 end

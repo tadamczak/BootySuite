@@ -1735,7 +1735,7 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
     row.level:SetText(tostring(member.level or ""))
     row.status:SetText(member.online and "Online" or "Offline")
     row.class:SetText(shorten(member.class, 12))
-    row.rank:SetText(shorten(string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or (member.guildRank ~= "" and member.guildRank or "Guest"), 18))
+    row.rank:SetText(shorten(MOS.Services.RankPolicy.GetDisplayName(member.guildRank ~= "" and member.guildRank or "Guest"), 18))
     local itemId = member.srItemIds and member.srItemIds[1]
     row.sr:SetText(itemId and MOS.UI.Components.GetItemLabel(itemId) or "")
     row.srHit.itemId = itemId

@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.106"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.107"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -600,38 +600,22 @@ RequestGuildAction = MOS.Modules.RosterManagement.CreateGuildActionHandler({
     printMessage = Print,
 })
 
-MOS.CompleteRaidSession = function(saveOptions)
-    if type(saveOptions) ~= "table" then
-        local enabled = saveOptions and true or false
-        saveOptions = { saveRaidStatistics = enabled, saveAttendance = enabled, saveCSR = enabled }
-    end
-    if IsTestRaid() then
-        MOS.Services.TestRaid.Stop()
-    else
-        local attendance = MOS.Database.GetRaidAttendance()
-        if attendance then
-            local savedAt = time()
-            local requestedRaidId=string.gsub(tostring(saveOptions.raidId or attendance.snapshotId or ""),"^%s+","");requestedRaidId=string.gsub(requestedRaidId,"%s+$","")
-            if requestedRaidId=="" or MOS.Database.HasSoftReserveSnapshot(requestedRaidId) or MOS.Database.HasRaidStatistic(requestedRaidId) then return false end
-            attendance.snapshotId=requestedRaidId;attendance._loadedSnapshotId=nil
-            attendance.lastSavedAt = savedAt; attendance._sessionDraft = nil
-            MOS.Services.RaidRes.SyncHistory(attendance)
-            if saveOptions.saveRaidStatistics or saveOptions.saveCSR then
-                local entry = MOS.Services.RaidStatistics.BuildEntry(attendance, saveOptions)
-                if entry then MOS.Database.StoreRaidStatistic(entry) end
-            end
-        end
-        -- The durable snapshot/statistics entry is complete. Do not leave the
-        -- same attendance object as the active session or VARIABLES_LOADED will
-        -- restore the raid immediately after the requested reload.
-        MOS.Database.StoreRaidAttendance(nil)
-    end
-    MOS.raidSessionDraft = false; MOS.raidSessionPaused = true; MOS.raidLiveTracking = false
-    MOS.raidScanReady = false; MOS.raidSessionContinuedContext = nil
-    raidHistoricalLoaded = false; selectedRaidMemberName = nil
-    MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD")
-    return true
-end
+local raidSessionService = MOS.Services.RaidSession.Create({
+    database = MOS.Database,
+    raidRes = MOS.Services.RaidRes,
+    raidStatistics = MOS.Services.RaidStatistics,
+    testRaid = MOS.Services.TestRaid,
+    now = function() return time() end,
+})
+local raidSessionController = MOS.Modules.RaidSessionController.Create({
+    state = MOS,
+    session = raidSessionService,
+    setHistoricalLoaded = function(value) raidHistoricalLoaded = value and true or false end,
+    clearSelection = function() selectedRaidMemberName = nil end,
+    showSavedPopup = function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD") end,
+})
+
+MOS.CompleteRaidSession = function(saveOptions) return raidSessionController:Complete(saveOptions) end
 
 MOS.Modules.RaidManagement.AttachActionHandlers({
     page = raidPage,
@@ -644,20 +628,9 @@ MOS.Modules.RaidManagement.AttachActionHandlers({
     shareMissingSrNames = MOS.Services.Raid.SendRaidWarningList,
     getAttendance = GetRaidAttendance,
     getRaidHistory = MOS.Database.GetSoftReserveHistory,
-    raidIdExists = function(raidId) return MOS.Database.HasSoftReserveSnapshot(raidId) or MOS.Database.HasRaidStatistic(raidId) end,
+    raidIdExists = function(raidId) return raidSessionService:RaidIdExists(raidId) end,
     deleteRaidSnapshot = MOS.Database.DeleteSoftReserveSnapshot,
-    loadRaidSnapshot = function(snapshotId)
-        local snapshots = MOS.Database.GetSoftReserveHistory()
-        local index
-        for index = 1, table.getn(snapshots) do
-            if snapshots[index].id == snapshotId then
-                local attendance = MOS.Services.RaidRes.RestoreSnapshot(snapshots[index])
-                MOS.Services.RaidRes.Reconcile(attendance, attendance)
-                return attendance
-            end
-        end
-        return nil
-    end,
+    loadRaidSnapshot = function(snapshotId) return raidSessionService:LoadSnapshot(snapshotId) end,
     setHistoricalLoaded = function(value) raidHistoricalLoaded = value and true or false end,
     getRules = function()
         local rules = MOS.Database.GetLootRules()
@@ -677,37 +650,17 @@ MOS.Modules.RaidManagement.AttachActionHandlers({
     isInRaid = IsActiveRaid,
     requestRosterScan = RequestRosterScan,
     saveRaidRoster = SaveActiveRaidRoster,
-    beginRaidSession = function()
-        MOS.raidSessionPaused = false; MOS.raidSessionDraft = true
-        MOS.raidSessionContinuedContext = nil
-        local attendance = GetRaidAttendance(); if attendance then attendance._sessionDraft = true end
-    end,
-    startNewRaid = function(raidId, raidName)
-        MOS.pendingRaidSessionId = raidId
-        MOS.pendingRaidName = raidName
-        MOS.Database.StoreRaidAttendance(nil)
-        raidHistoricalLoaded = false
-        MOS.raidSessionPaused = false; MOS.raidSessionDraft = true
-    end,
+    beginRaidSession = function() raidSessionController:Begin() end,
+    startNewRaid = function(raidId, raidName) raidSessionController:StartNew(raidId, raidName) end,
     saveRaidSession = function(saveOptions) return MOS.CompleteRaidSession(saveOptions) end,
-    quitRaidSession = function()
-        local wasTestRaid = IsTestRaid()
-        MOS.Services.TestRaid.Stop()
-        if not wasTestRaid then MOS.Database.StoreRaidAttendance(nil) end
-        MOS.raidSessionPaused = true; MOS.raidSessionDraft = false; MOS.raidLiveTracking = false
-        raidHistoricalLoaded = false; MOS.raidScanReady = false; selectedRaidMemberName = nil
-        MOS.raidSessionContinuedContext = nil
-    end,
-    continueRaidSession = function(contextKey)
-        MOS.raidSessionContinuedContext = contextKey
-        MOS.raidSessionPaused = false
-    end,
+    quitRaidSession = function() raidSessionController:Quit() end,
+    continueRaidSession = function(contextKey) raidSessionController:Continue(contextKey) end,
     dismissRaidStartReminder = function(contextKey) MOS.raidStartReminderContext = contextKey end,
     openRaidManagement = function()
         if not dashboard:IsVisible() then dashboard:Show() end
         ShowPage("raid")
     end,
-    startTestRaid = function() MOS.Services.TestRaid.Start(); MOS.raidLiveTracking = false; selectedRaidMemberName = nil end,
+    startTestRaid = function() raidSessionController:StartTest() end,
     refresh = function() RefreshRaidPage() end,
     printMessage = Print,
     showPopup = MOS.UI.Components.ShowOpaquePopup,
@@ -858,15 +811,7 @@ end
 MOS.Core.EventDispatcher.Attach(MOS, {
     VARIABLES_LOADED = function()
         EnsureDatabase()
-        local restoredAttendance = MOS.Database.GetRaidAttendance()
-        local restoredImport = restoredAttendance and restoredAttendance.softReserveImport
-        local restoredRaidId = restoredAttendance and (restoredAttendance.snapshotId or (restoredImport and restoredImport.id))
-        local hasRestorableRaid = restoredRaidId and restoredAttendance.sessionStartedAt and type(restoredAttendance.members) == "table"
-        MOS.raidScanReady = hasRestorableRaid and true or false
-        MOS.raidSessionDraft = hasRestorableRaid and restoredAttendance._sessionDraft and true or false
-        MOS.raidSessionPaused = false
-        raidHistoricalLoaded = false
-        if hasRestorableRaid then MOS.Services.RaidRes.Reconcile(restoredAttendance, restoredAttendance) end
+        raidSessionController:RestoreActive()
         MOS.Modules.Settings.SyncSavedControls(configurationPage.chatLogsCheck, configurationPage.raidAccordionControls.opacityField, configurationPage.raidAccordionControls.focusField)
         MOS.UI.Components.Dashboard.RestoreGeometry(dashboard, MuklaOfficerSuiteDB)
         MuklaOfficerSuiteDB.uiScale = nil
