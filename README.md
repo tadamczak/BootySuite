@@ -130,7 +130,7 @@ Statistics, CSR and Performance adapt their controls and tables to the window si
 
 ### Settings
 
-**UI > Roster > General > Player details style** selects **Collapsible** (the default expanded roster row) or **Window**, a member panel attached to the right of the main window. The panel shows guild details, editable notes when permitted, rank controls, Remove (with confirmation), and Group Invite. The choice is saved in settings profiles.
+**UI > Roster > General > Player details style** selects **Collapsible** (the default expanded roster row) or **Window**, a compact member panel attached to the right of the main window. The panel shows guild details, editable notes when permitted, rank controls, Remove (with confirmation), and Group Invite. Unavailable rank controls remain visible in grey. The choice is saved in settings profiles.
 
 **UI > Layout** can hide the status/version bar, guild logo, or addon name and ornaments. These options default to off. **Hide header bar** removes the entire header and moves window controls to a compact row inside the content. In top Tab View the gold outer edge moves below the tabs, which retain their position. Menu type and Use Icon Tabs share one row. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. In tab views, narrow headers hide side ornaments and align the title left so window controls remain accessible. These preferences are saved in profiles under **Profile > General**. Hiding every roster filter also removes its empty row.
 

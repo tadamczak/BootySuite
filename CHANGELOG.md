@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.93 - 2026-10-01
+
+- Compact and align the Window-style player details panel, including shorter note fields and smaller metadata labels.
+- Keep unavailable promote and demote controls visible in their disabled grey state.
+
 ## 0.5.0-dev.92 - 2026-10-01
 
 - Fix Guild Statistics loading in WoW 1.12 by creating clickable result rows as native buttons.
