@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.104 - 2026-10-01
+
+- Coalesce guild roster events and scan large rosters in bounded steps, committing only completed results.
+- Stop hidden roster rendering and cancel obsolete Live Tracking work; preserve explicit scans.
+- Update only changed target controls and progress values, with inactive animation handlers removed.
+
 ## 0.5.0-dev.103 - 2026-10-01
 
 - Bound temporary Loot Master restore history while preserving active awards and trades.

@@ -947,6 +947,8 @@ function RosterManagement.MountControllers(page, options)
         refreshButton = guildControls.refreshButton,
         startSharedScan = options.startSharedScan,
         requestScan = options.requestScan,
+        requestLiveScan = options.requestLiveScan,
+        cancelLiveScan = options.cancelLiveScan,
         printMessage = options.printMessage,
         buildSnapshot = options.buildSnapshot,
         storeSnapshot = options.storeSnapshot,
@@ -958,8 +960,24 @@ function RosterManagement.CreateRenderer(options)
     return options
 end
 
+local function IsRosterVisible(page)
+    if page.IsVisible then return page:IsVisible() end
+    return page:IsShown()
+end
+
+function RosterManagement.InvalidateView(renderer, resetScroll)
+    renderer.viewInvalidated = true
+    if resetScroll then renderer.resetScrollRequested = true end
+end
+
 function RosterManagement.RefreshView(renderer, data, guildName, resetScroll, sortKey, selectedMemberName)
     local page = renderer.page
+    if not IsRosterVisible(page) then
+        RosterManagement.InvalidateView(renderer, resetScroll)
+        return false
+    end
+    resetScroll = resetScroll or renderer.resetScrollRequested
+    renderer.viewInvalidated, renderer.resetScrollRequested = nil, nil
     RosterManagement.UpdateSectionHeader(page)
     if not RosterManagement.IsReady(page.dataController) then
         RosterManagement.SetDataVisible(page.visibilityController, false)
@@ -1060,31 +1078,36 @@ function RosterManagement.SetRefreshPending(controller, pending)
 end
 
 function RosterManagement.HandleGuildRosterUpdate(controller, scanCompleted, scanPending)
-    if not controller.liveTracking or scanCompleted or scanPending then return false end
-    local snapshot = controller.buildSnapshot(GetTime())
-    if not snapshot then return false end
-    controller.storeSnapshot(snapshot)
-    controller.ready = true
-    controller.refresh(false)
+    if not controller.liveTracking then return false end
+    if not MuklaOfficerSuiteDB.rosterLiveTrackingEnabled or not IsRosterVisible(controller.page) then
+        RosterManagement.DeactivateDataController(controller)
+        return false
+    end
+    if scanCompleted or scanPending or not controller.requestLiveScan then return false end
+    if not controller.requestLiveScan() then return false end
+    RosterManagement.SetRefreshPending(controller, true)
     return true
 end
 
 function RosterManagement.DeactivateDataController(controller)
-    if not controller.liveTracking then return end
+    if controller.cancelLiveScan and controller.cancelLiveScan() then
+        RosterManagement.SetRefreshPending(controller, false)
+    end
     controller.liveTracking = false
-    controller.refreshButton:SetInactive(controller.refreshPending)
+    if controller.refreshButton then controller.refreshButton:SetInactive(controller.refreshPending) end
 end
 
 function RosterManagement.ActivateDataController(controller, scanAlreadyStarted)
     MOS.Database.Ensure()
     if not MuklaOfficerSuiteDB.rosterLiveTrackingEnabled then
-        controller.liveTracking = false
-        controller.refreshButton:SetInactive(controller.refreshPending)
+        RosterManagement.DeactivateDataController(controller)
         return
     end
     controller.liveTracking = true
-    if not scanAlreadyStarted and not controller.requestScan("quiet") then
-        controller.liveTracking = false
+    if not scanAlreadyStarted then
+        if controller.requestLiveScan then
+            if controller.requestLiveScan() then RosterManagement.SetRefreshPending(controller, true) end
+        elseif not controller.requestScan("quiet") then controller.liveTracking = false end
     end
     controller.refreshButton:SetInactive(controller.refreshPending)
     controller.refreshButton:Hide()
@@ -1152,6 +1175,7 @@ function RosterManagement.AttachInteractions(options)
     page.footer:SetScript("OnSizeChanged", QueueSectionLayout)
     page.finishLayout = function()
         this:SetScript("OnUpdate", nil)
+        if not IsRosterVisible(this) then return end
         local currentWidth, currentHeight = this:GetWidth(), this:GetHeight()
         if RosterManagement.NeedsLayout(currentWidth, currentHeight, this.layoutWidth, this.layoutHeight, this.viewportChanged) then
             this.viewportChanged = nil
@@ -1161,6 +1185,7 @@ function RosterManagement.AttachInteractions(options)
     end
     page:SetScript("OnHide", function()
         this:SetScript("OnUpdate", nil); this.fittedPanel:Hide()
+        if this.dataController then RosterManagement.DeactivateDataController(this.dataController) end
         if this.memberMenu then this.memberMenu:Hide() end
         if this.memberReport then this.memberReport:Hide() end
         if this.noteEditor then this.noteEditor:Hide() end
@@ -1400,8 +1425,16 @@ end
 
 function RosterManagement.BindPermissionEvents(page)
     local watcher = MOS.UI.Components.CreateContainer(nil, page)
-    local function Refresh()
+    local function Refresh(force)
+        if not IsRosterVisible(page) then return end
         local C, service = MOS.UI.Components, MOS.Services.Roster
+        if service.ReadManagementState then
+            local flags, rank, rankCount, playerName = service.ReadManagementState()
+            if not force and watcher.managementFlags == flags and watcher.managementRank == rank
+                and watcher.managementRankCount == rankCount and watcher.managementPlayer == playerName then return end
+            watcher.managementFlags, watcher.managementRank = flags, rank
+            watcher.managementRankCount, watcher.managementPlayer = rankCount, playerName
+        end
         if service.CanManage("invite") then page.guildAddButton:Show() else page.guildAddButton:Hide() end
         if service.CanManage("control") then page.guildControlButton:Show() else page.guildControlButton:Hide() end
         if page.layoutControls then RosterManagement.LayoutChrome(page, page.layoutControls, page.footer.motd:GetText()) end
@@ -1416,8 +1449,8 @@ function RosterManagement.BindPermissionEvents(page)
             end
         end
     end
-    watcher:SetScript("OnEvent", Refresh)
-    watcher:SetScript("OnShow", function() watcher:RegisterEvent("GUILD_ROSTER_UPDATE"); watcher:RegisterEvent("PLAYER_GUILD_UPDATE"); Refresh() end)
+    watcher:SetScript("OnEvent", function() Refresh(false) end)
+    watcher:SetScript("OnShow", function() watcher:RegisterEvent("GUILD_ROSTER_UPDATE"); watcher:RegisterEvent("PLAYER_GUILD_UPDATE"); Refresh(true) end)
     watcher:SetScript("OnHide", function() watcher:UnregisterEvent("GUILD_ROSTER_UPDATE"); watcher:UnregisterEvent("PLAYER_GUILD_UPDATE") end)
     page.permissionWatcher = watcher
 end

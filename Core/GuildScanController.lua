@@ -4,42 +4,86 @@ MOS.Core = MOS.Core or {}
 local GuildScanController = {}
 MOS.Core.GuildScanController = GuildScanController
 
+local LIVE_ORIGIN = "roster_live"
+local TRAILING_DELAY, MAX_TRAILING_DELAY = 0.15, 1
+local READINESS_TIMEOUT, JOB_TIMEOUT = 15, 60
+
+local function CancelJob(controller, reason)
+    if controller.job and controller.cancelSnapshot then controller.cancelSnapshot(controller.job, reason) end
+    controller.job, controller.jobStartedAt = nil, nil
+end
+
+local function Fail(controller, reason)
+    controller.failureReason = reason
+    GuildScanController.Finish(controller)
+    controller.onFailure()
+end
+
+local function Retry(controller, now)
+    if controller.deadline and now >= controller.deadline then Fail(controller, "timeout"); return end
+    if controller.attempts < 6 then
+        controller.attempts = controller.attempts + 1
+        controller.frame.delay = 2.5
+        if controller.origin ~= LIVE_ORIGIN then
+            controller.printMessage("Guild roster is still loading. Request " .. controller.attempts .. "/6...")
+        end
+        controller.requestRoster()
+    else controller.frame.delay = 0.5 end
+end
+
 local function OnScanUpdate()
     local controller = this.controller
     if not controller.mode then
-        this.delay = nil
-        this:Hide()
+        this.delay = nil; this:SetScript("OnUpdate", nil); this:Hide()
         return
     end
-    this.delay = this.delay - arg1
+    this.delay = math.max(0, (this.delay or 0) - arg1)
     if this.delay > 0 then return end
-    if controller.tryComplete() then return end
-    if controller.deadline and GetTime() >= controller.deadline then
-        GuildScanController.Finish(controller)
-        controller.onFailure()
+    local now = GetTime()
+    if not controller.startSnapshot then
+        -- Explicit legacy factories remain supported; the composition root injects staged APIs.
+        if controller.tryComplete() then return end
+        Retry(controller, now)
         return
     end
-    if controller.attempts < 6 then
-        controller.attempts = controller.attempts + 1
-        this.delay = 2.5
-        controller.printMessage("Guild roster is still loading. Request " .. controller.attempts .. "/6...")
-        controller.requestRoster()
+    if not controller.job then
+        -- Readiness and invalidated restarts share the original request deadline.
+        -- A stable job can continue beyond it, bounded by the separate 60s timeout.
+        if controller.deadline and now >= controller.deadline then Fail(controller, "timeout"); return end
+        local job, reason = controller.startSnapshot(controller.startedAt, controller.generation)
+        if not job then controller.lastError = reason; Retry(controller, now); return end
+        controller.job, controller.jobStartedAt = job, now
+        controller.burstStartedAt = nil
+    end
+    if now - controller.jobStartedAt >= JOB_TIMEOUT then Fail(controller, "job_timeout"); return end
+    -- The service bounds captured roster rows and cached-key merge moves separately (32 / 256).
+    local status, reason = controller.stepSnapshot(controller.job, nil, controller.generation)
+    if status == "working" then return end
+    if status ~= "ready" then
+        controller.lastError = reason
+        CancelJob(controller, reason)
+        Retry(controller, now)
         return
     end
-    this.delay = 0.5
+    local snapshot
+    snapshot, reason = controller.finishSnapshot(controller.job, controller.generation)
+    controller.job, controller.jobStartedAt = nil, nil
+    if not snapshot then controller.lastError = reason; Retry(controller, now); return end
+    if not controller.tryComplete(snapshot) then
+        controller.lastError = "commit_rejected"
+        Retry(controller, now)
+    end
 end
 
 function GuildScanController.Create(options)
     local controller = options
-    controller.mode = nil
-    controller.startedAt = nil
-    controller.attempts = 0
-    controller.deadline = nil
+    controller.mode, controller.startedAt, controller.deadline = nil, nil, nil
+    controller.attempts, controller.generation = 0, 0
     controller.frame = CreateFrame("Frame", "MuklaOfficerSuiteRosterRequestFrame", UIParent)
     controller.frame.controller = controller
     controller.frame.delay = nil
     controller.frame:Hide()
-    controller.frame:SetScript("OnUpdate", OnScanUpdate)
+    controller.frame:SetScript("OnUpdate", nil)
     MOS.guildScanController = controller
     return controller
 end
@@ -56,8 +100,10 @@ local function Begin(controller, mode, delay)
     controller.mode = mode or "manual"
     controller.startedAt = GetTime()
     controller.attempts = 1
-    controller.deadline = controller.startedAt + 15
+    controller.deadline = controller.startedAt + READINESS_TIMEOUT
+    controller.lastError, controller.failureReason = nil, nil
     controller.frame.delay = delay
+    controller.frame:SetScript("OnUpdate", OnScanUpdate)
     controller.frame:Show()
     controller.onStart(controller.mode, controller)
     return true
@@ -84,12 +130,45 @@ function GuildScanController.Queue(controller)
     return Begin(controller, "quiet", 0.75)
 end
 
+local function ScheduleTrailing(controller)
+    local now = GetTime()
+    controller.burstStartedAt = controller.burstStartedAt or now
+    controller.frame.delay = math.max(0, math.min(now + TRAILING_DELAY, controller.burstStartedAt + MAX_TRAILING_DELAY) - now)
+end
+
+function GuildScanController.QueueLive(controller)
+    if controller.mode then
+        if controller.origin ~= LIVE_ORIGIN then return false end
+        ScheduleTrailing(controller)
+        return true
+    end
+    controller.origin = LIVE_ORIGIN
+    if not Begin(controller, "quiet", TRAILING_DELAY) then controller.origin = nil; return false end
+    controller.burstStartedAt = controller.startedAt
+    return true
+end
+
+function GuildScanController.HandleRosterUpdate(controller)
+    controller.generation = controller.generation + 1
+    if not controller.mode then return false end
+    CancelJob(controller, "roster_changed")
+    ScheduleTrailing(controller)
+    return true
+end
+
+function GuildScanController.CancelLive(controller)
+    if controller.origin ~= LIVE_ORIGIN then return false end
+    GuildScanController.Finish(controller)
+    controller.origin = nil
+    return true
+end
+
 function GuildScanController.Finish(controller)
-    controller.mode = nil
-    controller.startedAt = nil
-    controller.attempts = 0
-    controller.deadline = nil
+    CancelJob(controller, "finished")
+    controller.mode, controller.startedAt, controller.deadline = nil, nil, nil
+    controller.attempts, controller.burstStartedAt = 0, nil
     controller.frame.delay = nil
+    controller.frame:SetScript("OnUpdate", nil)
     controller.frame:Hide()
 end
 
