@@ -985,7 +985,7 @@ function RaidService.SaveRoster()
         for previousIndex = 1, table.getn(previousAttendance.members) do
             local previousMember = previousAttendance.members[previousIndex]
             previousLoot[string.lower(previousMember.name or "")] = previousMember.loot or {}
-            previousReserves[string.lower(previousMember.name or "")] = { text = previousMember.sr or "", itemIds = previousMember.srItemIds }
+            previousReserves[string.lower(previousMember.name or "")] = { text = previousMember.sr or "", itemIds = previousMember.srItemIds, sourceName = previousMember.srSourceName }
             previousReyCoin[string.lower(previousMember.name or "")] = previousMember.reyCoinUsedAt
             previousReyCoinItems[string.lower(previousMember.name or "")] = previousMember.reyCoinItemLink
             previousSrConsumed[string.lower(previousMember.name or "")] = previousMember.srConsumedAt
@@ -1016,6 +1016,7 @@ function RaidService.SaveRoster()
                 guildMember = guildMember and true or false,
                 sr = previousReserve and previousReserve.text or "",
                 srItemIds = previousReserve and previousReserve.itemIds or nil,
+                srSourceName = previousReserve and previousReserve.sourceName or nil,
                 srConsumedAt = previousSrConsumed[string.lower(name)],
                 reyCoinUsedAt = previousReyCoin[string.lower(name)],
                 reyCoinItemLink = previousReyCoinItems[string.lower(name)],

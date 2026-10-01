@@ -279,10 +279,16 @@ function RaidResService.RemoveMemberReservation(attendance, memberName)
     local unmatchedNames = importInfo.unmatchedNames or {}
     local reservationExists = false
     for index = 1, table.getn(unmatchedReservations) do
-        if NormalizeName(unmatchedReservations[index].name) == NormalizeName(releasedName) then reservationExists = true; break end
+        if NormalizeName(unmatchedReservations[index].name) == NormalizeName(releasedName) then
+            unmatchedReservations[index].manualOnly = true
+            reservationExists = true
+            break
+        end
     end
     if not reservationExists then
-        table.insert(unmatchedReservations, { name = releasedName, itemIds = releasedItemIds })
+        -- Explicit removal is durable assignment intent, not a new import that
+        -- may be automatically assigned on the next roster refresh.
+        table.insert(unmatchedReservations, { name = releasedName, itemIds = releasedItemIds, manualOnly = true })
         table.insert(unmatchedNames, releasedName)
         table.sort(unmatchedReservations, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
         table.sort(unmatchedNames)
@@ -343,16 +349,26 @@ function RaidResService.Reconcile(previousAttendance, attendance)
     attendance.sessionStartedAt = previousAttendance.sessionStartedAt
     attendance.lastSavedAt = previousAttendance.lastSavedAt
     attendance._sessionDraft = previousAttendance._sessionDraft
-    local reservationsByName = {}
+    local reservationsByName, manualReservations, previousAssignmentState = {}, {}, {}
     local index
     for index = 1, table.getn(previousImport.unmatchedReservations or {}) do
         local reservation = previousImport.unmatchedReservations[index]
-        reservationsByName[NormalizeName(reservation.name)] = { name = reservation.name, itemIds = reservation.itemIds }
+        if reservation.manualOnly == true then
+            table.insert(manualReservations, { name = reservation.name, itemIds = reservation.itemIds, manualOnly = true })
+        else
+            reservationsByName[NormalizeName(reservation.name)] = { name = reservation.name, itemIds = reservation.itemIds }
+        end
     end
     for index = 1, table.getn(previousAttendance.members or {}) do
         local member = previousAttendance.members[index]
-        if member.srItemIds and table.getn(member.srItemIds) > 0 then
-            reservationsByName[NormalizeName(member.name)] = { name = member.srSourceName or member.name, itemIds = member.srItemIds }
+        local key = NormalizeName(member.name)
+        local assigned = member.srItemIds and table.getn(member.srItemIds) > 0
+        -- nil means a new roster member, false means an existing member with
+        -- no assignment, true means a previous assignment may be carried over.
+        -- This preserves saved assignments even for snapshots without a marker.
+        previousAssignmentState[key] = previousAssignmentState[key] == true or assigned and true or false
+        if assigned then
+            reservationsByName[key] = { name = member.srSourceName or member.name, itemIds = member.srItemIds }
         end
     end
 
@@ -363,7 +379,7 @@ function RaidResService.Reconcile(previousAttendance, attendance)
         local reservation = reservationsByName[key]
         if member.srItemIds and table.getn(member.srItemIds) > 0 then
             reservationsByName[key] = nil
-        elseif reservation then
+        elseif reservation and previousAssignmentState[key] ~= false then
             member.srItemIds = reservation.itemIds
             member.srSourceName = reservation.name
             local labels, itemIndex = {}, nil
@@ -376,11 +392,12 @@ function RaidResService.Reconcile(previousAttendance, attendance)
         end
     end
 
-    local unmatchedNames, unmatchedReservations = {}, {}
+    local unmatchedNames, unmatchedReservations = {}, manualReservations
+    for index = 1, table.getn(manualReservations) do table.insert(unmatchedNames, manualReservations[index].name) end
     local _, reservation
     for _, reservation in pairs(reservationsByName) do
-        unmatchedNames[table.getn(unmatchedNames) + 1] = reservation.name
-        unmatchedReservations[table.getn(unmatchedReservations) + 1] = reservation
+        table.insert(unmatchedNames, reservation.name)
+        table.insert(unmatchedReservations, reservation)
     end
     table.sort(missingNames); table.sort(unmatchedNames)
     table.sort(unmatchedReservations, function(a, b) return string.lower(a.name or "") < string.lower(b.name or "") end)
@@ -428,7 +445,7 @@ function RaidResService.BuildSnapshot(attendance)
     for index = 1, table.getn(importInfo.unmatchedReservations or {}) do
         local reservation = importInfo.unmatchedReservations[index]; local itemIds = {}
         for itemIndex = 1, table.getn(reservation.itemIds or {}) do itemIds[itemIndex] = reservation.itemIds[itemIndex] end
-        table.insert(snapshot.unmatched, { name = reservation.name, itemIds = itemIds })
+        table.insert(snapshot.unmatched, { name = reservation.name, itemIds = itemIds, manualOnly = reservation.manualOnly == true and true or nil })
     end
     for index = 1, table.getn(importInfo.missingNames or {}) do snapshot.missingNames[index] = importInfo.missingNames[index] end
     return snapshot
@@ -459,7 +476,7 @@ function RaidResService.RestoreSnapshot(snapshot)
     for index = 1, table.getn(snapshot.unmatched or {}) do
         local source, ids = snapshot.unmatched[index], {}
         for itemIndex = 1, table.getn(source.itemIds or {}) do ids[itemIndex] = source.itemIds[itemIndex] end
-        unmatched[index] = { name = source.name, itemIds = ids }; unmatchedNames[index] = source.name
+        unmatched[index] = { name = source.name, itemIds = ids, manualOnly = source.manualOnly == true and true or nil }; unmatchedNames[index] = source.name
     end
     for index = 1, table.getn(snapshot.missingNames or {}) do missingNames[index] = snapshot.missingNames[index] end
     local attendance = {
