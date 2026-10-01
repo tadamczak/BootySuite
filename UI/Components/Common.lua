@@ -867,6 +867,26 @@ function UI.CreateGoldToolbarButton(parent, iconKey)
     return button
 end
 
+-- Reusable lightweight table-row accents. These avoid a full nine-slice per
+-- pooled row while retaining the project's one-pixel gold treatment.
+function UI.CreateProjectRowDecorations(row)
+    local border, index = {}, nil
+    for index = 1, 4 do
+        local texture = UI.CreateTexture(row, nil, "BORDER")
+        texture:SetTexture("Interface\\Buttons\\WHITE8X8"); texture:SetVertexColor(0.95, 0.72, 0.18, 1); texture:Hide(); border[index] = texture
+    end
+    border[1]:SetPoint("TOPLEFT",row,"TOPLEFT",0,0);border[1]:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0);border[1]:SetHeight(1)
+    border[2]:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",0,0);border[2]:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",0,0);border[2]:SetHeight(1)
+    border[3]:SetPoint("TOPLEFT",row,"TOPLEFT",0,0);border[3]:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",0,0);border[3]:SetWidth(1)
+    border[4]:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0);border[4]:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",0,0);border[4]:SetWidth(1)
+    local left = UI.CreateTexture(row,nil,"BORDER");left:SetTexture("Interface\\Buttons\\WHITE8X8");left:SetVertexColor(0.95,0.72,0.18,1);left:SetWidth(1);left:Hide()
+    return border,left
+end
+
+function UI.CreateClassIcon(parent, size)
+    local icon=UI.CreateTexture(parent,nil,"ARTWORK");icon:SetWidth(size or 16);icon:SetHeight(size or 16);icon:Hide();return icon
+end
+
 function UI.AttachPlaceholder(field, text)
     local label = UI.CreateLabel(field, nil, "OVERLAY", "GameFontDisableSmall")
     label:SetPoint("LEFT", field, "LEFT", 6, 0); label:SetText(text)
