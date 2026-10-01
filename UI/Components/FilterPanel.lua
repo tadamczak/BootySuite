@@ -18,7 +18,7 @@ local function SetCaption(toggle, values, selected, allSelectedCaption, owner)
         if selected[values[index]] then table.insert(captions, tostring(values[index])) end
     end
     if table.getn(captions) == table.getn(values or {}) and table.getn(captions) > 0 and allSelectedCaption then toggle:SetText(allSelectedCaption)
-    elseif table.getn(captions) == 0 then toggle:SetText("None")
+    elseif table.getn(captions) == 0 then toggle:SetText(owner.emptyMeansAll and (allSelectedCaption or "All") or "None")
     elseif table.getn(captions) == 1 then toggle:SetText(captions[1])
     else toggle:SetText(table.getn(captions) .. " selected") end
     if UI.FitButtonLabel then UI.FitButtonLabel(toggle, math.max(1, toggle:GetWidth() - 28)) end
@@ -68,7 +68,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
         panel:SetWidth(panelWidth)
     end
     panel.selectAll:ClearAllPoints()
-    panel.selectAll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", padding, panel.contentPadding or 9)
+    panel.selectAll:SetPoint("BOTTOM", panel, "BOTTOM", 0, panel.contentPadding or 9)
     panel:SetHeight(panel.contentPadding and (padding * 2 + 22 + table.getn(values) * 20) or (38 + table.getn(values) * 20))
 
     local optionIndex

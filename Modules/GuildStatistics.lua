@@ -6,6 +6,15 @@ local GuildStatistics = {}
 MOS.Modules.GuildStatistics = GuildStatistics
 
 local function Lower(value) return string.lower(tostring(value or "")) end
+local guildGroupRowColor={0.13,0.10,0.03}
+local guildStripeColor={1,1,1}
+local function AddUniqueMember(groups, groupName, memberName)
+    local group=groups[groupName]
+    if not group then group={};groups[groupName]=group end
+    if group[memberName] then return 0 end
+    group[memberName]=true
+    return 1
+end
 local function DisplayRank(value)
     if value == nil or value == "" then return "Unknown" end
     return Lower(value) == "officer wukong" and "Officer (Chimp)" or tostring(value)
@@ -136,11 +145,16 @@ end
 
 local function BuildEntries(controller, data)
     ClearArray(controller.table.memberScratch); ClearArray(controller.table.entries)
-    controller.rawRanks = controller.rawRanks or {}; controller.rawRankOrder = controller.rawRankOrder or {}; controller.rawClasses = controller.rawClasses or {}; controller.rawLevels = controller.rawLevels or {0,0,0}
-    controller.rawRanks = {}; controller.rawRankOrder = {}; controller.rawClasses = {}; controller.rawLevels[1]=0;controller.rawLevels[2]=0;controller.rawLevels[3]=0
+    controller.rawRanks = {}; controller.rawRankOrder = {}; controller.rawClasses = {}; controller.rawLevels = {0,0,0}
+    controller.rawRankMembers={};controller.rawClassMembers={};controller.rawLevelMembers={}
     local ranks, classes, rankSeen, classSeen = {}, {}, {}, {}
+    local rankHasSelection,classHasSelection=false,false
+    local selectedName
+    for selectedName in pairs(controller.selectedRanks) do if controller.selectedRanks[selectedName] then rankHasSelection=true;break end end
+    for selectedName in pairs(controller.selectedClasses) do if controller.selectedClasses[selectedName] then classHasSelection=true;break end end
     local query = Lower(controller.search:GetText())
     local level = tonumber(controller.level:GetText())
+    local effectiveGroupBy=controller.rawMode and "none" or controller.groupBy
     local index
     for index = 1, table.getn(data.members) do
         local member = data.members[index]
@@ -150,14 +164,17 @@ local function BuildEntries(controller, data)
         if controller.knownRanks[rank] == nil then controller.knownRanks[rank] = true; controller.selectedRanks[rank] = true end
         if controller.knownClasses[className] == nil then controller.knownClasses[className] = true; controller.selectedClasses[className] = true end
         local matchesQuery = query == "" or string.find(Lower(member.name), query, 1, true) or string.find(Lower(rank), query, 1, true) or string.find(Lower(className), query, 1, true)
-        local rankMatches = not controller.rankGroup.panel.selectionTouched or controller.selectedRanks[rank]
-        local classMatches = not controller.classGroup.panel.selectionTouched or controller.selectedClasses[className]
+        local rankMatches = not controller.rankGroup.panel.selectionTouched or not rankHasSelection or controller.selectedRanks[rank]
+        local classMatches = not controller.classGroup.panel.selectionTouched or not classHasSelection or controller.selectedClasses[className]
         if rankMatches and classMatches and (not level or tonumber(member.level) == level) and matchesQuery then
-            table.insert(controller.table.memberScratch,CreateWrappedMember(member,MemberGroupValue(member,controller.groupBy),controller.groupBy=="level" and tonumber(member.level) or nil,controller))
-            controller.rawRanks[rank]=(controller.rawRanks[rank] or 0)+1;controller.rawClasses[className]=(controller.rawClasses[className] or 0)+1
+            table.insert(controller.table.memberScratch,CreateWrappedMember(member,MemberGroupValue(member,effectiveGroupBy),effectiveGroupBy=="level" and tonumber(member.level) or nil,controller))
+            local memberKey=Lower(member.name)
+            controller.rawRanks[rank]=(controller.rawRanks[rank] or 0)+AddUniqueMember(controller.rawRankMembers,rank,memberKey)
+            controller.rawClasses[className]=(controller.rawClasses[className] or 0)+AddUniqueMember(controller.rawClassMembers,className,memberKey)
             controller.rawRankOrder[rank]=math.min(controller.rawRankOrder[rank] or 999,tonumber(member.rankIndex) or 999)
             local memberLevel=tonumber(member.level) or 0
-            if memberLevel<=30 then controller.rawLevels[1]=controller.rawLevels[1]+1 elseif memberLevel<60 then controller.rawLevels[2]=controller.rawLevels[2]+1 else controller.rawLevels[3]=controller.rawLevels[3]+1 end
+            local levelBand=memberLevel<=30 and 1 or (memberLevel<60 and 2 or 3)
+            controller.rawLevels[levelBand]=controller.rawLevels[levelBand]+AddUniqueMember(controller.rawLevelMembers,levelBand,memberKey)
         end
     end
     table.sort(ranks, function(a,b) return Lower(a)<Lower(b) end); table.sort(classes, function(a,b) return Lower(a)<Lower(b) end)
@@ -167,12 +184,12 @@ local function BuildEntries(controller, data)
     local previousGroup, groupEntry, count = nil, nil, 0
     for index = 1, table.getn(controller.table.memberScratch) do
         local wrapped = controller.table.memberScratch[index]
-        if controller.groupBy ~= "none" and wrapped.group ~= previousGroup then
+        if effectiveGroupBy ~= "none" and wrapped.group ~= previousGroup then
             groupEntry = { kind = "group", value = wrapped.group, count = 0 }
             table.insert(controller.table.entries, groupEntry); previousGroup = wrapped.group
         end
-        if groupEntry and controller.groupBy ~= "none" then groupEntry.count = groupEntry.count + 1 end
-        if controller.groupBy == "none" or controller.expandedGroups[wrapped.group] then table.insert(controller.table.entries, { kind = "member", member = wrapped.member, child = controller.groupBy ~= "none", rowIndex = groupEntry and groupEntry.count or count + 1 }) end
+        if groupEntry and effectiveGroupBy ~= "none" then groupEntry.count = groupEntry.count + 1 end
+        if effectiveGroupBy == "none" or controller.expandedGroups[wrapped.group] then table.insert(controller.table.entries, { kind = "member", member = wrapped.member, child = effectiveGroupBy ~= "none", rowIndex = groupEntry and groupEntry.count or count + 1 }) end
         count = count + 1
     end
     if controller.rawMode then
@@ -183,7 +200,10 @@ local function BuildEntries(controller, data)
         for name,value in pairs(controller.rawClasses) do table.insert(rawClassList,{name=name,count=value}) end
         table.sort(rawRankList,function(a,b) if a.index==b.index then return Lower(a.name)<Lower(b.name) end return a.index>b.index end);table.sort(rawClassList,function(a,b)return Lower(a.name)<Lower(b.name) end)
         local function AddRawSection(rawKey,title,entries,kind)
-            table.insert(controller.table.entries,{kind="rawHeader",value=title,rawKey=rawKey,count=table.getn(entries)})
+            local memberCount=0
+            local countIndex
+            for countIndex=1,table.getn(entries) do memberCount=memberCount+(tonumber(entries[countIndex].count) or 0) end
+            table.insert(controller.table.entries,{kind="rawHeader",value=title,rawKey=rawKey,count=memberCount})
             if controller.expandedRawSections[rawKey] then
                 local rawIndex
                 for rawIndex=1,table.getn(entries) do
@@ -195,7 +215,11 @@ local function BuildEntries(controller, data)
         AddRawSection("rank","Members by Rank",rawRankList,"raw")
         local classEntries={};for index=1,table.getn(rawClassList) do table.insert(classEntries,{name=rawClassList[index].name,count=rawClassList[index].count,className=rawClassList[index].name}) end
         AddRawSection("class","Members by Class",classEntries,"rawClass")
-        AddRawSection("level","Members by Level",{{name="1 - 30lvl",count=controller.rawLevels[1]},{name="31 - 59lvl",count=controller.rawLevels[2]},{name="60lvl",count=controller.rawLevels[3]}},"raw")
+        local levelEntries={}
+        if controller.rawLevels[1]>0 then table.insert(levelEntries,{name="1 - 30lvl",count=controller.rawLevels[1]}) end
+        if controller.rawLevels[2]>0 then table.insert(levelEntries,{name="31 - 59lvl",count=controller.rawLevels[2]}) end
+        if controller.rawLevels[3]>0 then table.insert(levelEntries,{name="60lvl",count=controller.rawLevels[3]}) end
+        AddRawSection("level","Members by Level",levelEntries,"raw")
     end
     return count
 end
@@ -221,10 +245,10 @@ local function SetRowDecorations(row, kind, child, stripeIndex)
     UI.SetProjectButtonOutline(row, kind=="group" or kind=="rawHeader")
     row.childBorder:Hide();row.classIcon:Hide()
     if kind=="group" or kind=="rawHeader" then
-        row:SetBackdropColor(0.13,0.10,0.03,0.9)
+        UI.SetRowColor(row,guildGroupRowColor,0.9)
     elseif stripeIndex and math.mod(stripeIndex,2)==0 then
-        row:SetBackdropColor(unpack(UI.Theme.colors.rowAlternate))
-    else row:SetBackdropColor(0,0,0,0) end
+        UI.SetRowColor(row,guildStripeColor,0.14)
+    else UI.SetRowColor(row,guildStripeColor,0.025) end
     if child then
         row.childBorder:ClearAllPoints();row.childBorder:SetPoint("TOPLEFT",row,"TOPLEFT",12,0);row.childBorder:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",12,0);row.childBorder:Show()
     end
@@ -262,7 +286,7 @@ local function RenderTable(controller)
                 row.classIcon:ClearAllPoints();row.classIcon:SetPoint("LEFT",row,"LEFT",iconInset,0);SetClassIcon(row.classIcon,member.class);row.classIcon:Show()
                 UI.Table.Cell(row.name, row, x + nameInset, columns[1].width - nameInset - 4, 23, member.name); x = x + columns[1].width
                 local color = ClassColor(member.class); row.name:SetTextColor(color.r or color[1], color.g or color[2], color.b or color[3])
-                UI.Table.Cell(row.class, row, x, columns[2].width - 4, 23, DisplayClass(member.class)); x = x + columns[2].width
+                UI.Table.Cell(row.class, row, x, columns[2].width - 4, 23, DisplayClass(member.class)); row.class:SetTextColor(color.r or color[1],color.g or color[2],color.b or color[3]); x = x + columns[2].width
                 UI.Table.Cell(row.rank, row, x, columns[3].width - 4, 23, DisplayRank(member.rank)); x = x + columns[3].width
                 UI.Table.Cell(row.level, row, x, columns[4].width - 2, 23, member.level or "")
                 row.class:Show(); row.rank:Show(); row.level:Show()
@@ -285,7 +309,7 @@ function GuildStatistics.CreateView(host, styleButton, refresh)
     view.titleSeparator = UI.CreateHeading(page, "", 1, "white"); view.titleSeparator:SetText("|"); view.titleSeparator:SetTextColor(1,1,1)
     view.guildTitle = UI.CreateHeading(page, "", 1, "orange"); view.guildTitle:SetText("Guild")
     local headingFont,_,headingFlags=view.guildTitle:GetFont();view.titleSeparator:SetFont(headingFont,13,headingFlags);view.guildTitle:SetFont(headingFont,13,headingFlags)
-    view.actionPanel=UI.CreateToolbarSurface(page,true,true)
+    view.actionPanel=UI.CreateToolbarSurface(page,true,true);UI.AddToolbarBackground(view.actionPanel,0.42)
     view.refreshButton = UI.CreateControl(nil, view.actionPanel); view.refreshButton:SetWidth(108); view.refreshButton:SetHeight(26); styleButton(view.refreshButton, "Refresh Data"); view.refreshButton:Hide()
     UI.SetClassicButtonIcon(view.refreshButton, "reset", 13, 7, 0); UI.SetClassicButtonLabelOffset(view.refreshButton, 2)
     view.rawButton=UI.CreateControl(nil,view.actionPanel);view.rawButton:SetWidth(92);view.rawButton:SetHeight(26);styleButton(view.rawButton,"Raw Data");view.rawButton:Hide()
@@ -296,8 +320,8 @@ function GuildStatistics.CreateView(host, styleButton, refresh)
     view.scanButton = UI.CreateControl(nil, page); view.scanButton:SetWidth(160); view.scanButton:SetHeight(26); styleButton(view.scanButton, "Scan Guild Statistics")
     view.empty = UI.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall"); view.empty:SetJustifyH("CENTER"); view.empty:Hide()
     view.filterPanel = UI.CreateToolbarSurface(page, false, true)
-    view.rankGroup = CreateFilterGroup(view.filterPanel, "Rank", 88);view.rankGroup.panel.allSelectedCaption="Rank";view.rankGroup.button.mosLabelJustify="LEFT"
-    view.classGroup = CreateFilterGroup(view.filterPanel, "Class", 96);view.classGroup.panel.allSelectedCaption="Class";view.classGroup.button.mosLabelJustify="LEFT"
+    view.rankGroup = CreateFilterGroup(view.filterPanel, "Rank", 88);view.rankGroup.panel.allSelectedCaption="Rank";view.rankGroup.panel.emptyMeansAll=true;view.rankGroup.button.mosLabelJustify="LEFT"
+    view.classGroup = CreateFilterGroup(view.filterPanel, "Class", 96);view.classGroup.panel.allSelectedCaption="Class";view.classGroup.panel.emptyMeansAll=true;view.classGroup.button.mosLabelJustify="LEFT"
     view.groupGroup = UI.CreateContainer(nil, view.filterPanel); view.groupGroup:SetWidth(112); view.groupGroup:SetHeight(24); view.groupGroup.mosFlowWidth=112
     local groupChoices={{value="none",text="None"},{value="class",text="Class"},{value="rank",text="Rank"},{value="level",text="Level"}}
     view.groupLabel=UI.CreateLabel(view.groupGroup,nil,"OVERLAY","GameFontHighlightSmall");view.groupLabel:SetPoint("LEFT",view.groupGroup,"LEFT",0,0);view.groupLabel:SetText("Group by:")
@@ -325,6 +349,11 @@ end
 
 local function OnStatisticsScan() this.statisticsController.startScan("statistics") end
 local function SetControlText(control,text) if control.label then control.label:SetText(text) else control:SetText(text) end end
+local function SetGroupByEnabled(view,enabled)
+    if enabled then view.groupButton:Enable();view.groupButton.label:SetTextColor(1,1,1);view.groupButton.arrow:SetVertexColor(1,1,1)
+    else view.groupPanel:Hide();view.groupButton:Disable();view.groupButton.label:SetTextColor(0.45,0.45,0.45);view.groupButton.arrow:SetVertexColor(0.45,0.45,0.45) end
+    if UI.SetClassicButtonDisabled then UI.SetClassicButtonDisabled(view.groupButton,not enabled) end
+end
 
 function GuildStatistics.CreateController(options)
     local view=options.view
@@ -336,7 +365,7 @@ function GuildStatistics.CreateController(options)
         GuildStatistics.Refresh(options)
     end
     view.rawButton.statisticsController=options;view.rawButton:SetScript("OnClick",function()
-        local controller=this.statisticsController;controller.rawMode=not controller.rawMode;SetControlText(this,controller.rawMode and "Table Data" or "Raw Data");GuildStatistics.Refresh(controller)
+        local controller=this.statisticsController;controller.rawMode=not controller.rawMode;SetControlText(this,controller.rawMode and "Table Data" or "Raw Data");SetGroupByEnabled(controller.view,not controller.rawMode);GuildStatistics.Refresh(controller)
     end)
     options.page.statisticsController=options;view.host.statisticsController=options;view.scanButton.statisticsController=options;view.refreshButton.statisticsController=options
     view.scanButton:SetScript("OnClick",OnStatisticsScan);view.refreshButton:SetScript("OnClick",OnStatisticsScan)
@@ -400,7 +429,7 @@ local function LayoutContent(width,height,controller)
         if sameRowWidth>=searchMinimum then searchGroupWidth=math.min(searchMaximum,sameRowWidth)
         else searchGroupWidth=math.min(searchMaximum,math.max(searchMinimum,flowWidth)) end
         view.searchGroup.mosFlowWidth=searchGroupWidth
-        local filterBottom=UI.LayoutFlow(view.filterPanel,view.flow,8,8,flowWidth,6)+8;view.filterPanel:SetHeight(filterBottom)
+        local filterBottom=UI.LayoutFlow(view.filterPanel,view.flow,8,6,flowWidth,6)+6;view.filterPanel:SetHeight(filterBottom)
         view.rankGroup.button:SetWidth(view.rankGroup:GetWidth());view.classGroup.button:SetWidth(view.classGroup:GetWidth())
         view.groupButton:SetWidth(64);view.groupButton:ClearAllPoints();view.groupButton:SetPoint("LEFT",view.groupLabel,"RIGHT",4,0)
         view.level:SetWidth(32);view.level:ClearAllPoints();view.level:SetPoint("LEFT",view.levelLabel,"RIGHT",4,0)

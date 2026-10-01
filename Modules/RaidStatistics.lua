@@ -66,9 +66,9 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     UI.FilterPanel.Refresh(controller.raidPanel,raidNames,controller.selectedRaids,function() controller:Refresh() end,true,true)
     controller.raidChecks=controller.raidPanel.options
     controller.listTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controller.listTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -120); controller.listTitle:SetText("Raids")
-    controller.historyToggle = MOS.UI.Components.CreateButton(page, nil, "", 22, 20)
+    controller.historyToggle = MOS.UI.Components.CreateButton(page, nil, "", 18, 18)
     MOS.UI.Components.SetClassicButtonCompact(controller.historyToggle, true); MOS.UI.Components.AttachGoldHoverBorder(controller.historyToggle, 0.35, 0.35, 0.35, 1)
-    UI.SetChevronButtonIcon(controller.historyToggle,"left",13)
+    UI.SetChevronButtonIcon(controller.historyToggle,"left",11)
     MOS.UI.Components.AttachTooltip(controller.historyToggle, "Saved raids", "Collapse or restore the saved raid list.")
     controller.historyToggle:SetScript("OnClick", function() controller.historyCollapsed = not controller.historyCollapsed; controller:Refresh() end)
     controller.historyHeaders = {}
@@ -296,18 +296,18 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local remaining=math.max(96,height-top-8)
         local historyHeight=stacked and math.max(56,math.min(84,math.floor((remaining-100)/28)*28)) or remaining-44
         self.listTitle:ClearAllPoints();self.listTitle:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);self.listTitle:SetWidth(historyWidth);self.listTitle:SetJustifyH("LEFT")
-        self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8+historyWidth-22,-top+1);UI.SetChevronButtonIcon(self.historyToggle,self.historyCollapsed and "right" or "left",13)
+        self.historyToggle:SetWidth(18);self.historyToggle:SetHeight(18);self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8+historyWidth-18,-top);UI.SetChevronButtonIcon(self.historyToggle,self.historyCollapsed and "right" or "left",11)
         local headerX=8
         local headerName=math.floor(historyWidth*0.38);local headerRaid=math.floor(historyWidth*0.34);local headerTime=historyWidth-headerName-headerRaid
         local headerWidths={headerName,headerRaid,headerTime}
         for index=1,3 do local header=self.historyHeaders[index];header:ClearAllPoints();header:SetPoint("TOPLEFT",page,"TOPLEFT",headerX,-top-24);header:SetWidth(headerWidths[index]);header:SetHeight(18);headerX=headerX+headerWidths[index] end
         self.historyRect=self.historyRect or {}
         self.historyRect.x=8;self.historyRect.y=top+44;self.historyRect.width=historyWidth;self.historyRect.height=historyHeight
-        local playerX=self.historyCollapsed and 38 or (stacked and 8 or 8+historyWidth+12)
-        local playerTop=self.historyCollapsed and top+28 or (stacked and top+44+historyHeight+8 or top)
-        local playerWidth=self.historyCollapsed and math.max(1,available-30) or (stacked and available or available-historyWidth-12)
+        local playerX=self.historyCollapsed and 34 or (stacked and 8 or 8+historyWidth+12)
+        local playerTop=self.historyCollapsed and top or (stacked and top+44+historyHeight+8 or top)
+        local playerWidth=self.historyCollapsed and math.max(1,available-26) or (stacked and available or available-historyWidth-12)
         if self.historyCollapsed then
-            self.listTitle:Hide();self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top+1)
+            self.listTitle:Hide();self.historyToggle:ClearAllPoints();self.historyToggle:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top)
             for index=1,3 do self.historyHeaders[index]:Hide() end
         else self.listTitle:Show();for index=1,3 do self.historyHeaders[index]:Show() end end
         local statusHeight=self.showResultStatus and 22 or 0
@@ -387,9 +387,9 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
                 button.dateText:ClearAllPoints();button.dateText:SetPoint("LEFT",button,"LEFT",nameWidth+raidWidth,0);button.dateText:SetWidth(timeWidth-4);button.dateText:SetJustifyH("LEFT");button.dateText:SetText(date("%Y-%m-%d",tonumber(raid.savedAt) or 0));button.dateText:Show();button.allText:Hide()
                 button.allText:SetText(tostring(raid.id) .. " | " .. tostring(raid.raidName or "Unknown") .. " | " .. date("%Y-%m-%d",tonumber(raid.savedAt) or 0))
                 local selected = self.selectedHistoryIds[raid.id] and true or false; button:Show()
-                MOS.UI.Components.SetClassicButtonSelected(button, selected)
-                MOS.UI.Components.StyleWarmListRow(button, selected)
-            else MOS.UI.Components.SetClassicButtonSelected(button, false); button:Hide() end
+                button.mosClassicSelected=false
+                MOS.UI.Components.StyleSelectableTableRow(button,math.mod(logicalIndex,2)==0,selected)
+            else button.mosClassicSelected=false;button.mosTableRowSelected=false;UI.SetProjectButtonOutline(button,false);button:Hide() end
         end
         local summary = selectedCount>0 and MOS.Services.RaidStatistics.BuildSummary(entries, selectedFilter) or {players={}}
         local displayPlayers=self.editMode and (self.editMembers or {}) or summary.players

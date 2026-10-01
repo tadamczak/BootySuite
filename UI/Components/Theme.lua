@@ -206,3 +206,28 @@ function UI.StyleWarmListRow(button, selected)
     end
     UI.UpdateWarmListBorder(button, selected or button.mosWarmListHovered)
 end
+
+local selectableTableColor={1,1,1}
+function UI.SelectableTableRowEnter()
+    this.mosTableRowHovered=true;this.mosTableRowHover:Show()
+    if this.mosTableRowSelected then this.mosTableRowSelection:SetAlpha(1) end
+end
+function UI.SelectableTableRowLeave()
+    this.mosTableRowHovered=nil;this.mosTableRowHover:Hide()
+    if this.mosTableRowSelected then this.mosTableRowSelection:SetAlpha(0.68) end
+end
+function UI.StyleSelectableTableRow(button, even, selected)
+    button.mosSelectableTableRow=true;button.mosTableRowEven=even and true or false;button.mosTableRowSelected=selected and true or false
+    UI.SetRowColor(button,selectableTableColor,even and 0.14 or 0.025)
+    button:SetBackdropBorderColor(0,0,0,0)
+    button:SetNormalTexture("");button:SetPushedTexture("");button:SetHighlightTexture("")
+    if button.mosHighlight then button.mosHighlight:Hide() end
+    if not button.mosTableRowSelection then
+        button.mosTableRowSelection=button:CreateTexture(nil,"ARTWORK");button.mosTableRowSelection:SetAllPoints(button);UI.ApplyGoldRadialHighlight(button.mosTableRowSelection)
+        button.mosTableRowHover=button:CreateTexture(nil,"ARTWORK");button.mosTableRowHover:SetAllPoints(button);button.mosTableRowHover:SetTexture(1,1,1,1);button.mosTableRowHover:SetAlpha(0.07);button.mosTableRowHover:Hide()
+        button:SetScript("OnEnter",UI.SelectableTableRowEnter);button:SetScript("OnLeave",UI.SelectableTableRowLeave)
+    end
+    UI.SetProjectButtonOutline(button,selected)
+    if selected then button.mosTableRowSelection:SetAlpha(button.mosTableRowHovered and 1 or 0.68);button.mosTableRowSelection:Show()
+    else button.mosTableRowSelection:Hide() end
+end

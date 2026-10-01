@@ -22,7 +22,8 @@ end
 
 local function PlaceDetailValue(window, label, value, y, text)
     label:ClearAllPoints(); label:SetPoint("TOPLEFT", window, "TOPLEFT", 12, y); label:SetText(text)
-    label:SetWidth(math.ceil(label:GetStringWidth())); label:SetJustifyH("LEFT")
+    label:SetWidth(82); label:SetHeight(18); label:SetJustifyH("LEFT")
+    if label.SetWordWrap then label:SetWordWrap(false) end
     value:ClearAllPoints(); value:SetPoint("LEFT", label, "RIGHT", 4, 0); value:SetPoint("RIGHT", window, "RIGHT", -12, 0); value:SetHeight(18); value:SetJustifyH("LEFT")
     if value.SetWordWrap then value:SetWordWrap(false) end
 end

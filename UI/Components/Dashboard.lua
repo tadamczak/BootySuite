@@ -84,7 +84,7 @@ end
 function Dashboard.ApplyChrome(view, get)
     if view.minimized then
         Dashboard.SetTabBody(view, false); Dashboard.SetBottomTabSeam(view, false)
-        view.frame:SetBackdropColor(0,0,0,0)
+        view.frame:SetBackdrop(nil)
         MOS.UI.Components.SetSurfaceTransparent(view.titleBar, true)
         view.sidebar:Hide(); view.contentPanel:Hide()
         return
@@ -425,6 +425,7 @@ function Dashboard.BindWindow(view, options)
         if view.minimized then
             view.minimizedLeft, view.minimizedBottom = frame:GetLeft(), frame:GetBottom()
             view.minimized = false; frame.mosMinimized = false
+            frame:SetBackdrop(frame.mosWindowBackdrop); frame:SetBackdropColor(0.02,0.02,0.02,0.98); frame:SetBackdropBorderColor(0.68,0.54,0.27,1)
             MOS.UI.Components.SetSurfaceTransparent(view.titleBar, false)
             Dashboard.SetTabBody(view, false)
             frame:SetMinResize(350, 380); frame:SetMaxResize(1100, 760)
@@ -450,7 +451,8 @@ function Dashboard.BindWindow(view, options)
             view.titleBar:Show(); Dashboard.PlaceWindowControls(view, false)
             view.minimized = true; frame.mosMinimized = true
             MOS.UI.Components.SetSurfaceTransparent(view.titleBar, true)
-            frame:SetBackdropColor(0,0,0,0)
+            frame:SetBackdrop(nil)
+            if view.lootBorder then view.lootBorder:Hide() end
             Dashboard.SetBottomTabSeam(view, false)
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end
@@ -458,7 +460,7 @@ function Dashboard.BindWindow(view, options)
             frame:ClearAllPoints()
             frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.minimizedLeft or view.leftBeforeMinimize or 0, view.minimizedBottom or ((view.bottomBeforeMinimize or 0) + view.heightBeforeMinimize - 40))
             view.titleBar:ClearAllPoints(); view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -5); view.titleBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 5)
-            view.title:ClearAllPoints(); view.title:SetPoint("LEFT", view.titleBar, "LEFT", 9, 1); view.title:SetFontObject(GameFontNormal)
+            view.title:ClearAllPoints(); view.title:SetPoint("LEFT", view.titleBar, "LEFT", 9, 1); view.title:SetWidth(156); view.title:SetHeight(18); view.title:SetJustifyH("LEFT"); view.title:SetFontObject(GameFontNormal)
             view.title:SetText("Mukla Officer Suite"); view.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
             MOS.UI.Components.SetWindowButtonAction(view.minimizeButton, "maximize")
             view.classicTitle:Hide(); view.classicLogo:Hide(); view.classicTitleLeft:Hide(); view.classicTitleRight:Hide(); view.title:Show()
@@ -506,4 +508,3 @@ function Dashboard.CreateMinimapButton(options)
     button:SetScript("OnDragStop", function() this:SetScript("OnUpdate", nil) end)
     return button
 end
-
