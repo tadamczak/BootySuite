@@ -104,6 +104,26 @@ local function NormalizeName(value)
     return value
 end
 
+local function EnsureSnapshotImport(attendance)
+    local importInfo = attendance.softReserveImport
+    if not importInfo then
+        attendance.snapshotId = attendance.snapshotId or ((attendance.raidName or "raid") .. "-" .. time())
+        importInfo = { id = attendance.snapshotId, origin = "mos", importedAt = time(), unmatchedNames = {}, unmatchedReservations = {}, missingNames = {} }
+        attendance.softReserveImport = importInfo
+    end
+    return importInfo
+end
+
+-- Mutations do not consume snapshots. Keep metadata preparation, but omit
+-- member/item copies when draft or transient changes cannot be persisted.
+local function SyncMutation(attendance)
+    if attendance and (attendance._transient or attendance._sessionDraft) then
+        if type(attendance.members) == "table" then EnsureSnapshotImport(attendance) end
+        return
+    end
+    RaidResService.SyncHistory(attendance)
+end
+
 function RaidResService.HasSession(attendance)
     local importInfo = attendance and attendance.softReserveImport
     local raidId = attendance and (attendance.snapshotId or (importInfo and importInfo.id))
@@ -180,7 +200,7 @@ function RaidResService.Import(encoded, attendance, srUrl)
         unmatchedReservations = unmatchedReservations,
         missingNames = missingNames,
     }
-    RaidResService.SyncHistory(attendance)
+    SyncMutation(attendance)
     return { matched = matched, total = table.getn(reservations), unmatched = unmatched, missing = table.getn(missingNames) }
 end
 
@@ -228,7 +248,7 @@ function RaidResService.ApplyAssignments(attendance, assignments)
     importInfo.unmatchedReservations = remainingReservations
     importInfo.unmatchedNames = remainingNames
     importInfo.missingNames = remainingMissing
-    RaidResService.SyncHistory(attendance)
+    SyncMutation(attendance)
     return true
 end
 
@@ -237,7 +257,7 @@ function RaidResService.ClearUnmatched(attendance)
     if not importInfo then return false end
     importInfo.unmatchedNames = {}
     importInfo.unmatchedReservations = {}
-    RaidResService.SyncHistory(attendance)
+    SyncMutation(attendance)
     return true
 end
 
@@ -275,7 +295,7 @@ function RaidResService.RemoveMemberReservation(attendance, memberName)
     end
     if not alreadyMissing then missing[table.getn(missing) + 1] = member.name; table.sort(missing) end
     importInfo.missingNames = missing
-    RaidResService.SyncHistory(attendance)
+    SyncMutation(attendance)
     return true
 end
 
@@ -304,7 +324,7 @@ function RaidResService.ClearInvalidMemberReservations(attendance, rules)
             cleared = cleared + table.getn(invalidIds)
         end
     end
-    if cleared > 0 then RaidResService.SyncHistory(attendance) end
+    if cleared > 0 then SyncMutation(attendance) end
     return cleared
 end
 
@@ -380,18 +400,13 @@ function RaidResService.SetUrl(attendance, value)
         }
     end
     attendance.softReserveImport.url = url
-    RaidResService.SyncHistory(attendance)
+    SyncMutation(attendance)
     return true
 end
 
 function RaidResService.BuildSnapshot(attendance)
     if not attendance or type(attendance.members) ~= "table" then return nil end
-    local importInfo = attendance.softReserveImport
-    if not importInfo then
-        attendance.snapshotId = attendance.snapshotId or ((attendance.raidName or "raid") .. "-" .. time())
-        importInfo = { id = attendance.snapshotId, origin = "mos", importedAt = time(), unmatchedNames = {}, unmatchedReservations = {}, missingNames = {} }
-        attendance.softReserveImport = importInfo
-    end
+    local importInfo = EnsureSnapshotImport(attendance)
     if not importInfo.id and not attendance.snapshotId then return nil end
     local snapshot = { version = 3, id = attendance.snapshotId or importInfo.id, raidResId = importInfo.id, srUrl = importInfo.url, rollForExport = importInfo.rollForExport, raidName = attendance.raidName, source = importInfo.origin or "raidres", startedAt = attendance.sessionStartedAt or attendance.scannedAt, savedAt = attendance.lastSavedAt, updatedAt = time(), assignedCount = 0, unmatched = {}, missingNames = {}, members = {} }
     local index, itemIndex
@@ -440,16 +455,17 @@ function RaidResService.RestoreSnapshot(snapshot)
         end
         for index = 1, table.getn(snapshot.missingNames or {}) do table.insert(members, { name = snapshot.missingNames[index], subgroup = 0, level = 0, class = "", classFile = "", zone = "", online = false, guildRank = "", sr = "", loot = {} }) end
     end
-    local unmatched, unmatchedNames = {}, {}
+    local unmatched, unmatchedNames, missingNames = {}, {}, {}
     for index = 1, table.getn(snapshot.unmatched or {}) do
         local source, ids = snapshot.unmatched[index], {}
         for itemIndex = 1, table.getn(source.itemIds or {}) do ids[itemIndex] = source.itemIds[itemIndex] end
         unmatched[index] = { name = source.name, itemIds = ids }; unmatchedNames[index] = source.name
     end
+    for index = 1, table.getn(snapshot.missingNames or {}) do missingNames[index] = snapshot.missingNames[index] end
     local attendance = {
         addonVersion = MOS.version, scannedAt = snapshot.updatedAt, scannedAtText = snapshot.updatedAt and date("%Y-%m-%d %H:%M:%S", snapshot.updatedAt) or "", sessionStartedAt = snapshot.startedAt or snapshot.updatedAt, lastSavedAt = snapshot.savedAt or snapshot.updatedAt,
         raidName = snapshot.raidName, snapshotId = snapshot.id, updatedBy = UnitName("player"), members = members,
-        softReserveImport = { id = snapshot.raidResId or snapshot.id, origin = snapshot.source, url = snapshot.srUrl or "", rollForExport = snapshot.rollForExport or "", importedAt = snapshot.updatedAt, unmatchedNames = unmatchedNames, unmatchedReservations = unmatched, missingNames = snapshot.missingNames or {} },
+        softReserveImport = { id = snapshot.raidResId or snapshot.id, origin = snapshot.source, url = snapshot.srUrl or "", rollForExport = snapshot.rollForExport or "", importedAt = snapshot.updatedAt, unmatchedNames = unmatchedNames, unmatchedReservations = unmatched, missingNames = missingNames },
         _loadedSnapshotId = snapshot.id,
         _sessionDraft = true,
     }
@@ -457,6 +473,8 @@ function RaidResService.RestoreSnapshot(snapshot)
 end
 
 function RaidResService.SyncHistory(attendance)
+    -- Explicit calls retain the public copy-return contract, including draft
+    -- and transient attendance. Only durable attendance is stored in history.
     local snapshot = RaidResService.BuildSnapshot(attendance)
     if snapshot and not attendance._transient and not attendance._sessionDraft then MOS.Database.StoreSoftReserveSnapshot(snapshot) end
     return snapshot

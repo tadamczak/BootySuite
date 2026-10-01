@@ -171,6 +171,210 @@ local rollTypeNames = { [98] = "Transmog", [99] = "OS", [100] = "MS", [101] = "R
 local pendingAward
 local events
 local reyCoinEvents
+local tracker
+local retention = { sourceLimit = 64, historyLimit = 256, roundLimit = 8,
+    historyOrder = {}, pendingKeys = {}, protectedSources = {} }
+
+function retention.ClearMap(values)
+    local key
+    for key in pairs(values) do values[key] = nil end
+end
+
+function retention.ClearSequence(values)
+    local index
+    for index = table.getn(values), 1, -1 do table.remove(values, index) end
+end
+
+function retention.RememberSource(source)
+    if not source or sessionKnown[source] then return end
+    sessionKnown[source] = true
+    sessionSavedAt[source] = date("%H:%M:%S")
+    table.insert(sessionOrder, source)
+end
+
+function retention.EnsureSource()
+    if currentLootSession then return end
+    lootSessionNumber = lootSessionNumber + 1
+    currentLootSession = "session:" .. lootSessionNumber
+    currentSessionHasGuid = false
+    retention.RememberSource(currentLootSession)
+end
+
+function retention.ResolveHistoryKey(key, link)
+    local history = completedRolls[key]
+    if not history or history.link == link then return key end
+    return key .. ":item:" .. link
+end
+
+function retention.IsHistoryProtected(key, history)
+    if retention.pendingKeys[key] then return true end
+    if activeRoll and activeRoll.historyKey == key then return true end
+    if raidRollPending and raidRollPending.historyKey == key then return true end
+    if pendingAward and pendingAward.historyKey == key then return true end
+    local current = lastRollBySource[currentLootSession]
+    return current and current.historyKey == key and not current.manual and not current.awarded
+end
+
+function retention.ForgetHistory(key)
+    local history = completedRolls[key]
+    if not history then return end
+    completedRolls[key] = nil; collapsedRounds[key] = nil
+    local order = historyOrderBySource[history.source]
+    local index
+    for index = order and table.getn(order) or 0, 1, -1 do
+        if order[index] == key then table.remove(order, index) end
+    end
+    if order and table.getn(order) == 0 then historyOrderBySource[history.source] = nil end
+    for index = table.getn(retention.historyOrder), 1, -1 do
+        if retention.historyOrder[index] == key then table.remove(retention.historyOrder, index) end
+    end
+    local previous = lastRollBySource[history.source]
+    if previous and previous.historyKey == key then lastRollBySource[history.source] = nil end
+    if lastRoll and lastRoll.historyKey == key then lastRoll = nil end
+    if expandedHistoryKey == key then
+        expandedHistoryKey = nil
+        retention.ClearMap(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
+    end
+    for index = 1, table.getn(liveRows) do
+        local row = liveRows[index]
+        if row.roll and row.roll.historyKey == key then
+            row.roll = nil; row.result = nil; row.playerName = nil; row:Hide()
+        end
+    end
+    if retention.releaseHistoryView then retention.releaseHistoryView(history.lines) end
+end
+
+function retention.ForgetSource(source)
+    local order = historyOrderBySource[source]
+    while order and table.getn(order) > 0 do retention.ForgetHistory(order[table.getn(order)]) end
+    historyOrderBySource[source] = nil; lastRollBySource[source] = nil
+    sessionKnown[source] = nil; sessionSavedAt[source] = nil
+    local index
+    for index = table.getn(sessionOrder), 1, -1 do
+        if sessionOrder[index] == source then table.remove(sessionOrder, index) end
+    end
+    for index = table.getn(restoreCandidates), 1, -1 do
+        if restoreCandidates[index].source == source then
+            -- This scratch array uses numeric filling, never insert/remove.
+            local tail
+            for tail = index, table.getn(restoreCandidates) - 1 do restoreCandidates[tail] = restoreCandidates[tail + 1] end
+            restoreCandidates[table.getn(restoreCandidates)] = nil
+        end
+    end
+end
+
+function retention.GetHistory(source, key, link, icon, manual)
+    retention.RememberSource(source)
+    key = retention.ResolveHistoryKey(key, link)
+    local history = completedRolls[key]
+    if not history then
+        history = { source = source, link = link, icon = icon, lines = {}, rounds = 0, manual = manual }
+        completedRolls[key] = history
+        local order = historyOrderBySource[source]
+        if not order then order = {}; historyOrderBySource[source] = order end
+        table.insert(order, key); table.insert(retention.historyOrder, key)
+    end
+    return history, key
+end
+
+function retention.TrimRounds(key, history)
+    -- Full lines must reach durable award/SR/RC copies before the transient
+    -- restore cache can discard old rounds. Manual rolls have no award route.
+    if not history.awarded and not history.manual then return end
+    if history.rounds <= retention.roundLimit or history.trimmedAtRound == history.rounds then return end
+    local lines, rounds, first = history.lines, 0, nil
+    local index
+    for index = table.getn(lines), 1, -1 do
+        if string.find(lines[index], "^Round %d+:") or string.find(lines[index], "^Raid roll %d+/") then
+            rounds = rounds + 1
+            if rounds == retention.roundLimit then first = index; break end
+        end
+    end
+    if not first or first <= 1 then return end
+    local oldCount, kept = table.getn(lines), table.getn(lines) - first + 1
+    for index = 1, kept do lines[index] = lines[first + index - 1] end
+    for index = oldCount, kept + 1, -1 do table.remove(lines, index) end
+    history.trimmedAtRound = history.rounds
+    local firstRound = tonumber(string.match(lines[1], "^Round (%d+):"))
+    local collapsed = collapsedRounds[key]
+    if collapsed and firstRound then
+        local round
+        for round in pairs(collapsed) do if round < firstRound then collapsed[round] = nil end end
+        if not next(collapsed) then collapsedRounds[key] = nil end
+    end
+    local previous = lastRollBySource[history.source]
+    if previous and previous.historyKey == key and previous.summaryIndex then previous.summaryIndex = previous.summaryIndex - first + 1 end
+    if expandedHistoryKey == key then
+        retention.ClearMap(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
+    end
+    if retention.refreshHistoryView then retention.refreshHistoryView(lines) end
+end
+
+function retention.Prune()
+    retention.ClearMap(retention.pendingKeys); retention.ClearMap(retention.protectedSources)
+    if RaidService.FillPendingLootHistoryKeys then RaidService.FillPendingLootHistoryKeys(retention.pendingKeys) end
+    if currentLootSession then retention.protectedSources[currentLootSession] = true end
+    if activeRoll then retention.protectedSources[activeRoll.source] = true end
+    if raidRollPending then retention.protectedSources[raidRollPending.source] = true end
+    if pendingAward then retention.protectedSources[pendingAward.source] = true end
+    local index, key, history
+    for index = 1, table.getn(retention.historyOrder) do
+        key = retention.historyOrder[index]; history = completedRolls[key]
+        if retention.IsHistoryProtected(key, history) then retention.protectedSources[history.source] = true
+        else retention.TrimRounds(key, history) end
+    end
+    index = 1
+    while table.getn(sessionOrder) > retention.sourceLimit and index <= table.getn(sessionOrder) do
+        local source = sessionOrder[index]
+        if retention.protectedSources[source] then index = index + 1 else retention.ForgetSource(source) end
+    end
+    index = 1
+    while table.getn(retention.historyOrder) > retention.historyLimit and index <= table.getn(retention.historyOrder) do
+        key = retention.historyOrder[index]; history = completedRolls[key]
+        if retention.IsHistoryProtected(key, history) then index = index + 1 else retention.ForgetHistory(key) end
+    end
+end
+
+function retention.Reset()
+    if retention.releaseHistoryView then
+        local key, history
+        for key, history in pairs(completedRolls) do retention.releaseHistoryView(history.lines) end
+    end
+    retention.ClearMap(completedRolls); retention.ClearMap(historyOrderBySource)
+    retention.ClearMap(lastRollBySource); retention.ClearMap(collapsedRounds)
+    retention.ClearSequence(sessionOrder); retention.ClearMap(sessionKnown); retention.ClearMap(sessionSavedAt)
+    retention.ClearSequence(retention.historyOrder)
+    retention.ClearMap(retention.pendingKeys); retention.ClearMap(retention.protectedSources)
+    retention.ClearMap(restoreCandidates); retention.ClearMap(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
+    retention.ClearMap(displayItems); expandedHistoryKey = nil; displayCount = 0
+    currentLootSession = nil; currentSessionHasGuid = nil; manualRollLink = nil; panel.manualSession = nil
+    local index
+    for index = 1, table.getn(liveRows) do liveRows[index].roll = nil; liveRows[index].result = nil; liveRows[index].playerName = nil; liveRows[index]:Hide() end
+end
+
+-- Explicit read-only diagnostics; no tables are allocated by idle handlers.
+function MasterLootWindow.GetHistoryRetentionState(source, historyKey)
+    local state = { sourceLimit = retention.sourceLimit, historyLimit = retention.historyLimit,
+        roundLimit = retention.roundLimit, sourceOrderCount = table.getn(sessionOrder),
+        historyOrderCount = table.getn(retention.historyOrder), historyCount = 0,
+        historySourceCount = 0, lastRollCount = 0, collapsedCount = 0,
+        knownCount = 0, savedAtCount = 0, totalLines = 0,
+        sourceRetained = source and sessionKnown[source] and true or false,
+        historyRetained = historyKey and completedRolls[historyKey] and true or false,
+        currentSource = currentLootSession, activeSource = activeRoll and activeRoll.source,
+        pendingSource = pendingAward and pendingAward.source }
+    local key, history
+    for key, history in pairs(completedRolls) do state.historyCount = state.historyCount + 1; state.totalLines = state.totalLines + table.getn(history.lines) end
+    for key in pairs(historyOrderBySource) do state.historySourceCount = state.historySourceCount + 1 end
+    for key in pairs(lastRollBySource) do state.lastRollCount = state.lastRollCount + 1 end
+    for key in pairs(collapsedRounds) do state.collapsedCount = state.collapsedCount + 1 end
+    for key in pairs(sessionKnown) do state.knownCount = state.knownCount + 1 end
+    for key in pairs(sessionSavedAt) do state.savedAtCount = state.savedAtCount + 1 end
+    history = historyKey and completedRolls[historyKey]
+    state.historyLineCount = history and table.getn(history.lines) or 0
+    state.historyRounds = history and history.rounds or 0
+    return state
+end
 local playerColors = {}
 local playerColorCodes = {}
 local function UpdateClassColors()
@@ -347,16 +551,17 @@ local function AwardToPlayer(roll, name)
         return
     end
     local history = roll.historyKey and completedRolls[roll.historyKey]
-    if history and history.link == roll.link then
-        RaidService.QueueRollHistoryForAward(name, roll.link, history.lines)
-    end
+    local lootIcon, lootName, quantity = GetLootSlotInfo(slot)
+    local historyKey = retention.ResolveHistoryKey(roll.historyKey or (roll.source .. ":" .. slot .. ":award:" .. roll.link), roll.link)
+    roll.historyKey = historyKey
+    RaidService.QueueLootAwardForReceipt(name, roll.link, historyKey,
+        history and history.link == roll.link and history.lines or nil, quantity)
     pendingAward = { source = roll.source, slot = slot, link = roll.link,
         lootSessionToken = roll.lootSessionToken,
-        historyKey = roll.historyKey or (roll.source .. ":" .. slot .. ":award:" .. roll.link),
-        icon = GetLootSlotInfo(slot), winner = name,
+        historyKey = historyKey,
+        icon = lootIcon, winner = name,
         softReserve = roll.winnerResult and roll.winnerResult.range == 102 and roll.winner == name }
     if RaidService.debugReyCoin and DEFAULT_CHAT_FRAME then
-        local lootIcon, lootName = GetLootSlotInfo(slot)
         DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: Give loot recipient=" .. tostring(name)
             .. " winner=" .. tostring(roll.winner) .. " tradeWinner=" .. tostring(roll.tradeWinner)
             .. " reyCoin=" .. tostring(roll.winnerUsesReyCoin) .. " slot=" .. tostring(slot)
@@ -376,7 +581,7 @@ local function AwardToPlayer(roll, name)
             end
         end
         if RaidService.QueueReyCoinAward(reyCoinWinner, roll.link, name,
-            reyCoinRollers, roll.historyKey, history and history.link == roll.link and history.lines or nil) then
+            reyCoinRollers, roll.historyKey, history and history.link == roll.link and history.lines or nil, quantity) then
             if string.lower(name) == string.lower(UnitName("player") or "") then
                 reyCoinEvents.TrackLocalBag(roll.link)
             end
@@ -385,7 +590,7 @@ local function AwardToPlayer(roll, name)
     if roll.tradeWinnerResult and roll.tradeWinnerResult.range == 102 and roll.tradeWinner
         and roll.winner and string.lower(name) == string.lower(roll.winner) then
         RaidService.QueueSoftReserveTrade(roll.tradeWinner, roll.link, name,
-            roll.historyKey, history and history.link == roll.link and history.lines or nil)
+            roll.historyKey, history and history.link == roll.link and history.lines or nil, quantity)
     end
     GiveMasterLoot(slot, candidate)
 end
@@ -471,6 +676,7 @@ local function FindMatchingLootSlot(link)
 end
 
 local function FindHistoryForItem(source, slot, link)
+    if not source then return end
     local directKey = slot and (source .. ":" .. slot) or nil
     local direct = directKey and completedRolls[directKey]
     if direct and direct.link == link then return direct, directKey end
@@ -601,6 +807,7 @@ end
 
 local function OpenCandidateMenu(slot, link)
     if activeRoll or raidRollPending then return end
+    retention.EnsureSource()
     if not slot or not link or not RaidService.IsPlayerLootMaster() then return end
     if not LootSlotIsItem(slot) or GetLootSlotLink(slot) ~= link then return end
     local _, historyKey = FindHistoryForItem(currentLootSession, slot, link)
@@ -694,6 +901,7 @@ RefreshResults = function()
         end
     end
     local historyCount = 0
+    local previousHistoryCount = table.getn(visibleHistoryLines)
     if expandedHistory then
         local hidden = false
         local collapsed = collapsedRounds[expandedHistoryKey]
@@ -713,6 +921,9 @@ RefreshResults = function()
                 visibleHistoryRounds[historyCount] = nil
             end
         end
+    end
+    for index = previousHistoryCount, historyCount + 1, -1 do
+        visibleHistoryLines[index] = nil; visibleHistoryRounds[index] = nil
     end
     firstResult = math.min(firstResult, math.max(1, historyCount - MAX_RESULT_ROWS + 1))
     local historyVisible = math.min(MAX_RESULT_ROWS, historyCount)
@@ -947,6 +1158,7 @@ local function Refresh()
 end
 
 RestoreSession = function(source)
+    if not sessionKnown[source] then return end
     if activeRoll and activeRoll.source ~= source then
         status:SetText("Finish the current roll before restoring another session")
         return
@@ -962,6 +1174,7 @@ RestoreSession = function(source)
         if slot then previous.slot = slot end
     end
     currentLootSession = source
+    retention.Prune()
     expandedHistoryKey = nil; firstResult = 1; firstLiveResult = 1
     restoreButton:Hide(); tracker:Hide()
     if activeRoll and activeRoll.source == source then
@@ -984,17 +1197,28 @@ local timer = MOS.UI.Components.CreateContainer(nil, UIParent)
 timer:Hide()
 events = MOS.UI.Components.CreateContainer(nil, UIParent)
 reyCoinEvents = MOS.Modules.MasterLootEvents.Create(RaidService, function(message) Announce(message) end)
+local previousPendingChanged = RaidService.onReyCoinPendingChanged
+RaidService.onReyCoinPendingChanged = function()
+    if previousPendingChanged then previousPendingChanged() end
+    retention.Prune()
+end
+local previousExpiryChanged = RaidService.onPendingLootExpiryChanged
+RaidService.onPendingLootExpiryChanged = function()
+    if previousExpiryChanged then previousExpiryChanged() end
+    retention.Prune()
+end
 RaidService.onReyCoinTradeConfirmed = function(sender, recipient, link, historyKey)
     local history = historyKey and completedRolls[historyKey]
     if history and history.link == link then
         history.tradedTo = recipient
-        history.lines[table.getn(history.lines) + 1] = sender .. " traded " .. link .. " to " .. recipient .. "."
+        table.insert(history.lines, sender .. " traded " .. link .. " to " .. recipient .. ".")
     end
     if lastRoll and lastRoll.historyKey == historyKey and lastRoll.link == link then lastRoll.tradedTo = recipient end
+    retention.Prune()
     if panel:IsShown() then Refresh() end
 end
 
-local tracker = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteRollTracker", UIParent)
+tracker = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteRollTracker", UIParent)
 tracker:SetWidth(300); tracker:SetHeight(168)
 tracker:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 130)
 tracker:SetFrameStrata("DIALOG"); tracker:EnableMouse(true); tracker:Hide()
@@ -1155,27 +1379,21 @@ FinishRoll = function()
     end
     activeRoll = nil; lastRoll = roll
     lastRollBySource[roll.source] = roll
-    local history = completedRolls[roll.historyKey]
-    if not history or history.link ~= roll.link then
-        history = { link = roll.link, icon = roll.icon, lines = {}, rounds = 0 }
-        completedRolls[roll.historyKey] = history
-        local order = historyOrderBySource[roll.source]
-        if not order then order = {}; historyOrderBySource[roll.source] = order end
-        order[table.getn(order) + 1] = roll.historyKey
-    end
+    local history, historyKey = retention.GetHistory(roll.source, roll.historyKey, roll.link, roll.icon, roll.manual)
+    roll.historyKey = historyKey
     history.rounds = history.rounds + 1
     history.latestWinner = roll.winner
     local lines = history.lines
     roll.summaryIndex = table.getn(lines) + 1
-    lines[roll.summaryIndex] = "Round " .. history.rounds .. ": " ..
+    table.insert(lines, "Round " .. history.rounds .. ": " ..
         (roll.winner and (roll.winner .. (roll.winnerResult and roll.winnerResult.automatic
             and " (automatic SR)" or (" (" .. roll.highest .. "/" .. (roll.winnerResult and roll.winnerResult.range or 100) .. ")")))
-            or (table.getn(roll.results) > 0 and "No valid rolls" or "No rolls"))
+            or (table.getn(roll.results) > 0 and "No valid rolls" or "No rolls")))
     local index
     for index = 1, table.getn(roll.results) do
         local result = roll.results[index]
-        lines[table.getn(lines) + 1] = "    " .. result.name .. (result.automatic and " - automatic SR"
-            or (" - " .. result.value .. "/" .. (result.range or 100) .. (result.valid == false and " - Invalid (" .. result.invalidReason .. ")" or "")))
+        table.insert(lines, "    " .. result.name .. (result.automatic and " - automatic SR"
+            or (" - " .. result.value .. "/" .. (result.range or 100) .. (result.valid == false and " - Invalid (" .. result.invalidReason .. ")" or ""))))
     end
     timer:SetScript("OnUpdate", nil); timer:Hide()
     -- Loot-window rolls keep listening while the item is unawarded. A linked
@@ -1191,6 +1409,7 @@ FinishRoll = function()
         Announce((table.getn(roll.results) > 0 and "No valid rolls for " or "No rolls for ") .. roll.link .. ".")
     end
     if currentLootSession == roll.source then status:SetText("") end
+    retention.Prune()
     if panel:IsShown() then Refresh() end
     tracker:Hide()
 end
@@ -1204,6 +1423,7 @@ CancelRoll = function()
     events:UnregisterEvent("CHAT_MSG_SYSTEM")
     Announce("Rolling stopped for " .. roll.link .. ". All rolls are invalidated.")
     if currentLootSession == roll.source then status:SetText("Roll stopped; all rolls are invalidated") end
+    retention.Prune()
     if panel:IsShown() then Refresh() end
     tracker:Hide()
 end
@@ -1216,6 +1436,7 @@ local function OnTimerUpdate()
             events:UnregisterEvent("CHAT_MSG_SYSTEM")
             timer:SetScript("OnUpdate", nil); timer:Hide()
             status:SetText("Raid roll result was not received; try again")
+            retention.Prune()
             if panel:IsShown() then Refresh() end
         end
         return
@@ -1237,6 +1458,7 @@ local function StartRoll(slot, link)
     if not link or not RaidService.IsPlayerLootMaster() then return end
     local manual = not slot
     if not manual and (not LootSlotIsItem(slot) or GetLootSlotLink(slot) ~= link) then return end
+    retention.EnsureSource()
     local seconds = GetGlobalRollDuration()
     local count = GetNumRaidMembers() or 0
     local index
@@ -1256,7 +1478,7 @@ local function StartRoll(slot, link)
     local srRestricted, srReserved, srAllowed, srNames, srRankRights, srRankNames, reyCoinRights, reyCoinUsed = RaidService.GetSoftReserveRollRights(link)
     activeRoll = { slot = slot, link = link, icon = icon, source = currentLootSession,
         lootSessionToken = RaidService.GetLootSessionToken(),
-        historyKey = historyKey or (currentLootSession .. ":" .. tostring(slot or "manual")), manual = manual,
+        historyKey = historyKey or retention.ResolveHistoryKey(currentLootSession .. ":" .. tostring(slot or "manual"), link), manual = manual,
         duration = seconds, endsAt = GetTime() + seconds, lastRemaining = seconds, seen = {}, results = {}, highest = -1, highestPriority = -1, transmogHighest = -1, srRestricted = srRestricted, srReserved = srReserved, srAllowed = srAllowed, srNames = srNames, srRankRights = srRankRights, srRankNames = srRankNames, reyCoinRights = reyCoinRights, reyCoinUsed = reyCoinUsed }
     events:RegisterEvent("CHAT_MSG_SYSTEM")
     timer:SetScript("OnUpdate", OnTimerUpdate)
@@ -1282,22 +1504,17 @@ local function ResolveRaidRoll(value)
     local candidate, _, unavailableReason = CanGive(pending, name)
     if candidate then Announce("Raid roll " .. value .. "/" .. pending.count .. ": " .. name .. " wins " .. pending.link .. ".")
     else Announce("Raid roll " .. value .. "/" .. pending.count .. ": " .. name .. " cannot receive " .. pending.link .. ".") end
-    local history = completedRolls[pending.historyKey]
-    if not history or history.link ~= pending.link then
-        history = { link = pending.link, icon = pending.icon, lines = {}, rounds = 0 }
-        completedRolls[pending.historyKey] = history
-        local order = historyOrderBySource[pending.source]
-        if not order then order = {}; historyOrderBySource[pending.source] = order end
-        order[table.getn(order) + 1] = pending.historyKey
-    end
+    local history, historyKey = retention.GetHistory(pending.source, pending.historyKey, pending.link, pending.icon)
+    pending.historyKey = historyKey
     history.rounds = history.rounds + 1
     history.latestWinner = name
-    history.lines[table.getn(history.lines) + 1] = "Raid roll " .. value .. "/" .. pending.count .. ": " .. name
+    table.insert(history.lines, "Raid roll " .. value .. "/" .. pending.count .. ": " .. name)
     lastRoll = { source = pending.source, link = pending.link, icon = pending.icon, historyKey = pending.historyKey,
         lootSessionToken = pending.lootSessionToken,
         results = { { name = name, value = value } }, winner = name, highest = value,
         raidRoll = true, raidCount = pending.count, awardable = candidate and true or false }
     lastRollBySource[pending.source] = lastRoll
+    retention.Prune()
     status:SetText(candidate and name or (name .. ": " .. (unavailableReason or "unavailable")))
     if panel:IsShown() then Refresh() end
 end
@@ -1306,6 +1523,7 @@ local function StartRaidRoll(slot, link)
     if activeRoll or raidRollPending then status:SetText("Another roll is in progress"); return end
     if not slot or not link or not RaidService.IsPlayerLootMaster() then return end
     if not LootSlotIsItem(slot) or GetLootSlotLink(slot) ~= link then return end
+    retention.EnsureSource()
     local count = GetNumRaidMembers() or 0
     if count < 1 then status:SetText("No raid members to roll for"); return end
     if type(RandomRoll) ~= "function" then status:SetText("Raid roll is unavailable in this client"); return end
@@ -1315,7 +1533,7 @@ local function StartRaidRoll(slot, link)
     local _, historyKey = FindHistoryForItem(currentLootSession, slot, link)
     raidRollPending = { slot = slot, link = link, source = currentLootSession,
         lootSessionToken = RaidService.GetLootSessionToken(),
-        historyKey = historyKey or (currentLootSession .. ":" .. slot), icon = GetLootSlotInfo(slot),
+        historyKey = historyKey or retention.ResolveHistoryKey(currentLootSession .. ":" .. slot, link), icon = GetLootSlotInfo(slot),
         count = count, players = players, endsAt = GetTime() + 8 }
     events:RegisterEvent("CHAT_MSG_SYSTEM")
     timer:SetScript("OnUpdate", OnTimerUpdate); timer:Show()
@@ -1597,11 +1815,18 @@ end
 historyDialog.visibleLines = {}
 historyDialog.visibleRounds = {}
 historyDialog.collapsed = {}
+retention.releaseHistoryView = function(lines)
+    if lines and historyDialog.lines ~= lines then return end
+    historyDialog.lines = nil; historyDialog:Hide()
+    retention.ClearMap(historyDialog.visibleLines); retention.ClearMap(historyDialog.visibleRounds)
+    retention.ClearMap(historyDialog.collapsed); historyDialog.visibleCount = 0
+end
 RefreshHistoryDialog = function()
     local lines = historyDialog.lines
     local count = lines and table.getn(lines) or 0
     local visibleLines, visibleRounds = historyDialog.visibleLines, historyDialog.visibleRounds
     local visibleCount, hidden = 0, false
+    local previousVisibleCount = historyDialog.visibleCount or 0
     local index
     for index = 1, count do
         local line = lines[index]
@@ -1619,6 +1844,7 @@ RefreshHistoryDialog = function()
             visibleRounds[visibleCount] = nil
         end
     end
+    for index = previousVisibleCount, visibleCount + 1, -1 do visibleLines[index] = nil; visibleRounds[index] = nil end
     historyDialog.visibleCount = visibleCount
     historyDialog.offset = math.max(1, math.min(historyDialog.offset or 1, math.max(1, visibleCount - 9)))
     local widestLine = historyDialogTitle:GetStringWidth() + historyDialogItem:GetWidth() + 60
@@ -1635,6 +1861,9 @@ RefreshHistoryDialog = function()
     historyDialog:SetWidth(math.max(300, math.min(430, widestLine)))
     historyDialog:SetHeight(math.max(74, math.min(260, 46 + math.min(10, math.max(1, visibleCount)) * 22)))
     for index = 1, 10 do historyDialogRows[index]:SetWidth(historyDialog:GetWidth() - 30) end
+end
+retention.refreshHistoryView = function(lines)
+    if historyDialog.lines == lines then RefreshHistoryDialog() end
 end
 historyDialog:EnableMouseWheel(true)
 historyDialog:SetScript("OnMouseWheel", function()
@@ -1674,6 +1903,7 @@ function MasterLootWindow.ShowHistory(itemLink, lines, itemId, itemName)
 end
 
 function MasterLootWindow.Open()
+    RaidService.GetLootSessionToken()
     local shift = type(IsShiftKeyDown) == "function" and IsShiftKeyDown()
     shiftAtLootOpen = shift == true or shift == 1
     panel.manualSession = nil; manualRollLink = nil
@@ -1700,11 +1930,8 @@ function MasterLootWindow.Open()
         lootSessionNumber = lootSessionNumber + 1
         currentLootSession = "session:" .. lootSessionNumber
     end
-    if not sessionKnown[currentLootSession] then
-        sessionKnown[currentLootSession] = true
-        sessionSavedAt[currentLootSession] = date("%H:%M:%S")
-        sessionOrder[table.getn(sessionOrder) + 1] = currentLootSession
-    end
+    retention.RememberSource(currentLootSession)
+    retention.Prune()
     if activeRoll and activeRoll.source ~= currentLootSession then tracker:Show(); RefreshTracker() end
     if activeRoll and activeRoll.source == currentLootSession then
         status:SetText("Rolling for " .. activeRoll.link .. " - " .. (activeRoll.lastRemaining or DEFAULT_ROLL_SECONDS) .. "s")
@@ -1750,15 +1977,15 @@ function MasterLootWindow.OpenLinkedItemRoll(itemReference)
         if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: Another roll is already in progress.") end
         return false
     end
+    RaidService.GetLootSessionToken()
     lootSessionNumber = lootSessionNumber + 1
     currentLootSession = "manual:" .. lootSessionNumber
     currentSessionHasGuid = false
     manualRollLink = link
     panel.manualSession = true
     firstSlot = 1; firstResult = 1; firstLiveResult = 1; expandedHistoryKey = nil
-    sessionKnown[currentLootSession] = true
-    sessionSavedAt[currentLootSession] = date("%H:%M:%S")
-    sessionOrder[table.getn(sessionOrder) + 1] = currentLootSession
+    retention.RememberSource(currentLootSession)
+    retention.Prune()
     UpdateClassColors()
     panel:Show()
     Refresh()
@@ -1792,19 +2019,14 @@ events:SetScript("OnEvent", function()
         events:UnregisterEvent("LOOT_CLOSED"); events:UnregisterEvent("RAID_ROSTER_UPDATE"); events:UnregisterEvent("UI_ERROR_MESSAGE")
         if not pendingAward then events:UnregisterEvent("LOOT_SLOT_CLEARED") end
         if activeRoll then tracker:Show(); RefreshTracker() end
+        retention.Prune()
     elseif event == "LOOT_SLOT_CLEARED" then
         if autoLootPendingSlot and tonumber(arg1) == autoLootPendingSlot then autoLootPendingSlot = nil; autoLootTimeout:Hide() end
         local failedSlot
         for failedSlot in pairs(autoLootFailedSlots) do autoLootFailedSlots[failedSlot] = nil end
         if pendingAward and tonumber(arg1) == pendingAward.slot and currentLootSession == pendingAward.source then
-            local history = completedRolls[pendingAward.historyKey]
-            if not history or history.link ~= pendingAward.link then
-                history = { link = pendingAward.link, icon = pendingAward.icon, lines = {}, rounds = 0 }
-                completedRolls[pendingAward.historyKey] = history
-                local order = historyOrderBySource[currentLootSession]
-                if not order then order = {}; historyOrderBySource[currentLootSession] = order end
-                order[table.getn(order) + 1] = pendingAward.historyKey
-            end
+            local history, historyKey = retention.GetHistory(pendingAward.source, pendingAward.historyKey, pendingAward.link, pendingAward.icon)
+            pendingAward.historyKey = historyKey
             history.awarded = true
             local awardedRoll = lastRollBySource[currentLootSession]
             if awardedRoll and awardedRoll.historyKey == pendingAward.historyKey then awardedRoll.awarded = true end
@@ -1821,6 +2043,7 @@ events:SetScript("OnEvent", function()
                 reyCoinEvents.ConfirmAwardReceipt(pendingAward.winner, pendingAward.link)
             end
             pendingAward = nil
+            retention.Prune()
             if not activeRoll and not raidRollPending then events:UnregisterEvent("CHAT_MSG_SYSTEM") end
             if not panel:IsShown() then events:UnregisterEvent("LOOT_SLOT_CLEARED") end
         end
@@ -1866,7 +2089,7 @@ events:SetScript("OnEvent", function()
                         history.latestWinner = roll.winner
                         history.lines[roll.summaryIndex] = "Round " .. history.rounds .. ": " ..
                             (roll.winner and (roll.winner .. " (" .. roll.highest .. "/" .. (roll.winnerResult and roll.winnerResult.range or 100) .. ")") or "No valid rolls")
-                        history.lines[table.getn(history.lines) + 1] = "    " .. result.name .. " - " .. result.value .. "/" .. (result.range or 100) .. (result.valid == false and " - Invalid (" .. result.invalidReason .. ")" or "")
+                        table.insert(history.lines, "    " .. result.name .. " - " .. result.value .. "/" .. (result.range or 100) .. (result.valid == false and " - Invalid (" .. result.invalidReason .. ")" or ""))
                     end
                 end
                 if panel:IsShown() then RefreshResults() end
@@ -1878,12 +2101,11 @@ end)
 
 RaidService.onLootSessionChanged = function()
     activeRoll = nil; raidRollPending = nil; pendingAward = nil; lastRoll = nil
-    local source
-    for source in pairs(lastRollBySource) do lastRollBySource[source] = nil end
+    retention.Reset()
     timer:SetScript("OnUpdate", nil); timer:Hide()
     events:UnregisterEvent("CHAT_MSG_SYSTEM")
     if not panel:IsShown() then events:UnregisterEvent("LOOT_SLOT_CLEARED") end
-    candidateMenu:Hide(); tracker:Hide()
+    candidateMenu:Hide(); restorePicker:Hide(); restoreButton:Hide(); tracker:Hide()
     status:SetText("")
     if panel:IsShown() then Refresh() end
 end

@@ -104,6 +104,8 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 
 Pending trades survive closing the loot window or refreshing the current roster. Starting, loading or ending a raid cancels its previous pending transactions.
 
+Restore keeps recent loot sources and roll rounds. Active awards and unfinished trades stay available. Repeated ordinary loot combines into one quantity entry; separately assigned items and tracked trades keep their own records.
+
 ### Raid Statistics
 
 - **Saved raid list -** Browse date-only saved raid rows, select one or several sessions for combined results, or collapse the list to give the result table the full width.
