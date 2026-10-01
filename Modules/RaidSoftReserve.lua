@@ -176,7 +176,7 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
             if key == "invalidNames" then
                 for _, member in ipairs(attendance and attendance.members or {}) do
                     if string.lower(member.name or "") == string.lower(names[index]) then
-                        caption = caption .. " - " .. (string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or ((member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest")) .. " rank has no SR"
+                        caption = caption .. " - " .. MOS.Services.RankPolicy.GetDisplayName((member.guildRank and member.guildRank ~= "" and member.guildRank) or "Guest") .. " rank has no SR"
                         break
                     end
                 end

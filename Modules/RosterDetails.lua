@@ -42,7 +42,7 @@ function Roster.LayoutDetailsWindow(window, member)
     PlaceDetailValue(window, window.zoneLabel, window.zoneValue, -48, "Zone:")
     window.zoneValue:SetText(member.zone or "Unknown")
     PlaceDetailValue(window, window.details.rank, window.rankValue, -66, "Rank:")
-    window.rankValue:SetText(string.lower(member.rank or "") == "officer wukong" and "Officer (Chimp)" or (member.rank or "Unknown"))
+    window.rankValue:SetText(MOS.Services.RankPolicy.GetDisplayName(member.rank or "Unknown"))
     PlaceDetailValue(window, window.details.lastOnline, window.lastOnlineValue, -84, "Last online:")
     window.lastOnlineValue:SetText(member.online and "Online" or (Roster.FormatLastOnline(member) .. " ago"))
     if member.online then window.lastOnlineValue:SetTextColor(1,1,1) else window.lastOnlineValue:SetTextColor(0.5,0.5,0.5) end

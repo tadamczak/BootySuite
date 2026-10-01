@@ -29,7 +29,7 @@ local function AddUniqueMember(groups, groupName, memberName)
 end
 local function DisplayRank(value)
     if value == nil or value == "" then return "Unknown" end
-    return Lower(value) == "officer wukong" and "Officer (Chimp)" or tostring(value)
+    return tostring(MOS.Services.RankPolicy.GetDisplayName(value))
 end
 local function DisplayClass(value) return value and value ~= "" and value or "Unknown" end
 local function OnTableScroll() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end

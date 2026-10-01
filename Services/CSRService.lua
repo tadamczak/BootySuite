@@ -12,18 +12,10 @@ local function Normalize(value)
     return string.lower(tostring(value or ""))
 end
 
-local LOOT_RANKS = { macaque = true, guest = true, alt = true, baboon = true, chimp = true, silverback = true }
-
-local function NormalizeLootRank(value)
-    local word
-    for word in string.gfind(Normalize(value), "%a+") do if LOOT_RANKS[word] then return word end end
-    return nil
-end
-
 local function HasCsrRights(member, rules)
-    local guildRank = Normalize(member.guildRank)
-    local key = (guildRank == "officer wukong" or guildRank == "chimp banker") and "chimp" or NormalizeLootRank(member.lootRank)
-    key = key or NormalizeLootRank(member.guildRank)
+    local policy = MOS.Services.RankPolicy
+    local key = policy.GetLootAlias(member.guildRank) or policy.FindLootRank(member.lootRank)
+    key = key or policy.FindLootRank(member.guildRank)
     if not key then return false end
     local rule = rules and rules[key]
     if rule then return rule.csr and true or false end
