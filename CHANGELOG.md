@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.92 - 2026-10-01
+
+- Fix Guild Statistics loading in WoW 1.12 by creating clickable result rows as native buttons.
+
 ## 0.5.0-dev.91 - 2026-10-01
 
 - Keep active Raid metadata and actions on one aligned row and strengthen warning record backgrounds.
