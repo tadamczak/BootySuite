@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.100 - 2026-10-01
+
+- Complete the performance, lifecycle, architecture and WoW 1.12 compatibility audit; record verified findings and follow-up verification locally.
+- Runtime behavior is unchanged in this audit build.
+
 ## 0.5.0-dev.99 - 2026-10-01
 
 - Fix minimized dashboard and first-open Roster details geometry.
