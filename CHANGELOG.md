@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.90 - 2026-10-01
+
+- Add sortable Guild Statistics columns, collapsible grouped rows and a filtered Raw Data summary.
+- Refine Guild Statistics heading, toolbar, filters, alternating rows and conditional scrollbar geometry.
+- Make shared multiselect `Select all` actions toggle between selecting and clearing every option.
+
 ## 0.5.0-dev.89 - 2026-10-01
 
 - Keep saved raid snapshots immutable when loaded sessions are saved again, and retain ten loadable snapshots.

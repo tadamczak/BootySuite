@@ -19,10 +19,13 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
         panel.selectAll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 9)
         panel.selectAll:SetScript("OnClick", function()
             local owner = this:GetParent()
-            local optionIndex
+            local optionIndex, allSelected = nil, true
             for optionIndex = 1, table.getn(owner.values or {}) do
-                owner.selected[owner.values[optionIndex]] = true
-                if owner.options[optionIndex] then owner.options[optionIndex]:SetChecked(1) end
+                if not owner.selected[owner.values[optionIndex]] then allSelected = false; break end
+            end
+            for optionIndex = 1, table.getn(owner.values or {}) do
+                owner.selected[owner.values[optionIndex]] = not allSelected
+                if owner.options[optionIndex] then owner.options[optionIndex]:SetChecked(not allSelected and 1 or nil) end
             end
             if owner.onChanged then owner.onChanged(true) end
         end)
