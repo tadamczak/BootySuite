@@ -61,6 +61,8 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 - **Guild information -** Review or edit Guild Information and Message of the Day.
 - **Roster scan -** Refresh and save current guild data when you explicitly request it.
 
+Large guild scans finish in stages; the previous saved roster stays available until the new scan completes. Roster Live Tracking pauses when its view is hidden. An explicitly requested scan can still finish after you close the window.
+
 Expanded roster rows stay highlighted. Roster rows expand with player name, level/class, rank, last online, public and officer notes, and permitted rank arrows. The attached Window style uses compact labels, larger metadata values and smaller padded note displays. Click a note to edit it in an Accept/Cancel window. Officer notes and guild administration controls appear only with the required permissions. Right-click a member for a compact menu beside the cursor with Whisper, Invite, Target, Report or Ignore Player; click outside to close. Report opens a reason form and Submit sends a GM ticket.
 
 ### Guild Statistics

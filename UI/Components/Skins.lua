@@ -480,11 +480,10 @@ function UI.RegisterSkinnedSurface(frame, kind, backdrop, background, border)
 end
 
 function UI.SetSurfaceCompact(frame, compact)
-    frame.mosCompactBorder = compact and true or false
-    local index
-    for index = 1, table.getn(Skins.surfaces) do
-        if Skins.surfaces[index].frame == frame then ApplySurface(Skins.surfaces[index]); return end
-    end
+    local wanted = compact and true or false
+    if frame.mosCompactBorder == wanted then return end
+    frame.mosCompactBorder = wanted
+    if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry) end
 end
 
 function UI.RegisterDialogSurface(frame, kind, background)
@@ -555,14 +554,19 @@ function UI.SetSkin(value, persist)
     return wanted
 end
 
+-- Registration owns this reference. State changes affect one control; SetSkin
+-- remains the explicit full invalidation, including reapplying the same skin.
+local function ApplyButtonState(button)
+    if button.mosSkinEntry then ApplyControl(button.mosSkinEntry) end
+end
+
 function UI.SetClassicButtonVariant(button, variant)
     if not button then return end
-    button.mosClassicVariant = variant == "red" and "red" or "dark"
+    local wanted = variant == "red" and "red" or "dark"
+    if button.mosClassicVariant == wanted then return end
+    button.mosClassicVariant = wanted
     if Skins.current ~= "classic" then return end
-    local index
-    for index = 1, table.getn(Skins.controls) do
-        if Skins.controls[index].frame == button then ApplyControl(Skins.controls[index]); return end
-    end
+    ApplyButtonState(button)
 end
 
 function UI.SetClassicButtonSelected(button, selected)
@@ -570,10 +574,7 @@ function UI.SetClassicButtonSelected(button, selected)
     local wanted = selected and true or false
     if button.mosClassicSelected == wanted then return end
     button.mosClassicSelected = wanted
-    local index
-    for index = 1, table.getn(Skins.controls) do
-        if Skins.controls[index].frame == button then ApplyControl(Skins.controls[index]); return end
-    end
+    ApplyButtonState(button)
 end
 
 function UI.SetClassicButtonCompact(button, compact)
@@ -581,51 +582,45 @@ function UI.SetClassicButtonCompact(button, compact)
     local wanted = compact and true or false
     if button.mosClassicCompactControl == wanted then return end
     button.mosClassicCompactControl = wanted
-    local index
-    for index = 1, table.getn(Skins.controls) do
-        if Skins.controls[index].frame == button then ApplyControl(Skins.controls[index]); return end
-    end
+    ApplyButtonState(button)
 end
 
 function UI.SetClassicButtonGold(button, gold)
     if not button then return end
-    button.mosClassicGold = gold and true or false
-    local index
-    for index = 1, table.getn(Skins.controls) do
-        if Skins.controls[index].frame == button then ApplyControl(Skins.controls[index]); return end
-    end
+    local wanted = gold and true or false
+    if button.mosClassicGold == wanted then return end
+    button.mosClassicGold = wanted
+    ApplyButtonState(button)
 end
 
 function UI.SetClassicButtonDisabled(button, disabled)
     if not button then return end
-    button.mosClassicDisabled = disabled and true or false
-    local index
-    for index = 1, table.getn(Skins.controls) do
-        if Skins.controls[index].frame == button then ApplyControl(Skins.controls[index]); return end
-    end
+    local wanted = disabled and true or false
+    if button.mosClassicDisabled == wanted then return end
+    button.mosClassicDisabled = wanted
+    ApplyButtonState(button)
 end
 
 function UI.SetClassicButtonIcon(button, iconKey, size, inset, yOffset)
     if not button then return end
+    local wantedSize, wantedInset, wantedY = size or 13, inset or 7, yOffset or 0
+    -- Compare requested geometry, not the effective values derived by sizing.
+    if button.mosClassicIconKey == iconKey and button.mosBaseIconSize == wantedSize and button.mosBaseIconInset == wantedInset and button.mosBaseIconYOffset == wantedY then return end
     button.mosClassicIconKey = iconKey
-    button.mosClassicIconSize = size or 13
-    button.mosBaseIconSize = size or 13; button.mosBaseIconInset = inset or 7
-    button.mosClassicIconInset = inset or 7
-    button.mosClassicIconYOffset = yOffset or 0
-    local index
-    for index = 1, table.getn(Skins.controls) do
-        if Skins.controls[index].frame == button then ApplyControl(Skins.controls[index]); return end
-    end
+    button.mosClassicIconSize = wantedSize
+    button.mosBaseIconSize = wantedSize; button.mosBaseIconInset = wantedInset; button.mosBaseIconYOffset = wantedY
+    button.mosClassicIconInset = wantedInset
+    button.mosClassicIconYOffset = wantedY
+    ApplyButtonState(button)
 end
 
 function UI.SetClassicButtonLabelOffset(button, offset, xOffset)
     if not button then return end
+    local wantedX = xOffset or 0
+    if button.mosClassicLabelYOffset == offset and button.mosClassicLabelXOffset == wantedX then return end
     button.mosClassicLabelYOffset = offset
-    button.mosClassicLabelXOffset = xOffset or 0
-    local index
-    for index = 1, table.getn(Skins.controls) do
-        if Skins.controls[index].frame == button then ApplyControl(Skins.controls[index]); return end
-    end
+    button.mosClassicLabelXOffset = wantedX
+    ApplyButtonState(button)
 end
 
 function UI.SizeClassicButton(button, width, height, fontScale)

@@ -5,10 +5,30 @@ local ProgressBar = {}
 UI.ProgressBar = ProgressBar
 
 local function OnProgressUpdate()
-    if not this.active or not this.startedAt then return end
+    if not this.active or not this.startedAt then this:SetScript("OnUpdate", nil); return end
     local percent = math.min(this.progressCap, math.floor((GetTime() - this.startedAt) * this.progressRate))
-    this:SetValue(percent)
-    this.text:SetText(this.progressLabel .. "... " .. percent .. "%")
+    if percent ~= this.progressPercent then
+        this.progressPercent = percent
+        this:SetValue(percent)
+        this.text:SetText(this.progressLabel .. "... " .. percent .. "%")
+    end
+    -- The controller continues its request; an animation at its cap is idle.
+    if percent >= this.progressCap then this:SetScript("OnUpdate", nil) end
+end
+
+local function SetProgressUpdate(bar)
+    if bar.active and bar.startedAt and bar:IsVisible() and bar.progressPercent < bar.progressCap then
+        bar:SetScript("OnUpdate", OnProgressUpdate)
+    else bar:SetScript("OnUpdate", nil) end
+end
+
+local function OnProgressShow()
+    SetProgressUpdate(this)
+end
+
+local function OnProgressHide()
+    -- A hidden ancestor suspends display work, not the explicit scan request.
+    this:SetScript("OnUpdate", nil)
 end
 
 function ProgressBar.Create(parent, width, height)
@@ -22,7 +42,8 @@ function ProgressBar.Create(parent, width, height)
     bar:SetBackdropColor(0.03, 0.03, 0.03, 0.97)
     bar.text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     bar.text:SetPoint("CENTER", bar, "CENTER", 0, 0)
-    bar:SetScript("OnUpdate", OnProgressUpdate)
+    bar:SetScript("OnShow", OnProgressShow)
+    bar:SetScript("OnHide", OnProgressHide)
     bar:Hide()
     return bar
 end
@@ -33,14 +54,17 @@ function ProgressBar.Start(bar, label, startedAt, rate, cap)
     bar.progressRate = rate or 7
     bar.progressCap = cap or 94
     bar.active = true
+    bar.progressPercent = 0
     bar:SetValue(0)
     bar.text:SetText(bar.progressLabel .. "... 0%")
     bar:Show()
+    SetProgressUpdate(bar)
 end
 
 function ProgressBar.Stop(bar)
     bar.active = false
     bar.startedAt = nil
+    bar:SetScript("OnUpdate", nil)
     bar:Hide()
 end
 

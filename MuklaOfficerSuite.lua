@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.103"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.104"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -13,6 +13,8 @@ MOS.Database.onRaidAttendanceChanged = MOS.Services.Raid.OnRaidAttendanceChanged
 -- Wrap the actual domain/render entry points so direct module calls share
 -- the same scoped measurements as composition callbacks.
 MOS.Services.Roster.BuildSnapshot = MOS.Diagnostics.Wrap("Guild roster scan", MOS.Services.Roster.BuildSnapshot, 1)
+MOS.Services.Roster.StepSnapshot = MOS.Diagnostics.Wrap("Guild roster scan step", MOS.Services.Roster.StepSnapshot, 3)
+MOS.Services.Roster.FinishSnapshot = MOS.Diagnostics.Wrap("Guild roster scan finish", MOS.Services.Roster.FinishSnapshot, 2)
 MOS.Services.Raid.SaveRoster = MOS.Diagnostics.Wrap("Raid roster scan", MOS.Services.Raid.SaveRoster, 0)
 MOS.Services.Raid.RecordLoot = MOS.Diagnostics.Wrap("Loot message", MOS.Services.Raid.RecordLoot, 2)
 MOS.Services.RaidStatistics.BuildSummary = MOS.Diagnostics.Wrap("Raid summary", MOS.Services.RaidStatistics.BuildSummary, 2)
@@ -52,17 +54,15 @@ local EnsureDatabase = MOS.Database.Ensure
 local GuildKey = MOS.Database.GetGuildIdentity
 local CountSavedMembers = MOS.Database.CountRosterMembers
 
-local function SaveGuildRoster()
-    local snapshot, failure = MOS.Services.Roster.BuildSnapshot(MOS.Core.GuildScanController.GetStartedAt(MOS.guildScanController))
-    if failure == "not-in-guild" then
-        Print("This character is not in a guild.")
-        return false
-    end
+local function SaveGuildRoster(snapshot)
     if not snapshot then return false end
+    local origin = MOS.Core.GuildScanController.GetOrigin(MOS.guildScanController)
     MOS.Services.Roster.StoreSnapshot(snapshot)
     MOS.Core.GuildScanController.Finish(MOS.guildScanController)
-    MOS.UI.Components.ProgressBar.Complete(scanProgress)
-    SetStatus("Guild roster updated", "success")
+    if origin ~= "roster_live" then
+        MOS.UI.Components.ProgressBar.Complete(scanProgress)
+        SetStatus("Guild roster updated", "success")
+    end
     return true
 end
 
@@ -371,6 +371,8 @@ MOS.Modules.RosterManagement.MountControllers(rosterPage, {
     printMessage = Print,
     buildSnapshot = MOS.Services.Roster.BuildSnapshot,
     storeSnapshot = MOS.Services.Roster.StoreSnapshot,
+    requestLiveScan = function() return MOS.Core.GuildScanController.QueueLive(MOS.guildScanController) end,
+    cancelLiveScan = function() return MOS.Core.GuildScanController.CancelLive(MOS.guildScanController) end,
     refresh = function(resetScroll) RefreshRosterPage(resetScroll) end,
 })
 
@@ -389,6 +391,10 @@ local rosterRenderer = MOS.Modules.RosterManagement.CreateRenderer({
 })
 
 RefreshRosterPage = function(resetScroll)
+    if not rosterPage:IsVisible() then
+        MOS.Modules.RosterManagement.InvalidateView(rosterRenderer, resetScroll)
+        return
+    end
     MOS.Diagnostics.Count("uiRefreshes")
     local data, guildName = GetCurrentGuildData()
     if not rosterPage.sortLoaded then
@@ -526,8 +532,13 @@ MOS.Core.GuildScanController.Create({
     isInGuild = IsInGuild,
     requestRoster = GuildRoster,
     printMessage = Print,
-    tryComplete = function() return CompletePendingGuildScan and CompletePendingGuildScan() end,
+    startSnapshot = MOS.Services.Roster.StartSnapshot,
+    stepSnapshot = MOS.Services.Roster.StepSnapshot,
+    finishSnapshot = MOS.Services.Roster.FinishSnapshot,
+    cancelSnapshot = MOS.Services.Roster.CancelSnapshot,
+    tryComplete = function(snapshot) return CompletePendingGuildScan and CompletePendingGuildScan(snapshot) end,
     onStart = function(scanMode, controller)
+        if MOS.Core.GuildScanController.GetOrigin(controller) == "roster_live" then return end
         if scanMode == "raid" then controller.progressLabel = "Scanning raid"
         elseif scanMode == "reload" then controller.progressLabel = "Preparing roster export"
         elseif scanMode == "quiet" then controller.progressLabel = "Refreshing guild data"
@@ -546,7 +557,7 @@ MOS.Core.GuildScanController.Create({
         MOS.UI.Components.ProgressBar.Stop(scanProgress)
         MOS.UI.Components.ProgressBar.Stop(raidScanProgress)
         SetStatus("Guild roster scan failed", "error")
-        Print("Guild roster could not be loaded after 15 seconds. Please try again.")
+        Print("Guild roster scan could not finish. Please try again.")
         if HandleGuildScanFailure then HandleGuildScanFailure() end
     end,
 })
@@ -777,7 +788,7 @@ MOS.Core.Commands.Attach({
 
 HandleGuildScanFailure = function()
     local origin = MOS.Core.GuildScanController.GetOrigin(MOS.guildScanController)
-    if origin == "roster" then
+    if origin == "roster" or origin == "roster_live" then
         MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, false)
         RefreshRosterPage(false)
     elseif origin == "statistics" then
@@ -788,19 +799,17 @@ HandleGuildScanFailure = function()
     MOS.Core.GuildScanController.ClearOrigin(MOS.guildScanController)
 end
 
-CompletePendingGuildScan = function()
+CompletePendingGuildScan = function(snapshot)
     if not MOS.Core.GuildScanController.IsPending(MOS.guildScanController) then return false end
     local scanMode = MOS.Core.GuildScanController.GetMode(MOS.guildScanController)
-    if not SaveGuildRoster() then return false end
+    if not SaveGuildRoster(snapshot) then return false end
     MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, false)
 
-    RefreshRosterPage(scanMode ~= "quiet")
     if scanMode == "shared" then
         MOS.Modules.RosterManagement.SetReady(rosterPage.dataController, true)
         MOS.Modules.GuildStatistics.SetReady(statisticsPage.statisticsController, true)
         RefreshRosterPage(true)
         RefreshStatisticsPage()
-        MOS.Core.GuildScanController.ClearOrigin(MOS.guildScanController)
         SetStatus("Guild data refreshed", "success")
         Print("Guild data loaded successfully. Members: " .. CountSavedMembers() .. ".")
     elseif scanMode == "raid" then
@@ -829,6 +838,14 @@ CompletePendingGuildScan = function()
         SetStatus("Guild roster updated", "success")
         Print("Roster scanned. Members: " .. CountSavedMembers())
     end
+    if scanMode ~= "shared" then RefreshRosterPage(scanMode ~= "quiet") end
+    MOS.Core.GuildScanController.ClearOrigin(MOS.guildScanController)
+    return true
+end
+
+local function CancelLiveRosterScan()
+    if not MOS.Core.GuildScanController.CancelLive(MOS.guildScanController) then return false end
+    MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, false)
     return true
 end
 
@@ -854,8 +871,8 @@ MOS.Core.EventDispatcher.Attach(MOS, {
         ApplyNavigationLayout()
     end,
     GUILD_ROSTER_UPDATE = function()
-        local completed = CompletePendingGuildScan()
-        MOS.Modules.RosterManagement.HandleGuildRosterUpdate(rosterPage.dataController, completed, MOS.Core.GuildScanController.IsPending(MOS.guildScanController))
+        MOS.Core.GuildScanController.HandleRosterUpdate(MOS.guildScanController)
+        MOS.Modules.RosterManagement.HandleGuildRosterUpdate(rosterPage.dataController, false, MOS.Core.GuildScanController.IsPending(MOS.guildScanController))
     end,
     RAID_ROSTER_UPDATE = function()
         raidPage.lifecycle:OnWorldContextChanged()
@@ -863,8 +880,14 @@ MOS.Core.EventDispatcher.Attach(MOS, {
             raidPage.lifecycle:OnRosterUpdate()
         end
     end,
-    PLAYER_ENTERING_WORLD = function() raidPage.lifecycle:OnWorldContextChanged() end,
-    ZONE_CHANGED_NEW_AREA = function() raidPage.lifecycle:OnWorldContextChanged() end,
+    PLAYER_ENTERING_WORLD = function()
+        CancelLiveRosterScan()
+        raidPage.lifecycle:OnWorldContextChanged()
+    end,
+    ZONE_CHANGED_NEW_AREA = function()
+        CancelLiveRosterScan()
+        raidPage.lifecycle:OnWorldContextChanged()
+    end,
     CHAT_MSG_LOOT = function(message)
         local attendance = MOS.Database.GetRaidAttendance()
         local trackingLoot = MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused
