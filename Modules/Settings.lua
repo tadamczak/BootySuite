@@ -82,7 +82,7 @@ function Settings.LayoutGeneral(page)
         for index = 1, table.getn(page.chromeChecks) do
             local control = page.chromeChecks[index]
             local _, _, _, _, y = control:GetPoint(1)
-            bottom = math.max(bottom, -y + math.max(control:GetHeight(), control.label:GetStringHeight() + 3))
+            bottom = math.max(bottom, -y + math.max(control:GetHeight(), MOS.UI.Components.MeasureTextHeight(control.label) + 3))
         end
         extent = bottom + 12
     end
@@ -867,7 +867,7 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local gridHeight = 0
     if page.rosterLayoutChecks then
         page.rosterGrid = page.rosterGrid or {}
-        for index = table.getn(page.rosterGrid), 1, -1 do page.rosterGrid[index] = nil end
+        for index = table.getn(page.rosterGrid), 1, -1 do table.remove(page.rosterGrid, index) end
         for index = 1, table.getn(page.rosterLayoutChecks) do
             local check = page.rosterLayoutChecks[index]
             if check.settingKey ~= "rosterShowOfficerNote" or page.canShowOfficerOption then table.insert(page.rosterGrid, check) end

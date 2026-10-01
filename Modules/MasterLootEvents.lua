@@ -1,4 +1,5 @@
 local MOS = MuklaOfficerSuite
+local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Match or string.match
 
 MOS.Modules.MasterLootEvents = MOS.Modules.MasterLootEvents or {}
 local MasterLootEvents = MOS.Modules.MasterLootEvents
@@ -80,10 +81,10 @@ function MasterLootEvents.Create(raid, announce)
     messageEvents:SetScript("OnEvent", function()
         if event ~= "CHAT_MSG_SYSTEM" and not (event == "CHAT_MSG_SAY" and raid.allowReyCoinSayTests) then return end
         if not raid.HasPendingReyCoinAward() and not raid.HasPendingSoftReserveTrade() then Sync(); return end
-        local sender, itemName, recipient = string.match(tostring(arg1 or ""),
+        local sender, itemName, recipient = Match(tostring(arg1 or ""),
             "^%s*(%S+) trades item (.+) to (%S+)%.%s*$")
         if not sender then
-            sender, itemName, recipient = string.match(tostring(arg1 or ""),
+            sender, itemName, recipient = Match(tostring(arg1 or ""),
                 "^%s*(%S+) traded (.+) to (%S+)%.%s*$")
         end
         if not sender then return end

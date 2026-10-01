@@ -17,7 +17,7 @@ local function Cell(label, parent, x, width, text)
     if label.SetWordWrap then label:SetWordWrap(true) end
     if label.SetNonSpaceWrap then label:SetNonSpaceWrap(true) end
     label:SetText(text); label:Show()
-    return label:GetStringHeight() + 10
+    return MOS.UI.Components.MeasureTextHeight(label, width, true) + 10
 end
 
 local function MeasureHistory(width, controls)
@@ -76,7 +76,7 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
         if label.SetWordWrap then label:SetWordWrap(true) end
         label:SetText(canStartRaid and "Start a new raid snapshot, or load a saved raid." or "Join a raid to start a new snapshot, or load a saved raid.")
         label:SetHeight(0)
-        local textHeight = math.max(16, label:GetStringHeight())
+        local textHeight = math.max(16, MOS.UI.Components.MeasureTextHeight(label, width))
         label:SetHeight(textHeight); label:Show()
         actionY = textY - textHeight - 16
     end

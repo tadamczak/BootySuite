@@ -1,14 +1,15 @@
 local MOS = MuklaOfficerSuite
+local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Match or string.match
 
 MOS.Services.Version = MOS.Services.Version or {}
 local Version = MOS.Services.Version
 
 function Version.Parse(value)
     if type(value) ~= "string" then return nil end
-    local major, minor, patch = string.match(value, "^(%d+)%.(%d+)%.(%d+)$")
+    local major, minor, patch = Match(value, "^(%d+)%.(%d+)%.(%d+)$")
     if major then return { tonumber(major), tonumber(minor), tonumber(patch), nil } end
     local dev
-    major, minor, patch, dev = string.match(value, "^(%d+)%.(%d+)%.(%d+)%-dev%.(%d+)$")
+    major, minor, patch, dev = Match(value, "^(%d+)%.(%d+)%.(%d+)%-dev%.(%d+)$")
     if not major then return nil end
     return { tonumber(major), tonumber(minor), tonumber(patch), tonumber(dev) }
 end

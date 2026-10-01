@@ -124,7 +124,7 @@ function RaidStatistics.FilterEntries(entries, fromText, toText, target, selecte
     if fromStamp == false or toStamp == false then return nil, "Use date format YYYY-MM-DD." end
     if fromStamp and toStamp and fromStamp > toStamp then return nil, "The From date must be before the To date." end
     local index
-    for index = table.getn(target), 1, -1 do target[index] = nil end
+    for index = table.getn(target), 1, -1 do table.remove(target, index) end
     for index = 1, table.getn(entries or {}) do
         local savedAt = tonumber(entries[index].savedAt) or 0
         local raidName = tostring(entries[index].raidName or "Other")
@@ -142,7 +142,7 @@ function RaidStatistics.FilterEntries(entries, fromText, toText, target, selecte
             end
         end
         if entries[index].statisticsEnabled ~= false and (not selectedRaids or selectedRaids[filterName]) and matchesSearch
-            and (not fromStamp or savedAt >= fromStamp) and (not toStamp or savedAt <= toStamp) then target[table.getn(target) + 1] = entries[index] end
+            and (not fromStamp or savedAt >= fromStamp) and (not toStamp or savedAt <= toStamp) then table.insert(target, entries[index]) end
     end
     return target
 end

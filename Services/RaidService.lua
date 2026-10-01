@@ -1,4 +1,5 @@
 local MOS = MuklaOfficerSuite
+local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Match or string.match
 
 MOS.Services.Raid = MOS.Services.Raid or {}
 local RaidService = MOS.Services.Raid
@@ -245,7 +246,7 @@ function RaidService.IsHighlyContestedItem(itemReference, items)
         end
     end
     local reference = tostring(itemReference or "")
-    local name = string.match(reference, "|h%[([^%]]+)%]|h")
+    local name = Match(reference, "|h%[([^%]]+)%]|h")
     if not name and tonumber(reference) and type(GetItemInfo) == "function" then name = GetItemInfo(tonumber(reference)) end
     if not name and not tonumber(reference) then name = reference end
     return name and contestedNames[string.lower(name)] and true or false
@@ -298,7 +299,7 @@ end
 
 function RaidService.GetSoftReserveRollRights(itemLink)
     local reserved, allowed, names, rankRights, rankNames, reyCoinRights, reyCoinUsed = {}, {}, {}, {}, {}, {}, {}
-    local itemId = tonumber(string.match(tostring(itemLink or ""), "item:(%d+)"))
+    local itemId = tonumber(Match(tostring(itemLink or ""), "item:(%d+)"))
     if not itemId then return false, reserved, allowed, names, rankRights, rankNames, reyCoinRights, reyCoinUsed end
     local testRaid = MOS.Services.TestRaid
     local testing = testRaid and testRaid.IsActive and testRaid.IsActive()
@@ -432,11 +433,11 @@ function RaidService.ProcessLootRoll(roll, name, value, range, reyCoinUsed, reyC
     local position = table.getn(results) + 1
     while position > 1 and (results[position - 1].priority < priority
         or (results[position - 1].priority == priority and results[position - 1].value < value)) do
-        results[position] = results[position - 1]; position = position - 1
+        position = position - 1
     end
     local result = { name = name, value = value, range = range, priority = priority,
         valid = valid, invalidReason = invalidReason, shortInvalidReason = invalidReason }
-    results[position] = result
+    table.insert(results, position, result)
     roll.seen[rollKey] = result
     if valid and policy.pool == "transmog" then
         if value > roll.transmogHighest then
@@ -499,7 +500,7 @@ end
 
 function RaidService.ConfirmSoftReserveReceipt(recipient, itemLink, expectedSessionToken)
     if expectedSessionToken ~= nil and not RaidService.IsLootSessionCurrent(expectedSessionToken) then return false end
-    local itemId = tonumber(string.match(tostring(itemLink or ""), "item:(%d+)"))
+    local itemId = tonumber(Match(tostring(itemLink or ""), "item:(%d+)"))
     local attendance = ActiveLootAttendance()
     if not recipient or not itemId or not attendance or not attendance.members then return false end
     local index
@@ -583,14 +584,14 @@ function RaidService.ConsumeReyCoin(playerName, itemLink)
 end
 
 function RaidService.GetBagItemCount(itemLink)
-    local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
+    local itemId = Match(tostring(itemLink or ""), "item:(%d+)")
     if not itemId then return 0 end
     local total = 0
     local bag, slot
     for bag = 0, 4 do
         for slot = 1, GetContainerNumSlots(bag) do
             local link = GetContainerItemLink(bag, slot)
-            if link and string.match(link, "item:(%d+)") == itemId then
+            if link and Match(link, "item:(%d+)") == itemId then
                 local texture, count = GetContainerItemInfo(bag, slot)
                 total = total + (count or 1)
             end
@@ -602,7 +603,7 @@ end
 function RaidService.QueueReyCoinAward(winner, itemLink, carrier, reyCoinRollers, historyKey, rollHistory, quantity)
     local token = RaidService.GetLootSessionToken()
     if not lootSessionAttendance then return false end
-    local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
+    local itemId = Match(tostring(itemLink or ""), "item:(%d+)")
     if not winner or not itemId then return false end
     reyCoinRollers = reyCoinRollers or {}
     reyCoinRollers[string.lower(winner)] = true
@@ -652,7 +653,7 @@ end
 
 function RaidService.ConfirmReyCoinReceipt(recipient, itemLink)
     RaidService.GetLootSessionToken()
-    local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
+    local itemId = Match(tostring(itemLink or ""), "item:(%d+)")
     if not itemId or not recipient then return false end
     if RaidService.debugReyCoin and DEFAULT_CHAT_FRAME and table.getn(pendingReyCoinAwards) > 0 then
         DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: receipt recipient=" .. tostring(recipient)
@@ -684,7 +685,7 @@ function RaidService.ConfirmReyCoinReceipt(recipient, itemLink)
 end
 
 function RaidService.ConfirmReyCoinLoot(message)
-    local itemId = string.match(tostring(message or ""), "item:(%d+)")
+    local itemId = Match(tostring(message or ""), "item:(%d+)")
     if not itemId then return false end
     local _, _, itemLink = string.find(message, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
     if not itemLink then _, _, itemLink = string.find(message, "(|Hitem:.-|h%[.-%]|h)") end
@@ -696,7 +697,7 @@ function RaidService.ConfirmReyCoinLoot(message)
     if selfMessage or string.find(message, "You receive loot", 1, true) or string.find(message, "You receive item", 1, true) then
         recipient = UnitName("player")
     else
-        recipient = string.match(message, "^%s*([^%s:]+)")
+        recipient = Match(message, "^%s*([^%s:]+)")
         if recipient == "You" then recipient = UnitName("player") end
     end
     return RaidService.ConfirmReyCoinReceipt(recipient, message)
@@ -704,7 +705,7 @@ end
 
 function RaidService.IsPendingReyCoinTrade(sender, itemLink)
     RaidService.GetLootSessionToken()
-    local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
+    local itemId = Match(tostring(itemLink or ""), "item:(%d+)")
     if not sender or not itemId then return false end
     local index
     for index = 1, table.getn(pendingReyCoinAwards) do
@@ -716,14 +717,14 @@ end
 
 function RaidService.ConfirmReyCoinTrade(sender, recipient, itemLink)
     RaidService.GetLootSessionToken()
-    local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
+    local itemId = Match(tostring(itemLink or ""), "item:(%d+)")
     if not sender or not recipient or not itemLink then return false end
     local itemName = string.gsub(string.gsub(tostring(itemLink), "^%[", ""), "%]$", "")
     local failure = "no matching item"
     local index
     for index = table.getn(pendingReyCoinAwards), 1, -1 do
         local pending = pendingReyCoinAwards[index]
-        local pendingName = string.match(tostring(pending.link or ""), "|h%[([^%]]+)%]|h")
+        local pendingName = Match(tostring(pending.link or ""), "|h%[([^%]]+)%]|h")
         local itemMatches = (itemId and pending.itemId == itemId)
             or (not itemId and pendingName and string.lower(pendingName) == string.lower(itemName))
         if itemMatches then
@@ -749,7 +750,7 @@ end
 function RaidService.QueueLootAwardForReceipt(recipient, itemLink, historyKey, lines, quantity)
     local token = RaidService.GetLootSessionToken()
     if not lootSessionAttendance then return false end
-    local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
+    local itemId = Match(tostring(itemLink or ""), "item:(%d+)")
     if not recipient or not itemId then return false end
     local copy = lines and {} or nil
     local index
@@ -780,7 +781,7 @@ local function AppendRollHistory(loot, history)
     loot.rollHistory = loot.rollHistory or {}
     local index
     for index = 1, table.getn(history) do
-        loot.rollHistory[table.getn(loot.rollHistory) + 1] = history[index]
+        table.insert(loot.rollHistory, history[index])
     end
 end
 
@@ -840,7 +841,7 @@ function RaidService.RecordReyCoinTrade(pending, recipient)
         end
     end
     if not loot then
-        local itemName = string.match(tostring(pending.link or ""), "%[([^%]]+)%]") or "Unknown item"
+        local itemName = Match(tostring(pending.link or ""), "%[([^%]]+)%]") or "Unknown item"
         local _, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(pending.link)
         attendance.nextLootRecordId = (tonumber(attendance.nextLootRecordId) or 0) + 1
         loot = { recordId = attendance.nextLootRecordId, itemId = pending.itemId,
@@ -851,7 +852,7 @@ function RaidService.RecordReyCoinTrade(pending, recipient)
         AppendRollHistory(loot, pending.rollHistory)
     end
     loot.rollHistory = loot.rollHistory or {}
-    loot.rollHistory[table.getn(loot.rollHistory) + 1] = sender .. " traded " .. pending.link .. " to " .. recipient .. "."
+    table.insert(loot.rollHistory, sender .. " traded " .. pending.link .. " to " .. recipient .. ".")
     loot.tradedFrom = sender
     loot.tradedTo = recipient
     loot.ordinaryReceipt = nil
@@ -882,22 +883,22 @@ end
 function RaidService.QueueSoftReserveTrade(recipient, itemLink, carrier, historyKey, rollHistory, quantity)
     local token = RaidService.GetLootSessionToken()
     if not lootSessionAttendance then return false end
-    local itemId = tonumber(string.match(tostring(itemLink or ""), "item:(%d+)"))
+    local itemId = tonumber(Match(tostring(itemLink or ""), "item:(%d+)"))
     if not recipient or not carrier or not itemId then return false end
     local copy = {}
     local index
     for index = 1, table.getn(rollHistory or {}) do copy[index] = rollHistory[index] end
-    pendingSoftReserveTrades[table.getn(pendingSoftReserveTrades) + 1] = {
+    table.insert(pendingSoftReserveTrades, {
         recipient = recipient, carrier = carrier, link = itemLink, itemId = itemId,
         historyKey = historyKey, rollHistory = copy, state = "awaiting_receipt", lootSessionToken = token,
-        quantity = quantity and LootQuantity(quantity) or nil }
+        quantity = quantity and LootQuantity(quantity) or nil })
     NotifySoftReserveTradeChanged()
     return true
 end
 
 function RaidService.ConfirmSoftReserveCarrierReceipt(carrier, itemLink)
     RaidService.GetLootSessionToken()
-    local itemId = tonumber(string.match(tostring(itemLink or ""), "item:(%d+)"))
+    local itemId = tonumber(Match(tostring(itemLink or ""), "item:(%d+)"))
     if not carrier or not itemId then return false end
     local index
     for index = 1, table.getn(pendingSoftReserveTrades) do
@@ -914,7 +915,7 @@ end
 
 function RaidService.IsPendingSoftReserveTrade(sender, itemLink)
     RaidService.GetLootSessionToken()
-    local itemId = tonumber(string.match(tostring(itemLink or ""), "item:(%d+)"))
+    local itemId = tonumber(Match(tostring(itemLink or ""), "item:(%d+)"))
     local index
     for index = 1, table.getn(pendingSoftReserveTrades) do
         local pending = pendingSoftReserveTrades[index]
@@ -927,12 +928,12 @@ end
 function RaidService.ConfirmSoftReserveTrade(sender, recipient, itemReference)
     RaidService.GetLootSessionToken()
     if not sender or not recipient or not itemReference then return false end
-    local itemName = string.match(tostring(itemReference), "%[([^%]]+)%]") or tostring(itemReference)
-    local itemId = tonumber(string.match(tostring(itemReference), "item:(%d+)"))
+    local itemName = Match(tostring(itemReference), "%[([^%]]+)%]") or tostring(itemReference)
+    local itemId = tonumber(Match(tostring(itemReference), "item:(%d+)"))
     local index
     for index = 1, table.getn(pendingSoftReserveTrades) do
         local pending = pendingSoftReserveTrades[index]
-        local expectedName = string.match(tostring(pending.link), "%[([^%]]+)%]")
+        local expectedName = Match(tostring(pending.link), "%[([^%]]+)%]")
         if pending.state == "awaiting_trade"
             and string.lower(pending.carrier) == string.lower(sender)
             and string.lower(pending.recipient) == string.lower(recipient)
@@ -1079,7 +1080,7 @@ function RaidService.RecordLoot(message, confirmedAward)
         recipient = UnitName("player")
     else
         local prefix = string.sub(message, 1, math.max(0, (itemStart or 1) - 1))
-        local prefixName = string.match(prefix, "^%s*([^%s:]+)")
+        local prefixName = Match(prefix, "^%s*([^%s:]+)")
         local memberIndex
         for memberIndex = 1, table.getn(attendance.members) do
             local memberName = attendance.members[memberIndex].name
@@ -1139,7 +1140,7 @@ end
 
 function RaidService.RecordPendingAwardReceipt(recipient, itemLink)
     RaidService.GetLootSessionToken()
-    local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
+    local itemId = Match(tostring(itemLink or ""), "item:(%d+)")
     if not recipient or not itemId then return false end
     local key = string.lower(recipient) .. ":" .. itemId
     local pending = pendingRollAwards[key]

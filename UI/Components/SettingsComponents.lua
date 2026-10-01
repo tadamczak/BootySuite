@@ -417,13 +417,13 @@ function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
         item:ClearAllPoints(); item:SetPoint("TOPLEFT", parent, "TOPLEFT", x + offsetX, y - used)
         local label = sliders and getglobal(item:GetName() .. "Text") or item.label
         local labelWidth = math.max(1, widths[col] - (sliders and 0 or (item.swatchBorder and 26 or item:GetWidth() + 4)))
-        if label then label:SetWidth(labelWidth); label:SetJustifyH("LEFT"); rowHeight = math.max(rowHeight, label:GetStringHeight() + (sliders and 32 or 8)) end
+        if label then label:SetWidth(labelWidth); label:SetJustifyH("LEFT"); rowHeight = math.max(rowHeight, MOS.UI.Components.MeasureTextHeight(label, labelWidth) + (sliders and 32 or 8)) end
         if sliders or item.swatchBorder then item:SetWidth(widths[col]) end
         if label and not sliders then
             label:ClearAllPoints(); label:SetPoint("TOPLEFT", item, "TOPLEFT", item.swatchBorder and 26 or item:GetWidth() + 4, -3)
         end
         if item.labelHit then
-            item.labelHit:SetWidth(labelWidth); item.labelHit:SetHeight(math.max(item:GetHeight(), label:GetStringHeight() + 6))
+            item.labelHit:SetWidth(labelWidth); item.labelHit:SetHeight(math.max(item:GetHeight(), MOS.UI.Components.MeasureTextHeight(label, labelWidth) + 6))
             item.labelHit:ClearAllPoints(); item.labelHit:SetPoint("TOPLEFT", item, "TOPRIGHT", 2, 0)
         end
         offsetX = offsetX + widths[col] + 14

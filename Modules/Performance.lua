@@ -172,7 +172,7 @@ function Performance.Create(parent)
                 if amount and amount >= 0 then
                     entryCount = entryCount + 1
                     local entry = entries[entryCount]
-                    if not entry then entry = {}; entries[entryCount] = entry end
+                    if not entry then entry = {}; table.insert(entries, entry) end
                     entry.name = title or name or ("Addon " .. index)
                     entry.memory = amount
                     entry.unsupported = nil
@@ -183,7 +183,7 @@ function Performance.Create(parent)
         for staleIndex = table.getn(entries), entryCount + 1, -1 do table.remove(entries, staleIndex) end
         if entryCount == 0 then
             local entry = entries[1]
-            if not entry then entry = {}; entries[1] = entry end
+            if not entry then entry = {}; table.insert(entries, entry) end
             entry.name = nil; entry.memory = nil; entry.unsupported = true
             entryCount = 1
         else
@@ -261,7 +261,7 @@ function Performance.Create(parent)
             if operation.count > 0 then
                 entryCount = entryCount + 1
                 local delta = entries[entryCount]
-                if not delta then delta = {}; entries[entryCount] = delta end
+                if not delta then delta = {}; table.insert(entries, delta) end
                 delta.name = name
                 delta.count = operation.count
                 delta.time = operation.time
@@ -312,13 +312,15 @@ function Performance.Create(parent)
         self:ResetOperationBaseline()
         if self.diagnosis then
             MOS.Diagnostics.EndScope(self.diagnosis.scope)
-            self.diagnosis = { startedAt = GetTime(), startMemory = current, scope = MOS.Diagnostics.BeginScope("diagnosis"), minFps = nil, maxLatency = 0 }
+            self.diagnosis = { startedAt = GetTime(), startMemory = current, scope = MOS.Diagnostics.BeginScope("diagnosis"), minFps = nil, maxLatency = 0,
+                capabilities = MOS.Core.ClientCapabilities and MOS.Core.ClientCapabilities.Collect(page.description) }
         end
     end
 
     function module:StartDiagnosis()
         if self.diagnosis then MOS.Diagnostics.EndScope(self.diagnosis.scope) end
-        self.diagnosis = { startedAt = GetTime(), startMemory = gcinfo(), scope = MOS.Diagnostics.BeginScope("diagnosis"), minFps = nil, maxLatency = 0 }
+        self.diagnosis = { startedAt = GetTime(), startMemory = gcinfo(), scope = MOS.Diagnostics.BeginScope("diagnosis"), minFps = nil, maxLatency = 0,
+            capabilities = MOS.Core.ClientCapabilities and MOS.Core.ClientCapabilities.Collect(page.description) }
         page.diagnosticButton:SetText("Stop diagnosis")
         report:Hide(); UpdateSampler()
     end
@@ -341,6 +343,10 @@ function Performance.Create(parent)
         table.insert(results, "Only selected MOS entry points are measured; these samples do not establish total addon cost or a memory leak.")
         table.insert(results, "Measured MOS runtime during diagnosis: " .. Duration(runtimeDuringSession) .. ".")
         if slowest then table.insert(results, "Slowest single measured call: " .. slowest .. ".") end
+        if session.capabilities then
+            local runtime, extensions = MOS.Core.ClientCapabilities.Describe(session.capabilities)
+            table.insert(results, runtime); table.insert(results, extensions)
+        end
         for index=table.getn(report.lines)+1,table.getn(results) do report.lines[index]=UI.CreateLabel(report.canvas,nil,"OVERLAY","GameFontHighlightSmall") end
         for index = 1, table.getn(report.lines) do report.lines[index]:SetText(results[index] or "") end
         report:Show()
@@ -417,7 +423,7 @@ function Performance.Create(parent)
                 local label,value=page.labels[i],page.values[i]
                 label:ClearAllPoints();label:SetPoint("TOPLEFT",page.canvas,"TOPLEFT",x,-y);label:SetWidth(labelWidth);label:SetHeight(0);if label.SetWordWrap then label:SetWordWrap(true) end
                 value:ClearAllPoints();value:SetPoint("TOPLEFT",page.canvas,"TOPLEFT",x+labelWidth+8,-y);value:SetWidth(math.max(1,columnWidth-labelWidth-8));value:SetHeight(0);if value.SetWordWrap then value:SetWordWrap(true) end
-                local height=math.max(22,label:GetStringHeight(),value:GetStringHeight())
+                local height=math.max(22,UI.MeasureTextHeight(label,labelWidth),UI.MeasureTextHeight(value,math.max(1,columnWidth-labelWidth-8)))
                 rowHeight=math.max(rowHeight,height)
                 page.targets[i]:ClearAllPoints();page.targets[i]:SetPoint("TOPLEFT",page.canvas,"TOPLEFT",x,-y);page.targets[i]:SetWidth(columnWidth);page.targets[i]:SetHeight(height)
             end
@@ -432,7 +438,7 @@ function Performance.Create(parent)
         page.title:ClearAllPoints();page.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);UI.FitButtonLabel(page.title,available)
         local top=UI.LayoutFlow(page,page.flow,8,38,available,8)+8
         page.description:ClearAllPoints();page.description:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);page.description:SetWidth(available);page.description:SetHeight(0);if page.description.SetWordWrap then page.description:SetWordWrap(true) end
-        top=top+math.max(16,page.description:GetStringHeight())+10
+        top=top+math.max(16,UI.MeasureTextHeight(page.description,available))+10
         local bodyHeight=math.max(24,height-top-8)
         local contentWidth,contentHeight,_,maximum=UI.ResolveScrollLayout(available,bodyHeight,20,MetricsLayout,self)
         page.scroll:ClearAllPoints();page.scroll:SetPoint("TOPLEFT",page,"TOPLEFT",8,-top);page.scroll:SetWidth(contentWidth);page.scroll:SetHeight(bodyHeight)
@@ -452,7 +458,7 @@ function Performance.Create(parent)
             for i=1,table.getn(lines) do
                 local line=lines[i];line:ClearAllPoints();line:SetPoint("TOPLEFT",dialog.canvas,"TOPLEFT",0,-y);line:SetWidth(width);line:SetHeight(0);line:SetJustifyH("LEFT")
                 if line.SetWordWrap then line:SetWordWrap(true) end
-                if line:GetText()~="" then y=y+math.max(16,line:GetStringHeight())+6 end
+                if line:GetText()~="" then y=y+math.max(16,UI.MeasureTextHeight(line,width))+6 end
             end
             return math.max(1,y)
         end
@@ -482,7 +488,7 @@ function Performance.Create(parent)
         oldRefresh(self)
         if page:IsVisible() then
             local changed=false
-            for i=1,19 do local value=page.values[i];local height=value:GetStringHeight();if value.mosMeasuredHeight~=height then changed=true;value.mosMeasuredHeight=height end end
+            for i=1,19 do local value=page.values[i];local height=UI.MeasureTextHeight(value);if value.mosMeasuredHeight~=height then changed=true;value.mosMeasuredHeight=height end end
             if changed then self:Layout() end
         end
     end

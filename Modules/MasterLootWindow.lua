@@ -1,4 +1,5 @@
 local MOS = MuklaOfficerSuite
+local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Match or string.match
 local RaidService = MOS.Services.Raid
 
 MOS.Modules.MasterLootWindow = MOS.Modules.MasterLootWindow or {}
@@ -233,7 +234,7 @@ function retention.ForgetHistory(key)
     if lastRoll and lastRoll.historyKey == key then lastRoll = nil end
     if expandedHistoryKey == key then
         expandedHistoryKey = nil
-        retention.ClearMap(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
+        retention.ClearSequence(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
     end
     for index = 1, table.getn(liveRows) do
         local row = liveRows[index]
@@ -255,10 +256,8 @@ function retention.ForgetSource(source)
     end
     for index = table.getn(restoreCandidates), 1, -1 do
         if restoreCandidates[index].source == source then
-            -- This scratch array uses numeric filling, never insert/remove.
-            local tail
-            for tail = index, table.getn(restoreCandidates) - 1 do restoreCandidates[tail] = restoreCandidates[tail + 1] end
-            restoreCandidates[table.getn(restoreCandidates)] = nil
+            -- Keep the reused sequence's Lua 5.0 stored length in sync.
+            table.remove(restoreCandidates, index)
         end
     end
 end
@@ -295,7 +294,7 @@ function retention.TrimRounds(key, history)
     for index = 1, kept do lines[index] = lines[first + index - 1] end
     for index = oldCount, kept + 1, -1 do table.remove(lines, index) end
     history.trimmedAtRound = history.rounds
-    local firstRound = tonumber(string.match(lines[1], "^Round (%d+):"))
+    local firstRound = tonumber(Match(lines[1], "^Round (%d+):"))
     local collapsed = collapsedRounds[key]
     if collapsed and firstRound then
         local round
@@ -305,7 +304,7 @@ function retention.TrimRounds(key, history)
     local previous = lastRollBySource[history.source]
     if previous and previous.historyKey == key and previous.summaryIndex then previous.summaryIndex = previous.summaryIndex - first + 1 end
     if expandedHistoryKey == key then
-        retention.ClearMap(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
+        retention.ClearSequence(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
     end
     if retention.refreshHistoryView then retention.refreshHistoryView(lines) end
 end
@@ -345,7 +344,7 @@ function retention.Reset()
     retention.ClearSequence(sessionOrder); retention.ClearMap(sessionKnown); retention.ClearMap(sessionSavedAt)
     retention.ClearSequence(retention.historyOrder)
     retention.ClearMap(retention.pendingKeys); retention.ClearMap(retention.protectedSources)
-    retention.ClearMap(restoreCandidates); retention.ClearMap(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
+    retention.ClearSequence(restoreCandidates); retention.ClearSequence(visibleHistoryLines); retention.ClearMap(visibleHistoryRounds)
     retention.ClearMap(displayItems); expandedHistoryKey = nil; displayCount = 0
     currentLootSession = nil; currentSessionHasGuid = nil; manualRollLink = nil; panel.manualSession = nil
     local index
@@ -415,9 +414,9 @@ local function ColoredHistoryLine(line)
     if string.find(line, "No rolls", 1, true) then
         return string.gsub(line, "No rolls", "|cff777777No rolls|r")
     end
-    local prefix, name, suffix = string.match(line, "^(%s*[>v]?%s*Round %d+: )([^%s]+)(.*)$")
-    if not prefix then prefix, name, suffix = string.match(line, "^(%s+)([^%s]+)(.*)$") end
-    if not prefix then prefix, name, suffix = string.match(line, "^(Raid roll %d+/%d+: )([^%s]+)(.*)$") end
+    local prefix, name, suffix = Match(line, "^(%s*[>v]?%s*Round %d+: )([^%s]+)(.*)$")
+    if not prefix then prefix, name, suffix = Match(line, "^(%s+)([^%s]+)(.*)$") end
+    if not prefix then prefix, name, suffix = Match(line, "^(Raid roll %d+/%d+: )([^%s]+)(.*)$") end
     if name and playerColorCodes[name] then return prefix .. ColoredName(name) .. suffix end
     return line
 end
@@ -429,7 +428,7 @@ local function ShowItemTooltip(owner, slot, link)
         shown = pcall(GameTooltip.SetLootItem, GameTooltip, slot)
     end
     if not shown and GameTooltip.SetHyperlink then
-        local payload = string.match(link, "|H([^|]+)|h") or link
+        local payload = Match(link, "|H([^|]+)|h") or link
         shown = pcall(GameTooltip.SetHyperlink, GameTooltip, payload)
     end
     if shown then GameTooltip:Show() else GameTooltip:Hide() end
@@ -565,7 +564,7 @@ local function AwardToPlayer(roll, name)
         DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: Give loot recipient=" .. tostring(name)
             .. " winner=" .. tostring(roll.winner) .. " tradeWinner=" .. tostring(roll.tradeWinner)
             .. " reyCoin=" .. tostring(roll.winnerUsesReyCoin) .. " slot=" .. tostring(slot)
-            .. " slotName=" .. tostring(lootName) .. " rollItem=" .. tostring(string.match(tostring(roll.link or ""), "item:(%d+)")))
+            .. " slotName=" .. tostring(lootName) .. " rollItem=" .. tostring(Match(tostring(roll.link or ""), "item:(%d+)")))
     end
     local reyCoinWinner = roll.tradeWinnerResult and roll.tradeWinnerResult.range == 101 and roll.tradeWinner
         or (roll.winnerResult and roll.winnerResult.range == 101 and roll.winner)
@@ -695,7 +694,7 @@ end
 
 local function UpdateRestoreCandidates()
     local index
-    for index = table.getn(restoreCandidates), 1, -1 do restoreCandidates[index] = nil end
+    retention.ClearSequence(restoreCandidates)
     if currentSessionHasGuid then restoreButton:Hide(); return end
     for index = table.getn(sessionOrder), 1, -1 do
         local source = sessionOrder[index]
@@ -716,7 +715,7 @@ local function UpdateRestoreCandidates()
                 local entry = restoreCandidates[table.getn(restoreCandidates) + 1] or {}
                 entry.source = source
                 entry.label = "|cffffd700Loot:|r " .. roll.link .. " - " .. (sessionSavedAt[source] or "--:--:--")
-                restoreCandidates[table.getn(restoreCandidates) + 1] = entry
+                table.insert(restoreCandidates, entry)
                 if table.getn(restoreCandidates) >= 8 then break end
             end
         end
@@ -907,23 +906,25 @@ RefreshResults = function()
         local collapsed = collapsedRounds[expandedHistoryKey]
         for index = 1, table.getn(expandedHistory.lines) do
             local line = expandedHistory.lines[index]
-            local round = tonumber(string.match(line, "^Round (%d+):"))
+            local round = tonumber(Match(line, "^Round (%d+):"))
             if round then
                 hidden = collapsed and collapsed[round]
                 historyCount = historyCount + 1
                 local nextLine = expandedHistory.lines[index + 1]
-                local hasDetails = nextLine and not string.match(nextLine, "^Round %d+:")
-                visibleHistoryLines[historyCount] = (hasDetails and (hidden and "> " or "v ") or "") .. ColoredHistoryLine(line)
+                local hasDetails = nextLine and not Match(nextLine, "^Round %d+:")
+                local visibleLine = (hasDetails and (hidden and "> " or "v ") or "") .. ColoredHistoryLine(line)
+                if visibleHistoryLines[historyCount] then visibleHistoryLines[historyCount] = visibleLine else table.insert(visibleHistoryLines, visibleLine) end
                 visibleHistoryRounds[historyCount] = hasDetails and round or nil
             elseif not hidden then
                 historyCount = historyCount + 1
-                visibleHistoryLines[historyCount] = ColoredHistoryLine(line)
+                local visibleLine = ColoredHistoryLine(line)
+                if visibleHistoryLines[historyCount] then visibleHistoryLines[historyCount] = visibleLine else table.insert(visibleHistoryLines, visibleLine) end
                 visibleHistoryRounds[historyCount] = nil
             end
         end
     end
     for index = previousHistoryCount, historyCount + 1, -1 do
-        visibleHistoryLines[index] = nil; visibleHistoryRounds[index] = nil
+        table.remove(visibleHistoryLines, index); visibleHistoryRounds[index] = nil
     end
     firstResult = math.min(firstResult, math.max(1, historyCount - MAX_RESULT_ROWS + 1))
     local historyVisible = math.min(MAX_RESULT_ROWS, historyCount)
@@ -986,8 +987,8 @@ RefreshResults = function()
                 row.text:ClearAllPoints(); row.text:SetPoint("LEFT", row, "LEFT", 5, 0)
                 row.text:SetText(ColoredName(result.name) .. " - ")
                 row.text:SetWidth(row.text:GetStringWidth() + 2)
-                row.itemHit.itemId = tonumber(string.match(liveRoll.link, "item:(%d+)"))
-                row.itemHit.itemName = string.match(liveRoll.link, "%[([^%]]+)%]")
+                row.itemHit.itemId = tonumber(Match(liveRoll.link, "item:(%d+)"))
+                row.itemHit.itemName = Match(liveRoll.link, "%[([^%]]+)%]")
                 row.itemHit.text:SetText(liveRoll.link)
                 row.itemHit:SetWidth(row.itemHit.text:GetStringWidth() + 2)
                 row.itemHit:ClearAllPoints(); row.itemHit:SetPoint("LEFT", row.text, "RIGHT", 0, 0)
@@ -1039,10 +1040,10 @@ local function Refresh()
     local autoEnabled = AutoLootEnabled() and RaidService.IsPlayerLootMaster()
     local autoCandidate = autoEnabled and FindCandidate(UnitName("player"))
     local index, slot
-    for index = table.getn(itemSlots), 1, -1 do itemSlots[index] = nil end
+    retention.ClearSequence(itemSlots)
     for slot = 1, count do
         if LootSlotIsItem(slot) and not (autoEnabled and not autoLootFailedSlots[slot] and AutoLootRoute(slot, autoCandidate)) then
-            itemSlots[table.getn(itemSlots) + 1] = slot
+            table.insert(itemSlots, slot)
         end
     end
     local itemCount = table.getn(itemSlots)
@@ -1096,7 +1097,7 @@ local function Refresh()
             else row.winner:SetPoint("RIGHT", row.rollButton, "LEFT", -7, 1) end
             local manualName, manualTexture
             if entry.manual then
-                local itemId = tonumber(string.match(tostring(entry.link), "item:(%d+)"))
+                local itemId = tonumber(Match(tostring(entry.link), "item:(%d+)"))
                 local equipLocation
                 manualName, _, _, _, _, _, _, _, equipLocation, manualTexture = GetItemInfo(itemId or entry.link)
                 if type(GetItemIcon) == "function" then
@@ -1751,7 +1752,7 @@ panel:SetScript("OnMouseWheel", function()
             local collapsed = collapsedRounds[expandedHistoryKey]
             local lineIndex
             for lineIndex = 1, table.getn(history.lines) do
-                local round = tonumber(string.match(history.lines[lineIndex], "^Round (%d+):"))
+                local round = tonumber(Match(history.lines[lineIndex], "^Round (%d+):"))
                 if round then hidden = collapsed and collapsed[round]; count = count + 1
                 elseif not hidden then count = count + 1 end
             end
@@ -1818,7 +1819,7 @@ historyDialog.collapsed = {}
 retention.releaseHistoryView = function(lines)
     if lines and historyDialog.lines ~= lines then return end
     historyDialog.lines = nil; historyDialog:Hide()
-    retention.ClearMap(historyDialog.visibleLines); retention.ClearMap(historyDialog.visibleRounds)
+    retention.ClearSequence(historyDialog.visibleLines); retention.ClearMap(historyDialog.visibleRounds)
     retention.ClearMap(historyDialog.collapsed); historyDialog.visibleCount = 0
 end
 RefreshHistoryDialog = function()
@@ -1830,21 +1831,22 @@ RefreshHistoryDialog = function()
     local index
     for index = 1, count do
         local line = lines[index]
-        local round = tonumber(string.match(line, "^Round (%d+):"))
+        local round = tonumber(Match(line, "^Round (%d+):"))
         if round then
             local nextLine = lines[index + 1]
-            local hasDetails = nextLine and string.match(nextLine, "^%s+")
+            local hasDetails = nextLine and Match(nextLine, "^%s+")
             hidden = hasDetails and historyDialog.collapsed[round] or false
             visibleCount = visibleCount + 1
-            visibleLines[visibleCount] = (hasDetails and (hidden and "> " or "v ") or "") .. line
+            local visibleLine = (hasDetails and (hidden and "> " or "v ") or "") .. line
+            if visibleLines[visibleCount] then visibleLines[visibleCount] = visibleLine else table.insert(visibleLines, visibleLine) end
             visibleRounds[visibleCount] = hasDetails and round or nil
         elseif not hidden then
             visibleCount = visibleCount + 1
-            visibleLines[visibleCount] = line
+            if visibleLines[visibleCount] then visibleLines[visibleCount] = line else table.insert(visibleLines, line) end
             visibleRounds[visibleCount] = nil
         end
     end
-    for index = previousVisibleCount, visibleCount + 1, -1 do visibleLines[index] = nil; visibleRounds[index] = nil end
+    for index = previousVisibleCount, visibleCount + 1, -1 do table.remove(visibleLines, index); visibleRounds[index] = nil end
     historyDialog.visibleCount = visibleCount
     historyDialog.offset = math.max(1, math.min(historyDialog.offset or 1, math.max(1, visibleCount - 9)))
     local widestLine = historyDialogTitle:GetStringWidth() + historyDialogItem:GetWidth() + 60
@@ -1882,19 +1884,19 @@ function MasterLootWindow.ShowHistory(itemLink, lines, itemId, itemName)
         local _, resolvedLink = GetItemInfo(itemId or itemLink)
         link = resolvedLink
         if not link and itemName and itemName ~= "" then
-            local rawItem = itemLink and string.match(itemLink, "(item:[^|%s]+)") or nil
+            local rawItem = itemLink and Match(itemLink, "(item:[^|%s]+)") or nil
             if not rawItem and itemId then rawItem = "item:" .. tostring(itemId) end
             link = rawItem and ("|cffffffff|H" .. rawItem .. "|h[" .. itemName .. "]|h|r") or itemName
         end
         link = link or itemName or (itemId and ("Item " .. tostring(itemId))) or "Item"
-        if type(link) == "string" and string.match(link, "^item:%d+") then
-            local readableName = itemName and not string.match(itemName, "^item:") and itemName or (itemId and ("Item " .. tostring(itemId))) or "Item"
+        if type(link) == "string" and Match(link, "^item:%d+") then
+            local readableName = itemName and not Match(itemName, "^item:") and itemName or (itemId and ("Item " .. tostring(itemId))) or "Item"
             link = "|cffffffff|H" .. link .. "|h[" .. readableName .. "]|h|r"
         end
     end
     historyDialogTitle:SetText("Roll history: ")
     historyDialogTitle:SetWidth(historyDialogTitle:GetStringWidth() + 2)
-    historyDialogItem.itemId = tonumber(itemId) or tonumber(string.match(tostring(link), "item:(%d+)"))
+    historyDialogItem.itemId = tonumber(itemId) or tonumber(Match(tostring(link), "item:(%d+)"))
     historyDialogItem.itemName = itemName
     historyDialogItem.text:SetText(tostring(link or "Item"))
     historyDialogItem:SetWidth(historyDialogItem.text:GetStringWidth() + 2)
@@ -1959,8 +1961,8 @@ end
 
 function MasterLootWindow.OpenLinkedItemRoll(itemReference)
     local reference = tostring(itemReference or "")
-    local link = string.match(reference, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
-        or string.match(reference, "(|Hitem:.-|h%[.-%]|h)")
+    local link = Match(reference, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
+        or Match(reference, "(|Hitem:.-|h%[.-%]|h)")
     if not link then
         if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: Usage: /mos roll [linked item]") end
         return false
@@ -2061,13 +2063,13 @@ events:SetScript("OnEvent", function()
     elseif event == "RAID_ROSTER_UPDATE" and panel:IsShown() then
         UpdateClassColors(); Refresh()
     elseif event == "CHAT_MSG_SYSTEM" and raidRollPending then
-        local name, value, low, high = string.match(arg1 or "", "^(.+) rolls? a? ?(%d+) %((%d+)%-(%d+)%)%.?$")
+        local name, value, low, high = Match(arg1 or "", "^(.+) rolls? a? ?(%d+) %((%d+)%-(%d+)%)%.?$")
         if name == "You" then name = UnitName("player") end
         if name == UnitName("player") and tonumber(low) == 1 and tonumber(high) == raidRollPending.count then
             ResolveRaidRoll(tonumber(value))
         end
     elseif event == "CHAT_MSG_SYSTEM" and (activeRoll or (lastRollBySource[currentLootSession] and not lastRollBySource[currentLootSession].awarded)) then
-        local name, value, low, high = string.match(arg1 or "", "^(.+) rolls? a? ?(%d+) %((%d+)%-(%d+)%)%.?$")
+        local name, value, low, high = Match(arg1 or "", "^(.+) rolls? a? ?(%d+) %((%d+)%-(%d+)%)%.?$")
         if name == "You" then name = UnitName("player") end
         value = tonumber(value)
         local range = tonumber(high)

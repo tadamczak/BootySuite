@@ -1,4 +1,5 @@
 local MOS = MuklaOfficerSuite
+local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Match or string.match
 
 MOS.Core.Commands = MOS.Core.Commands or {}
 local Commands = MOS.Core.Commands
@@ -10,13 +11,15 @@ function Commands.Attach(options)
         local raw = string.gsub(message or "", "^%s*(.-)%s*$", "%1")
         local command = string.lower(raw)
         command = string.gsub(command, "^%s*(.-)%s*$", "%1")
-        local rollArgument = string.match(raw, "^[Rr][Oo][Ll][Ll]%s+(.+)$")
+        local rollArgument = Match(raw, "^[Rr][Oo][Ll][Ll]%s+(.+)$")
         if rollArgument then
             options.startLinkedItemRoll(rollArgument)
         elseif command == "roll" then
             options.printMessage("Usage: /mos roll [linked item]")
         elseif command == "layout" then
             options.printLayoutDiagnostics()
+        elseif command == "capabilities" then
+            if options.printCapabilities then options.printCapabilities() end
         elseif command == "scan" then
             if not options.dashboard:IsVisible() then options.dashboard:Show() end
             options.showPage("roster")
@@ -33,7 +36,7 @@ function Commands.Attach(options)
         elseif command == "status" then
             options.printMessage("Saved members: " .. options.countSavedMembers())
         else
-            options.printMessage("Commands: /mos, /mos roll [linked item], /mos status, /mos minimap, /mos hide")
+            options.printMessage("Commands: /mos, /mos roll [linked item], /mos status, /mos capabilities, /mos minimap, /mos hide")
         end
     end
 end

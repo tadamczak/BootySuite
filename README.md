@@ -50,6 +50,7 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 - **Saved roster status -** Use `/mos status` to print the number of saved guild members.
 - **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
 - **Layout diagnostics -** Use `/mos layout` when diagnosing window-layout problems.
+- **Client API diagnostics -** Use `/mos capabilities` to report the available client APIs and extension markers. Performance diagnosis reports include the same information captured when the diagnosis starts.
 
 ### Roster
 

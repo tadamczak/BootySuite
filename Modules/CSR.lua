@@ -60,7 +60,7 @@ local function CreateTestLab(onChanged, onExit)
             line:ClearAllPoints(); line:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -y)
             line:SetWidth(width); line:SetHeight(0); line:SetJustifyH("LEFT")
             if line.SetWordWrap then line:SetWordWrap(true) end
-            y = y + math.max(16, line:GetStringHeight()) + 8
+            y = y + math.max(16, UI.MeasureTextHeight(line, width)) + 8
         end
         Line(dialog.help); Line(dialog.status); Line(dialog.item); Line(dialog.result)
         y = UI.LayoutFlow(body, dialog.actions, 0, y, width, 8) + 8
@@ -183,7 +183,7 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
         local total=0
         for index,player in ipairs(self.summary.players) do
             local entry=self.layoutRows[index]
-            if not entry then entry={};self.layoutRows[index]=entry end
+            if not entry then entry={};table.insert(self.layoutRows,entry) end
             entry.y=total;entry.player=player;entry.count=0
             local height=24
             if self.expandedKey==string.lower(player.name or "")..":"..tostring(player.itemId or "") then
@@ -191,13 +191,13 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
                 for i,raid in ipairs(player.raids or {}) do
                     self.detailTexts[i]=DetailText(raid,i)
                     self.measure:SetWidth(math.max(1,width-78));self.measure:SetText(self.detailTexts[i])
-                    self.detailHeights[i]=math.max(24,self.measure:GetStringHeight()+8);height=height+self.detailHeights[i]
+                    self.detailHeights[i]=math.max(24,UI.MeasureTextHeight(self.measure,math.max(1,width-78))+8);height=height+self.detailHeights[i]
                 end
             end
             entry.height=height
             total=total+height
         end
-        for i=table.getn(self.layoutRows),table.getn(self.summary.players)+1,-1 do self.layoutRows[i]=nil end
+        for i=table.getn(self.layoutRows),table.getn(self.summary.players)+1,-1 do table.remove(self.layoutRows,i) end
         return total
     end
     local function LayoutContent(width,height,self)
@@ -205,7 +205,7 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
         self.title:ClearAllPoints();self.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);UI.FitButtonLabel(self.title,math.max(1,available-104))
         self.testButton:ClearAllPoints();self.testButton:SetPoint("TOPRIGHT",page,"TOPRIGHT",-8,-8)
         self.description:ClearAllPoints();self.description:SetPoint("TOPLEFT",page,"TOPLEFT",8,-42);self.description:SetWidth(available);self.description:SetHeight(0)
-        local top=42+math.max(24,self.description:GetStringHeight())+8
+        local top=42+math.max(24,UI.MeasureTextHeight(self.description,available))+8
         self.filterLabel:Hide()
         top=UI.LayoutFlow(page,self.flow,8,top,available,8)+8
         self.search:SetWidth(math.max(24,self.searchGroup:GetWidth()))

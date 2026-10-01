@@ -63,7 +63,7 @@ function CSR.BuildSummary(entries, rules, currentTime, target, rosterData, selec
     local players, states = summary.players, summary.states or {}
     summary.states = states
     local index
-    for index = table.getn(players), 1, -1 do players[index] = nil end
+    for index = table.getn(players), 1, -1 do table.remove(players, index) end
     for index in pairs(states) do states[index] = nil end
 
     local now = tonumber(currentTime) or time()
@@ -73,12 +73,12 @@ function CSR.BuildSummary(entries, rules, currentTime, target, rosterData, selec
     summary.rosterLootRanks = nil
     local ordered = summary.orderedScratch or {}
     summary.orderedScratch = ordered
-    for index = table.getn(ordered), 1, -1 do ordered[index] = nil end
+    for index = table.getn(ordered), 1, -1 do table.remove(ordered, index) end
     for index = 1, table.getn(entries or {}) do
         local savedAt = GetSavedAt(entries[index])
         local raidName = tostring(entries[index].raidName or "Other")
         local filterName = KNOWN_RAIDS[raidName] and raidName or "Other"
-        if entries[index].csrEnabled ~= false and savedAt >= cutoff and savedAt <= now and (not selectedRaids or selectedRaids[filterName]) then ordered[table.getn(ordered) + 1] = entries[index] end
+        if entries[index].csrEnabled ~= false and savedAt >= cutoff and savedAt <= now and (not selectedRaids or selectedRaids[filterName]) then table.insert(ordered, entries[index]) end
     end
     table.sort(ordered, function(a, b) return GetSavedAt(a) < GetSavedAt(b) end)
 
@@ -124,7 +124,7 @@ function CSR.BuildSummary(entries, rules, currentTime, target, rosterData, selec
         local itemId, missed
         for itemId, missed in pairs(state.pending) do
             if missed > 0 and (not searchText or searchText == "" or string.find(string.lower(state.name), string.lower(searchText), 1, true)) then
-                players[table.getn(players) + 1] = { name = state.name, itemId = itemId, items = missed, csr = missed * POINTS_PER_UNSUCCESSFUL_SR, raids = state.sources and state.sources[itemId] or {} }
+                table.insert(players, { name = state.name, itemId = itemId, items = missed, csr = missed * POINTS_PER_UNSUCCESSFUL_SR, raids = state.sources and state.sources[itemId] or {} })
             end
         end
     end

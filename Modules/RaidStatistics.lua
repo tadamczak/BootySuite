@@ -189,7 +189,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     local function OnRemoveRaid()
         controller.removeDialog.raidId = this.raidId
         controller.removeDialog.message:SetText("Remove raid " .. tostring(this.raidId or "") .. " from Raid Statistics and CSR history?")
-        local messageHeight=math.max(32,controller.removeDialog.message:GetStringHeight())
+        local messageHeight=math.max(32,UI.MeasureTextHeight(controller.removeDialog.message,controller.removeDialog:GetWidth()-16))
         controller.removeDialog.message:SetHeight(messageHeight);controller.removeDialog:SetHeight(messageHeight+78)
         controller.removeDialog:Show()
     end
@@ -366,9 +366,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         if self.modelDirty then
             local entries, filterError = MOS.Services.RaidStatistics.FilterEntries(self.getEntries(), self.fromDate:GetText(), self.toDate:GetText(), self.filteredEntries, self.selectedRaids, self.search:GetText())
             if not entries then
-                -- This scratch array is filled by numeric assignment, never
-                -- insert/remove, so Lua 5.0 cannot retain a cached length.
-                for index = table.getn(self.filteredEntries), 1, -1 do self.filteredEntries[index] = nil end
+                for index = table.getn(self.filteredEntries), 1, -1 do table.remove(self.filteredEntries, index) end
             end
             self.filterError = filterError
             local raidId

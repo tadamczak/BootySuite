@@ -13,7 +13,9 @@ local function SetCaption(toggle, values, selected, allSelectedCaption, owner)
     owner.captionScratch = owner.captionScratch or {}
     local captions = owner.captionScratch
     local index
-    for index = table.getn(captions), 1, -1 do captions[index] = nil end
+    -- table.insert records sequence length in stock Lua 5.0; raw nil writes do
+    -- not clear that length. Remove backwards before reusing this scratch list.
+    for index = table.getn(captions), 1, -1 do table.remove(captions, index) end
     for index = 1, table.getn(values or {}) do
         if selected[values[index]] then table.insert(captions, tostring(values[index])) end
     end

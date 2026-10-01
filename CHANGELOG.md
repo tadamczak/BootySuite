@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.105 - 2026-10-01
+
+- Remove parser and reusable-table dependencies on extension-specific Lua behavior.
+- Measure wrapped text through the available native client API, reusing one fallback label when needed.
+- Add `/mos capabilities` and include the captured client API inventory in Performance diagnosis reports.
+
 ## 0.5.0-dev.104 - 2026-10-01
 
 - Coalesce guild roster events and scan large rosters in bounded steps, committing only completed results.
