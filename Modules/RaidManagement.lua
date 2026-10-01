@@ -1011,14 +1011,16 @@ function RaidManagement.RefreshPage(renderer)
     page.classicActionScale = 1
     page.classicSectionOffset = MOS.UI.Components.IsClassicSkin() and not MuklaOfficerSuiteDB.raidHideSectionHeader and 24 or 0
     page.classicToolbarOffset = MOS.UI.Components.IsClassicSkin() and RaidManagement.GetToolToolbarOffset(pageWidth, page.raidView) or 0
+    local lootMasterMode = renderer.isLootMasterMode()
     local attendance = renderer.getData()
+    local issues
     local importInfo = attendance and attendance.softReserveImport
     local raidId = attendance and (attendance.snapshotId or (importInfo and importInfo.id))
     if attendance and raidId then
         local savedText = attendance.lastSavedAt and date("%Y-%m-%d %H:%M", attendance.lastSavedAt) or "Not saved yet"
-        if MOS.UI.Components.IsClassicSkin() then
+        if MOS.UI.Components.IsClassicSkin() and not lootMasterMode then
             local issueCount = 0
-            local issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
+            issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
             if table.getn(issues.unmatchedNames) > 0 then issueCount = issueCount + 1 end
             if table.getn(issues.missingNames) > 0 then issueCount = issueCount + 1 end
             if table.getn(issues.invalidNames) > 0 then issueCount = issueCount + 1 end
@@ -1039,7 +1041,6 @@ function RaidManagement.RefreshPage(renderer)
         page.refreshControls.title:Show(); page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide()
         page.refreshControls.title:SetText("Raid")
     end
-    local lootMasterMode = renderer.isLootMasterMode()
     if lootMasterMode then
         page.classicRaidName:Hide(); page.classicMeta:Hide()
         page.classicSaved:Hide(); page.classicIssues:Hide()
@@ -1065,13 +1066,13 @@ function RaidManagement.RefreshPage(renderer)
     end
     RaidManagement.ShowReadyState(page, lootMasterMode)
     local query = string.lower(renderer.searchBox:GetText() or "")
-    RaidManagement.PrepareListMembers(page, renderer.visibleMembers, renderer.getData(), query, renderer.selectedClasses, renderer.selectedRanks, renderer.getSelectedName())
+    RaidManagement.PrepareListMembers(page, renderer.visibleMembers, attendance, query, renderer.selectedClasses, renderer.selectedRanks, renderer.getSelectedName())
     RaidManagement.UpdateViewSelector(page, lootMasterMode)
     if not lootMasterMode and page.raidView == "groups" then
-        RaidManagement.ShowGroupView(page, rows)
+        RaidManagement.ShowGroupView(page, rows, issues)
         return
     end
-    RaidManagement.RefreshListView(page, rows, renderer.visibleMembers, renderer.getSelectedName(), renderer.getSortKey(), lootMasterMode, renderer.getSettings())
+    RaidManagement.RefreshListView(page, rows, renderer.visibleMembers, renderer.getSelectedName(), renderer.getSortKey(), lootMasterMode, renderer.getSettings(), issues)
 end
 
 function RaidManagement.ShowMinimizedLootMasterState(page, rows)
@@ -1170,9 +1171,13 @@ function RaidManagement.UpdateViewSelector(page, lootMasterMode)
     RaidManagement.LayoutActions(page)
 end
 
-function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side)
-    local attendance = page.getSoftReserveData and page.getSoftReserveData() or nil
-    local issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
+function RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, side, issues)
+    -- A full refresh shares its freshly computed issues with the header. Direct
+    -- layout calls still resolve current data; no result is retained on the page.
+    if not issues then
+        local attendance = page.getSoftReserveData and page.getSoftReserveData() or nil
+        issues = MOS.Services.Raid.GetSoftReserveIssues(attendance, page.getSoftReserveRules and page.getSoftReserveRules())
+    end
     local unmatchedNames, missingNames, invalidNames = issues.unmatchedNames, issues.missingNames, issues.invalidNames
     local unmatchedCount = unmatchedNames and table.getn(unmatchedNames) or 0
     local missingCount = missingNames and table.getn(missingNames) or 0
@@ -1300,7 +1305,7 @@ function RaidManagement.RestoreDefaultWarningLayout(page)
     invalid.ping:ClearAllPoints(); invalid.ping:SetPoint("TOPRIGHT", invalid, "TOPRIGHT", -8, -38); invalid.ping:SetWidth(66); invalid.ping:SetHeight(14)
 end
 
-function RaidManagement.ShowGroupView(page, rows)
+function RaidManagement.ShowGroupView(page, rows, issues)
     local controls = page.refreshControls
     controls.resetFilters:Hide(); controls.searchLabel:Hide(); controls.searchBox:Hide(); controls.refreshButton:Hide(); controls.filterLabel:Hide()
     controls.classButton:Hide(); controls.rankButton:Hide(); controls.classPanel:Hide(); controls.rankPanel:Hide()
@@ -1308,7 +1313,7 @@ function RaidManagement.ShowGroupView(page, rows)
     RaidManagement.HideListTable(page, rows)
     page.groupFrame:ClearAllPoints()
     if MOS.UI.Components.IsClassicSkin() then
-        local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
+        local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true, issues)
         if not page.softReserveWarning:IsShown() and not page.missingSoftReserveWarning:IsShown() and not page.invalidSoftReserveWarning:IsShown() then warningWidth = 0 end
         -- 2px warning inset + 7.5px outer clearance (4px window + 1.5px page + 2px warning) + 20px scrollbar/gap.
         page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 10, -100 - (page.classicSectionOffset or 0) - (page.classicActionOffset or 0) - (page.classicToolbarOffset or 0)); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 4)
@@ -1318,7 +1323,7 @@ function RaidManagement.ShowGroupView(page, rows)
             page.groupScrollBar:SetPoint("BOTTOMLEFT", page.groupFrame, "BOTTOMRIGHT", 4, 12)
         end
     else
-        local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true)
+        local warningWidth = RaidManagement.LayoutSoftReserveWarnings(page, false, true, issues)
         page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -72); page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
     end
     page.mosGroupLayout = true
@@ -1357,9 +1362,9 @@ function RaidManagement.LootMasterExpandedHeight(availableHeight, memberCount)
     return math.min(131, math.max(80, availableHeight - neighborHeight))
 end
 
-function RaidManagement.RefreshListView(page, rows, members, selectedName, sortKey, lootMasterMode, settings)
+function RaidManagement.RefreshListView(page, rows, members, selectedName, sortKey, lootMasterMode, settings, issues)
     local renderer = page.listRenderer
-    if not page.detachedLootMaster then RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true) end
+    if not page.detachedLootMaster then RaidManagement.LayoutSoftReserveWarnings(page, lootMasterMode, true, issues) end
     page.classicWarningWidth = 0
     local pageWidth = PageSpan(page)
     local filterWidth = pageWidth < 650 and 60 or 84

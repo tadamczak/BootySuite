@@ -18,6 +18,38 @@ local nextReyCoinTransactionId = 0
 local lootSessionAttendance
 local lootSessionToken = 0
 local pendingLootExpiry
+-- Weak keys release replaced loot lists. Values contain records only, never
+-- their list/member/attendance (Lua 5.0 weak tables are not ephemerons).
+local ordinaryLootIndexes = setmetatable({}, { __mode = "k" })
+
+local function ItemPayload(link)
+    local _, _, payload = string.find(tostring(link or ""), "|H(item:[^|]+)|h")
+    return payload
+end
+
+local function LootQuantity(value)
+    return math.max(1, math.floor(tonumber(value) or 1))
+end
+
+local function IsOrdinaryReceipt(loot)
+    return loot.ordinaryReceipt == true and not loot.awardHistoryKey
+        and not loot.tradedFrom and not loot.tradedTo
+        and (not loot.rollHistory or table.getn(loot.rollHistory) == 0)
+end
+
+local function OrdinaryLootIndex(lootList)
+    local index = ordinaryLootIndexes[lootList]
+    if index then return index end
+    index = {}
+    local position
+    for position = 1, table.getn(lootList) do
+        local loot = lootList[position]
+        local payload = IsOrdinaryReceipt(loot) and ItemPayload(loot.link)
+        if payload and not index[payload] then index[payload] = loot end
+    end
+    ordinaryLootIndexes[lootList] = index
+    return index
+end
 
 local function NotifyPendingReyCoinChanged()
     if RaidService.onReyCoinChanged then RaidService.onReyCoinChanged() end
@@ -53,6 +85,7 @@ local function BindLootSession(attendance, force)
     if not force and lootSessionAttendance == attendance then return end
     lootSessionAttendance = attendance
     lootSessionToken = lootSessionToken + 1
+    ordinaryLootIndexes = setmetatable({}, { __mode = "k" })
     ClearPendingLoot()
     if RaidService.onLootSessionChanged then RaidService.onLootSessionChanged() end
 end
@@ -95,6 +128,50 @@ local function StopLootExpiryIfEmpty()
 end
 
 function RaidService.GetNextPendingLootExpiry() return pendingLootExpiry end
+
+-- Cache retention queries are read-only: they must not bind a provider,
+-- prune transactions, or invoke callbacks while a window is evicting data.
+local function PendingLootHistoryKeys(historyKey, target)
+    if ActiveLootAttendance() ~= lootSessionAttendance then return false end
+    local index, pending
+    if next(pendingRollAwards) then
+        local now = GetTime()
+        for index, pending in pairs(pendingRollAwards) do
+            if pending.lootSessionToken == lootSessionToken and pending.historyKey and pending.at + 30 > now then
+                if target then target[pending.historyKey] = true end
+                if pending.historyKey == historyKey then return true end
+            end
+        end
+    end
+    for index = 1, table.getn(pendingSoftReserveTrades) do
+        pending = pendingSoftReserveTrades[index]
+        if pending.lootSessionToken == lootSessionToken and pending.historyKey
+            and (pending.state == "awaiting_receipt" or pending.state == "awaiting_trade") then
+            if target then target[pending.historyKey] = true end
+            if pending.historyKey == historyKey then return true end
+        end
+    end
+    for index = 1, table.getn(pendingReyCoinAwards) do
+        pending = pendingReyCoinAwards[index]
+        if pending.lootSessionToken == lootSessionToken and pending.historyKey
+            and (pending.state == "awaiting_item" or pending.state == "awaiting_trade") then
+            if target then target[pending.historyKey] = true end
+            if pending.historyKey == historyKey then return true end
+        end
+    end
+    return false
+end
+
+function RaidService.IsLootHistoryPending(historyKey)
+    if not historyKey then return false end
+    return PendingLootHistoryKeys(historyKey)
+end
+
+function RaidService.FillPendingLootHistoryKeys(target)
+    if not target then return nil end
+    PendingLootHistoryKeys(nil, target)
+    return target
+end
 
 function RaidService.PrunePendingLoot(now)
     now = tonumber(now) or GetTime()
@@ -522,7 +599,7 @@ function RaidService.GetBagItemCount(itemLink)
     return total
 end
 
-function RaidService.QueueReyCoinAward(winner, itemLink, carrier, reyCoinRollers, historyKey, rollHistory)
+function RaidService.QueueReyCoinAward(winner, itemLink, carrier, reyCoinRollers, historyKey, rollHistory, quantity)
     local token = RaidService.GetLootSessionToken()
     if not lootSessionAttendance then return false end
     local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
@@ -539,6 +616,7 @@ function RaidService.QueueReyCoinAward(winner, itemLink, carrier, reyCoinRollers
         lootSessionToken = token,
         winner = winner, carrier = carrier or winner, link = itemLink, itemId = itemId,
         reyCoinRollers = reyCoinRollers, historyKey = historyKey, rollHistory = rollHistory,
+        quantity = quantity and LootQuantity(quantity) or nil,
     })
     NotifyPendingReyCoinChanged()
     return true
@@ -668,17 +746,25 @@ function RaidService.PrefixLootMasterMessage(message)
     return "[Loot Master]: " .. tostring(message or "")
 end
 
-function RaidService.QueueRollHistoryForAward(recipient, itemLink, lines)
+function RaidService.QueueLootAwardForReceipt(recipient, itemLink, historyKey, lines, quantity)
     local token = RaidService.GetLootSessionToken()
-    if not lootSessionAttendance then return end
+    if not lootSessionAttendance then return false end
     local itemId = string.match(tostring(itemLink or ""), "item:(%d+)")
-    if not recipient or not itemId or not lines or table.getn(lines) == 0 then return end
-    local copy = {}
+    if not recipient or not itemId then return false end
+    local copy = lines and {} or nil
     local index
-    for index = 1, table.getn(lines) do copy[index] = lines[index] end
+    for index = 1, table.getn(lines or {}) do copy[index] = lines[index] end
     local now = GetTime()
-    pendingRollAwards[string.lower(recipient) .. ":" .. itemId] = { lines = copy, at = now, lootSessionToken = token }
+    pendingRollAwards[string.lower(recipient) .. ":" .. itemId] = {
+        lines = copy, at = now, lootSessionToken = token, historyKey = historyKey,
+        quantity = quantity and LootQuantity(quantity) or nil }
     ScheduleLootExpiry(now + 30)
+    return true
+end
+
+function RaidService.QueueRollHistoryForAward(recipient, itemLink, lines)
+    if not lines or table.getn(lines) == 0 then return end
+    RaidService.QueueLootAwardForReceipt(recipient, itemLink, nil, lines)
 end
 
 local function TakeRollHistory(recipient, itemId)
@@ -686,7 +772,7 @@ local function TakeRollHistory(recipient, itemId)
     local pending = pendingRollAwards[key]
     pendingRollAwards[key] = nil
     StopLootExpiryIfEmpty()
-    if pending and pending.lootSessionToken == lootSessionToken and GetTime() - pending.at < 30 then return pending.lines end
+    if pending and pending.lootSessionToken == lootSessionToken and GetTime() - pending.at < 30 then return pending.lines, pending end
 end
 
 local function AppendRollHistory(loot, history)
@@ -712,13 +798,44 @@ function RaidService.RecordReyCoinTrade(pending, recipient)
         if member.name and string.lower(member.name) == string.lower(recipient) then recipientMember = member end
     end
     if not recipientMember then return false end
-    local loot
+    local loot, candidateIndex, fallbackIndex
     if senderMember and senderMember.loot then
         for index = table.getn(senderMember.loot), 1, -1 do
             local candidate = senderMember.loot[index]
-            if tostring(candidate.itemId or "") == tostring(pending.itemId or "") and not candidate.tradedTo then
-                loot = table.remove(senderMember.loot, index)
-                break
+            local candidatePayload, pendingPayload = ItemPayload(candidate.link), ItemPayload(pending.link)
+            if tostring(candidate.itemId or "") == tostring(pending.itemId or "") and not candidate.tradedTo
+                and (not candidatePayload or not pendingPayload or candidatePayload == pendingPayload) then
+                if pending.historyKey and candidate.awardHistoryKey == pending.historyKey then
+                    candidateIndex = index; break
+                elseif not candidate.awardHistoryKey and not fallbackIndex then
+                    fallbackIndex = index
+                elseif not pending.historyKey and not candidateIndex then
+                    candidateIndex = index
+                end
+            end
+        end
+        candidateIndex = candidateIndex or fallbackIndex
+        if candidateIndex then
+            local candidate = senderMember.loot[candidateIndex]
+            local available = LootQuantity(candidate.count)
+            local quantity = pending.quantity and LootQuantity(pending.quantity)
+                or (IsOrdinaryReceipt(candidate) and 1 or available)
+            quantity = math.min(available, quantity)
+            if quantity < available then
+                loot = {}
+                local key, value
+                for key, value in pairs(candidate) do
+                    if key ~= "rollHistory" then loot[key] = value end
+                end
+                AppendRollHistory(loot, candidate.rollHistory)
+                candidate.count = available - quantity
+                attendance.nextLootRecordId = (tonumber(attendance.nextLootRecordId) or 0) + 1
+                loot.sourceRecordId = candidate.recordId
+                loot.recordId = attendance.nextLootRecordId
+                loot.count = quantity
+            else
+                loot = table.remove(senderMember.loot, candidateIndex)
+                ordinaryLootIndexes[senderMember.loot] = nil
             end
         end
     end
@@ -727,7 +844,8 @@ function RaidService.RecordReyCoinTrade(pending, recipient)
         local _, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(pending.link)
         attendance.nextLootRecordId = (tonumber(attendance.nextLootRecordId) or 0) + 1
         loot = { recordId = attendance.nextLootRecordId, itemId = pending.itemId,
-            name = itemName, link = pending.link, icon = itemTexture, count = 1 }
+            name = itemName, link = pending.link, icon = itemTexture,
+            count = pending.quantity and LootQuantity(pending.quantity) or 1 }
     end
     if not loot.rollHistory or table.getn(loot.rollHistory) == 0 then
         AppendRollHistory(loot, pending.rollHistory)
@@ -736,6 +854,8 @@ function RaidService.RecordReyCoinTrade(pending, recipient)
     loot.rollHistory[table.getn(loot.rollHistory) + 1] = sender .. " traded " .. pending.link .. " to " .. recipient .. "."
     loot.tradedFrom = sender
     loot.tradedTo = recipient
+    loot.ordinaryReceipt = nil
+    loot.awardHistoryKey = loot.awardHistoryKey or pending.historyKey
     recipientMember.loot = recipientMember.loot or {}
     table.insert(recipientMember.loot, loot)
     return true
@@ -759,7 +879,7 @@ function RaidService.HasPendingSoftReserveTrade()
     return false
 end
 
-function RaidService.QueueSoftReserveTrade(recipient, itemLink, carrier, historyKey, rollHistory)
+function RaidService.QueueSoftReserveTrade(recipient, itemLink, carrier, historyKey, rollHistory, quantity)
     local token = RaidService.GetLootSessionToken()
     if not lootSessionAttendance then return false end
     local itemId = tonumber(string.match(tostring(itemLink or ""), "item:(%d+)"))
@@ -769,7 +889,8 @@ function RaidService.QueueSoftReserveTrade(recipient, itemLink, carrier, history
     for index = 1, table.getn(rollHistory or {}) do copy[index] = rollHistory[index] end
     pendingSoftReserveTrades[table.getn(pendingSoftReserveTrades) + 1] = {
         recipient = recipient, carrier = carrier, link = itemLink, itemId = itemId,
-        historyKey = historyKey, rollHistory = copy, state = "awaiting_receipt", lootSessionToken = token }
+        historyKey = historyKey, rollHistory = copy, state = "awaiting_receipt", lootSessionToken = token,
+        quantity = quantity and LootQuantity(quantity) or nil }
     NotifySoftReserveTradeChanged()
     return true
 end
@@ -924,16 +1045,33 @@ function RaidService.SaveRoster()
     return table.getn(members)
 end
 
+local function PendingReceiptTransfer(recipient, itemId)
+    local normalizedName = string.lower(recipient)
+    local index, pending
+    for index = 1, table.getn(pendingSoftReserveTrades) do
+        pending = pendingSoftReserveTrades[index]
+        if pending.lootSessionToken == lootSessionToken and pending.state == "awaiting_receipt"
+            and tostring(pending.itemId) == tostring(itemId)
+            and string.lower(pending.carrier) == normalizedName then return pending end
+    end
+    for index = 1, table.getn(pendingReyCoinAwards) do
+        pending = pendingReyCoinAwards[index]
+        if pending.lootSessionToken == lootSessionToken and pending.state == "awaiting_item"
+            and tostring(pending.itemId) == tostring(itemId)
+            and string.lower(pending.carrier) == normalizedName then return pending end
+    end
+end
+
 function RaidService.RecordLoot(message, confirmedAward)
     RaidService.GetLootSessionToken()
     local attendance = ActiveLootAttendance()
     if not attendance or not attendance.members or not message then return false end
 
-    local itemStart, _, itemLink = string.find(message, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
-    if not itemLink then itemStart, _, itemLink = string.find(message, "(|Hitem:.-|h%[.-%]|h)") end
+    local itemStart, itemEnd, itemLink = string.find(message, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
+    if not itemLink then itemStart, itemEnd, itemLink = string.find(message, "(|Hitem:.-|h%[.-%]|h)") end
     if not itemLink then return false end
-    local _, _, parsedQuantity = string.find(message, "x(%d+)")
-    local quantity = tonumber(parsedQuantity) or 1
+    local _, _, parsedQuantity = string.find(string.sub(message, itemEnd + 1), "x(%d+)")
+    local quantity = LootQuantity(parsedQuantity)
     local recipient
     local selfMessage = (LOOT_ITEM_SELF and string.format(LOOT_ITEM_SELF, itemLink) == message)
         or (LOOT_ITEM_SELF_MULTIPLE and string.format(LOOT_ITEM_SELF_MULTIPLE, itemLink, quantity) == message)
@@ -976,13 +1114,26 @@ function RaidService.RecordLoot(message, confirmedAward)
         pendingLootEchoes[receiptKey] = nil
         StopLootExpiryIfEmpty()
     end
-    local rollHistory = TakeRollHistory(recipient, itemId)
-    local _, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
+    local rollHistory, award = TakeRollHistory(recipient, itemId)
+    local transfer = not award and PendingReceiptTransfer(recipient, itemId)
+    local ordinary = not confirmedAward and not award and not transfer
     member.loot = member.loot or {}
+    local payload = ordinary and ItemPayload(itemLink)
+    local ordinaryIndex = payload and OrdinaryLootIndex(member.loot)
+    local previous = ordinaryIndex and ordinaryIndex[payload]
+    if previous then
+        previous.count = LootQuantity(previous.count) + quantity
+        return true
+    end
+    local _, _, _, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
     attendance.nextLootRecordId = (tonumber(attendance.nextLootRecordId) or 0) + 1
-    local loot = { recordId = attendance.nextLootRecordId, itemId = itemId, name = itemName, link = itemLink, icon = itemTexture, count = quantity }
+    local loot = { recordId = attendance.nextLootRecordId, itemId = itemId, name = itemName,
+        link = itemLink, icon = itemTexture, count = quantity,
+        ordinaryReceipt = ordinary and true or nil,
+        awardHistoryKey = award and award.historyKey or (transfer and transfer.historyKey) }
     AppendRollHistory(loot, rollHistory)
     table.insert(member.loot, loot)
+    if ordinaryIndex then ordinaryIndex[payload] = loot end
     return true
 end
 
@@ -998,7 +1149,8 @@ function RaidService.RecordPendingAwardReceipt(recipient, itemLink)
         StopLootExpiryIfEmpty()
         return false
     end
-    local recorded = RaidService.RecordLoot(recipient .. " receives loot: " .. itemLink, true)
+    local quantitySuffix = pending.quantity and (" x" .. pending.quantity) or ""
+    local recorded = RaidService.RecordLoot(recipient .. " receives loot: " .. itemLink .. quantitySuffix, true)
     if recorded then
         local echo = pendingLootEchoes[key]
         if not echo or GetTime() > echo.expiresAt then

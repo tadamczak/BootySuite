@@ -20,7 +20,7 @@ local function NormalizeLootRank(value)
     return nil
 end
 
-local function HasCsrRights(member, rules, rosterLootRanks)
+local function HasCsrRights(member, rules)
     local key = Normalize(member.guildRank) == "officer wukong" and "chimp" or NormalizeLootRank(member.lootRank)
     key = key or NormalizeLootRank(member.guildRank)
     if not key then return false end
@@ -68,16 +68,9 @@ function CSR.BuildSummary(entries, rules, currentTime, target, rosterData, selec
 
     local now = tonumber(currentTime) or time()
     local cutoff = now - WINDOW_SECONDS
-    local rosterLootRanks = summary.rosterLootRanks or {}
-    summary.rosterLootRanks = rosterLootRanks
-    ClearTable(rosterLootRanks)
-    for index = 1, table.getn(rosterData and rosterData.members or {}) do
-        local rosterMember = rosterData.members[index]
-        if Normalize(rosterMember.rank) == "officer wukong" then
-            local lootRank = "chimp"
-            if lootRank then rosterLootRanks[Normalize(rosterMember.name)] = lootRank end
-        end
-    end
+    -- Keep the public rosterData argument for callers; CSR rights belong to
+    -- historical member records and rules, not the current guild roster.
+    summary.rosterLootRanks = nil
     local ordered = summary.orderedScratch or {}
     summary.orderedScratch = ordered
     for index = table.getn(ordered), 1, -1 do ordered[index] = nil end
@@ -98,7 +91,7 @@ function CSR.BuildSummary(entries, rules, currentTime, target, rosterData, selec
             local lootCount, lootItems = GetLootCount(member)
             local reserveCount, reserveItems, scalarReserves = GetReserveCount(member)
             local hasLoot = lootCount > 0
-            local hasRights = HasCsrRights(member, rules, rosterLootRanks)
+            local hasRights = HasCsrRights(member, rules)
             if key ~= "" and (hasLoot or hasRights) then
                 local state = states[key]
                 if not state then state = { name = member.name or "Unknown", pending = {}, sources = {}, receivedThisRaid = {} }; states[key] = state end

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.103 - 2026-10-01
+
+- Bound temporary Loot Master restore history while preserving active awards and trades.
+- Aggregate ordinary repeated loot quantities while retaining separate award records and transfer history.
+- Avoid redundant SR/CSR calculations and draft snapshot copies; keep restored SR source data independent.
+
 ## 0.5.0-dev.102 - 2026-10-01
 
 - Reuse Guild/Raid Statistics data models during scrolling, resizing and accordion changes; rebuild on relevant data or filter changes.
