@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.96 - 2026-10-01
+
+- Fix independent Guild Statistics class/rank filtering and stabilize the visible-member count.
+- Refine Guild Statistics filters, member class icons and accordion-based raw summaries.
+
 ## 0.5.0-dev.95 - 2026-10-01
 
 - Refine attached Roster details typography, note padding and window width.
