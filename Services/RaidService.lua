@@ -223,7 +223,7 @@ local lootRankNames = { macaque = true, guest = true, alt = true, baboon = true,
 
 local function GetSoftReserveRank(member)
     local rank = string.lower(member.guildRank or "")
-    if rank ~= "officer wukong" then return rank ~= "" and rank or "guest" end
+    if rank ~= "officer wukong" and rank ~= "chimp banker" then return rank ~= "" and rank or "guest" end
     return "chimp"
 end
 
