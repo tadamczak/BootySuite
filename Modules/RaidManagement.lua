@@ -1024,8 +1024,7 @@ function RaidManagement.RefreshPage(renderer)
             local titleWidth = math.min(120, page.classicRaidName:GetStringWidth())
             local metaWidth = math.min(82, page.classicMeta:GetStringWidth())
             page.classicRaidName:SetWidth(titleWidth); page.classicMeta:SetWidth(metaWidth)
-            local needed = 6 + titleWidth + 10 + metaWidth + 8 + 108 + 108 + 66 + 16 + 4 + (issueCount > 0 and 104 or 0)
-            page.classicActionOffset = pageWidth < needed and 38 or 0
+            page.classicActionOffset = 0
         else
             page.refreshControls.title:Show(); page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide()
             page.refreshControls.title:SetText("Raid")
@@ -1042,11 +1041,7 @@ function RaidManagement.RefreshPage(renderer)
         if renderer.isLootMasterMinimized() then page.refreshControls.title:Hide() else page.refreshControls.title:Show() end
     end
     RaidManagement.ApplySectionHeaderVisibility(page, raidId, lootMasterMode)
-    if MOS.UI.Components.IsClassicSkin() and attendance and attendance.members then
-        local memberCount, onlineCount, memberIndex = table.getn(attendance.members), 0, nil
-        for memberIndex = 1, memberCount do if attendance.members[memberIndex].online then onlineCount = onlineCount + 1 end end
-        page.classicSummary:SetText(memberCount .. " | " .. onlineCount .. " online | " .. (memberCount - onlineCount) .. " offline")
-    end
+    page.classicSummary:Hide()
     if lootMasterMode and renderer.isLootMasterMinimized() then
         RaidManagement.ShowMinimizedLootMasterState(page, rows)
         return
@@ -1122,7 +1117,8 @@ end
 function RaidManagement.ShowReadyState(page, lootMasterMode)
     if lootMasterMode and page.toolDropdowns then for _, panel in pairs(page.toolDropdowns) do panel:Hide() end end
     local controls = page.refreshControls
-    if MOS.UI.Components.IsClassicSkin() and not lootMasterMode then page.classicToolbar:Show(); page.classicSummary:Show() else page.classicToolbar:Hide(); page.classicSummary:Hide() end
+    if MOS.UI.Components.IsClassicSkin() and not lootMasterMode then page.classicToolbar:Show() else page.classicToolbar:Hide() end
+    page.classicSummary:Hide()
     controls.mode:Show(); controls.scan:Hide(); controls.live:Hide()
     controls.testRaid:Hide()
     RaidManagement.HideRaidHistoryControls(controls)
@@ -2354,42 +2350,27 @@ function RaidManagement.LayoutActions(page)
         local toolbarOffset = page.classicToolbarOffset or 0
         local sectionOffset = page.classicSectionOffset or 0
         local scale = page.classicActionScale or 1
-        local right, index = -4, nil
-        local topActions = { { page.quitButton, 66 }, { page.exportButton, 108 } }
-        for index = 1, table.getn(topActions) do
-            local button, width = topActions[index][1], topActions[index][2]
-            local sizedWidth = math.floor(width * scale)
-            button:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(button, sizedWidth, 26, scale)
-            button:SetPoint("TOPRIGHT", page, "TOPRIGHT", right, -9 - sectionOffset - actionOffset)
-            right = right - sizedWidth - 8
-        end
-        MOS.UI.Components.SizeClassicButton(page.classicSaved, math.floor(108 * scale), 26, scale)
-        MOS.UI.Components.SetButtonLabelInsets(page.classicSaved, 8, 4)
-        MOS.UI.Components.SizeClassicButton(page.classicIssues, math.floor(96 * scale), 26, scale)
-        page.classicSaved:ClearAllPoints(); page.classicSaved:SetPoint("LEFT", page.classicMeta, "RIGHT", 8, 0)
-        page.classicIssues:ClearAllPoints(); page.classicIssues:SetPoint("LEFT", page.classicSaved, "RIGHT", 8, 0)
-        if actionOffset > 0 then
-            local titleSpace = math.max(40, PageSpan(page) - 134)
-            page.classicRaidName:SetWidth(math.min(120, titleSpace * 0.6))
-            page.classicMeta:SetWidth(math.max(1, titleSpace - page.classicRaidName:GetWidth() - 10))
-            local left = 6
-            local secondRow = {page.classicSaved, page.classicIssues, page.exportButton, page.quitButton}
-            local available = math.max(1, PageSpan(page) - 12)
-            local total = 108 + 108 + 66 + (page.classicIssues:IsShown() and 96 or 0)
-            local gaps = page.classicIssues:IsShown() and 24 or 16
-            local rowScale = math.min(1, math.max(1, available - gaps) / total)
-            local widths = {108, 96, 108, 66}
-            for index = 1, 4 do
-                local button = secondRow[index]
-                if index ~= 2 or button:IsShown() then
-                    local width = math.floor(widths[index] * rowScale)
-                    button:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(button, width, 26, rowScale)
-                    button:SetPoint("TOPLEFT", page, "TOPLEFT", left, -9 - sectionOffset - actionOffset)
-                    left = left + width + 8
-                end
-            end
-        end
-        page.classicRaidName:ClearAllPoints(); page.classicRaidName:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10 - sectionOffset)
+        local available=math.max(1,PageSpan(page)-12)
+        local showIssues=page.classicIssues:IsShown()
+        local nameLabel=page.classicRaidName.label or page.classicRaidName
+        local metaLabel=page.classicMeta.label or page.classicMeta
+        local nameWidth=nameLabel.GetStringWidth and nameLabel:GetStringWidth() or 48
+        local metaWidth=metaLabel.GetStringWidth and metaLabel:GetStringWidth() or 42
+        local natural={math.min(120,math.max(48,nameWidth+2)),math.min(100,math.max(42,metaWidth+2)),108,showIssues and 96 or 0,108,66}
+        local gapCount=showIssues and 5 or 4
+        local naturalTotal=gapCount*8
+        local index
+        for index=1,6 do naturalTotal=naturalTotal+natural[index] end
+        scale=math.min(1,available/math.max(1,naturalTotal));page.classicActionScale=scale
+        local widths={}
+        for index=1,6 do widths[index]=natural[index]>0 and math.max(1,math.floor(natural[index]*scale)) or 0 end
+        local left=6;local top=-9-sectionOffset
+        page.classicRaidName:ClearAllPoints();page.classicRaidName:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);page.classicRaidName:SetWidth(widths[1]);page.classicRaidName:SetHeight(26);if nameLabel.SetJustifyV then nameLabel:SetJustifyV("MIDDLE") end;MOS.UI.Components.FitButtonLabel(page.classicRaidName,widths[1]);left=left+widths[1]+8
+        page.classicMeta:ClearAllPoints();page.classicMeta:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);page.classicMeta:SetWidth(widths[2]);page.classicMeta:SetHeight(26);if metaLabel.SetJustifyV then metaLabel:SetJustifyV("MIDDLE") end;MOS.UI.Components.FitButtonLabel(page.classicMeta,widths[2]);left=left+widths[2]+8
+        MOS.UI.Components.SizeClassicButton(page.classicSaved,widths[3],26,scale);MOS.UI.Components.SetButtonLabelInsets(page.classicSaved,8,4);page.classicSaved:ClearAllPoints();page.classicSaved:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);left=left+widths[3]+8
+        if showIssues then MOS.UI.Components.SizeClassicButton(page.classicIssues,widths[4],26,scale);page.classicIssues:ClearAllPoints();page.classicIssues:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);left=left+widths[4]+8 end
+        MOS.UI.Components.SizeClassicButton(page.exportButton,widths[5],26,scale);page.exportButton:ClearAllPoints();page.exportButton:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);left=left+widths[5]+8
+        MOS.UI.Components.SizeClassicButton(page.quitButton,widths[6],26,scale);page.quitButton:ClearAllPoints();page.quitButton:SetPoint("TOPLEFT",page,"TOPLEFT",left,top)
         page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -48 - sectionOffset - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -48 - sectionOffset - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
         page.classicListButton:ClearAllPoints(); page.classicListButton:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -57 - sectionOffset - actionOffset)
         page.classicGroupButton:ClearAllPoints(); page.classicGroupButton:SetPoint("LEFT", page.classicListButton, "RIGHT", 8, 0)
@@ -2416,7 +2397,7 @@ function RaidManagement.LayoutActions(page)
             page.raidLeaderToolsButton:ClearAllPoints(); page.raidLeaderToolsButton:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -57 - sectionOffset - actionOffset - toolbarOffset)
             page.lootMasterToolsButton:ClearAllPoints(); page.lootMasterToolsButton:SetPoint("LEFT", page.raidLeaderToolsButton, "RIGHT", 8, 0)
         end
-        page.classicSummary:ClearAllPoints(); page.classicSummary:SetPoint("TOPLEFT", page.classicRaidName, "BOTTOMLEFT", 0, -2)
+        page.classicSummary:Hide()
         local toolbarLevel = page.classicToolbar:GetFrameLevel() + 2
         page.classicListButton:SetFrameLevel(toolbarLevel); page.classicGroupButton:SetFrameLevel(toolbarLevel)
         page.classicTwoButton:SetFrameLevel(toolbarLevel); page.classicFourButton:SetFrameLevel(toolbarLevel)
@@ -3136,7 +3117,7 @@ function RaidManagement.AttachActionHandlers(options)
         options.startTestRaid(); options.beginRaidSession(); options.setHistoricalLoaded(false); options.setScanReady(true); options.refresh()
     end)
     local saveDialog = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteSaveRaidSessionDialog", UIParent)
-    saveDialog:SetWidth(280); saveDialog:SetHeight(176); saveDialog:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
+    saveDialog:SetWidth(300); saveDialog:SetHeight(218); saveDialog:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
     saveDialog:SetFrameStrata("FULLSCREEN_DIALOG"); saveDialog:SetFrameLevel(245); saveDialog:EnableMouse(true)
     saveDialog:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
     saveDialog:SetBackdropColor(0.03, 0.025, 0.02, 1)
@@ -3151,9 +3132,12 @@ function RaidManagement.AttachActionHandlers(options)
         return checkbox
     end
     MOS.UI.Components.Window.StyleProjectDialog(saveDialog)
-    saveDialog.statistics = CreateSaveCheckbox("Save raid statistics", -42)
-    saveDialog.attendance = CreateSaveCheckbox("Save attendance", -70)
-    saveDialog.csr = CreateSaveCheckbox("Save CSR", -98)
+    saveDialog.idLabel=MOS.UI.Components.CreateLabel(saveDialog,nil,"OVERLAY","GameFontHighlightSmall");saveDialog.idLabel:SetPoint("TOPLEFT",saveDialog,"TOPLEFT",18,-42);saveDialog.idLabel:SetText("Raid ID")
+    saveDialog.raidId=MOS.UI.Components.CreateFramedEditBox(saveDialog,nil,190);saveDialog.raidId:SetPoint("LEFT",saveDialog.idLabel,"RIGHT",8,0);saveDialog.raidId:SetMaxLetters(80)
+    saveDialog.error=MOS.UI.Components.CreateLabel(saveDialog,nil,"OVERLAY","GameFontHighlightSmall");saveDialog.error:SetPoint("TOPLEFT",saveDialog,"TOPLEFT",18,-68);saveDialog.error:SetWidth(264);saveDialog.error:SetTextColor(1,0.35,0.30);saveDialog.error:Hide()
+    saveDialog.statistics = CreateSaveCheckbox("Save raid statistics", -88)
+    saveDialog.attendance = CreateSaveCheckbox("Save attendance", -116)
+    saveDialog.csr = CreateSaveCheckbox("Save CSR", -144)
     local function SyncAttendanceOption()
         if saveDialog.statistics:GetChecked() then
             saveDialog.attendance:Enable(); saveDialog.attendance.label:SetTextColor(1, 1, 1)
@@ -3168,15 +3152,19 @@ function RaidManagement.AttachActionHandlers(options)
     saveDialog.save:SetPoint("BOTTOMRIGHT", saveDialog, "BOTTOMRIGHT", -12, 12)
     saveDialog.cancel:SetScript("OnClick", function() saveDialog:Hide() end)
     saveDialog.save:SetScript("OnClick", function()
+        local raidId=string.gsub(tostring(saveDialog.raidId:GetText() or ""),"^%s+","");raidId=string.gsub(raidId,"%s+$","")
+        if raidId=="" then saveDialog.error:SetText("Raid ID is required.");saveDialog.error:Show();return end
+        if options.raidIdExists and options.raidIdExists(raidId) then saveDialog.error:SetText("This Raid ID is already saved.");saveDialog.error:Show();return end
         local saveStatistics = saveDialog.statistics:GetChecked() and true or false
         local saveAttendance = saveStatistics and saveDialog.attendance:GetChecked() and true or false
         local saveCSR = saveDialog.csr:GetChecked() and true or false
-        saveDialog:Hide()
-        options.saveRaidSession({ saveRaidStatistics = saveStatistics, saveAttendance = saveAttendance, saveCSR = saveCSR })
+        if options.saveRaidSession({raidId=raidId,saveRaidStatistics=saveStatistics,saveAttendance=saveAttendance,saveCSR=saveCSR})~=false then saveDialog:Hide()
+        else saveDialog.error:SetText("Raid ID could not be saved.");saveDialog.error:Show() end
     end)
     saveDialog.Open = function(self)
         self.statistics:SetChecked(1); self.attendance:SetChecked(1); self.csr:SetChecked(1)
-        SyncAttendanceOption(); self:Show()
+        local attendance=options.getAttendance and options.getAttendance();self.raidId:SetText(attendance and (attendance.snapshotId or (attendance.softReserveImport and attendance.softReserveImport.id)) or "")
+        self.error:Hide();SyncAttendanceOption(); self:Show();self.raidId:SetFocus();self.raidId:HighlightText()
     end
     saveDialog:Hide()
     options.page.saveSessionDialog = saveDialog

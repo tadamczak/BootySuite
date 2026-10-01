@@ -42,7 +42,7 @@ function RaidStatistics.BuildEntry(attendance, saveOptions)
         local savedMember = {
             name = member.name, class = member.class or "", guildRank = member.guildRank ~= "" and member.guildRank or "Guest",
             lootRank = ResolveLootRank(member),
-            srCount = table.getn(member.srItemIds or {}), lootCount = lootCount, srItems = {}, lootItems = {},
+            attendance = 1, srCount = table.getn(member.srItemIds or {}), lootCount = lootCount, srItems = {}, lootItems = {},
         }
         for itemIndex = 1, table.getn(member.srItemIds or {}) do savedMember.srItems[itemIndex] = { itemId = tonumber(member.srItemIds[itemIndex]), count = 1 } end
         for lootIndex = 1, table.getn(member.loot or {}) do
@@ -93,12 +93,13 @@ function RaidStatistics.BuildSummary(entries, selectedRaids)
                     player = { name = member.name, class = member.class, guildRank = string.lower(member.guildRank or "") == "officer wukong" and "Officer (Chimp)" or member.guildRank, raids = 0, sr = 0, loot = 0, srItems = {}, lootItems = {} }
                     byName[key] = player; summary.players[table.getn(summary.players) + 1] = player
                 end
-                if raid.attendanceEnabled ~= false then player.raids = player.raids + 1
+                local attendanceValue=tonumber(member.attendance);if attendanceValue==nil then attendanceValue=1 end
+                if raid.attendanceEnabled ~= false then player.raids = player.raids + attendanceValue
                 elseif selectedRaids then player.attendanceOff = true end
                 player.sr = player.sr + (tonumber(member.srCount) or 0); player.loot = player.loot + (tonumber(member.lootCount) or 0)
                 if table.getn(member.srItems or {}) > 0 then AppendItems(player.srItems, member.srItems, raid) else AppendMissingReserve(player.srItems, raid) end
                 AppendItems(player.lootItems, member.lootItems, raid)
-                if raid.attendanceEnabled ~= false then summary.participations = summary.participations + 1 end
+                if raid.attendanceEnabled ~= false then summary.participations = summary.participations + attendanceValue end
                 summary.sr = summary.sr + (tonumber(member.srCount) or 0); summary.loot = summary.loot + (tonumber(member.lootCount) or 0)
             end
         end

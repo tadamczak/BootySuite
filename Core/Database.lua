@@ -292,6 +292,16 @@ function Database.DeleteRaidStatistic(raidId)
     return true
 end
 
+function Database.HasRaidStatistic(raidId)
+    Database.Ensure()
+    local history=MuklaOfficerSuiteDB.raidStatistics
+    local wanted=string.lower(tostring(raidId or ""))
+    if wanted=="" or not history or type(history.raids)~="table" then return false end
+    local id
+    for id in pairs(history.raids) do if string.lower(tostring(id))==wanted then return true end end
+    return false
+end
+
 function Database.UpdateRaidStatisticFlags(raidId, attendanceEnabled, csrEnabled)
     Database.Ensure()
     local history = MuklaOfficerSuiteDB.raidStatistics
@@ -299,6 +309,15 @@ function Database.UpdateRaidStatisticFlags(raidId, attendanceEnabled, csrEnabled
     if not entry then return false end
     entry.attendanceEnabled = attendanceEnabled and true or false
     entry.csrEnabled = csrEnabled and true or false
+    return true
+end
+
+function Database.UpdateRaidStatistic(raidId,members,attendanceEnabled,csrEnabled)
+    Database.Ensure()
+    local history=MuklaOfficerSuiteDB.raidStatistics
+    local entry=history and history.raids and history.raids[raidId]
+    if not entry or type(members)~="table" then return false end
+    entry.members=members;entry.attendanceEnabled=attendanceEnabled and true or false;entry.csrEnabled=csrEnabled and true or false
     return true
 end
 
