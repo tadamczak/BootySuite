@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.95 - 2026-10-01
+
+- Refine attached Roster details typography, note padding and window width.
+- Unify Roster, Raid and Guild Statistics filter inputs, alignment, backgrounds and separators.
+
 ## 0.5.0-dev.94 - 2026-10-01
 
 - Refine Guild Statistics heading, result count and compact responsive filters.

@@ -964,6 +964,14 @@ function UI.LayoutFlow(parent, controls, x, top, width, gap)
     end
     return y+rowHeight
 end
+function UI.CreateToolbarSurface(parent, topBorder, bottomBorder)
+    local toolbar = UI.CreateContainer(nil, parent)
+    toolbar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+    toolbar:SetBackdropColor(0.025, 0.022, 0.016, 0.72)
+    UI.RegisterSkinnedSurface(toolbar, "content")
+    UI.SetSurfaceHorizontalBorders(toolbar, topBorder, bottomBorder)
+    return toolbar
+end
 function UI.StyleActionButton(button)
     button.mosClassicKeepNormalSurface=true;button.mosFlowFitLabel=true
     UI.ApplyDropdownChoiceSurface(button); UI.AttachGoldHoverBorder(button,0.35,0.35,0.35,1)

@@ -16,6 +16,10 @@ function RosterManagement.CreateSections(page)
     end
     C.JoinSurfaceEdges(page.tablePanel, true, true)
     C.JoinSurfaceEdges(page.actionsPanel, true, false)
+    page.filterToolbar = C.CreateToolbarSurface(page.tablePanel, false, true)
+    page.filterToolbar:SetPoint("TOPLEFT", page.tablePanel, "TOPLEFT", 0, 0)
+    page.filterToolbar:SetPoint("TOPRIGHT", page.tablePanel, "TOPRIGHT", 0, 0)
+    page.filterToolbar:Hide()
     page.actionsPanel:SetPoint("BOTTOMLEFT", page, "BOTTOMLEFT", 0, 0)
     page.actionsPanel:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", 0, 0)
     page.actionsPanel:SetHeight(34)
@@ -31,7 +35,7 @@ function RosterManagement.CreateShell(page, contentPanel)
     local searchLabel = MOS.UI.Components.CreateLabel(page.tablePanel or page, nil, "OVERLAY", "GameFontNormalSmall")
     searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -87)
     searchLabel:SetText("Search")
-    local searchBox = MOS.UI.Components.CreateSearchBox(page.tablePanel or page, "MuklaOfficerSuiteRosterSearch", 178)
+    local searchBox = MOS.UI.Components.CreateFramedEditBox(page.tablePanel or page, "MuklaOfficerSuiteRosterSearch", 178)
     searchBox:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -81)
 
     local status = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
@@ -172,7 +176,7 @@ function RosterManagement.CreateFilterView(page)
     sortHint:Hide()
     local label = MOS.UI.Components.CreateLabel(page.tablePanel or page, nil, "OVERLAY", "GameFontNormalSmall")
     label:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -112)
-    label:SetText("Filters")
+    label:SetText("")
 
     local classToggle = MOS.UI.Components.CreateDropdownButton(page.tablePanel or page, nil, "Class", 84)
     classToggle:SetPoint("TOPLEFT", page, "TOPLEFT", 50, -106)
@@ -1163,7 +1167,7 @@ end
 
 local function PlaceRosterFilter(page, control, visible, controlWidth, x, y)
     if not visible then control:Hide(); return x end
-    control:Show(); control:ClearAllPoints(); control:SetPoint("TOPLEFT", page.tablePanel or page, "TOPLEFT", x, y)
+    control:Show(); control:ClearAllPoints(); control:SetPoint("TOPLEFT", page.filterToolbar or page.tablePanel or page, "TOPLEFT", x, y)
     if controlWidth then control:SetWidth(controlWidth) end
     return x + (controlWidth or control:GetWidth()) + 8
 end
@@ -1217,25 +1221,26 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     local settings = MuklaOfficerSuiteDB or {}
     local x, y = 6, -8
     local hasFilters = settings.rosterShowClassFilter ~= false or settings.rosterShowRankFilter ~= false
-    x = PlaceRosterFilter(page, controls.filtersLabel, hasFilters, 30, x, y)
+    controls.filtersLabel:Hide()
     x = PlaceRosterFilter(page, controls.classFilter, settings.rosterShowClassFilter ~= false, width < 650 and 60 or 84, x, y)
     x = PlaceRosterFilter(page, controls.rankFilter, settings.rosterShowRankFilter ~= false, width < 650 and 60 or 84, x, y)
     local filterWrap = hasFilters and (settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false) and x + (settings.rosterShowSearch ~= false and 88 or 0) + (settings.rosterShowOffline ~= false and 118 or 0) > width - 6
     if filterWrap then x = 6; y = y - 28 end
     x = PlaceRosterFilter(page, controls.searchLabel, settings.rosterShowSearch ~= false, 40, x, y)
-    local searchAvailable = width - x - (settings.rosterShowOffline ~= false and 128 or 6)
+    local searchAvailable = width - x - (settings.rosterShowOffline ~= false and 114 or 6)
     x = PlaceRosterFilter(page, controls.searchBox, settings.rosterShowSearch ~= false, math.max(40, math.min(178, searchAvailable)), x, y)
     if settings.rosterShowSearch ~= false and settings.rosterShowOffline == false and searchAvailable < 178 then
         -- Resolve the right edge natively; sampled parent widths can lag a resize.
         controls.searchBox:SetPoint("TOPRIGHT", page.tablePanel or page, "TOPRIGHT", -6, y)
     end
-    x = PlaceRosterFilter(page, controls.showOffline.label, settings.rosterShowOffline ~= false, 76, x, y)
+    x = PlaceRosterFilter(page, controls.showOffline.label, settings.rosterShowOffline ~= false, 70, x, y)
+    if settings.rosterShowOffline ~= false then x = x - 6 end
     x = PlaceRosterFilter(page, controls.showOffline, settings.rosterShowOffline ~= false, nil, x, y)
+    controls.classFilter:SetHeight(24); controls.rankFilter:SetHeight(24); controls.searchBox:SetHeight(24); controls.showOffline:SetWidth(24); controls.showOffline:SetHeight(24)
     controls.searchLabel:SetTextColor(1, 1, 1)
-    controls.searchLabel:SetHeight(22); controls.searchLabel:SetJustifyV("MIDDLE")
+    controls.searchLabel:SetHeight(24); controls.searchLabel:SetJustifyV("MIDDLE")
     controls.showOffline.label:SetTextColor(1, 1, 1)
-    controls.showOffline.label:SetHeight(22); controls.showOffline.label:SetJustifyV("MIDDLE")
-    controls.filtersLabel:SetHeight(22); controls.filtersLabel:SetJustifyV("MIDDLE")
+    controls.showOffline.label:SetHeight(24); controls.showOffline.label:SetJustifyV("MIDDLE")
     if page.filterController and ((settings.rosterShowClassFilter == false and page.filterController.classPanel:IsVisible()) or (settings.rosterShowRankFilter == false and page.filterController.rankPanel:IsVisible())) then page.filterController:Hide() end
     controls.modeButton.label:ClearAllPoints()
     controls.modeButton.label:SetPoint("RIGHT", controls.modeButton, "LEFT", -4, 0)
@@ -1271,6 +1276,11 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     controls.refreshButton:SetWidth(22); controls.refreshButton:SetHeight(22)
     controls.refreshButton:SetPoint("BOTTOMLEFT", page.actionsPanel or page, "BOTTOMLEFT", actionX, actionBottom)
     local hasFilterRow = hasFilters or settings.rosterShowSearch ~= false or settings.rosterShowOffline ~= false
+    if page.filterToolbar then
+        if hasFilterRow then
+            page.filterToolbar:SetHeight(-y + 28); page.filterToolbar:Show()
+        else page.filterToolbar:Hide() end
+    end
     RosterManagement.LayoutSummary(page, controls.status)
     return y - (hasFilterRow and 28 or 0)
 end
