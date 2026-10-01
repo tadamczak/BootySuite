@@ -14,19 +14,36 @@ local function MatchSmallLabel(label, reference)
     label:SetJustifyH("LEFT")
 end
 
+local function MatchDetailValue(label, reference)
+    local font, size, flags = reference:GetFont()
+    label:SetFont(font, size + 2, flags)
+    label:SetJustifyH("LEFT")
+end
+
+local function PlaceDetailValue(window, label, value, y, text)
+    label:ClearAllPoints(); label:SetPoint("TOPLEFT", window, "TOPLEFT", 12, y); label:SetText(text)
+    label:SetWidth(math.ceil(label:GetStringWidth())); label:SetJustifyH("LEFT")
+    value:ClearAllPoints(); value:SetPoint("LEFT", label, "RIGHT", 4, 0); value:SetPoint("RIGHT", window, "RIGHT", -12, 0); value:SetJustifyH("LEFT")
+end
+
 function Roster.LayoutDetailsWindow(window, member)
-    window:SetWidth(230)
+    window:SetWidth(224)
     Place(window, window.details.name, -12)
     window.details.name:SetPoint("TOPRIGHT", window, "TOPRIGHT", -34, -12)
     Place(window, window.details.level, -29)
-    Place(window, window.zoneLabel, -48)
-    window.zoneLabel:SetText("Zone: |cffffffff" .. (member.zone or "Unknown") .. "|r")
-    Place(window, window.details.rank, -66)
-    window.details.rank:SetPoint("TOPRIGHT", window, "TOPRIGHT", -64, -66)
-    Place(window, window.details.lastOnline, -84)
     MatchSmallLabel(window.zoneLabel, window.details.level)
     MatchSmallLabel(window.details.rank, window.details.level)
     MatchSmallLabel(window.details.lastOnline, window.details.level)
+    MatchDetailValue(window.zoneValue, window.details.level)
+    MatchDetailValue(window.rankValue, window.details.level)
+    MatchDetailValue(window.lastOnlineValue, window.details.level)
+    PlaceDetailValue(window, window.zoneLabel, window.zoneValue, -48, "Zone:")
+    window.zoneValue:SetText(member.zone or "Unknown")
+    PlaceDetailValue(window, window.details.rank, window.rankValue, -66, "Rank:")
+    window.rankValue:SetText(string.lower(member.rank or "") == "officer wukong" and "Officer (Chimp)" or (member.rank or "Unknown"))
+    PlaceDetailValue(window, window.details.lastOnline, window.lastOnlineValue, -84, "Last online:")
+    window.lastOnlineValue:SetText(member.online and "Online" or (Roster.FormatLastOnline(member) .. " ago"))
+    if member.online then window.lastOnlineValue:SetTextColor(1,1,1) else window.lastOnlineValue:SetTextColor(0.5,0.5,0.5) end
     window.promoteButton:ClearAllPoints(); window.promoteButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -34, -62)
     window.demoteButton:ClearAllPoints(); window.demoteButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -10, -62)
     local canPromote = MOS.Services.Roster.CanManage("promote", member)
@@ -39,15 +56,19 @@ function Roster.LayoutDetailsWindow(window, member)
     public.title:SetText("Note:")
     MatchSmallLabel(public.title, window.details.level)
     MatchSmallLabel(officer.title, window.details.level)
+    MatchSmallLabel(public.label, window.details.level); public.label:SetJustifyV("TOP")
+    MatchSmallLabel(officer.label, window.details.level); officer.label:SetJustifyV("TOP")
     public:ClearAllPoints(); public:SetPoint("TOPLEFT", window, "TOPLEFT", 12, -116)
     public:SetPoint("TOPRIGHT", window, "TOPRIGHT", -12, -116); public:SetHeight(36)
+    public.label:ClearAllPoints(); public.label:SetPoint("TOPLEFT", public, "TOPLEFT", 5, -5); public.label:SetPoint("BOTTOMRIGHT", public, "BOTTOMRIGHT", -5, 5)
     public.title:ClearAllPoints(); public.title:SetPoint("BOTTOMLEFT", public, "TOPLEFT", 0, 4)
     officer:ClearAllPoints(); officer:SetPoint("TOPLEFT", window, "TOPLEFT", 12, -178)
     officer:SetPoint("TOPRIGHT", window, "TOPRIGHT", -12, -178); officer:SetHeight(36)
+    officer.label:ClearAllPoints(); officer.label:SetPoint("TOPLEFT", officer, "TOPLEFT", 5, -5); officer.label:SetPoint("BOTTOMRIGHT", officer, "BOTTOMRIGHT", -5, 5)
     officer.title:ClearAllPoints(); officer.title:SetPoint("BOTTOMLEFT", officer, "TOPLEFT", 0, 4)
     local canSeeOfficer = MOS.Services.Roster.CanManage("viewOfficerNote")
     window:SetHeight(canSeeOfficer and 258 or 196)
-    window.removeButton:SetWidth(96); window.inviteButton:SetWidth(102)
+    window.removeButton:SetWidth(94); window.inviteButton:SetWidth(100)
     if MOS.Services.Roster.CanManage("remove", member) then window.removeButton:Enable() else window.removeButton:Disable() end
     if MOS.Services.Roster.CanManage("group", member) then window.inviteButton:Enable() else window.inviteButton:Disable() end
 end
@@ -59,7 +80,7 @@ function Roster.UpdateDetailsWindow(page, member)
     end
     local window = page.detailsWindow
     if not window then
-        window = C.Window.CreateAttached(page, page.detailsOwner or page:GetParent(), 230, 258, function()
+        window = C.Window.CreateAttached(page, page.detailsOwner or page:GetParent(), 224, 258, function()
             local selected = page.detailsWindow.displayedMember
             if selected then page.rowController.onSelect(selected) end
         end)
@@ -80,6 +101,9 @@ function Roster.UpdateDetailsWindow(page, member)
         window.inviteButton = C.CreateButton(window, nil, "Group Invite", 118, 22)
         window.inviteButton:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -12, 10); Action(window.inviteButton, "group")
         window.zoneLabel = C.CreateComponentLabel(window, "", "orange")
+        window.zoneValue = C.CreateComponentLabel(window, "", "white")
+        window.rankValue = C.CreateComponentLabel(window, "", "white")
+        window.lastOnlineValue = C.CreateComponentLabel(window, "", "white")
         window:SetScript("OnHide", function()
             if page.noteTarget and page.noteTarget.row == window and page.noteEditor then page.noteEditor:Hide(); page.noteTarget = nil end
         end)

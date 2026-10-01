@@ -266,13 +266,14 @@ function RaidManagement.CreateChrome(page, callbacks)
 
     view.searchLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
     view.searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -82); view.searchLabel:SetText("Search"); view.searchLabel:Hide()
-    view.searchBox = MOS.UI.Components.CreateSearchBox(page, "MuklaOfficerSuiteRaidSearch", 178)
+    view.searchBox = MOS.UI.Components.CreateFramedEditBox(page, "MuklaOfficerSuiteRaidSearch", 178)
     view.searchBox:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -76); view.searchBox:Hide()
     view.refreshButton = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Buttons\\UI-RotationRight-Button-Up", 24)
     view.refreshButton:SetPoint("LEFT", view.searchBox, "RIGHT", 4, 0); view.refreshButton:Hide()
     MOS.UI.Components.AttachTooltip(view.refreshButton, "Refresh raid data", "Refresh the raid roster now. Disabled while Raid live tracking is active.")
     view.filterLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
-    view.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -82); view.filterLabel:SetText("Filters"); view.filterLabel:Hide()
+    view.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -82); view.filterLabel:SetText(""); view.filterLabel:Hide()
+    view.filterToolbar = MOS.UI.Components.CreateToolbarSurface(page, false, true); page.filterToolbar = view.filterToolbar; view.filterToolbar:Hide()
 
     local function CreateFilterButton(text, x)
         local button = MOS.UI.Components.CreateDropdownButton(page, nil, text, 84)
@@ -853,7 +854,7 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
                 page.reyCoinConfigWrapped = true
             end
         end
-        controls.filterLabel:Hide(); controls.resetButton:Hide(); controls.refreshButton:Hide(); controls.searchLabel:Hide()
+        controls.filterLabel:Hide(); controls.resetButton:Hide(); controls.refreshButton:Hide(); controls.searchLabel:Hide(); if page.filterToolbar then page.filterToolbar:Hide() end
         controls.modeButton:SetScale(1); controls.minimizeButton:SetScale(1)
         controls.modeButton:ClearAllPoints(); controls.modeButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -8); controls.modeButton:SetWidth(18); controls.modeButton:SetHeight(18); MOS.UI.Components.SetWindowButtonAction(controls.modeButton, "close")
         controls.minimizeButton:ClearAllPoints(); controls.minimizeButton:SetPoint("RIGHT", controls.modeButton, "LEFT", -4, 0); controls.minimizeButton:SetWidth(18); controls.minimizeButton:SetHeight(18); MOS.UI.Components.SetWindowButtonAction(controls.minimizeButton, "minimize")
@@ -869,32 +870,44 @@ function RaidManagement.LayoutListToolbar(page, lootMasterMode, settings)
     page.reyCoinToggle:Hide(); page.lmConfigToggle:Hide()
     if not page.lootMasterController or not page.lootMasterController.IsVisible() then if not page.reyCoinSolo then page.reyCoinPanel:Hide() end; page.lmConfigPanel:Hide() end
     local submenuOffset = classic and ((page.classicSectionOffset or 0) + (page.classicActionOffset or 0) + (page.classicToolbarOffset or 0)) or 0
-    controls.filterLabel:ClearAllPoints(); controls.filterLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -106 - submenuOffset)
     local pageWidth = PageSpan(page)
     local filterWidth = pageWidth < 650 and 60 or 84
-    controls.classButton:ClearAllPoints(); controls.classButton:SetPoint("TOPLEFT", page, "TOPLEFT", 50, -100 - submenuOffset); controls.classButton:SetWidth(filterWidth)
+    local toolbar = page.filterToolbar or page
+    if page.filterToolbar then
+        page.filterToolbar:ClearAllPoints(); page.filterToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -92 - submenuOffset); page.filterToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -92 - submenuOffset)
+        page.filterToolbar:SetHeight(38 + (page.classicSearchOffset or 0))
+    end
+    controls.filterLabel:Hide()
+    controls.classButton:ClearAllPoints(); controls.classButton:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -8); controls.classButton:SetWidth(filterWidth); controls.classButton:SetHeight(24)
     controls.rankButton:ClearAllPoints(); controls.rankButton:SetPoint("LEFT", controls.classButton, "RIGHT", 8, 0); controls.rankButton:SetWidth(filterWidth)
-    controls.resetButton:ClearAllPoints(); controls.resetButton:SetPoint("LEFT", controls.rankButton, "RIGHT", 8, 0)
+    controls.rankButton:SetHeight(24)
+    controls.resetButton:ClearAllPoints(); controls.resetButton:SetPoint("LEFT", controls.rankButton, "RIGHT", 8, 0); controls.resetButton:SetHeight(24)
     MOS.UI.Components.SetClassicButtonCompact(controls.modeButton, false)
     controls.modeButton:SetWidth(96); controls.modeButton:SetHeight(22)
     if not controls.modeButton.mosClassicIconKey then MOS.UI.Components.SetClassicButtonIcon(controls.modeButton, "loot_tools", 13, 7, 0) end
     controls.searchLabel:SetText("Search")
+    controls.searchLabel:SetTextColor(1,1,1)
     controls.searchLabel:SetWidth(42)
+    controls.searchLabel:SetHeight(24); controls.searchLabel:SetJustifyV("MIDDLE")
     controls.searchLabel:ClearAllPoints()
-    if (page.classicSearchOffset or 0) > 0 then controls.searchLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -136 - submenuOffset)
+    if (page.classicSearchOffset or 0) > 0 then controls.searchLabel:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -38)
     elseif settings.raidListShowFilters then controls.searchLabel:SetPoint("LEFT", controls.resetButton, "RIGHT", 10, 0)
-    else controls.searchLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -106 - submenuOffset) end
+    else controls.searchLabel:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 6, -8) end
     controls.searchBox:ClearAllPoints()
     controls.searchBox:SetPoint("LEFT", controls.searchLabel, "RIGHT", 4, 0)
+    controls.searchBox:SetHeight(24)
     controls.searchBox:SetWidth(math.min(110, page.classicSearchWidth or 110))
     controls.refreshButton:ClearAllPoints(); controls.refreshButton:SetPoint("LEFT", controls.searchBox, "RIGHT", 4, 0)
     if settings.raidListShowFilters then
-        controls.filterLabel:Show(); controls.classButton:Show(); controls.rankButton:Show(); controls.resetButton:Show()
+        controls.filterLabel:Hide(); controls.classButton:Show(); controls.rankButton:Show(); controls.resetButton:Show()
     else
         controls.filterLabel:Hide(); controls.classButton:Hide(); controls.rankButton:Hide(); controls.resetButton:Hide()
     end
     if settings.raidListShowSearch then controls.searchLabel:Show(); controls.searchBox:Show(); controls.refreshButton:Show()
     else controls.searchLabel:Hide(); controls.searchBox:Hide(); controls.refreshButton:Hide() end
+    if page.filterToolbar then
+        if settings.raidListShowFilters or settings.raidListShowSearch then page.filterToolbar:Show() else page.filterToolbar:Hide() end
+    end
 end
 
 function RaidManagement.SetRefreshControls(page, controls)
@@ -1298,6 +1311,7 @@ function RaidManagement.ShowGroupView(page, rows)
     local controls = page.refreshControls
     controls.resetFilters:Hide(); controls.searchLabel:Hide(); controls.searchBox:Hide(); controls.refreshButton:Hide(); controls.filterLabel:Hide()
     controls.classButton:Hide(); controls.rankButton:Hide(); controls.classPanel:Hide(); controls.rankPanel:Hide()
+    if page.filterToolbar then page.filterToolbar:Hide() end
     RaidManagement.HideListTable(page, rows)
     page.groupFrame:ClearAllPoints()
     if MOS.UI.Components.IsClassicSkin() then
