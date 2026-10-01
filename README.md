@@ -68,7 +68,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Export Roster -** Scan the guild roster and confirm a reload to save it to disk.
 - **Member filters -** Filter the saved roster independently by rank, class, exact level, or the `Search...` field. Rank and Class remain as the default captions when every option is active; one selected option is shown by name and larger selections use an `X selected` count. **Select all** toggles every option on or off.
 - **Grouping and sorting -** Sort by any column, or group by class, rank, or level. Group rows expand as accordions; sorting applies inside each group.
-- **Raw Data -** Toggle the table to review collapsible member totals by rank, class, and level band.
+- **Raw Data -** Toggle the table to review member totals by rank, class, and level band. Each section starts collapsed and shows its row count.
 - **Visible count -** Review the number of members currently included by the filters beside the Export Roster and Refresh Data actions.
 
 ### Raid
@@ -150,7 +150,7 @@ Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can 
 - **Resets -** Each Display, Size and Member tile color subsection has Reset to default with confirmation. Reset to defaults at the bottom-right of Settings resets all settings after confirmation, preserving saved profiles, guild data and raid history.
 - **Saved raids -** The Raid start screen lists Name, Raid and Time. Use the load or delete icon on each row; New Raid creates a session while grouped in a raid.
 - **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live. The skins are named **Default** (formerly Classic) and **Classic WIP** (formerly Default). Existing profile appearances are preserved.
-- **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them.
+- **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them. Multiselect menus use a bottom **Select All** toggle.
 - **Settings window -** Settings reopen from the top with your current saved values. Settings and saved raid lists use the full content width when scrolling is unnecessary; the scrollbar only takes space while needed.
 - **Resizable window -** Settings can be resized within the available game screen; long sections remain available through scrolling.
 - **Raid group interaction -** Drop a member on another member or on free group background. Hidden role icons release name space; hiding the group border and setting group spacing to zero joins the tiles.

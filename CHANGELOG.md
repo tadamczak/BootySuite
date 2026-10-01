@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.98 - 2026-10-01
+
+- Refine Guild Statistics accordions, row striping, hover states, action order and result-count sizing.
+- Fix first-open Roster details wrapping and dropdown click/layer behavior.
+- Standardize multiselect menus on the bottom Select All toggle and match the Raid Statistics chevron to navigation.
+
 ## 0.5.0-dev.97 - 2026-10-01
 
 - Standardize Search placeholders and dropdown geometry, captions, spacing and project popup borders.
