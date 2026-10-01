@@ -128,6 +128,8 @@ Pending trades survive closing the loot window or refreshing the current roster.
 - **Performance diagnosis -** Capture scoped addon activity when investigating performance problems.
 - **Memory by Addon -** Compare addon memory usage when the client exposes the required data. Long addon and operation lists are scrollable.
 
+Measured heap change is the change in the global Lua heap during observed calls; it does not measure total allocations or memory owned by MOS. Diagnosis reports the largest heap rise and slowest single measured call in its capture period. Closing Performance and Live Monitor stops measurement unless a diagnosis is running.
+
 Statistics, CSR and Performance adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, choosing or clearing a calendar date refreshes the results immediately.
 
 ### Settings

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.102 - 2026-10-01
+
+- Reuse Guild/Raid Statistics data models during scrolling, resizing and accordion changes; rebuild on relevant data or filter changes.
+- Remove disabled-profiler measurements, preserve callback results and report scoped single-call peaks with accurate global Lua heap semantics.
+- Preserve Raid Statistics edit values for offscreen rows and prevent recycled fields from changing another player's draft.
+
 ## 0.5.0-dev.101 - 2026-10-01
 
 - Isolate pending SR, Reycoin and loot confirmations across raid start, load, quit and test sessions; keep valid trades through roster refresh and window closure.

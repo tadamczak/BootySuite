@@ -6,8 +6,20 @@ local GuildStatistics = {}
 MOS.Modules.GuildStatistics = GuildStatistics
 
 local function Lower(value) return string.lower(tostring(value or "")) end
+local function SortNames(a,b) return Lower(a)<Lower(b) end
 local guildGroupRowColor={0.13,0.10,0.03}
 local guildStripeColor={1,1,1}
+local whiteClassColor={r=1,g=1,b=1}
+local RefreshPresentation
+local function IsPresentationVisible(controller)
+    local page=controller.page
+    if page.IsVisible then return page:IsVisible() end
+    return not page.IsShown or page:IsShown()
+end
+local function ClearMap(values)
+    local key
+    for key in pairs(values) do values[key] = nil end
+end
 local function AddUniqueMember(groups, groupName, memberName)
     local group=groups[groupName]
     if not group then group={};groups[groupName]=group end
@@ -24,7 +36,9 @@ local function OnTableScroll() FauxScrollFrame_OnVerticalScroll(24, this.refresh
 
 local function ClearArray(values)
     local index
-    for index = table.getn(values), 1, -1 do values[index] = nil end
+    -- Lua 5.0 remembers lengths written by insert/remove. Every cleared
+    -- sequence below is refilled with insert, so remove keeps that length valid.
+    for index = table.getn(values), 1, -1 do table.remove(values,index) end
 end
 
 function GuildStatistics.CreateSummaryState()
@@ -59,7 +73,7 @@ end
 
 local function ClassColor(className)
     local key = string.upper(tostring(className or ""))
-    return (RAID_CLASS_COLORS and RAID_CLASS_COLORS[key]) or UI.Theme.classColors[key] or { r = 1, g = 1, b = 1 }
+    return (RAID_CLASS_COLORS and RAID_CLASS_COLORS[key]) or UI.Theme.classColors[key] or whiteClassColor
 end
 
 local function CreateFilterGroup(parent, buttonText, width)
@@ -74,12 +88,14 @@ local function OnGuildRowClick()
     local row = this
     if not row.entry then return end
     local controller = row.tableController.controller
+    if not IsPresentationVisible(controller) then return end
     if row.entry.kind == "group" then
         controller.expandedGroups[row.entry.value] = not controller.expandedGroups[row.entry.value]
     elseif row.entry.kind == "rawHeader" then
         controller.expandedRawSections[row.entry.rawKey] = not controller.expandedRawSections[row.entry.rawKey]
     else return end
-    GuildStatistics.Refresh(controller)
+    controller.projectionDirty = true
+    RefreshPresentation(controller, false)
 end
 
 local function CreateMemberTable(page, refresh)
@@ -129,33 +145,160 @@ local function SortMembers(a, b)
     end
     if a.sortNumber ~= b.sortNumber then return a.sortAscending and a.sortNumber < b.sortNumber or (not a.sortAscending and a.sortNumber > b.sortNumber) end
     if a.sortText ~= b.sortText then return a.sortAscending and a.sortText < b.sortText or (not a.sortAscending and a.sortText > b.sortText) end
-    local aName,bName=Lower(a.member.name),Lower(b.member.name)
+    local aName,bName=a.sortName,b.sortName
     if aName==bName then return false end
     return a.sortAscending and aName<bName or (not a.sortAscending and aName>bName)
 end
 
-local function CreateWrappedMember(member,group,groupNumber,controller)
+local function UpdateWrappedMember(wrapped,member,group,groupNumber,controller)
     local number,text=0,""
     if controller.sortKey=="level" then number=tonumber(member.level) or 0
     elseif controller.sortKey=="rank" then number=tonumber(member.rankIndex) or 999;text=Lower(DisplayRank(member.rank))
     elseif controller.sortKey=="class" then text=Lower(DisplayClass(member.class))
     else text=Lower(member.name) end
-    return {member=member,group=group,groupNumber=groupNumber,sortNumber=number,sortText=text,sortAscending=controller.sortAscending}
+    wrapped.kind="member";wrapped.member=member;wrapped.group=group;wrapped.groupNumber=groupNumber
+    wrapped.sortNumber=number;wrapped.sortText=text;wrapped.sortAscending=controller.sortAscending;wrapped.sortName=Lower(member.name)
+    return wrapped
 end
 
-local function BuildEntries(controller, data)
-    ClearArray(controller.table.memberScratch); ClearArray(controller.table.entries)
-    controller.rawRanks = {}; controller.rawRankOrder = {}; controller.rawClasses = {}; controller.rawLevels = {0,0,0}
-    controller.rawRankMembers={};controller.rawClassMembers={};controller.rawLevelMembers={}
-    local ranks, classes, rankSeen, classSeen = {}, {}, {}, {}
+local function ClearWrappedMembers(pool, first)
+    local index
+    for index=first,table.getn(pool) do
+        local wrapped=pool[index]
+        wrapped.member=nil;wrapped.group=nil;wrapped.groupNumber=nil;wrapped.sortText=nil;wrapped.sortName=nil
+    end
+end
+
+local function ResetUniqueGroups(groups)
+    local _,members
+    for _,members in pairs(groups) do ClearMap(members) end
+end
+
+local function DropUnusedGroups(groups, counts)
+    local name
+    for name in pairs(groups) do if not counts[name] or counts[name]==0 then groups[name]=nil end end
+end
+
+local function SortRawRanks(a,b)
+    if a.index==b.index then return a.sortName<b.sortName end
+    return a.index>b.index
+end
+local function SortRawClasses(a,b) return a.sortName<b.sortName end
+local rawSectionKeys={"rank","class","level"}
+local rawSectionTitles={"Members by Rank","Members by Class","Members by Level"}
+local rawLevelLabels={"1 - 30lvl","31 - 59lvl","60lvl"}
+
+local function UpdateRawRow(rows, pool, index, name, count, rankIndex, className)
+    local row=pool[index]
+    if not row then row={};pool[index]=row end
+    row.kind=className and "rawClass" or "raw";row.label=name;row.count=count;row.index=rankIndex
+    row.className=className;row.countText="- "..count.." members";row.sortName=Lower(name)
+    table.insert(rows,row)
+end
+
+local function ReleaseRawRows(model)
+    local sectionIndex,rowIndex
+    for sectionIndex=1,3 do
+        local key=rawSectionKeys[sectionIndex]
+        ClearArray(model.rawRows[key])
+        local pool=model.rawPools[key]
+        for rowIndex=1,table.getn(pool) do
+            pool[rowIndex].label=nil;pool[rowIndex].className=nil;pool[rowIndex].countText=nil;pool[rowIndex].sortName=nil
+        end
+    end
+end
+
+local function ClearDerivedModel(controller)
+    local model=controller.model
+    ClearArray(model.fullEntries);ClearArray(controller.table.memberScratch);ClearArray(controller.table.entries);ClearWrappedMembers(model.wrapperPool,1)
+    ClearArray(model.ranks);ClearArray(model.classes);ClearMap(model.rankSeen);ClearMap(model.classSeen)
+    ClearMap(controller.rawRanks);ClearMap(controller.rawRankOrder);ClearMap(controller.rawClasses)
+    ClearMap(controller.rawRankMembers);ClearMap(controller.rawClassMembers);ClearMap(controller.rawLevelMembers)
+    controller.rawLevels[1]=0;controller.rawLevels[2]=0;controller.rawLevels[3]=0
+    ReleaseRawRows(model)
+    local index
+    for index=1,table.getn(model.groupHeaders) do model.groupHeaders[index].value=nil;model.groupHeaders[index].count=0 end
+    model.count=0;model.builtRaw=false;controller.projectionDirty=false
+end
+
+local function BuildRawEntries(controller)
+    local model=controller.model
+    local rankRows,classRows,levelRows=model.rawRows.rank,model.rawRows.class,model.rawRows.level
+    ClearArray(rankRows);ClearArray(classRows);ClearArray(levelRows)
+    local name,count
+    local index=0
+    for name,count in pairs(controller.rawRanks) do
+        index=index+1;UpdateRawRow(rankRows,model.rawPools.rank,index,name,count,controller.rawRankOrder[name] or 999)
+    end
+    table.sort(rankRows,SortRawRanks)
+    index=0
+    for name,count in pairs(controller.rawClasses) do
+        index=index+1;UpdateRawRow(classRows,model.rawPools.class,index,name,count,nil,name)
+    end
+    table.sort(classRows,SortRawClasses)
+    index=0
+    local band
+    for band=1,3 do
+        if controller.rawLevels[band]>0 then
+            index=index+1;UpdateRawRow(levelRows,model.rawPools.level,index,rawLevelLabels[band],controller.rawLevels[band])
+        end
+    end
+    local sectionIndex,rowIndex
+    for sectionIndex=1,3 do
+        local key=rawSectionKeys[sectionIndex]
+        local rows=model.rawRows[key]
+        local header=model.rawHeaders[sectionIndex]
+        header.kind="rawHeader";header.value=rawSectionTitles[sectionIndex];header.rawKey=key;header.count=0
+        table.insert(model.fullEntries,header)
+        for rowIndex=1,table.getn(rows) do
+            local row=rows[rowIndex]
+            row.rawIndex=rowIndex;row.rawKey=key;header.count=header.count+row.count
+            table.insert(model.fullEntries,row)
+        end
+        local pool=model.rawPools[key]
+        for rowIndex=table.getn(rows)+1,table.getn(pool) do
+            pool[rowIndex].label=nil;pool[rowIndex].className=nil;pool[rowIndex].countText=nil;pool[rowIndex].sortName=nil
+        end
+    end
+end
+
+local function BuildTableEntries(controller)
+    local model,scratch=controller.model,controller.table.memberScratch
+    table.sort(scratch,SortMembers)
+    local previousGroup,groupEntry,groupIndex=nil,nil,0
+    local index
+    for index=1,table.getn(scratch) do
+        local wrapped=scratch[index]
+        if controller.groupBy~="none" and wrapped.group~=previousGroup then
+            groupIndex=groupIndex+1;groupEntry=model.groupHeaders[groupIndex]
+            if not groupEntry then groupEntry={kind="group"};model.groupHeaders[groupIndex]=groupEntry end
+            groupEntry.value=wrapped.group;groupEntry.count=0
+            table.insert(model.fullEntries,groupEntry);previousGroup=wrapped.group
+        end
+        if groupEntry then groupEntry.count=groupEntry.count+1 end
+        wrapped.child=controller.groupBy~="none";wrapped.rowIndex=groupEntry and groupEntry.count or index
+        table.insert(model.fullEntries,wrapped)
+    end
+    for index=groupIndex+1,table.getn(model.groupHeaders) do model.groupHeaders[index].value=nil;model.groupHeaders[index].count=0 end
+end
+
+local function BuildModel(controller, data)
+    local model=controller.model
+    ClearArray(controller.table.memberScratch);ClearArray(model.fullEntries)
+    local ranks,classes,rankSeen,classSeen=model.ranks,model.classes,model.rankSeen,model.classSeen
+    ClearArray(ranks);ClearArray(classes);ClearMap(rankSeen);ClearMap(classSeen)
+    if controller.rawMode or model.builtRaw then
+        ClearMap(controller.rawRanks);ClearMap(controller.rawRankOrder);ClearMap(controller.rawClasses)
+        controller.rawLevels[1]=0;controller.rawLevels[2]=0;controller.rawLevels[3]=0
+        ResetUniqueGroups(controller.rawRankMembers);ResetUniqueGroups(controller.rawClassMembers);ResetUniqueGroups(controller.rawLevelMembers)
+    end
     local rankHasSelection,classHasSelection=false,false
     local selectedName
     for selectedName in pairs(controller.selectedRanks) do if controller.selectedRanks[selectedName] then rankHasSelection=true;break end end
     for selectedName in pairs(controller.selectedClasses) do if controller.selectedClasses[selectedName] then classHasSelection=true;break end end
     local query = Lower(controller.search:GetText())
     local level = tonumber(controller.level:GetText())
-    local effectiveGroupBy=controller.rawMode and "none" or controller.groupBy
-    local index
+    local count,index=0,nil
     for index = 1, table.getn(data.members) do
         local member = data.members[index]
         local rank, className = DisplayRank(member.rank), DisplayClass(member.class)
@@ -167,62 +310,54 @@ local function BuildEntries(controller, data)
         local rankMatches = not controller.rankGroup.panel.selectionTouched or not rankHasSelection or controller.selectedRanks[rank]
         local classMatches = not controller.classGroup.panel.selectionTouched or not classHasSelection or controller.selectedClasses[className]
         if rankMatches and classMatches and (not level or tonumber(member.level) == level) and matchesQuery then
-            table.insert(controller.table.memberScratch,CreateWrappedMember(member,MemberGroupValue(member,effectiveGroupBy),effectiveGroupBy=="level" and tonumber(member.level) or nil,controller))
-            local memberKey=Lower(member.name)
-            controller.rawRanks[rank]=(controller.rawRanks[rank] or 0)+AddUniqueMember(controller.rawRankMembers,rank,memberKey)
-            controller.rawClasses[className]=(controller.rawClasses[className] or 0)+AddUniqueMember(controller.rawClassMembers,className,memberKey)
-            controller.rawRankOrder[rank]=math.min(controller.rawRankOrder[rank] or 999,tonumber(member.rankIndex) or 999)
-            local memberLevel=tonumber(member.level) or 0
-            local levelBand=memberLevel<=30 and 1 or (memberLevel<60 and 2 or 3)
-            controller.rawLevels[levelBand]=controller.rawLevels[levelBand]+AddUniqueMember(controller.rawLevelMembers,levelBand,memberKey)
-        end
-    end
-    table.sort(ranks, function(a,b) return Lower(a)<Lower(b) end); table.sort(classes, function(a,b) return Lower(a)<Lower(b) end)
-    UI.FilterPanel.Refresh(controller.rankGroup.panel, ranks, controller.selectedRanks, controller.filterChanged, true)
-    UI.FilterPanel.Refresh(controller.classGroup.panel, classes, controller.selectedClasses, controller.filterChanged, true)
-    table.sort(controller.table.memberScratch, SortMembers)
-    local previousGroup, groupEntry, count = nil, nil, 0
-    for index = 1, table.getn(controller.table.memberScratch) do
-        local wrapped = controller.table.memberScratch[index]
-        if effectiveGroupBy ~= "none" and wrapped.group ~= previousGroup then
-            groupEntry = { kind = "group", value = wrapped.group, count = 0 }
-            table.insert(controller.table.entries, groupEntry); previousGroup = wrapped.group
-        end
-        if groupEntry and effectiveGroupBy ~= "none" then groupEntry.count = groupEntry.count + 1 end
-        if effectiveGroupBy == "none" or controller.expandedGroups[wrapped.group] then table.insert(controller.table.entries, { kind = "member", member = wrapped.member, child = effectiveGroupBy ~= "none", rowIndex = groupEntry and groupEntry.count or count + 1 }) end
-        count = count + 1
-    end
-    if controller.rawMode then
-        ClearArray(controller.table.entries)
-        local rawRankList,rawClassList={},{}
-        local name,value
-        for name,value in pairs(controller.rawRanks) do table.insert(rawRankList,{name=name,count=value,index=controller.rawRankOrder[name] or 999}) end
-        for name,value in pairs(controller.rawClasses) do table.insert(rawClassList,{name=name,count=value}) end
-        table.sort(rawRankList,function(a,b) if a.index==b.index then return Lower(a.name)<Lower(b.name) end return a.index>b.index end);table.sort(rawClassList,function(a,b)return Lower(a.name)<Lower(b.name) end)
-        local function AddRawSection(rawKey,title,entries,kind)
-            local memberCount=0
-            local countIndex
-            for countIndex=1,table.getn(entries) do memberCount=memberCount+(tonumber(entries[countIndex].count) or 0) end
-            table.insert(controller.table.entries,{kind="rawHeader",value=title,rawKey=rawKey,count=memberCount})
-            if controller.expandedRawSections[rawKey] then
-                local rawIndex
-                for rawIndex=1,table.getn(entries) do
-                    local item=entries[rawIndex]
-                    table.insert(controller.table.entries,{kind=kind or "raw",className=item.className,label=item.name,countText="- "..item.count.." members",rawIndex=rawIndex})
-                end
+            count=count+1
+            if controller.rawMode then
+                local memberKey=Lower(member.name)
+                controller.rawRanks[rank]=(controller.rawRanks[rank] or 0)+AddUniqueMember(controller.rawRankMembers,rank,memberKey)
+                controller.rawClasses[className]=(controller.rawClasses[className] or 0)+AddUniqueMember(controller.rawClassMembers,className,memberKey)
+                controller.rawRankOrder[rank]=math.min(controller.rawRankOrder[rank] or 999,tonumber(member.rankIndex) or 999)
+                local memberLevel=tonumber(member.level) or 0
+                local levelBand=memberLevel<=30 and 1 or (memberLevel<60 and 2 or 3)
+                controller.rawLevels[levelBand]=controller.rawLevels[levelBand]+AddUniqueMember(controller.rawLevelMembers,levelBand,memberKey)
+            else
+                local wrapped=model.wrapperPool[count]
+                if not wrapped then wrapped={};model.wrapperPool[count]=wrapped end
+                table.insert(controller.table.memberScratch,UpdateWrappedMember(wrapped,member,MemberGroupValue(member,controller.groupBy),controller.groupBy=="level" and tonumber(member.level) or nil,controller))
             end
         end
-        AddRawSection("rank","Members by Rank",rawRankList,"raw")
-        local classEntries={};for index=1,table.getn(rawClassList) do table.insert(classEntries,{name=rawClassList[index].name,count=rawClassList[index].count,className=rawClassList[index].name}) end
-        AddRawSection("class","Members by Class",classEntries,"rawClass")
-        local levelEntries={}
-        if controller.rawLevels[1]>0 then table.insert(levelEntries,{name="1 - 30lvl",count=controller.rawLevels[1]}) end
-        if controller.rawLevels[2]>0 then table.insert(levelEntries,{name="31 - 59lvl",count=controller.rawLevels[2]}) end
-        if controller.rawLevels[3]>0 then table.insert(levelEntries,{name="60lvl",count=controller.rawLevels[3]}) end
-        AddRawSection("level","Members by Level",levelEntries,"raw")
     end
-    return count
+    table.sort(ranks,SortNames);table.sort(classes,SortNames)
+    UI.FilterPanel.Refresh(controller.rankGroup.panel, ranks, controller.selectedRanks, controller.filterChanged, true)
+    UI.FilterPanel.Refresh(controller.classGroup.panel, classes, controller.selectedClasses, controller.filterChanged, true)
+    ClearWrappedMembers(model.wrapperPool,controller.rawMode and 1 or count+1)
+    DropUnusedGroups(controller.rawRankMembers,controller.rawRanks);DropUnusedGroups(controller.rawClassMembers,controller.rawClasses);DropUnusedGroups(controller.rawLevelMembers,controller.rawLevels)
+    if controller.rawMode then
+        BuildRawEntries(controller)
+        for index=1,table.getn(model.groupHeaders) do model.groupHeaders[index].value=nil;model.groupHeaders[index].count=0 end
+    else
+        BuildTableEntries(controller)
+        if model.builtRaw then ReleaseRawRows(model) end
+    end
+    model.builtRaw=controller.rawMode;model.count=count
+    controller.modelDirty=false;controller.projectionDirty=true
 end
+
+local function ProjectEntries(controller)
+    local entries,full=controller.table.entries,controller.model.fullEntries
+    ClearArray(entries)
+    local index
+    for index=1,table.getn(full) do
+        local entry=full[index]
+        if entry.kind=="group" or entry.kind=="rawHeader"
+            or (entry.kind=="member" and (not entry.child or controller.expandedGroups[entry.group]))
+            or (entry.kind~="member" and controller.expandedRawSections[entry.rawKey]) then
+            table.insert(entries,entry)
+        end
+    end
+    controller.projectionDirty=false
+end
+
+if MOS.Diagnostics.Wrap then BuildModel=MOS.Diagnostics.Wrap("Guild Statistics model",BuildModel,2) end
 
 local function LayoutTable(controller, rowWidth)
     UI.Table.AllocateColumnWidths(controller.table.columns, rowWidth)
@@ -296,6 +431,8 @@ local function RenderTable(controller)
     end
 end
 
+if MOS.Diagnostics.Wrap then RenderTable=MOS.Diagnostics.Wrap("Guild Statistics rows",RenderTable,1) end
+
 function GuildStatistics.AttachExport(view, button)
     button:SetParent(view.actionPanel or view.page); button:ClearAllPoints(); button:SetWidth(100); button:SetHeight(26); button:Show()
     UI.StyleActionButton(button); UI.SetClassicButtonIcon(button, "save", 13, 7, 0); UI.SetClassicButtonLabelOffset(button, 2)
@@ -359,8 +496,13 @@ function GuildStatistics.CreateController(options)
     local view=options.view
     options.page=view.page;options.view=view;options.rankGroup=view.rankGroup;options.classGroup=view.classGroup;options.level=view.level;options.search=view.search;options.table=view.table
     options.ready=false;options.groupBy="none";options.selectedRanks={};options.selectedClasses={};options.knownRanks={};options.knownClasses={};options.expandedGroups={};options.expandedRawSections={rank=false,class=false,level=false};options.sortKey="name";options.sortAscending=true;options.rawMode=false
-    view.groupBy="none";options.filterChanged=function() options.expandedGroups={};GuildStatistics.Refresh(options) end;view.onFilterChanged=options.filterChanged
+    options.model={ranks={},classes={},rankSeen={},classSeen={},wrapperPool={},fullEntries={},groupHeaders={},rawRows={rank={},class={},level={}},rawPools={rank={},class={},level={}},rawHeaders={{},{},{}}}
+    options.rawRanks={};options.rawRankOrder={};options.rawClasses={};options.rawLevels={0,0,0};options.rawRankMembers={};options.rawClassMembers={};options.rawLevelMembers={}
+    options.modelDirty=true;options.projectionDirty=true
+    view.groupBy="none";options.filterChanged=function() ClearMap(options.expandedGroups);GuildStatistics.Refresh(options) end;view.onFilterChanged=options.filterChanged
+    options.table.scroll.refreshCallback=function() RefreshPresentation(options,false) end
     options.table.controller=options;options.table.onSort=function(key)
+        if options.rawMode then return end
         if options.sortKey==key then options.sortAscending=not options.sortAscending else options.sortKey=key;options.sortAscending=true end
         GuildStatistics.Refresh(options)
     end
@@ -372,7 +514,7 @@ function GuildStatistics.CreateController(options)
     return options
 end
 
-function GuildStatistics.SetReady(controller,ready) controller.ready=ready and true or false end
+function GuildStatistics.SetReady(controller,ready) controller.ready=ready and true or false;controller.modelDirty=true end
 function GuildStatistics.IsReady(controller) return controller.ready end
 
 local function HideResults(controller)
@@ -384,9 +526,14 @@ local function HideResults(controller)
 end
 
 function GuildStatistics.BeginScan(controller)
-    controller.ready=false;HideResults(controller);controller.view.refreshButton:Hide();controller.view.scanButton:Hide();controller.view.empty:Hide()
+    controller.ready=false;controller.modelDirty=true
+    if not IsPresentationVisible(controller) then return end
+    HideResults(controller);controller.view.refreshButton:Hide();controller.view.scanButton:Hide();controller.view.empty:Hide()
 end
-function GuildStatistics.HandleScanFailure(controller) controller.view.scanButton:Show() end
+function GuildStatistics.HandleScanFailure(controller)
+    if not IsPresentationVisible(controller) then return end
+    controller.view.scanButton:Show()
+end
 
 local function LayoutContent(width,height,controller)
     local view,page=controller.view,controller.page
@@ -444,25 +591,45 @@ local function LayoutContent(width,height,controller)
 end
 
 function GuildStatistics.Layout(controller) UI.LayoutResponsiveCanvas(controller.page,LayoutContent,controller) end
+if MOS.Diagnostics.Wrap then GuildStatistics.Layout=MOS.Diagnostics.Wrap("Guild Statistics layout",GuildStatistics.Layout,1) end
 
-function GuildStatistics.Refresh(controller)
-    if controller.page.IsShown and not controller.page:IsShown() then return end
+RefreshPresentation=function(controller,relayout)
+    if not IsPresentationVisible(controller) then return end
     if controller.refreshing then return end
     controller.refreshing=true;MOS.Diagnostics.Count("uiRefreshes")
-    if not controller.ready then GuildStatistics.Layout(controller);controller.refreshing=false;return end
-    local data,guildName=controller.getData();guildName=guildName or "Guild";controller.view.guildTitle:SetText(guildName)
-    if not data or not data.members then
-        HideResults(controller);controller.view.empty:SetText(guildName.." has no saved roster. Scan Guild Statistics to begin.");controller.view.empty:Show();controller.view.scanButton:Show();GuildStatistics.Layout(controller);controller.refreshing=false;return
+    if not controller.ready then
+        if relayout then HideResults(controller);GuildStatistics.Layout(controller) end
+        controller.refreshing=false;return
     end
-    controller.groupBy=controller.view.groupBy or "none"
-    local count=BuildEntries(controller,data)
-    controller.view.showing:SetText(tostring(count));controller.view.showingLabel:Show();controller.view.showing:Show()
-    controller.view.lastScan:SetText("Last scan: "..(data.scannedAtText or "Unknown"))
-    controller.view.empty:Hide();controller.view.scanButton:Hide();controller.view.refreshButton:Show();controller.view.rawButton:Show();controller.view.actionPanel:Show();controller.view.filterPanel:Show()
-    GuildStatistics.Layout(controller);RenderTable(controller)
+    if controller.modelDirty then
+        local data,guildName=controller.getData();guildName=guildName or "Guild";controller.view.guildTitle:SetText(guildName)
+        controller.model.hasData=data and type(data.members)=="table" and true or false
+        if not controller.model.hasData then
+            controller.modelDirty=false;ClearDerivedModel(controller)
+            HideResults(controller);controller.view.empty:SetText(guildName.." has no saved roster. Scan Guild Statistics to begin.");controller.view.empty:Show();controller.view.scanButton:Show()
+        else
+            controller.groupBy=controller.view.groupBy or "none"
+            BuildModel(controller,data)
+            controller.view.showing:SetText(tostring(controller.model.count));controller.view.showingLabel:Show();controller.view.showing:Show()
+            controller.view.lastScan:SetText("Last scan: "..(data.scannedAtText or "Unknown"))
+            controller.view.empty:Hide();controller.view.scanButton:Hide();controller.view.refreshButton:Show();controller.view.rawButton:Show();controller.view.actionPanel:Show();controller.view.filterPanel:Show()
+        end
+        relayout=true
+    end
+    if relayout then GuildStatistics.Layout(controller) end
+    if not controller.model.hasData then controller.refreshing=false;return end
+    if controller.projectionDirty then ProjectEntries(controller) end
+    RenderTable(controller)
     local index
     for index=1,table.getn(controller.table.headers) do if controller.rawMode then controller.table.headers[index]:Hide() else controller.table.headers[index]:Show() end end
     controller.refreshing=false
+end
+
+-- External roster mutations explicitly invalidate the derived model, even
+-- while hidden. Scroll, resize and accordion projection reuse its rows.
+function GuildStatistics.Refresh(controller)
+    controller.modelDirty=true;controller.projectionDirty=true
+    RefreshPresentation(controller,true)
 end
 
 function GuildStatistics.CreateLifecycle(controller)
@@ -470,6 +637,6 @@ function GuildStatistics.CreateLifecycle(controller)
         Hide=function() controller.view.rankGroup.panel:Hide();controller.view.classGroup.panel:Hide();controller.view.groupPanel:Hide();controller.page:Hide();controller.view.host:Hide();UI.SetScrollBarVisible(getglobal("MuklaOfficerSuiteGuildStatisticsScrollScrollBar"),false) end,
         Show=function() controller.view.host:Show();controller.page:Show();GuildStatistics.Refresh(controller) end,
         Refresh=function() GuildStatistics.Refresh(controller) end,
-        OnResize=function() GuildStatistics.Refresh(controller) end,
+        OnResize=function() RefreshPresentation(controller,true) end,
     }
 end

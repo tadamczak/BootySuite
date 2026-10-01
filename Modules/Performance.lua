@@ -6,7 +6,7 @@ local Performance = MOS.Modules.Performance
 local function Memory(value)
     value = tonumber(value)
     if not value then return "Unavailable" end
-    if value >= 1024 then return string.format("%.2f MB", value / 1024) end
+    if math.abs(value) >= 1024 then return string.format("%.2f MB", value / 1024) end
     return string.format("%.1f KB", value)
 end
 
@@ -42,7 +42,7 @@ function Performance.Create(parent)
     page.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); page.title:SetText("Performance")
     page.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     page.description:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -48)
-    page.description:SetText("Live addon and client diagnostics.")
+    page.description:SetText("Selected calls; global Lua heap.")
 
     page.scroll=UI.CreateScrollFrame("MuklaOfficerSuitePerformanceBody",page,"UIPanelScrollFrameTemplate")
     page.canvas=UI.CreateContainer(nil,page.scroll);page.scroll:SetScrollChild(page.canvas)
@@ -58,13 +58,13 @@ function Performance.Create(parent)
     page.addonHeading, page.addonRule = Section("Mukla Officer Suite", -76)
     page.globalHeading, page.globalRule = Section("Game and all addons", -286)
 
-    local names = { "Tracked allocations", "Measured calls", "Measured runtime", "Average call time", "Largest allocation", "Slowest operation", "MOS events / sec", "UI refreshes / sec", "Scans this session", "Last roster scan", "Saved roster members", "Raid members / loot", "Current Lua memory", "GC threshold", "Memory rate", "Last allocation peak", "Last cleanup", "Current FPS / frame", "Network latency" }
+    local names = { "Measured heap change", "Measured calls", "Measured runtime", "Average call time", "Largest call heap rise", "Slowest single call", "MOS events / sec", "UI refreshes / sec", "Scans this session", "Last roster scan", "Saved roster members", "Raid members / loot", "Current Lua memory", "GC threshold", "Global heap rate", "Sampled heap rise", "Last heap decrease", "Current FPS / frame", "Network latency" }
     local tips = {
-        "Temporary memory allocated during the Mukla Officer Suite operations measured by this profiler. This does not include other addons.",
-        "Calls measured inside selected Mukla Officer Suite operations. Click to open the operation profiler.",
+        "Sum of signed global Lua heap changes across measured calls. Includes measurement overhead and garbage collection; not gross allocations or memory owned by MOS.",
+        "Selected MOS entry points only; nested calls are counted once. This is not complete addon CPU profiling. Click to open the operation profiler.",
         "Total execution time of measured Mukla Officer Suite operations.",
         "Average execution time of one measured Mukla Officer Suite operation.",
-        "Largest positive allocation observed during one measured operation.",
+        "Largest positive global Lua heap change during a single call in this viewing period. Not gross allocation or MOS-owned memory.",
         "Measured Mukla Officer Suite operation with the longest single execution.",
         "Average number of game events handled by Mukla Officer Suite per second.",
         "Average number of major Mukla Officer Suite page redraws per second.",
@@ -72,8 +72,8 @@ function Performance.Create(parent)
         "Time required to create the latest saved guild roster snapshot.",
         "Roster records retained in SavedVariables.", "Raid members and loot entries retained in the attendance snapshot.",
         "Memory used by the complete Lua interface, including every addon.", "Lua garbage collector threshold reported by this client.",
-        "Change in total Lua memory during the last second.", "Largest short allocation increase observed since reset.",
-        "Time since the sampler observed garbage collection reducing Lua memory.", "Frames per second and approximate duration of one frame.",
+        "Change in total Lua memory during the last sampling interval.", "Largest global Lua heap increase between samples since reset; not gross allocation.",
+        "Time since a sample showed lower global Lua heap use; does not prove a garbage-collection event.", "Frames per second and approximate duration of one frame.",
         "Round-trip network delay reported by the client."
     }
     page.labels, page.values, page.targets = {}, {}, {}
@@ -141,7 +141,7 @@ function Performance.Create(parent)
         for index=table.getn(detail.rows)+1,table.getn(entries) do detail.rows[index]=UI.CreateLabel(detail.canvas,nil,"OVERLAY","GameFontHighlightSmall") end
         for index = 1, table.getn(detail.rows) do
             local entry = entries[index]
-            if entry then detail.rows[index]:SetText(string.format("%s | %dx | %s | +%s", entry.name, entry.count or 0, Duration(entry.time), Memory(entry.memory))); detail.rows[index]:Show()
+            if entry then detail.rows[index]:SetText(string.format("%s | %dx | %s | heap %s", entry.name, entry.count or 0, Duration(entry.time), Memory(entry.memory))); detail.rows[index]:Show()
             else detail.rows[index]:SetText(index == 1 and "No measured operations yet." or ""); if index == 1 then detail.rows[index]:Show() else detail.rows[index]:Hide() end end
         end
     end
@@ -180,7 +180,7 @@ function Performance.Create(parent)
             end
         end
         local staleIndex
-        for staleIndex = table.getn(entries), entryCount + 1, -1 do entries[staleIndex] = nil end
+        for staleIndex = table.getn(entries), entryCount + 1, -1 do table.remove(entries, staleIndex) end
         if entryCount == 0 then
             local entry = entries[1]
             if not entry then entry = {}; entries[1] = entry end
@@ -232,7 +232,7 @@ function Performance.Create(parent)
     for index = 1, 5 do monitor.lines[index] = MOS.UI.Components.CreateLabel(monitor, nil, "OVERLAY", "GameFontHighlightSmall"); monitor.lines[index]:SetPoint("TOPLEFT", monitor, "TOPLEFT", 12, -34 - ((index - 1) * 18)); monitor.lines[index]:SetWidth(225); monitor.lines[index]:SetJustifyH("LEFT") end
     local monitorTips = {
         { "Lua memory / GC threshold", "Current memory used by all Lua addons, followed by the level at which the client expects garbage collection." },
-        { "Memory rate / allocation peak", "Memory change during the last second and the largest short allocation increase observed since reset." },
+        { "Global heap rate / sampled rise", "Global Lua heap change between samples and the largest observed rise since reset; not gross allocation or MOS-owned memory." },
         { "FPS / frame time", "Frames rendered per second and the approximate duration of one frame. Higher FPS and lower frame time are better." },
         { "Network latency", "Round-trip network delay. It affects responsiveness but does not directly measure addon CPU cost." },
         { "Mukla Officer Suite operations", "Measured calls per second, followed by cumulative calls and total execution time since reset." },
@@ -245,65 +245,51 @@ function Performance.Create(parent)
     monitor.minimized = false; monitor:Hide(); module.monitor = monitor
 
     function module:ResetOperationBaseline()
-        local calls, runtime, allocated, largest, slowest = MOS.Diagnostics.GetOperationTotals()
-        self.operationBaseline = {
-            totals = {
-                calls = calls or 0,
-                runtime = runtime or 0,
-                allocated = allocated or 0,
-            },
-            entries = {},
-            largest = largest or 0,
-            slowest = slowest,
-        }
-        local operations = MOS.Diagnostics.operations or {}
-        local name, operation = nil, nil
-        for name, operation in pairs(operations) do
-            self.operationBaseline.entries[name] = {
-                count = operation.count or 0,
-                time = operation.time or 0,
-                memory = operation.memory or 0,
-            }
-        end
+        MOS.Diagnostics.EndScope(self.operationScope)
+        self.operationScope = MOS.Diagnostics.BeginScope("performance")
+        self.operationStartedAt = GetTime()
     end
 
     function module:GetSessionOperations()
-        local calls, runtime, allocated = MOS.Diagnostics.GetOperationTotals()
-        local baseline = self.operationBaseline or { totals = { calls = 0, runtime = 0, allocated = 0 }, entries = {} }
-        local baselineTotals = baseline.totals
-        local deltaCalls = math.max(0, (calls or 0) - (baselineTotals.calls or 0))
-        local deltaRuntime = math.max(0, (runtime or 0) - (baselineTotals.runtime or 0))
-        local deltaAllocated = math.max(0, (allocated or 0) - (baselineTotals.allocated or 0))
+        local calls, runtime, memoryChange, largest, slowest = MOS.Diagnostics.GetOperationTotals(self.operationScope)
         local entries = self.sessionEntries
         if not entries then entries = {}; self.sessionEntries = entries end
         local entryCount = 0
-        local largestDelta, slowestTime, slowestName = 0, 0, nil
-        local operations = MOS.Diagnostics.operations or {}
-        local name, operation, base = nil, nil, nil
+        local operations = self.operationScope and self.operationScope.operations or MOS.Diagnostics.operations
+        local name, operation = nil, nil
         for name, operation in pairs(operations) do
-            base = baseline.entries[name]
-            local deltaCount = math.max(0, (operation.count or 0) - (base and base.count or 0))
-            if deltaCount > 0 then
+            if operation.count > 0 then
                 entryCount = entryCount + 1
                 local delta = entries[entryCount]
                 if not delta then delta = {}; entries[entryCount] = delta end
                 delta.name = name
-                delta.count = deltaCount
-                delta.time = math.max(0, (operation.time or 0) - (base and base.time or 0))
-                delta.memory = math.max(0, (operation.memory or 0) - (base and base.memory or 0))
-                if delta.memory > largestDelta then largestDelta = delta.memory end
-                if delta.time > slowestTime then slowestTime = delta.time; slowestName = name end
+                delta.count = operation.count
+                delta.time = operation.time
+                delta.memory = operation.memory
+                delta.maxTime = operation.maxTime
+                delta.maxMemory = operation.maxMemory
             end
         end
         local staleIndex
-        for staleIndex = table.getn(entries), entryCount + 1, -1 do entries[staleIndex] = nil end
+        for staleIndex = table.getn(entries), entryCount + 1, -1 do table.remove(entries, staleIndex) end
         table.sort(entries, CompareOperationTime)
-        return deltaCalls, deltaRuntime, deltaAllocated, largestDelta, slowestName, entries
+        return calls, runtime, memoryChange, largest, slowest, entries
     end
 
     local function UpdateSampler()
         local active = page:IsVisible() or monitor:IsVisible() or module.diagnosis
-        if active then sampler.frame:SetScript("OnUpdate",sampler.tick); sampler.frame:Show() else sampler.frame:SetScript("OnUpdate",nil);sampler.frame:Hide() end
+        if active then
+            if not module.operationScope or MOS.Diagnostics.scopes[module.operationScope.name] ~= module.operationScope then module:ResetOperationBaseline() end
+            if not sampler.frame:GetScript("OnUpdate") then
+                local current, threshold = gcinfo()
+                sampler.current, sampler.threshold, sampler.lastFast, sampler.lastSlow = current, threshold, current, current
+                sampler.fastElapsed, sampler.slowElapsed, sampler.rate = 0, 0, 0
+            end
+            sampler.frame:SetScript("OnUpdate",sampler.tick); sampler.frame:Show()
+        else
+            MOS.Diagnostics.EndScope(module.operationScope)
+            sampler.frame:SetScript("OnUpdate",nil);sampler.frame:Hide()
+        end
         page.monitorButton:SetText(monitor:IsVisible() and "Close Live Monitor" or "Open Live Monitor")
         if MOS.Diagnostics and type(MOS.Diagnostics.SetTracking) == "function" then
             MOS.Diagnostics.SetTracking(active)
@@ -314,6 +300,7 @@ function Performance.Create(parent)
         for index = 1, table.getn(monitor.lines) do if monitor.minimized then monitor.lines[index]:Hide() else monitor.lines[index]:Show() end end
         monitor:SetHeight(monitor.minimized and 34 or 134); monitor.minimize:SetText(monitor.minimized and "+" or "-")
     end)
+    page:SetScript("OnShow", UpdateSampler); page:SetScript("OnHide", UpdateSampler)
     monitor:SetScript("OnShow", UpdateSampler); monitor:SetScript("OnHide", UpdateSampler)
     page.monitorButton:SetScript("OnClick", function() if monitor:IsVisible() then monitor:Hide() else monitor:Show() end end)
 
@@ -322,11 +309,16 @@ function Performance.Create(parent)
         sampler.current, sampler.threshold, sampler.lastFast, sampler.lastSlow = current, threshold, current, current
         sampler.fastElapsed, sampler.slowElapsed, sampler.rate, sampler.peak, sampler.lastCleanupAt = 0, 0, 0, 0, nil
         MOS.Diagnostics.operations = {}; self.estimatedBaseline = MOS.Diagnostics.initialMemoryEstimate; self.estimatedAtLoad = current
+        self:ResetOperationBaseline()
+        if self.diagnosis then
+            MOS.Diagnostics.EndScope(self.diagnosis.scope)
+            self.diagnosis = { startedAt = GetTime(), startMemory = current, scope = MOS.Diagnostics.BeginScope("diagnosis"), minFps = nil, maxLatency = 0 }
+        end
     end
 
     function module:StartDiagnosis()
-        local calls, runtime = MOS.Diagnostics.GetOperationTotals()
-        self.diagnosis = { startedAt = GetTime(), startMemory = sampler.current or gcinfo(), startCalls = calls, startRuntime = runtime, minFps = nil, maxLatency = 0 }
+        if self.diagnosis then MOS.Diagnostics.EndScope(self.diagnosis.scope) end
+        self.diagnosis = { startedAt = GetTime(), startMemory = gcinfo(), scope = MOS.Diagnostics.BeginScope("diagnosis"), minFps = nil, maxLatency = 0 }
         page.diagnosticButton:SetText("Stop diagnosis")
         report:Hide(); UpdateSampler()
     end
@@ -334,21 +326,21 @@ function Performance.Create(parent)
     function module:StopDiagnosis(showReport)
         local session = self.diagnosis
         if not session then return end
-        self.diagnosis = nil; page.diagnosticButton:SetText("Start diagnosis"); UpdateSampler()
+        self.diagnosis = nil; MOS.Diagnostics.EndScope(session.scope); page.diagnosticButton:SetText("Start diagnosis"); UpdateSampler()
         if not showReport then return end
-        local seconds = math.max(1, GetTime() - session.startedAt); local calls, runtime, _, _, slowest = MOS.Diagnostics.GetOperationTotals()
-        local growth = (sampler.current or gcinfo()) - session.startMemory; local callsMade = calls - session.startCalls; local perSecond = callsMade / seconds; local runtimeDuringSession = runtime - session.startRuntime
+        local seconds = math.max(1, GetTime() - session.startedAt); local callsMade, runtimeDuringSession, _, _, slowest = MOS.Diagnostics.GetOperationTotals(session.scope)
+        local growth = gcinfo() - session.startMemory; local perSecond = callsMade / seconds
         local results = {
             string.format("Recorded %.0f seconds and %d measured MOS calls (%.2f/sec).", seconds, callsMade, perSecond),
-            string.format("Lua memory changed by %s (%+.1f KB/min).", Memory(math.abs(growth)), growth * 60 / seconds),
-            string.format("Lowest FPS: %.0f. Highest latency: %d ms.", session.minFps or 0, session.maxLatency or 0),
+            string.format("Global Lua heap changed by %s (%+.1f KB/min).", Memory(growth), growth * 60 / seconds),
+            string.format("Lowest FPS: %s. Highest latency: %d ms.", session.minFps and string.format("%.0f", session.minFps) or "not sampled", session.maxLatency or 0),
         }
-        if session.minFps and session.minFps < 30 then table.insert(results, "Warning: FPS dropped below 30 during the diagnosis.") elseif session.minFps and session.minFps < 50 then table.insert(results, "Notice: FPS dropped below 50 during the diagnosis.") else table.insert(results, "FPS remained stable during the recorded period.") end
+        if not session.minFps then table.insert(results, "FPS was not sampled during this diagnosis.") elseif session.minFps < 30 then table.insert(results, "Warning: FPS dropped below 30 during the diagnosis.") elseif session.minFps < 50 then table.insert(results, "Notice: FPS dropped below 50 during the diagnosis.") else table.insert(results, "FPS remained stable during the recorded period.") end
         if session.maxLatency > 300 then table.insert(results, "Warning: high network latency was observed; this is not necessarily caused by addons.") end
         if growth * 60 / seconds > 1024 then table.insert(results, "Notice: Lua memory grew by more than 1 MB/min; repeat a longer test to confirm a trend.") end
-        if perSecond > 5 then table.insert(results, "Notice: MOS performed many measured operations; open Measured calls to identify the busiest one.") else table.insert(results, "No excessive measured MOS operation rate was detected.") end
+        table.insert(results, "Only selected MOS entry points are measured; these samples do not establish total addon cost or a memory leak.")
         table.insert(results, "Measured MOS runtime during diagnosis: " .. Duration(runtimeDuringSession) .. ".")
-        if slowest then table.insert(results, "Most expensive observed operation: " .. slowest .. ".") end
+        if slowest then table.insert(results, "Slowest single measured call: " .. slowest .. ".") end
         for index=table.getn(report.lines)+1,table.getn(results) do report.lines[index]=UI.CreateLabel(report.canvas,nil,"OVERLAY","GameFontHighlightSmall") end
         for index = 1, table.getn(report.lines) do report.lines[index]:SetText(results[index] or "") end
         report:Show()
@@ -388,7 +380,7 @@ function Performance.Create(parent)
         values[19] = tostring(latency) .. " ms"
         for index = 1, table.getn(values) do page.values[index]:SetText(values[index]) end
         end
-        if monitor:IsVisible() then monitor.lines[1]:SetText("Lua: " .. Memory(current) .. " / " .. Memory(sampler.threshold)); monitor.lines[2]:SetText(string.format("Rate: %+.1f KB/s  Peak: %s", sampler.rate or 0, Memory(sampler.peak or 0))); monitor.lines[3]:SetText("FPS: " .. string.format("%.0f", fps) .. "  Frame: " .. (fps > 0 and string.format("%.1f ms", 1000 / fps) or "-")); monitor.lines[4]:SetText("Latency: " .. tostring(latency) .. " ms"); monitor.lines[5]:SetText(string.format("MOS: %.2f/s  %d total / %s", calls / elapsed, calls, Duration(runtime))); end; self:RefreshDetail(); self:RefreshAddons()
+        if monitor:IsVisible() then monitor.lines[1]:SetText("Lua: " .. Memory(current) .. " / " .. Memory(sampler.threshold)); monitor.lines[2]:SetText(string.format("Rate: %+.1f KB/s  Peak: %s", sampler.rate or 0, Memory(sampler.peak or 0))); monitor.lines[3]:SetText("FPS: " .. string.format("%.0f", fps) .. "  Frame: " .. (fps > 0 and string.format("%.1f ms", 1000 / fps) or "-")); monitor.lines[4]:SetText("Latency: " .. tostring(latency) .. " ms"); monitor.lines[5]:SetText(string.format("MOS: %.2f/s  %d total / %s", calls / math.max(1, GetTime() - (self.operationStartedAt or GetTime())), calls, Duration(runtime))); end; self:RefreshDetail(); self:RefreshAddons()
     end
 
     sampler.frame:SetScript("OnUpdate", function()
@@ -398,7 +390,10 @@ function Performance.Create(parent)
             if delta < 0 then sampler.lastCleanupAt = GetTime() elseif delta > (sampler.peak or 0) then sampler.peak = delta end
             sampler.current, sampler.threshold, sampler.lastFast = current, threshold, current
         end
-        if sampler.slowElapsed >= 1 then sampler.slowElapsed = 0; sampler.rate = (sampler.current or 0) - (sampler.lastSlow or sampler.current or 0); sampler.lastSlow = sampler.current; module:Refresh() end
+        if sampler.slowElapsed >= 1 then
+            sampler.rate = ((sampler.current or 0) - (sampler.lastSlow or sampler.current or 0)) / sampler.slowElapsed
+            sampler.slowElapsed = 0; sampler.lastSlow = sampler.current; module:Refresh()
+        end
     end)
     sampler.tick=sampler.frame:GetScript("OnUpdate");sampler.frame:SetScript("OnUpdate",nil)
     page.flow={page.diagnosticButton,page.monitorButton,page.resetButton}
@@ -449,7 +444,7 @@ function Performance.Create(parent)
     function module:Show() self:ResetOperationBaseline(); page:Show(); self:Layout(); UpdateSampler(); self:Refresh() end
     function module:Hide() page:Hide(); detail:Hide(); addons:Hide(); report:Hide(); UpdateSampler() end
     function module:OnResize() if page:IsVisible() then self:Layout() end end
-    page.resetButton:SetScript("OnClick", function() module:Reset(); module:ResetOperationBaseline(); module:Refresh() end)
+    page.resetButton:SetScript("OnClick", function() module:Reset(); module:Refresh() end)
     page.diagnosticButton:SetScript("OnClick", function() if module.diagnosis then module:StopDiagnosis(true) else module:StartDiagnosis() end end)
     local function LayoutDialogLines(dialog,lines)
         local function Measure(width)
@@ -497,7 +492,5 @@ function Performance.Create(parent)
     end
     monitor.title:SetPoint("RIGHT",monitor.minimize,"LEFT",-4,0)
     monitor:SetHeight(142)
-    module:Reset(); module:Layout(); return module
+    module:Reset(); UpdateSampler(); module:Layout(); return module
 end
-
-
