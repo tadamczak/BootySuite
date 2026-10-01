@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.101"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.102"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -10,6 +10,17 @@ end
 local MOS = MuklaOfficerSuite
 MOS.version = VERSION
 MOS.Database.onRaidAttendanceChanged = MOS.Services.Raid.OnRaidAttendanceChanged
+-- Wrap the actual domain/render entry points so direct module calls share
+-- the same scoped measurements as composition callbacks.
+MOS.Services.Roster.BuildSnapshot = MOS.Diagnostics.Wrap("Guild roster scan", MOS.Services.Roster.BuildSnapshot, 1)
+MOS.Services.Raid.SaveRoster = MOS.Diagnostics.Wrap("Raid roster scan", MOS.Services.Raid.SaveRoster, 0)
+MOS.Services.Raid.RecordLoot = MOS.Diagnostics.Wrap("Loot message", MOS.Services.Raid.RecordLoot, 2)
+MOS.Services.RaidStatistics.BuildSummary = MOS.Diagnostics.Wrap("Raid summary", MOS.Services.RaidStatistics.BuildSummary, 2)
+MOS.Services.CSR.BuildSummary = MOS.Diagnostics.Wrap("CSR model", MOS.Services.CSR.BuildSummary, 7)
+MOS.Services.RaidRes.Import = MOS.Diagnostics.Wrap("SR import", MOS.Services.RaidRes.Import, 3)
+MOS.Services.RaidRes.BuildSnapshot = MOS.Diagnostics.Wrap("SR snapshot", MOS.Services.RaidRes.BuildSnapshot, 1)
+MOS.Modules.RosterManagement.RefreshView = MOS.Diagnostics.Wrap("Roster refresh", MOS.Modules.RosterManagement.RefreshView, 6)
+MOS.Modules.RaidManagement.RefreshPage = MOS.Diagnostics.Wrap("Raid refresh", MOS.Modules.RaidManagement.RefreshPage, 1)
 -- Transient presentation modes never survive a UI reload. Their geometry is
 -- stored separately and is restored only when the user enters the mode again.
 MOS.lootMasterMode = false
@@ -55,10 +66,8 @@ local function SaveGuildRoster()
     return true
 end
 
-SaveGuildRoster = MOS.Diagnostics.Wrap("Guild roster scan", SaveGuildRoster)
-
-local SaveRaidRoster = MOS.Diagnostics.Wrap("Raid roster scan", MOS.Services.Raid.SaveRoster)
-local RecordRaidLoot = MOS.Diagnostics.Wrap("Loot message", MOS.Services.Raid.RecordLoot)
+local SaveRaidRoster = MOS.Services.Raid.SaveRoster
+local RecordRaidLoot = MOS.Services.Raid.RecordLoot
 
 MOS.Database.Ensure()
 MOS.UI.Components.SetSkinPersistence(function(value) MOS.Database.SetSetting("uiSkin", value) end)
@@ -406,10 +415,6 @@ RefreshRaidPage = function()
     if raidPage:IsVisible() then MOS.Modules.RaidManagement.RefreshPage(raidRenderer) end
     if raidPage.lootMasterController then raidPage.lootMasterController.Refresh() end
 end
-
-RefreshRosterPage = MOS.Diagnostics.Wrap("Roster refresh", RefreshRosterPage)
-RefreshStatisticsPage = MOS.Diagnostics.Wrap("Statistics refresh", RefreshStatisticsPage)
-RefreshRaidPage = MOS.Diagnostics.Wrap("Raid refresh", RefreshRaidPage)
 
 local function ShowPage(pageName)
     currentPage = pageName

@@ -10,7 +10,8 @@ local function OnRaidSelect()
     controller.editMode=false;controller.editMembers=nil
     if controller.selectedHistoryIds[this.raidId] then controller.selectedHistoryIds[this.raidId] = nil
     else controller.selectedHistoryIds[this.raidId] = true end
-    controller:Refresh()
+    controller.summaryDirty = true
+    controller:Render()
 end
 
 local function CopyItems(source)
@@ -24,12 +25,14 @@ local function CopyEditableMember(source)
     for key,value in pairs(source or {}) do if key~="srItems" and key~="lootItems" then target[key]=value end end
     target.srItems=CopyItems(source and source.srItems);target.lootItems=CopyItems(source and source.lootItems)
     target.attendance=tonumber(target.attendance);if target.attendance==nil then target.attendance=1 end
+    target.attendanceText=tostring(target.attendance)
+    target.srItemText=tostring(target.srItems[1] and target.srItems[1].itemId or "")
     return target
 end
 
 local function UpdateEditMember(row)
     local member=row and row.editMember
-    if not member then return end
+    if not member or row.bindingEditMember then return end
     member.name=row.nameEdit:GetText() or ""
     member.attendanceText=row.attendanceEdit:GetText() or ""
     member.srItemText=row.srEdit:GetText() or ""
@@ -49,7 +52,8 @@ end
 
 function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     local page=UI.CreateResponsiveCanvas(host,"MOSRaidStatisticsPage")
-    local controller = { page = page, getEntries = getEntries, deleteEntry = deleteEntry, updateEntry = updateEntry, selectedHistoryIds = {}, raidButtons = {}, rows = {}, filteredEntries = {}, selectedRaids = {} }
+    local isHostVisible = host.IsVisible or host.IsShown
+    local controller = { page = page, getEntries = getEntries, deleteEntry = deleteEntry, updateEntry = updateEntry, selectedHistoryIds = {}, raidButtons = {}, rows = {}, filteredEntries = {}, selectedRaids = {}, visibleHistoryIds = {}, modelDirty = true, summaryDirty = true, emptySummary = { players = {} } }
     page.statisticsController = controller
     host.statisticsController = controller
     controller.itemDialog = MOS.UI.Components.CreateItemListDialog("MuklaOfficerSuiteRaidStatisticsItems")
@@ -70,7 +74,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     MOS.UI.Components.SetClassicButtonCompact(controller.historyToggle, true); MOS.UI.Components.AttachGoldHoverBorder(controller.historyToggle, 0.35, 0.35, 0.35, 1)
     UI.SetChevronButtonIcon(controller.historyToggle,"left",11)
     MOS.UI.Components.AttachTooltip(controller.historyToggle, "Saved raids", "Collapse or restore the saved raid list.")
-    controller.historyToggle:SetScript("OnClick", function() controller.historyCollapsed = not controller.historyCollapsed; controller:Refresh() end)
+    controller.historyToggle:SetScript("OnClick", function() controller.historyCollapsed = not controller.historyCollapsed; controller:Render() end)
     controller.historyHeaders = {}
     for index, text in ipairs({"Name", "Raid", "Time"}) do controller.historyHeaders[index] = MOS.UI.Components.CreateColumnLabel(page, text, "gold") end
     controller.fromLabel = MOS.UI.Components.CreateLabel(controller.filterPanel, nil, "OVERLAY", "GameFontHighlightSmall"); controller.fromLabel:SetPoint("TOPLEFT", controller.filterPanel, "TOPLEFT", 10, -38); controller.fromLabel:SetText("From")
@@ -109,7 +113,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     controller.editError=UI.CreateLabel(page,nil,"OVERLAY","GameFontHighlightSmall");controller.editError:SetTextColor(1,0.35,0.30);controller.editError:SetJustifyH("RIGHT");controller.editError:Hide()
     controller.raidScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidStatisticsHistoryScroll", page, "FauxScrollFrameTemplate"); controller.raidScroll:SetPoint("TOPLEFT", page, "TOPLEFT", 2, -140); controller.raidScroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", 246, 5)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRaidStatisticsHistoryScrollScrollBar"))
-    controller.raidScroll.refreshCallback = function() controller:Refresh() end; controller.raidScroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(28, this.refreshCallback) end)
+    controller.raidScroll.refreshCallback = function() controller:RenderHistory() end; controller.raidScroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(28, this.refreshCallback) end)
     local index
     for index = 1, 20 do
         local button = MOS.UI.Components.CreateSelectionButton(page, nil, "", 234, 26); button:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -144 - ((index - 1) * 28)); button.statisticsController = controller; button:SetScript("OnClick", OnRaidSelect); button.label:Hide()
@@ -162,7 +166,15 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         local attendanceEnabled = controller.editDialog.attendance:GetChecked() and true or false
         local csrEnabled = controller.editDialog.csr:GetChecked() and true or false
         controller.editDialog:Hide()
-        if raidId and controller.updateEntry and controller.updateEntry(raidId,controller.editMembers or {},attendanceEnabled,csrEnabled) then controller.editMode=false;controller.editMembers=nil;controller:Refresh() end
+        if raidId and controller.updateEntry then
+            local members, memberIndex = {}, nil
+            for memberIndex = 1, table.getn(controller.editMembers or {}) do
+                local member = CopyEditableMember(controller.editMembers[memberIndex])
+                member.attendanceText = nil; member.srItemText = nil
+                members[memberIndex] = member
+            end
+            if controller.updateEntry(raidId,members,attendanceEnabled,csrEnabled) then controller.editMode=false;controller.editMembers=nil;controller:Refresh() end
+        end
     end)
     local function OnEditRaid()
         local raidId = this.raidId
@@ -172,7 +184,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         if not entry then return end
         controller.editingEntry=entry;controller.editingRaidId=raidId;controller.editMembers={}
         for entryIndex=1,table.getn(entry.members or {}) do controller.editMembers[entryIndex]=CopyEditableMember(entry.members[entryIndex]) end
-        controller.editMode=true;controller.editError:Hide();controller:Refresh()
+        controller.editMode=true;controller.editError:Hide();controller:Render()
     end
     local function OnRemoveRaid()
         controller.removeDialog.raidId = this.raidId
@@ -182,10 +194,10 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         controller.removeDialog:Show()
     end
     controller.headerEdit:SetScript("OnClick", OnEditRaid); controller.headerRemove:SetScript("OnClick", OnRemoveRaid)
-    controller.editCancel:SetScript("OnClick",function() controller.editMode=false;controller.editMembers=nil;controller.editError:Hide();controller:Refresh() end)
+    controller.editCancel:SetScript("OnClick",function() controller.editMode=false;controller.editMembers=nil;controller.editError:Hide();controller:Render() end)
     controller.editAdd:SetScript("OnClick",function()
         local member={name="",class="",guildRank="Guest",lootRank="Guest",attendance=1,attendanceText="1",srItemText="",srCount=0,lootCount=0,srItems={},lootItems={}}
-        table.insert(controller.editMembers,member);controller.scroll.offset=math.max(0,table.getn(controller.editMembers)-table.getn(controller.rows));controller:Refresh()
+        table.insert(controller.editMembers,member);controller.scroll.offset=math.max(0,table.getn(controller.editMembers)-table.getn(controller.rows));controller:Render()
     end)
     controller.editSave:SetScript("OnClick",function()
         local rowIndex
@@ -196,7 +208,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
             if name=="" then controller.editError:SetText("Player name is required.");controller.editError:Show();return end
             if not attendance or attendance<0 then controller.editError:SetText("Attendance must be a non-negative number.");controller.editError:Show();return end
             if itemText~="" and not itemId then controller.editError:SetText("SR must contain a numeric Item ID.");controller.editError:Show();return end
-            member.name=name;member.attendance=attendance;member.attendanceText=nil;member.srItemText=nil;member.srItems=itemId and {{itemId=itemId,count=1}} or {};member.srCount=itemId and 1 or 0
+            member.name=name;member.attendance=attendance;member.attendanceText=tostring(attendance);member.srItemText=itemId and tostring(itemId) or "";member.srItems=itemId and {{itemId=itemId,count=1}} or {};member.srCount=itemId and 1 or 0
         end
         controller.editError:Hide();controller.editDialog.raidId=controller.editingRaidId;controller.editDialog.attendance:SetChecked(controller.editingEntry.attendanceEnabled~=false and 1 or nil);controller.editDialog.csr:SetChecked(controller.editingEntry.csrEnabled~=false and 1 or nil);controller.editDialog:Show()
     end)
@@ -209,7 +221,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     controller.playerHeader:SetHeight(18); controller.attendanceHeader:SetHeight(18); controller.srHeader:SetHeight(18); controller.lootHeader:SetHeight(18)
     controller.scroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidStatisticsScroll", page, "FauxScrollFrameTemplate"); controller.scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -166); controller.scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -22, 5)
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRaidStatisticsScrollScrollBar"))
-    controller.scroll.refreshCallback = function() controller:Refresh() end; controller.scroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end)
+    controller.scroll.refreshCallback = function() controller:RenderRows() end; controller.scroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end)
     for index = 1, 25 do
         local row = MOS.UI.Components.CreateContainer(nil, page); row:SetPoint("TOPLEFT", page, "TOPLEFT", 264, -170 - ((index - 1) * 24)); row:SetPoint("RIGHT", page, "RIGHT", -26, 0); row:SetHeight(23)
         row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" }); row:SetBackdropColor(0, 0, 0, 0)
@@ -348,20 +360,36 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
             row.loot:ClearAllPoints();row.loot:SetPoint("LEFT",row,"LEFT",width-lootWidth+4,0)
         end
     end
-    function controller:Refresh()
-        if not host:IsShown() or self.refreshing then return end
-        self.refreshing=true
-        MOS.Diagnostics.Count("uiRefreshes")
-        local entries, filterError = MOS.Services.RaidStatistics.FilterEntries(self.getEntries(), self.fromDate:GetText(), self.toDate:GetText(), self.filteredEntries, self.selectedRaids, self.search:GetText())
-        if not entries then self.filterStatus:SetText(filterError);while table.getn(self.filteredEntries)>0 do table.remove(self.filteredEntries) end;entries=self.filteredEntries end
-        local visibleIds, selectedRaid, selectedCount = {}, nil, 0
-        for index = 1, table.getn(entries) do visibleIds[entries[index].id] = entries[index] end
+    -- Only data/filter changes rebuild the filtered history. Selection changes
+    -- rebuild its summary; viewport work binds the retained model directly.
+    function controller:RebuildModel()
+        if self.modelDirty then
+            local entries, filterError = MOS.Services.RaidStatistics.FilterEntries(self.getEntries(), self.fromDate:GetText(), self.toDate:GetText(), self.filteredEntries, self.selectedRaids, self.search:GetText())
+            if not entries then
+                -- This scratch array is filled by numeric assignment, never
+                -- insert/remove, so Lua 5.0 cannot retain a cached length.
+                for index = table.getn(self.filteredEntries), 1, -1 do self.filteredEntries[index] = nil end
+            end
+            self.filterError = filterError
+            local raidId
+            for raidId in pairs(self.visibleHistoryIds) do self.visibleHistoryIds[raidId] = nil end
+            for index = 1, table.getn(self.filteredEntries) do
+                local entry = self.filteredEntries[index]
+                self.visibleHistoryIds[entry.id] = entry
+            end
+        end
+        local visibleIds, selectedRaid, selectedCount = self.visibleHistoryIds, nil, 0
         for raidId in pairs(self.selectedHistoryIds) do
             if not visibleIds[raidId] then self.selectedHistoryIds[raidId] = nil
             else selectedCount = selectedCount + 1; selectedRaid = visibleIds[raidId] end
         end
-        local singleRaid = selectedCount == 1 and selectedRaid or nil
-        local selectedFilter = selectedCount > 0 and self.selectedHistoryIds or nil
+        self.selectedCount = selectedCount
+        self.singleRaid = selectedCount == 1 and selectedRaid or nil
+        self.summary = selectedCount > 0 and MOS.Services.RaidStatistics.BuildSummary(self.filteredEntries, self.selectedHistoryIds) or self.emptySummary
+        self.modelDirty = false; self.summaryDirty = false
+    end
+    function controller:RenderHeader()
+        local filterError, selectedCount, singleRaid = self.filterError, self.selectedCount, self.singleRaid
         self.showResultStatus=filterError or selectedCount > 0
         if filterError then self.filterStatus:SetText(filterError);self.filterStatus:Show();self.headerEdit:Hide(); self.headerRemove:Hide()
         elseif singleRaid then self.filterStatus:SetText("|cffffd147" .. tostring(singleRaid.raidName or "Unknown zone") .. "|r |cffffffff| " .. tostring(singleRaid.id) .. " | " .. date("%Y-%m-%d", tonumber(singleRaid.savedAt) or 0) .. "|r"); self.filterStatus:Show();self.headerEdit.raidId = singleRaid.id; self.headerRemove.raidId = singleRaid.id; self.headerEdit:Show(); self.headerRemove:Show()
@@ -369,7 +397,9 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         else self.filterStatus:SetText("");self.filterStatus:Hide(); self.headerEdit:Hide(); self.headerRemove:Hide() end
         if self.editMode then self.headerEdit:Hide();self.headerRemove:Hide();self.editAdd:Show();self.editSave:Show();self.editCancel:Show()
         else self.editAdd:Hide();self.editSave:Hide();self.editCancel:Hide();self.editError:Hide() end
-        self:Layout()
+    end
+    function controller:BindHistory()
+        local entries = self.filteredEntries
         local rect=self.historyRect
         local raidOffset,visibleRaids,historyWidth=0,0,rect.width
         if self.historyCollapsed then
@@ -391,14 +421,24 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
                 MOS.UI.Components.StyleSelectableTableRow(button,math.mod(logicalIndex,2)==0,selected)
             else button.mosClassicSelected=false;button.mosTableRowSelected=false;UI.SetProjectButtonOutline(button,false);button:Hide() end
         end
-        local summary = selectedCount>0 and MOS.Services.RaidStatistics.BuildSummary(entries, selectedFilter) or {players={}}
-        local displayPlayers=self.editMode and (self.editMembers or {}) or summary.players
+        self.emptyHistory:ClearAllPoints();self.emptyHistory:SetPoint("TOPLEFT",page,"TOPLEFT",rect.x,-rect.y-4);self.emptyHistory:SetWidth(historyWidth)
+        if not self.historyCollapsed and table.getn(entries)==0 then self.emptyHistory:Show() else self.emptyHistory:Hide() end
+    end
+    function controller:RenderHistory()
+        if not isHostVisible(host) or self.modelDirty or self.summaryDirty or self.renderingHistory or not self.historyRect then return end
+        self.renderingHistory = true
+        self:BindHistory()
+        self.renderingHistory = false
+    end
+    function controller:BindRows()
+        local displayPlayers=self.editMode and self.editMembers or self.summary.players
+        local selectedCount, singleRaid = self.selectedCount, self.singleRaid
         local body=self.playerRect
         local offset,visible,rowWidth=UI.Table.LayoutViewport(self.scroll,page,body.x,body.y,body.width,body.height,table.getn(displayPlayers),24,table.getn(self.rows))
-        self:LayoutColumns(rowWidth)
-        self.emptyHistory:ClearAllPoints();self.emptyHistory:SetPoint("TOPLEFT",page,"TOPLEFT",rect.x,-rect.y-4);self.emptyHistory:SetWidth(historyWidth)
+        if self.columnsWidth ~= rowWidth or self.columnsEditMode ~= self.editMode then
+            self:LayoutColumns(rowWidth); self.columnsWidth = rowWidth; self.columnsEditMode = self.editMode
+        end
         self.emptyPlayers:ClearAllPoints();self.emptyPlayers:SetPoint("TOPLEFT",page,"TOPLEFT",body.x,-body.y-4);self.emptyPlayers:SetWidth(rowWidth)
-        if not self.historyCollapsed and table.getn(entries)==0 then self.emptyHistory:Show() else self.emptyHistory:Hide() end
         self.emptyPlayers:SetText(selectedCount==0 and "No selected raid." or "No matching players.");self.emptyPlayers:SetJustifyH("CENTER")
         if table.getn(displayPlayers)==0 then self.emptyPlayers:Show() else self.emptyPlayers:Hide() end
         for index = 1, table.getn(self.rows) do
@@ -408,8 +448,10 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
                 UI.ApplyRowBackground(row,offset+index,false)
                 row.player = player
                 if self.editMode then
+                    row.bindingEditMember = true
                     row.editMember=player;row.name:Hide();row.attendance:Hide();row.sr:Hide();row.srDirect:Hide();row.srMissing:Hide();row.loot:Hide()
                     row.nameEdit:SetText(player.name or "");row.attendanceEdit:SetText(tostring(player.attendanceText or player.attendance or 1));local editItem=player.srItemText or (player.srItems and player.srItems[1] and player.srItems[1].itemId) or "";row.srEdit:SetText(tostring(editItem));row.nameEdit:Show();row.attendanceEdit:Show();row.srEdit:Show();row:Show()
+                    row.bindingEditMember = nil
                 else
                 row.editMember=nil;row.nameEdit:Hide();row.attendanceEdit:Hide();row.srEdit:Hide();row.name:Show();row.attendance:Show();row.loot:Show();row.name:SetText(player.name)
                 local classKey=string.upper(tostring(player.class or ""));local classColor=(RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or UI.Theme.classColors[classKey]
@@ -425,13 +467,41 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
                 end
             else row.player=nil;row.editMember=nil;row.nameEdit:Hide();row.attendanceEdit:Hide();row.srEdit:Hide();row.srDirect.itemId=nil;row.srDirect:Hide();row.srMissing:Hide();row:Hide() end
         end
-        self.refreshing=false
+    end
+    function controller:RenderRows()
+        if not isHostVisible(host) or self.modelDirty or self.summaryDirty or self.renderingRows or not self.playerRect then return end
+        self.renderingRows = true
+        self:BindRows()
+        self.renderingRows = false
+    end
+    function controller:Render()
+        if not isHostVisible(host) or self.refreshing then return end
+        self.refreshing = true
+        MOS.Diagnostics.Count("uiRefreshes")
+        if self.modelDirty or self.summaryDirty then self:RebuildModel() end
+        self:RenderHeader()
+        self:Layout()
+        -- Header positions move on resize even when the column width is equal.
+        self.columnsWidth = nil
+        self:RenderHistory()
+        self:RenderRows()
+        self.refreshing = false
+    end
+    function controller:Refresh()
+        self.modelDirty = true; self.summaryDirty = true
+        self:Render()
+    end
+    if MOS.Diagnostics.Wrap then
+        controller.RebuildModel = MOS.Diagnostics.Wrap("Raid Statistics model", controller.RebuildModel, 1)
+        controller.Layout = MOS.Diagnostics.Wrap("Raid Statistics layout", controller.Layout, 1)
+        controller.BindHistory = MOS.Diagnostics.Wrap("Raid Statistics history", controller.BindHistory, 1)
+        controller.BindRows = MOS.Diagnostics.Wrap("Raid Statistics rows", controller.BindRows, 1)
     end
     return {
         Hide = function(self) controller.raidPanel:Hide(); controller.raidDismiss:Hide(); controller.dateDismiss:Hide(); controller.itemDialog:Hide(); controller.datePicker:Hide(); controller.editDialog:Hide(); controller.removeDialog:Hide(); page:Hide();host:Hide() end,
         Show = function(self) host:Show();page:Show(); controller:Refresh() end,
         Refresh = function(self) controller:Refresh() end,
-        OnResize = function(self) controller.datePicker:Hide(); controller.raidPanel:Hide(); controller:Refresh() end,
+        OnResize = function(self) controller.datePicker:Hide(); controller.raidPanel:Hide(); controller:Render() end,
         SelectRaid = function(self, raidId) for selectedId in pairs(controller.selectedHistoryIds) do controller.selectedHistoryIds[selectedId]=nil end; if raidId then controller.selectedHistoryIds[raidId]=true end; controller.raidScroll.offset = 0; controller.scroll.offset = 0; controller:Refresh() end,
     }
 end
