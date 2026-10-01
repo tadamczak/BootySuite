@@ -63,17 +63,8 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     controller.raidPanel = MOS.UI.Components.CreateDropdownPanel(controller.filterPanel, controller.raidFilter, 190, 178, 20)
     controller.raidDismiss = controller.raidPanel.dismiss
     controller.raidFilter:SetScript("OnClick", function() if controller.raidPanel:IsVisible() then controller.raidPanel:Hide() else controller.datePicker:Hide();controller.raidPanel:Show() end end)
-    local allCheck = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); allCheck:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheck:SetWidth(20); allCheck:SetHeight(20); allCheck:SetChecked(1)
-    allCheck.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); allCheck.label:SetPoint("LEFT", allCheck, "RIGHT", 2, 0); allCheck.label:SetText("All")
-    controller.raidChecks = {}
-    local function RefreshRaidCaption() UI.FilterPanel.SetCaption(controller.raidFilter,raidNames,controller.selectedRaids) end
-    MOS.UI.Components.BindCheckboxLabel(allCheck, function(owner) local enabled = owner:GetChecked() and true or false; local i; for i = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[i]] = enabled and true or nil; controller.raidChecks[i]:SetChecked(enabled and 1 or nil) end;RefreshRaidCaption();controller:Refresh() end)
-    for raidNameIndex = 1, table.getn(raidNames) do
-        local check = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); check:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6 - (raidNameIndex * 23)); check:SetWidth(20); check:SetHeight(20); check:SetChecked(1); check.raidName = raidNames[raidNameIndex]
-        check.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); check.label:SetPoint("LEFT", check, "RIGHT", 2, 0); check.label:SetText(check.raidName)
-        MOS.UI.Components.BindCheckboxLabel(check, function(owner) controller.selectedRaids[owner.raidName] = owner:GetChecked() and true or nil; local allSelected, i = true, nil; for i = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[i]] then allSelected = false; break end end; allCheck:SetChecked(allSelected and 1 or nil);RefreshRaidCaption();controller:Refresh() end)
-        controller.raidChecks[raidNameIndex] = check
-    end
+    UI.FilterPanel.Refresh(controller.raidPanel,raidNames,controller.selectedRaids,function() controller:Refresh() end,true,true)
+    controller.raidChecks=controller.raidPanel.options
     controller.listTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controller.listTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -120); controller.listTitle:SetText("Raids")
     controller.historyToggle = MOS.UI.Components.CreateButton(page, nil, "", 22, 20)
     MOS.UI.Components.SetClassicButtonCompact(controller.historyToggle, true); MOS.UI.Components.AttachGoldHoverBorder(controller.historyToggle, 0.35, 0.35, 0.35, 1)
@@ -241,14 +232,6 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     UI.StyleProjectPopup(controller.raidPanel); UI.StyleProjectPopup(controller.datePicker)
     for _,button in ipairs(controller.datePicker.days) do UI.ApplyDropdownChoiceSurface(button);UI.AttachGoldHoverBorder(button,0.35,0.35,0.35,1) end
     UI.ApplyDropdownChoiceSurface(controller.datePicker.previous);UI.ApplyDropdownChoiceSurface(controller.datePicker.next)
-    controller.raidPanel:SetHeight(8+20+table.getn(controller.raidChecks)*23)
-    controller.raidPanel.options=controller.raidChecks;controller.raidPanel.selectAll=allCheck
-    RefreshRaidCaption()
-    local choiceWidth=130
-    for _,check in ipairs(controller.raidChecks) do choiceWidth=math.max(choiceWidth,check.label:GetStringWidth()+30) end
-    controller.raidPanel:SetWidth(choiceWidth)
-    allCheck:ClearAllPoints();allCheck:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4)
-    for i=1,table.getn(controller.raidChecks) do controller.raidChecks[i]:ClearAllPoints();controller.raidChecks[i]:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4-i*23) end
     UI.RegisterSkinnedSurface(controller.filterPanel,"content")
     UI.SetSurfaceHorizontalBorders(controller.filterPanel,true,true)
     controller.filterTitle:Hide()

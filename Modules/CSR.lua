@@ -115,29 +115,9 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
         if controller.raidPanel:IsVisible() then controller.raidPanel:Hide()
         else controller.raidPanel:Show() end
     end)
-    local allCheckbox = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); allCheckbox:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6); allCheckbox:SetWidth(20); allCheckbox:SetHeight(20); allCheckbox:SetChecked(1)
-    allCheckbox.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); allCheckbox.label:SetPoint("LEFT", allCheckbox, "RIGHT", 2, 0); allCheckbox.label:SetText("All")
-    controller.raidChecks = {}
-    local function RefreshRaidCaption() UI.FilterPanel.SetCaption(controller.raidFilter,raidNames,controller.selectedRaids) end
-    MOS.UI.Components.BindCheckboxLabel(allCheckbox, function(owner)
-        local enabled = owner:GetChecked() and true or false
-        local optionIndex
-        for optionIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[optionIndex]] = enabled and true or nil; controller.raidChecks[optionIndex]:SetChecked(enabled and 1 or nil) end
-        RefreshRaidCaption();controller:Refresh()
-    end)
-    for raidFilterIndex = 1, table.getn(raidNames) do
-        local checkbox = MOS.UI.Components.CreateCheckButton(nil, controller.raidPanel, "UICheckButtonTemplate"); checkbox:SetPoint("TOPLEFT", controller.raidPanel, "TOPLEFT", 8, -6 - (raidFilterIndex * 23)); checkbox:SetWidth(20); checkbox:SetHeight(20); checkbox.raidName = raidNames[raidFilterIndex]; checkbox:SetChecked(1)
-        checkbox.label = MOS.UI.Components.CreateLabel(controller.raidPanel, nil, "OVERLAY", "GameFontHighlightSmall"); checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", 2, 0); checkbox.label:SetText(raidNames[raidFilterIndex])
-        MOS.UI.Components.BindCheckboxLabel(checkbox, function(owner)
-            controller.selectedRaids[owner.raidName] = owner:GetChecked() and true or nil
-            local allSelected, optionIndex = true, nil
-            for optionIndex = 1, table.getn(raidNames) do if not controller.selectedRaids[raidNames[optionIndex]] then allSelected = false; break end end
-            allCheckbox:SetChecked(allSelected and 1 or nil);RefreshRaidCaption();controller:Refresh()
-        end)
-        controller.raidChecks[raidFilterIndex] = checkbox
-    end
+    UI.FilterPanel.Refresh(controller.raidPanel,raidNames,controller.selectedRaids,function() controller:Refresh() end,true,true)
+    controller.raidChecks=controller.raidPanel.options
     controller.search:SetScript("OnTextChanged", function() controller:Refresh() end)
-    RefreshRaidCaption()
     UI.AttachPlaceholder(controller.search,"Search...");controller.searchLabel:SetText("");controller.searchLabel:Hide()
     controller.playerHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Player name", 16, -108, 154, nil, false)
     controller.itemsHeader = MOS.UI.Components.Table.CreateHeader(page, nil, "Item", 180, -108, 140, nil, false)
@@ -185,13 +165,7 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
         end)
         row:Hide(); controller.rows[index] = row
     end
-    UI.StyleProjectPopup(controller.raidPanel);controller.raidPanel:SetHeight(8+20+table.getn(controller.raidChecks)*23)
-    controller.raidPanel.options=controller.raidChecks;controller.raidPanel.selectAll=allCheckbox
-    local choiceWidth=130
-    for _,check in ipairs(controller.raidChecks) do choiceWidth=math.max(choiceWidth,check.label:GetStringWidth()+30) end
-    controller.raidPanel:SetWidth(choiceWidth)
-    allCheckbox:ClearAllPoints();allCheckbox:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4)
-    for i=1,table.getn(controller.raidChecks) do controller.raidChecks[i]:ClearAllPoints();controller.raidChecks[i]:SetPoint("TOPLEFT",controller.raidPanel,"TOPLEFT",4,-4-i*23) end
+    UI.StyleProjectPopup(controller.raidPanel)
     UI.StyleActionButton(controller.testButton)
     controller.searchGroup=UI.CreateContainer(nil,page);controller.searchGroup:SetWidth(162);controller.searchGroup:SetHeight(26);controller.searchGroup.mosFlowWidth=162
     controller.searchLabel:Hide()

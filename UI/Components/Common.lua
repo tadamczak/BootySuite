@@ -162,6 +162,8 @@ function UI.CreateDropdownButton(parent, name, text, width)
     button.arrow:SetTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Up")
     button.arrow:SetTexCoord(0.20, 0.80, 0.20, 0.80)
     button:SetScript("OnSizeChanged",function() this.label:SetWidth(math.max(1,this:GetWidth()-28)) end)
+    if UI.ApplyDropdownChoiceSurface then UI.ApplyDropdownChoiceSurface(button) end
+    if UI.RegisterSkinCallback then UI.RegisterSkinCallback(function() UI.ApplyDropdownChoiceSurface(button) end) end
     return button
 end
 
@@ -169,7 +171,9 @@ function UI.RefreshDropdownLayers(panel, toggle)
     local strata = toggle:GetFrameStrata()
     local level = math.max(math.max(toggle:GetFrameLevel(), toggle:GetParent():GetFrameLevel()) + 20, panel.mosMinimumFrameLevel or 0)
     panel:SetFrameStrata(strata); panel:SetFrameLevel(level)
-    panel.dismiss:SetFrameStrata(strata); panel.dismiss:SetFrameLevel(level - 1)
+    -- Keep the outside-click catcher below sibling controls. This lets the same
+    -- click close one menu and activate another control instead of being eaten.
+    panel.dismiss:SetFrameStrata(strata); panel.dismiss:SetFrameLevel(math.max(0, toggle:GetFrameLevel() - 1))
     local index
     for index = 1, table.getn(panel.options) do
         local option = panel.options[index]
@@ -201,8 +205,12 @@ function UI.CreateDropdownPanel(parent, toggle, width, height, levelOffset)
     dismiss:Hide()
     panel.dismiss = dismiss
     panel.options = {}
-    panel:SetScript("OnShow", function() UI.RefreshDropdownLayers(panel, toggle); dismiss:Show() end)
-    panel:SetScript("OnHide", function() dismiss:Hide() end)
+    panel:SetScript("OnShow", function()
+        if UI.openDropdownPanel and UI.openDropdownPanel ~= panel then UI.openDropdownPanel:Hide() end
+        UI.openDropdownPanel = panel
+        UI.RefreshDropdownLayers(panel, toggle); dismiss:Show()
+    end)
+    panel:SetScript("OnHide", function() dismiss:Hide(); if UI.openDropdownPanel == panel then UI.openDropdownPanel = nil end end)
     UI.StyleProjectPopup(panel)
     panel:Hide()
     return panel
@@ -216,6 +224,17 @@ function UI.StyleDropdownChoice(button)
         if font then button.label:SetFont(font, 9 + math.min(0, UI.GetTextSizeDelta(button) + 1), flags) end
     end
     return button
+end
+
+function UI.AttachSubtleRowHover(row, alpha)
+    if not row.mosSubtleHover then
+        row.mosSubtleHover = UI.CreateTexture(row, nil, "ARTWORK")
+        row.mosSubtleHover:SetAllPoints(row); row.mosSubtleHover:SetTexture(1,1,1,1); row.mosSubtleHover:Hide()
+        row:SetScript("OnEnter", function() this.mosSubtleHover:Show() end)
+        row:SetScript("OnLeave", function() this.mosSubtleHover:Hide() end)
+    end
+    row.mosSubtleHover:SetAlpha(alpha or 0.07)
+    return row.mosSubtleHover
 end
 
 function UI.CreateSearchBox(parent, name, width)
@@ -890,6 +909,7 @@ function UI.SetChevronButtonIcon(button,direction,size)
     if not button.chevronIcon then button.chevronIcon=UI.CreateTexture(button,nil,"ARTWORK") end
     button.chevronIcon:ClearAllPoints();button.chevronIcon:SetPoint("CENTER",button,"CENTER",0,0);button.chevronIcon:SetWidth(size or 13);button.chevronIcon:SetHeight(size or 13)
     button.chevronIcon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Icons\\chevron_"..(direction=="right" and "right" or "left")..".tga");button.chevronIcon:Show()
+    button.chevronIcon:SetVertexColor(unpack(UI.Theme.colors.goldText))
     if button.SetText then button:SetText("") end
 end
 

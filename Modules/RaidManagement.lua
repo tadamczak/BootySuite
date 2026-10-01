@@ -286,8 +286,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.rankButton = CreateFilterButton("Rank", 142)
     view.classPanel = MOS.UI.Components.CreateDropdownPanel(page, view.classButton, 130, 80, 25)
     view.rankPanel = MOS.UI.Components.CreateDropdownPanel(page, view.rankButton, 130, 80, 25)
-    view.dismiss = MOS.UI.Components.CreateControl("MuklaOfficerSuiteRaidFilterDismiss", page)
-    view.dismiss:SetAllPoints(page); view.dismiss:SetFrameLevel(page:GetFrameLevel() + 20); view.dismiss:Hide()
+    view.dismiss = view.classPanel.dismiss
     view.classPanel:SetFrameLevel(page:GetFrameLevel() + 30); view.rankPanel:SetFrameLevel(page:GetFrameLevel() + 30)
     view.classButton:SetFrameLevel(page:GetFrameLevel() + 31); view.rankButton:SetFrameLevel(page:GetFrameLevel() + 31)
 
@@ -2480,12 +2479,12 @@ function RaidManagement.CreateFilterController(options)
     controller.classButton:SetScript("OnClick", function()
         local show = not controller.classPanel:IsVisible()
         controller:Hide()
-        if show then controller.classPanel:Show(); controller.dismiss:Show() end
+        if show then controller.classPanel:Show() end
     end)
     controller.rankButton:SetScript("OnClick", function()
         local show = not controller.rankPanel:IsVisible()
         controller:Hide()
-        if show then controller.rankPanel:Show(); controller.dismiss:Show() end
+        if show then controller.rankPanel:Show() end
     end)
     options.resetButton:SetScript("OnClick", function() controller:Reset() end)
     options.page.filterController = controller

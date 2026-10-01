@@ -23,7 +23,8 @@ end
 local function PlaceDetailValue(window, label, value, y, text)
     label:ClearAllPoints(); label:SetPoint("TOPLEFT", window, "TOPLEFT", 12, y); label:SetText(text)
     label:SetWidth(math.ceil(label:GetStringWidth())); label:SetJustifyH("LEFT")
-    value:ClearAllPoints(); value:SetPoint("LEFT", label, "RIGHT", 4, 0); value:SetPoint("RIGHT", window, "RIGHT", -12, 0); value:SetJustifyH("LEFT")
+    value:ClearAllPoints(); value:SetPoint("LEFT", label, "RIGHT", 4, 0); value:SetPoint("RIGHT", window, "RIGHT", -12, 0); value:SetHeight(18); value:SetJustifyH("LEFT")
+    if value.SetWordWrap then value:SetWordWrap(false) end
 end
 
 function Roster.LayoutDetailsWindow(window, member)

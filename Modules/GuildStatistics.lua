@@ -97,6 +97,7 @@ local function CreateMemberTable(page, refresh)
         row.rank = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
         row.level = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall")
         row.classIcon = UI.CreateClassIcon(row,16)
+        row.hover = UI.AttachSubtleRowHover(row,0.07)
         UI.SetProjectButtonOutline(row, false)
         row.childBorder=UI.CreateProjectLeftAccent(row); row.tableController = tableView; row:SetScript("OnClick", OnGuildRowClick)
         row:Hide(); tableView.rows[index] = row
@@ -171,7 +172,7 @@ local function BuildEntries(controller, data)
             table.insert(controller.table.entries, groupEntry); previousGroup = wrapped.group
         end
         if groupEntry and controller.groupBy ~= "none" then groupEntry.count = groupEntry.count + 1 end
-        if controller.groupBy == "none" or controller.expandedGroups[wrapped.group] then table.insert(controller.table.entries, { kind = "member", member = wrapped.member, child = controller.groupBy ~= "none" }) end
+        if controller.groupBy == "none" or controller.expandedGroups[wrapped.group] then table.insert(controller.table.entries, { kind = "member", member = wrapped.member, child = controller.groupBy ~= "none", rowIndex = groupEntry and groupEntry.count or count + 1 }) end
         count = count + 1
     end
     if controller.rawMode then
@@ -216,16 +217,15 @@ local function SetClassIcon(texture, className)
     if coordinates then texture:SetTexCoord(coordinates[1],coordinates[2],coordinates[3],coordinates[4]) else texture:SetTexCoord(0,1,0,1) end
 end
 
-local function SetRowDecorations(row, kind, child, rawIndex)
+local function SetRowDecorations(row, kind, child, stripeIndex)
     UI.SetProjectButtonOutline(row, kind=="group" or kind=="rawHeader")
     row.childBorder:Hide();row.classIcon:Hide()
-    if kind=="group" then
-        row:SetBackdropColor(0.15,0.115,0.035,0.92)
-    elseif kind=="rawHeader" then row:SetBackdropColor(0.13,0.10,0.03,0.9)
-    elseif rawIndex then
-        if math.mod(rawIndex,2)==0 then row:SetBackdropColor(unpack(UI.Theme.colors.rowAlternate))
-        else row:SetBackdropColor(0,0,0,0) end
-    elseif child then
+    if kind=="group" or kind=="rawHeader" then
+        row:SetBackdropColor(0.13,0.10,0.03,0.9)
+    elseif stripeIndex and math.mod(stripeIndex,2)==0 then
+        row:SetBackdropColor(unpack(UI.Theme.colors.rowAlternate))
+    else row:SetBackdropColor(0,0,0,0) end
+    if child then
         row.childBorder:ClearAllPoints();row.childBorder:SetPoint("TOPLEFT",row,"TOPLEFT",12,0);row.childBorder:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",12,0);row.childBorder:Show()
     end
 end
@@ -240,15 +240,14 @@ local function RenderTable(controller)
         local row, entry = controller.table.rows[index], entries[offset + index]
         if entry and index <= visible then
             row:ClearAllPoints(); row:SetPoint("TOPLEFT", controller.page, "TOPLEFT", rect.x, -rect.y - headerHeight - (index - 1) * 24); row:SetWidth(rowWidth);row.entry=entry
-            UI.ApplyRowBackground(row, offset + index, false)
-            SetRowDecorations(row,entry.kind,entry.child,entry.rawIndex)
+            SetRowDecorations(row,entry.kind,entry.child,entry.rawIndex or entry.rowIndex)
             if entry.kind == "group" then
                 local marker=controller.expandedGroups[entry.value] and "- " or "+ "
                 UI.Table.Cell(row.name, row, 6, rowWidth - 12, 23, marker..entry.value .. "  (" .. entry.count .. ")")
                 row.name:SetTextColor(unpack(UI.Theme.colors.goldText)); row.class:Hide(); row.rank:Hide(); row.level:Hide()
             elseif entry.kind=="rawHeader" then
                 local marker=controller.expandedRawSections[entry.rawKey] and "- " or "+ "
-                UI.Table.Cell(row.name,row,6,rowWidth-12,23,marker..entry.value);row.name:SetTextColor(unpack(UI.Theme.colors.goldText));row.class:Hide();row.rank:Hide();row.level:Hide()
+                UI.Table.Cell(row.name,row,6,rowWidth-12,23,marker..entry.value.."  ("..entry.count..")");row.name:SetTextColor(unpack(UI.Theme.colors.goldText));row.class:Hide();row.rank:Hide();row.level:Hide()
             elseif entry.kind=="raw" or entry.kind=="rawClass" then
                 local left=entry.kind=="rawClass" and 28 or 12
                 local valueX=math.min(190,math.max(110,math.floor(rowWidth*0.42)))
@@ -330,7 +329,7 @@ local function SetControlText(control,text) if control.label then control.label:
 function GuildStatistics.CreateController(options)
     local view=options.view
     options.page=view.page;options.view=view;options.rankGroup=view.rankGroup;options.classGroup=view.classGroup;options.level=view.level;options.search=view.search;options.table=view.table
-    options.ready=false;options.groupBy="none";options.selectedRanks={};options.selectedClasses={};options.knownRanks={};options.knownClasses={};options.expandedGroups={};options.expandedRawSections={rank=true,class=true,level=true};options.sortKey="name";options.sortAscending=true;options.rawMode=false
+    options.ready=false;options.groupBy="none";options.selectedRanks={};options.selectedClasses={};options.knownRanks={};options.knownClasses={};options.expandedGroups={};options.expandedRawSections={rank=false,class=false,level=false};options.sortKey="name";options.sortAscending=true;options.rawMode=false
     view.groupBy="none";options.filterChanged=function() options.expandedGroups={};GuildStatistics.Refresh(options) end;view.onFilterChanged=options.filterChanged
     options.table.controller=options;options.table.onSort=function(key)
         if options.sortKey==key then options.sortAscending=not options.sortAscending else options.sortKey=key;options.sortAscending=true end
@@ -370,9 +369,9 @@ local function LayoutContent(width,height,controller)
     view.guildTitle:ClearAllPoints();view.guildTitle:SetPoint("BOTTOMLEFT",view.titleSeparator,"BOTTOMRIGHT",8,0);view.guildTitle:SetWidth(guildWidth);view.guildTitle:SetHeight(16);UI.FitButtonLabel(view.guildTitle,guildWidth)
     local top=36
     if controller.ready then
-        local showingLabelWidth=math.ceil(view.showingLabel:GetStringWidth())+4
-        local showingCountWidth=math.ceil(view.showing:GetStringWidth())+4
-        local showingWidth=math.min(available,showingLabelWidth+4+showingCountWidth)
+        local showingLabelWidth=112
+        local showingCountWidth=math.max(32,math.ceil(view.showing:GetStringWidth())+10)
+        local showingWidth=showingLabelWidth+4+showingCountWidth
         local actionAvailable=math.max(72,available-showingWidth-12)
         local baseActionWidth=(view.exportButton and 100 or 0)+104+92+(view.exportButton and 16 or 8)
         local actionScale=math.min(1,math.max(0.52,actionAvailable/math.max(1,baseActionWidth)))
@@ -380,9 +379,10 @@ local function LayoutContent(width,height,controller)
         if baseActionWidth*actionScale>actionAvailable+1 then actionAvailable=available;actionScale=math.min(1,actionAvailable/math.max(1,baseActionWidth));actionHeight=68 end
         view.actionPanel:ClearAllPoints();view.actionPanel:SetPoint("TOPLEFT",page,"TOPLEFT",0,-top);view.actionPanel:SetWidth(width);view.actionPanel:SetHeight(actionHeight);view.actionPanel:Show()
         local actionX=8
-        if view.exportButton then UI.SizeClassicButton(view.exportButton,math.floor(100*actionScale),26,actionScale);view.exportButton:ClearAllPoints();view.exportButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6);actionX=actionX+view.exportButton:GetWidth()+8 end
-        UI.SizeClassicButton(view.refreshButton,math.floor(104*actionScale),26,actionScale);view.refreshButton:ClearAllPoints();view.refreshButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6);actionX=actionX+view.refreshButton:GetWidth()+8
         UI.SizeClassicButton(view.rawButton,math.floor(92*actionScale),26,actionScale);view.rawButton:ClearAllPoints();view.rawButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6)
+        actionX=actionX+view.rawButton:GetWidth()+8
+        UI.SizeClassicButton(view.refreshButton,math.floor(104*actionScale),26,actionScale);view.refreshButton:ClearAllPoints();view.refreshButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6);actionX=actionX+view.refreshButton:GetWidth()+8
+        if view.exportButton then UI.SizeClassicButton(view.exportButton,math.floor(100*actionScale),26,actionScale);view.exportButton:ClearAllPoints();view.exportButton:SetPoint("TOPLEFT",view.actionPanel,"TOPLEFT",actionX,-6) end
         view.showing:ClearAllPoints();view.showing:SetPoint("TOPRIGHT",view.actionPanel,"TOPRIGHT",-8,actionHeight==38 and -10 or -44);view.showing:SetWidth(showingCountWidth);view.showing:SetHeight(18)
         view.showingLabel:ClearAllPoints();view.showingLabel:SetPoint("RIGHT",view.showing,"LEFT",-4,0);view.showingLabel:SetWidth(math.max(1,showingWidth-showingCountWidth-4));view.showingLabel:SetHeight(18)
         top=top+actionHeight
@@ -390,7 +390,7 @@ local function LayoutContent(width,height,controller)
         local flowWidth=math.max(1,width-16)
         local groupLabelWidth=math.ceil(view.groupLabel:GetStringWidth())
         local levelLabelWidth=math.ceil(view.levelLabel:GetStringWidth())
-        view.groupGroup.mosFlowWidth=groupLabelWidth+4+52
+        view.groupGroup.mosFlowWidth=groupLabelWidth+4+64
         view.levelGroup.mosFlowWidth=levelLabelWidth+4+32
         local searchMinimum=66
         local searchMaximum=132
@@ -402,7 +402,7 @@ local function LayoutContent(width,height,controller)
         view.searchGroup.mosFlowWidth=searchGroupWidth
         local filterBottom=UI.LayoutFlow(view.filterPanel,view.flow,8,8,flowWidth,6)+8;view.filterPanel:SetHeight(filterBottom)
         view.rankGroup.button:SetWidth(view.rankGroup:GetWidth());view.classGroup.button:SetWidth(view.classGroup:GetWidth())
-        view.groupButton:SetWidth(52);view.groupButton:ClearAllPoints();view.groupButton:SetPoint("LEFT",view.groupLabel,"RIGHT",4,0)
+        view.groupButton:SetWidth(64);view.groupButton:ClearAllPoints();view.groupButton:SetPoint("LEFT",view.groupLabel,"RIGHT",4,0)
         view.level:SetWidth(32);view.level:ClearAllPoints();view.level:SetPoint("LEFT",view.levelLabel,"RIGHT",4,0)
         view.search:SetWidth(math.max(66,math.min(132,view.searchGroup:GetWidth())));view.search:ClearAllPoints();view.search:SetPoint("LEFT",view.searchGroup,"LEFT",0,0)
         top=top+filterBottom+8
