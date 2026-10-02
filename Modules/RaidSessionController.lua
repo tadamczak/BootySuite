@@ -8,6 +8,25 @@ function RaidSessionController.Create(dependencies)
     local state, session = dependencies.state, dependencies.session
     local controller = {}
 
+    -- Read after the service work, preserving the legacy callback order without
+    -- allocating closures on each roster capture.
+    local function IsDraft() return state.raidSessionDraft end
+    local function PendingId() return state.pendingRaidSessionId end
+    local function PendingName() return state.pendingRaidName end
+
+    function controller:CaptureActiveRoster()
+        return session:CaptureActiveRoster(IsDraft)
+    end
+
+    function controller:CompletePendingRaidScan()
+        local count = session:CapturePendingRaid(PendingId, PendingName)
+        state.pendingRaidSessionId = nil
+        state.pendingRaidName = nil
+        state.raidScanReady = true
+        state.raidLiveTracking = dependencies.isLiveTrackingWanted()
+        return count
+    end
+
     function controller:Complete(saveOptions)
         if not session:Complete(saveOptions) then return false end
         state.raidSessionDraft = false; state.raidSessionPaused = true; state.raidLiveTracking = false

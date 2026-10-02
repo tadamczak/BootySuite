@@ -82,6 +82,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Raid views -** Switch between the member list and a centered, configurable group layout with adjustable sizing, spacing, and typography.
 - **Player actions -** Manage raid leader, assistants, removal, reporting, and ignore state.
 - **Soft Reserve warnings -** Review compact, movable detail lists for missing SR, imported SR outside the raid, and SR without loot rights without blocking the game interface.
+- **Removed Soft Reserves -** Deleting a player's SR returns it to Unassigned Soft Reserves. Refresh, save, load and reload keep it unassigned. Use Fix SR to assign it again; importing new SR replaces the current assignments.
 - **Loot rules -** Configure SR, Highly Contested Items, Reycoin, and CSR rights by guild rank.
 - **Reycoin list -** Review used Reycoins and pending item trades.
 - **Narrow raid windows -** Raid Leader Tools and Loot Master Tools wrap to a left-aligned row. Warnings move below the roster as compact headers when space is limited.

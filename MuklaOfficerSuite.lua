@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.107"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.109"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -29,6 +29,7 @@ MOS.lootMasterMode = false
 MOS.lootMasterMinimized = false
 
 local CompletePendingGuildScan
+local raidSessionController
 local HandleGuildScanFailure
 local scanProgress
 local raidScanProgress
@@ -66,7 +67,6 @@ local function SaveGuildRoster(snapshot)
     return true
 end
 
-local SaveRaidRoster = MOS.Services.Raid.SaveRoster
 local RecordRaidLoot = MOS.Services.Raid.RecordLoot
 
 MOS.Database.Ensure()
@@ -236,13 +236,7 @@ local function IsTestRaid() return MOS.Services.TestRaid.IsActive() end
 local function GetRaidAttendance() return IsTestRaid() and MOS.Services.TestRaid.GetAttendance() or MOS.Database.GetRaidAttendance() end
 local function IsActiveRaid() return IsTestRaid() or MOS.Services.Raid.IsInRaid() end
 local function SaveActiveRaidRoster()
-    if IsTestRaid() then return MOS.Services.TestRaid.GetRaidMemberCount() end
-    local previousAttendance = MOS.Database.GetRaidAttendance()
-    local count = SaveRaidRoster()
-    local attendance = MOS.Database.GetRaidAttendance()
-    MOS.Services.RaidRes.Reconcile(previousAttendance, attendance)
-    if attendance and MOS.raidSessionDraft then attendance._sessionDraft = true end
-    return count
+    return raidSessionController:CaptureActiveRoster()
 end
 local function RunActiveRaidAction(member, action) return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).RunMemberAction(member, action) end
 local function GetActiveGroupCounts() return (IsTestRaid() and MOS.Services.TestRaid or MOS.Services.Raid).GetGroupCounts() end
@@ -602,17 +596,19 @@ RequestGuildAction = MOS.Modules.RosterManagement.CreateGuildActionHandler({
 
 local raidSessionService = MOS.Services.RaidSession.Create({
     database = MOS.Database,
+    raid = MOS.Services.Raid,
     raidRes = MOS.Services.RaidRes,
     raidStatistics = MOS.Services.RaidStatistics,
     testRaid = MOS.Services.TestRaid,
     now = function() return time() end,
 })
-local raidSessionController = MOS.Modules.RaidSessionController.Create({
+raidSessionController = MOS.Modules.RaidSessionController.Create({
     state = MOS,
     session = raidSessionService,
     setHistoricalLoaded = function(value) raidHistoricalLoaded = value and true or false end,
     clearSelection = function() selectedRaidMemberName = nil end,
     showSavedPopup = function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD") end,
+    isLiveTrackingWanted = function() return currentPage == "raid" and MuklaOfficerSuiteDB.raidLiveTrackingEnabled and true or false end,
 })
 
 MOS.CompleteRaidSession = function(saveOptions) return raidSessionController:Complete(saveOptions) end
@@ -773,19 +769,7 @@ CompletePendingGuildScan = function(snapshot)
         Print("Guild data loaded successfully. Members: " .. CountSavedMembers() .. ".")
     elseif scanMode == "raid" then
         MOS.UI.Components.ProgressBar.Complete(raidScanProgress)
-        local raidCount = SaveRaidRoster()
-        local attendance = MOS.Database.GetRaidAttendance()
-        if attendance and MOS.pendingRaidSessionId then
-            attendance.snapshotId = MOS.pendingRaidSessionId
-            attendance.raidName = MOS.pendingRaidName or attendance.raidName
-            attendance.sessionStartedAt = time()
-            attendance.softReserveImport = { id = MOS.pendingRaidSessionId, origin = "mos", importedAt = time(), unmatchedNames = {}, unmatchedReservations = {}, missingNames = {} }
-            attendance._sessionDraft = true
-        end
-        MOS.pendingRaidSessionId = nil
-        MOS.pendingRaidName = nil
-        MOS.raidScanReady = true
-        MOS.raidLiveTracking = currentPage == "raid" and MuklaOfficerSuiteDB.raidLiveTrackingEnabled and true or false
+        local raidCount = raidSessionController:CompletePendingRaidScan()
         RefreshRaidPage()
         SetStatus("Raid roster updated", "success")
         Print("Raid scanned. Members: " .. raidCount)
