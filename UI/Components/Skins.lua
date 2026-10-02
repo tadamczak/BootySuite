@@ -646,8 +646,9 @@ function UI.SetRowColor(row, color, alpha)
         row.mosColorFill:SetAllPoints(row)
         row.mosColorFill:SetTexture("Interface\\Buttons\\WHITE8X8")
     end
-    row.mosColorFill:SetVertexColor(color[1], color[2], color[3], alpha)
-    row.mosColorFill:SetAlpha(1); row.mosColorFill:Show()
+    -- Set opacity through the region API; never overwrite it with SetAlpha(1).
+    row.mosColorFill:SetVertexColor(color[1], color[2], color[3])
+    row.mosColorFill:SetAlpha(alpha or 1); row.mosColorFill:Show()
     local entry = row.mosSurfaceEntry
     if entry and entry.classicFill then entry.classicFill:Hide() end
     if row.mosClassicRowShade then row.mosClassicRowShade:Hide() end

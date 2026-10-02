@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.111 - 2026-10-03
+
+- Fix opaque white row backgrounds in Performance, Guild Statistics and Raid Statistics by applying row opacity through SetAlpha.
+
 ## 0.5.0-dev.110 - 2026-10-03
 
 - Integrate optional BootyProfiler with MOS and All Addons tabs in Performance.
