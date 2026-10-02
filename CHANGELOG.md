@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.109 - 2026-10-02
+
+- Move active-roster and completed-scan session initialization into the session service and controller, preserving scan and callback order.
+
 ## 0.5.0-dev.108 - 2026-10-02
 
 - Keep manually removed Soft Reserves unassigned through roster refresh, snapshot loading and reload; allow explicit reassignment.

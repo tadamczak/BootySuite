@@ -18,6 +18,31 @@ function Session:RaidIdExists(raidId)
     return database.HasSoftReserveSnapshot(raidId) or database.HasRaidStatistic(raidId)
 end
 
+function Session:CaptureActiveRoster(isDraft)
+    local dependencies = self.dependencies
+    if dependencies.testRaid.IsActive() then return dependencies.testRaid.GetRaidMemberCount() end
+    local previousAttendance = dependencies.database.GetRaidAttendance()
+    local count = dependencies.raid.SaveRoster()
+    local attendance = dependencies.database.GetRaidAttendance()
+    dependencies.raidRes.Reconcile(previousAttendance, attendance)
+    if attendance and isDraft() then attendance._sessionDraft = true end
+    return count
+end
+
+function Session:CapturePendingRaid(getPendingId, getPendingName)
+    local dependencies = self.dependencies
+    local count = dependencies.raid.SaveRoster()
+    local attendance = dependencies.database.GetRaidAttendance()
+    if attendance and getPendingId() then
+        attendance.snapshotId = getPendingId()
+        attendance.raidName = getPendingName() or attendance.raidName
+        attendance.sessionStartedAt = dependencies.now()
+        attendance.softReserveImport = { id = getPendingId(), origin = "mos", importedAt = dependencies.now(), unmatchedNames = {}, unmatchedReservations = {}, missingNames = {} }
+        attendance._sessionDraft = true
+    end
+    return count
+end
+
 function Session:Complete(saveOptions)
     if type(saveOptions) ~= "table" then
         local enabled = saveOptions and true or false
