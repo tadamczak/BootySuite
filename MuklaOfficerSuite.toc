@@ -2,9 +2,10 @@
 ## Title: Mukla Officer Suite
 ## Notes: Guild officer dashboard and persistent guild roster.
 ## Author: Mukla
-## Version: 0.5.0-dev.109
+## Version: 0.5.0-dev.110
 ## X-Release-Version: 0.4.0
 ## SavedVariables: MuklaOfficerSuiteDB
+## OptionalDeps: BootyProfiler
 
 Core\Bootstrap.lua
 Core\Compatibility.lua
@@ -14,6 +15,7 @@ UI\Components\Skins.lua
 Core\EventDispatcher.lua
 Core\Commands.lua
 Core\Diagnostics.lua
+Core\ProfilerBridge.lua
 Core\Database.lua
 Core\SettingsProfiles.lua
 Core\ModuleRegistry.lua

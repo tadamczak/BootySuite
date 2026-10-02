@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.110 - 2026-10-03
+
+- Integrate optional BootyProfiler with MOS and All Addons tabs in Performance.
+- Require explicit Enable and Start; retain stopped reports, bound histories and export one session.
+- Keep MOS usable without the profiler; global callback profiling remains the second package.
+
 ## 0.5.0-dev.109 - 2026-10-02
 
 - Move active-roster and completed-scan session initialization into the session service and controller, preserving scan and callback order.
