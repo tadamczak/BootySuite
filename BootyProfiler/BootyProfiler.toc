@@ -1,0 +1,10 @@
+## Interface: 11200
+## Title: BootyProfiler
+## Notes: Optional, on-demand profiling backend for Mukla Officer Suite.
+## Author: Bootybaker
+## Version: 0.1.0-dev.1
+## SavedVariables: BootyProfilerDB
+
+Core\Bootstrap.lua
+Core\Engine.lua
+Core\Runtime.lua

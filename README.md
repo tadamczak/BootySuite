@@ -35,6 +35,8 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 2. Confirm that `MuklaOfficerSuite.toc` is directly inside that directory.
 3. Start the game or use `/reload` after updating the addon.
 
+For optional profiling, also copy the separate **BootyProfiler** folder beside MuklaOfficerSuite in Interface/AddOns/. Restart the game after first installation and enable BootyProfiler in the character addon list.
+
 ## Basic Usage
 
 LM config and Reycoin list use the same diagonal resize grip as the main window. Expanded roster details stay inside the window; use the mouse wheel over the details to reach notes when space is limited.
@@ -50,7 +52,7 @@ The top-right buttons open Settings, minimize or restore the dashboard, and clos
 - **Saved roster status -** Use `/mos status` to print the number of saved guild members.
 - **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
 - **Layout diagnostics -** Use `/mos layout` when diagnosing window-layout problems.
-- **Client API diagnostics -** Use `/mos capabilities` to report the available client APIs and extension markers. Performance diagnosis reports include the same information captured when the diagnosis starts.
+- **Client API diagnostics -** Use `/mos capabilities` to report the available client APIs and extension markers. BootyProfiler sessions capture the same information when recording starts.
 
 ### Roster
 
@@ -129,12 +131,14 @@ Restore keeps recent loot sources and roll rounds. Active awards and unfinished 
 
 ### Performance
 
-- **Runtime metrics -** Review FPS, frame time, latency, Lua memory, event rate, refresh rate, and saved-data size.
-- **Live Monitor -** Open a small movable window with current runtime metrics.
-- **Performance diagnosis -** Capture scoped addon activity when investigating performance problems.
-- **Memory by Addon -** Compare addon memory usage when the client exposes the required data. Long addon and operation lists are scrollable.
+- **Optional BootyProfiler -** Without this addon, Performance shows installation instructions. With it enabled in the client, Performance contains **MOS** and **All Addons** tabs.
+- **Enable / Start -** Enable the profiler module, then press Start. Opening Performance or Live Monitor does not start measurement.
+- **MOS -** Review selected MOS operations, call counts, total/average/maximum times and recent slow calls.
+- **All Addons -** Review global Lua memory and sampled FPS/network latency. Refresh memory explicitly requests native addon memory statistics when supported. Other addons' callback profiling is planned for package 2.
+- **Stop / Disable -** Stop retains the report. Disable ends recording. An explicitly started session can continue while the main window is hidden; reload never resumes it automatically.
+- **Live Monitor / Export -** Open a movable summary. After Stop, Export stores one bounded report in BootyProfiler SavedVariables; reload or logout writes it to disk.
 
-Measured heap change is the change in the global Lua heap during observed calls; it does not measure total allocations or memory owned by MOS. Diagnosis reports the largest heap rise and slowest single measured call in its capture period. Closing Performance and Live Monitor stops measurement unless a diagnosis is running.
+Measured heap change is the change in the global Lua heap during observed calls; it does not measure total allocations or memory owned by MOS. Only selected entry points are measured. FPS samples are not individual frame timings or proof of the cause of a drop. Clock resolution and profiling overhead need verification on your client.
 
 Statistics, CSR and Performance adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, choosing or clearing a calendar date refreshes the results immediately.
 

@@ -29,6 +29,15 @@ function Diagnostics.Record(name, elapsed, memoryChange)
     AddSample(Diagnostics.operations, name, elapsed, memoryChange)
     local _, scope
     for _, scope in pairs(Diagnostics.scopes) do AddSample(scope.operations, name, elapsed, memoryChange) end
+    if Diagnostics.sampleObserver then
+        local ok, failure = pcall(Diagnostics.sampleObserver, name, elapsed, memoryChange)
+        if not ok then Diagnostics.sampleObserver = nil; Diagnostics.observerError = tostring(failure) end
+    end
+end
+
+function Diagnostics.SetSampleObserver(callback)
+    Diagnostics.sampleObserver = callback
+    Diagnostics.observerError = nil
 end
 
 function Diagnostics.SetTracking(enabled)
