@@ -62,6 +62,11 @@ function Bridge.PrepareDisable()
     local provider = BootyProfiler
     if type(provider) ~= "table" then return true end
     local ready, failure = true, nil
+    local monitor=provider.LiveMonitor
+    if type(monitor)=="table" and type(monitor.SetVisible)=="function" then
+        local ok,result=pcall(monitor.SetVisible,false)
+        if not ok or result==false then ready,failure=false,"Live monitor cleanup failed." end
+    end
     if type(provider.GetState) == "function" and type(provider.Stop) == "function" then
         local ok, state = pcall(provider.GetState)
         if not ok or type(state) ~= "table" then ready, failure = false, "Profiler state is unavailable."

@@ -23,6 +23,24 @@ local function Now()
     return value
 end
 
+-- Wall-clock metadata is captured once per explicit recording. GetTime is a
+-- client uptime clock and must never be presented as a calendar date.
+function P.CaptureDate()
+    local timestamp, formatted
+    if type(time) == "function" then
+        local ok, value = pcall(time)
+        if ok and FiniteNonnegative(value) and value == math.floor(value) then timestamp = value end
+    end
+    if type(date) == "function" then
+        local ok, value
+        if timestamp then ok, value = pcall(date, "%Y-%m-%d %H:%M:%S", timestamp)
+        else ok, value = pcall(date, "%Y-%m-%d %H:%M:%S") end
+        if ok and type(value) == "string" and string.len(value) == 19
+            and string.find(value, "^%d%d%d%d%-%d%d%-%d%d %d%d:%d%d:%d%d$") then formatted = value end
+    end
+    return timestamp, formatted
+end
+
 local function Push(buffer, limit)
     local index = math.mod(buffer.total, limit) + 1
     local entry = buffer[index]
@@ -170,9 +188,11 @@ function P.Start(options)
     end
     local callbacksRequested = type(options) == "table" and options.callbacks and true or false
     local callbackMemoryRequested = callbacksRequested and options.memory and true or false
+    local capturedAt, capturedDate = P.CaptureDate()
     -- Session summaries retain only running means/counts and extrema. The
     -- bounded sample ring may wrap without changing the summary's time span.
-    local session = { startedAt = now, elapsed = 0, fpsSamples = 0, latencySamples = 0,
+    local session = { startedAt = now, capturedAt = capturedAt, capturedDate = capturedDate,
+        elapsed = 0, fpsSamples = 0, latencySamples = 0,
         history = { count = 0, total = 0 }, samples = { count = 0, total = 0 },
         gc = { heapDropCount = 0, heapDropTotal = 0, readFailures = 0, history = { count = 0, total = 0 } },
         frameGaps = { count = 0, slowCount = 0, invalidCount = 0, maximum = 0, elapsed = 0, threshold = FRAME_GAP_THRESHOLD,
@@ -305,6 +325,7 @@ function P.Export()
     local session = state.session
     if not session then return nil, "No recording to export." end
     local result = { schema = 1, profilerVersion = P.version, elapsed = session.elapsed, clock = session.clock,
+        capturedAt = session.capturedAt, capturedDate = session.capturedDate,
         clockResolution = session.clockResolution, coverage = session.coverage, allAddonsCoverage = session.allAddonsCoverage,
         callbacksRequested = session.callbacksRequested,
         callbackMemoryRequested = session.callbackMemoryRequested,

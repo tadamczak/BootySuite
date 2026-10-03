@@ -379,6 +379,7 @@ end
 local function InspectFrame(run, frame)
     if P.Runtime and frame == P.Runtime.driver then return end
     if P.LoginMemory and type(P.LoginMemory.IsOwnFrame) == "function" and P.LoginMemory.IsOwnFrame(frame) then return end
+    if P.LiveMonitor and type(P.LiveMonitor.IsOwnFrame) == "function" and P.LiveMonitor.IsOwnFrame(frame) then return end
     local entry = run.frameMap[frame]
     -- Enumeration includes every inert UI frame. Read supported scripts before
     -- retaining a frame so that inert frames cannot exhaust callback capacity.

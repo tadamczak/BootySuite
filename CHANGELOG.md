@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.121 - 2026-10-03
+
+- Choose Profile MOS or Profile All from Advanced Profiler; keep Live Monitor and Analyze Login available beside it, with an illustrated initial view.
+- Run Live Monitor independently, showing integer FPS, current/peak shared memory and GC threshold, latest observed cleanup and signed memory change per second.
+- Show capture dates, separate MOS-only captures from All results, add gold action icons and use uniform report accordions.
+
 ## 0.5.0-dev.120 - 2026-10-03
 
 - Enable or disable the installed BootyProfiler addon from Performance with a UI reload; combine Start/Stop and add Analyze Login beside the tabs.
