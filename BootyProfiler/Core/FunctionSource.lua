@@ -51,7 +51,7 @@ local function DumpSource(value)
 end
 
 function Source.Get(callback)
-    if type(callback) ~= "function" then return nil, "unavailable" end
+    if type(callback) ~= "function" then return nil, "unavailable", "invalid-function" end
     local inspect = type(debug) == "table" and rawget(debug, "getinfo")
     if type(inspect) == "function" then
         local ok, info = pcall(inspect, callback, "S")
@@ -65,10 +65,10 @@ function Source.Get(callback)
         -- string.dump allocates a complete accepted function before the size
         -- check. The caller must budget/cache discovery; never call this hot.
         local ok, value = pcall(string.dump, callback)
-        if ok then
-            local source = DumpSource(value)
-            if source then return source, "Lua5.0 dump" end
-        end
+        if not ok then return nil, "unavailable", "dump-rejected" end
+        local source = DumpSource(value)
+        if source then return source, "Lua5.0 dump" end
+        return nil, "unavailable", "unsupported-dump"
     end
-    return nil, "unavailable"
+    return nil, "unavailable", "no-source-api"
 end

@@ -2,7 +2,7 @@
 ## Title: BootyProfiler
 ## Notes: Optional, on-demand profiling backend for Mukla Officer Suite.
 ## Author: Bootybaker
-## Version: 0.1.0-dev.2
+## Version: 0.1.0-dev.3
 ## SavedVariables: BootyProfilerDB
 
 Core\Bootstrap.lua

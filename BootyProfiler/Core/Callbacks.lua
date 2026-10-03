@@ -40,10 +40,10 @@ local function SourceOwner(run, callback)
     if run.sourceBudget <= 0 then return nil, nil, true end
     if run.sourceCount >= WRAPPER_LIMIT then run.metrics.truncated = true; return nil, nil end
     run.sourceBudget = run.sourceBudget - 1
-    local source, method
+    local source, method, reason
     if P.FunctionSource and type(P.FunctionSource.Get) == "function" then
-        local ok, value, backend = pcall(P.FunctionSource.Get, callback)
-        if ok then source, method = value, backend else run.metrics.sourceFailures = run.metrics.sourceFailures + 1 end
+        local ok, value, backend, failure = pcall(P.FunctionSource.Get, callback)
+        if ok then source, method, reason = value, backend, failure else run.metrics.sourceFailures = run.metrics.sourceFailures + 1 end
     elseif run.getinfo then
         local ok, info = pcall(run.getinfo, callback, "S")
         if ok and type(info) == "table" then source, method = info.source, "debug.getinfo" end
@@ -53,10 +53,14 @@ local function SourceOwner(run, callback)
     if method == "debug.getinfo" then run.metrics.sourceDebug = run.metrics.sourceDebug + 1
     elseif method == "Lua5.0 dump" then run.metrics.sourceDump = run.metrics.sourceDump + 1
     else run.metrics.sourceUnavailable = run.metrics.sourceUnavailable + 1 end
+    if reason == "dump-rejected" then run.metrics.sourceDumpRejected = run.metrics.sourceDumpRejected + 1
+    elseif reason == "unsupported-dump" then run.metrics.sourceUnsupportedDump = run.metrics.sourceUnsupportedDump + 1
+    elseif reason == "no-source-api" then run.metrics.sourceApiUnavailable = run.metrics.sourceApiUnavailable + 1 end
     local owner = "Unknown owner"
     if type(source) ~= "string" or string.len(source) > 1024 then source = nil end
     if source then source = string.gsub(source, "\\", "/") end
     if not source or string.sub(source, 1, 1) ~= "@" then
+        if source then run.metrics.sourceNonFile = run.metrics.sourceNonFile + 1 end
         run.functionSources[callback] = { owner = owner, source = source }
         return owner, source
     end
@@ -67,7 +71,10 @@ local function SourceOwner(run, callback)
         if slash and slash > last + 1 then
             local folder = string.sub(source, last + 1, slash - 1)
             if string.lower(folder) == "bootyprofiler" then owner = nil
-            else owner = run.inventoryMap[string.lower(folder)] or "Unknown owner" end
+            else
+                owner = run.inventoryMap[string.lower(folder)] or "Unknown owner"
+                if owner == "Unknown owner" then run.metrics.sourceUnmatchedFolder = run.metrics.sourceUnmatchedFolder + 1 end
+            end
         end
     end
     if string.find(lower, "[/@]interface/framexml/") or string.find(lower, "[/@]interface/sharedxml/") then owner = nil end
@@ -245,18 +252,39 @@ end
 local function InspectFrame(run, frame)
     if P.Runtime and frame == P.Runtime.driver then return end
     local entry = run.frameMap[frame]
+    -- Enumeration includes every inert UI frame. Read supported scripts before
+    -- retaining a frame so that inert frames cannot exhaust callback capacity.
+    local eventRead, onEvent = pcall(ReadScript, frame, "OnEvent")
+    local updateRead, onUpdate = pcall(ReadScript, frame, "OnUpdate")
+    if not eventRead then run.metrics.inspectionFailures = run.metrics.inspectionFailures + 1 end
+    if not updateRead then run.metrics.inspectionFailures = run.metrics.inspectionFailures + 1 end
     if not entry then
+        if not (eventRead and type(onEvent) == "function") and not (updateRead and type(onUpdate) == "function") then
+            if eventRead and updateRead then run.metrics.inertSkipped = run.metrics.inertSkipped + 1 end
+            return true
+        end
         if run.metrics.discovered >= FRAME_LIMIT then run.metrics.truncated = true; return end
         local named, name = pcall(ReadName, frame)
         run.metrics.discovered = run.metrics.discovered + 1
-        if not named or type(name) ~= "string" or name == "" then name = "Unnamed frame " .. run.metrics.discovered end
+        run.frameSerial = run.frameSerial + 1
+        if not named or type(name) ~= "string" or name == "" then name = "Unnamed frame " .. run.frameSerial end
         entry = { frame = frame, name = name }
         run.frameMap[frame] = entry
     end
-    local index
+    local index, recordsBefore = nil, table.getn(run.records)
     for index = 1, table.getn(scripts) do
         local script = scripts[index]
-        local read, current = pcall(ReadScript, frame, script)
+        local read, current
+        if index == 1 then read, current = eventRead, onEvent
+        else
+            -- A modified OnEvent setter may also replace OnUpdate. Re-read only
+            -- after an attempted install so a stale snapshot cannot overwrite it.
+            if table.getn(run.records) > recordsBefore then
+                updateRead, onUpdate = pcall(ReadScript, frame, "OnUpdate")
+                if not updateRead then run.metrics.inspectionFailures = run.metrics.inspectionFailures + 1 end
+            end
+            read, current = updateRead, onUpdate
+        end
         if read then
             local old = entry[script]
             if not old or current ~= old.wrapper then
@@ -271,7 +299,12 @@ local function InspectFrame(run, frame)
                     entry[script] = existingWrapper
                 elseif Attach(run, entry, script, current) == false then return false end
             end
-        else run.metrics.inspectionFailures = run.metrics.inspectionFailures + 1 end
+        end
+    end
+    if eventRead and updateRead and type(onEvent) ~= "function" and type(onUpdate) ~= "function" then
+        run.frameMap[frame] = nil
+        run.metrics.discovered = run.metrics.discovered - 1
+        run.metrics.inertSkipped = run.metrics.inertSkipped + 1
     end
     return true
 end
@@ -284,7 +317,8 @@ function C.Start(session)
         restoreFailures = 0, timingFailures = 0, metricFailures = 0, zeroDurations = 0, depthSkipped = 0, sourceFailures = 0,
         everHooked = 0, everUnknownHooked = 0, replacements = 0, skippedKnown = 0, clockReadFailures = 0,
         sourceDebug = 0, sourceDump = 0, sourceUnavailable = 0, inventoryReadFailures = 0,
-        scans = 0, scanned = 0, discoveryTime = 0,
+        sourceDumpRejected = 0, sourceUnsupportedDump = 0, sourceApiUnavailable = 0, sourceNonFile = 0, sourceUnmatchedFolder = 0,
+        scans = 0, scanned = 0, inertSkipped = 0, discoveryTime = 0,
         coverage = "Intercepted OnEvent and OnUpdate frame scripts only; not total addon CPU. Self time subtracts nested intercepted callbacks; unknown source owners are not guessed." }
     session.callbacks = metrics
     if restorationBlocked then
@@ -312,7 +346,7 @@ function C.Start(session)
         enumerate = EnumerateFrames, frameMap = {}, records = {}, wrapperMap = {}, addonMap = {}, stack = {}, depth = 0,
         functionSources = {}, sourceCount = 0, sourceBudget = 0, inventoryMap = {}, inventoryNext = 1,
         getinfo = type(debug) == "table" and type(debug.getinfo) == "function" and debug.getinfo or nil,
-        cursor = nil, scanning = true, cycleCount = 0, wait = 0 }
+        cursor = nil, scanning = true, cycleCount = 0, wait = 0, frameSerial = 0 }
     local inventoried, count = false, nil
     if type(GetNumAddOns) == "function" and type(GetAddOnInfo) == "function" then inventoried, count = pcall(GetNumAddOns) end
     if inventoried and Finite(count) and count >= 0 then

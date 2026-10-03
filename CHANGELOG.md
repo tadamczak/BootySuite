@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.115 - 2026-10-03
+
+- Keep inert frames outside the callback discovery limit and recover capacity when scripts are removed.
+- Preserve callback rankings across report refreshes on Lua 5.0.
+- Explain unavailable callback source metadata and expose discovery/source failure counters.
+
 ## 0.5.0-dev.114 - 2026-10-03
 
 - Add explicit All Addons callback profiling with source-addon and frame/script rankings, slow-call history and bounded gradual discovery.

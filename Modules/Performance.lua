@@ -101,7 +101,7 @@ function Performance.Create(parent)
     function module:BuildCallbackItems(callbacks,session)
         AddItem("heading","Addon callbacks — sorted by self time")
         AddItem("message","Intercepted frame callbacks only. Inclusive time overlaps; do not add it across addons.",nil,nil,hints.callbacks)
-        local coverage="Frames seen: "..tostring(callbacks.discovered or 0)
+        local coverage="Callback frames retained: "..tostring(callbacks.discovered or 0)
         if session.stopped and callbacks.activeHookedAtStop then
             coverage=coverage.." | Hooks at Stop: "..callbacks.activeHookedAtStop
             if callbacks.unknownAtStop then coverage=coverage.." | Unattributed at Stop: "..callbacks.unknownAtStop end
@@ -113,12 +113,22 @@ function Performance.Create(parent)
         if session.stopped and callbacks.wasPendingAtStop and not callbacks.firstScanComplete then AddItem("message","Recording ended before initial discovery completed. This report covers only callbacks found so far.") end
         if callbacks.truncated then AddItem("message","Partial coverage: discovery or report limit reached. See Technical details.") end
         if callbacks.inventoryAvailable==false then AddItem("message","Installed addon inventory is unavailable; callback sources remain unattributed.") end
+        if (callbacks.unknownAtStop or callbacks.unknown or 0)>0 then
+            AddItem("message","Some callback sources are unavailable. Inspect the frame / script ranking below; addon names cannot be inferred from frame names.")
+        end
+        if callbacks.sourceDumpRejected and callbacks.sourceDumpRejected>0 then
+            AddItem("message","The client rejected some function metadata reads. Lua 5.0 cannot dump closures with captured variables; a native source API is needed to identify them.")
+        end
         if callbacks.timingFailures and callbacks.timingFailures>0 then AddItem("message","Some callbacks could not be timed; displayed times exclude them.") end
         if callbacks.zeroDurations and callbacks.zeroDurations>0 then AddItem("message","Some calls measured 0 ms; this can reflect timer granularity, not zero cost.") end
         local entries,count=self.callbackEntries,0
+        local previousCount=table.getn(entries)
         if callbacks.addons then
             for _,entry in ipairs(callbacks.addons) do
-                if count<256 then count=count+1;entries[count]=entry end
+                if count<256 then
+                    count=count+1
+                    if count<=previousCount then entries[count]=entry else table.insert(entries,entry) end
+                end
             end
             if table.getn(callbacks.addons)>256 then AddItem("message","Partial table: first 256 addon entries only.") end
         end
@@ -139,9 +149,12 @@ function Performance.Create(parent)
                 if size<20 or CompareCallbackTime(entry,top[size]) then
                     local position=math.min(20,size+1)
                     while position>1 and CompareCallbackTime(entry,top[position-1]) do
-                        top[position]=top[position-1];position=position-1
+                        position=position-1
                     end
-                    top[position]=entry
+                    -- Lua5.0 stores lengths after removals. Raw refill writes
+                    -- leave that length at zero and hide the complete ranking.
+                    if size==20 then table.remove(top,20) end
+                    table.insert(top,position,entry)
                 end
             end
             if table.getn(top)>0 then
@@ -251,8 +264,10 @@ function Performance.Create(parent)
                         if callbacks.ownerSupport then AddItem("message",callbacks.ownerSupport) end
                         if callbacks.sourceMethod then AddItem("message","Last source backend: "..callbacks.sourceMethod) end
                         if callbacks.sourceDebug then AddItem("message","Source reads: "..callbacks.sourceDebug.." debug metadata | "..tostring(callbacks.sourceDump or 0).." bytecode metadata | "..tostring(callbacks.sourceUnavailable or 0).." unavailable") end
+                        if callbacks.sourceDumpRejected then AddItem("message","Missing source: "..callbacks.sourceDumpRejected.." dump rejections | "..tostring(callbacks.sourceUnsupportedDump or 0).." unsupported dumps | "..tostring(callbacks.sourceApiUnavailable or 0).." unavailable APIs | "..tostring(callbacks.sourceNonFile or 0).." non-file chunks | "..tostring(callbacks.sourceUnmatchedFolder or 0).." uncatalogued folders") end
                         if callbacks.sourceDebug==nil and callbacks.sourceMethod~="debug.getinfo" or callbacks.sourceDump and callbacks.sourceDump>0 or callbacks.sourceUnavailable and callbacks.sourceUnavailable>0 then AddItem("message","Some closures cannot expose their source on this client. Use frame/script rows to inspect unattributed work.") end
                         if callbacks.discoveryTime then AddItem("message","Discovery: "..tostring(callbacks.scans or 0).." scans | "..Duration(callbacks.discoveryTime).." measured time | "..tostring(callbacks.sourceFailures or 0).." source failures") end
+                        if callbacks.inertSkipped then AddItem("message","Frame visits: "..tostring(callbacks.scanned or 0).." | Skipped without callbacks: "..callbacks.inertSkipped..". Repeated sweeps can visit the same frame.") end
                         if callbacks.inventoryCount then AddItem("message","Installed addon inventory: "..callbacks.inventoryCount.." entries | "..tostring(callbacks.inventoryReadFailures or 0).." failed reads") end
                         if callbacks.replacements then AddItem("message","Script replacements: "..callbacks.replacements.." | Known client/profiler scripts skipped: "..tostring(callbacks.skippedKnown or 0)) end
                         if callbacks.inspectionFailures then AddItem("message","Hooks: "..callbacks.inspectionFailures.." inspection failures | "..tostring(callbacks.restoreFailures or 0).." restoration failures | "..tostring(callbacks.depthSkipped or 0).." depth-limit skips") end
