@@ -168,6 +168,7 @@ end
 function UI.SetButtonEnabled(button, enabled)
     if enabled then button:Enable() else button:Disable() end
     UI.SetButtonTextColor(button, enabled and UI.TextColors.white or UI.TextColors.gray)
+    if button.mosActionIcon then button.mosActionIcon:SetAlpha(enabled and 1 or 0.35) end
 end
 
 function UI.SetAlternatingRowColor(row, background, index, percentage)

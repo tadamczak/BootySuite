@@ -153,6 +153,10 @@ local function Start()
     status = "recording"
     local report = active
     if not clock or not heapReader then Finish("failed", "clock-or-heap-api-unavailable"); return end
+    -- Capture formatting allocations belong to the startup baseline. Nothing
+    -- reads the wall clock during later addon windows or the settle sampler.
+    if type(P.CaptureDate) == "function" then report.capturedAt, report.capturedDate = P.CaptureDate() end
+    if active ~= report then return end
     -- Include this query's own allocations in the baseline, not a later addon window.
     if not BaselineCoverage(report) or active ~= report then return end
     if not Sample("BASELINE", "BootyProfiler") or active ~= report then return end

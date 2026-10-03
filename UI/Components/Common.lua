@@ -791,9 +791,43 @@ function UI.FitButtonLabel(button, available)
     button.mosFitFontSize = button.mosFitFontSize or size
     label:SetFont(font, button.mosFitFontSize, flags); label:SetWidth(0)
     label:SetHeight(button.mosFitFontSize + 3)
+    if button.mosActionIcon then available=math.max(1,available-18-(button.mosActionTrailing or 0)) end
     local width = math.max(1, label:GetStringWidth())
     local fitted = math.max(1, button.mosFitFontSize * math.min(1, math.max(1, available) / width))
     label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH(button.mosLabelJustify or (button.label and "CENTER" or "LEFT"))
+    if button.mosActionIcon then
+        local textWidth=math.min(math.max(1,available),math.max(1,label:GetStringWidth()))
+        local start=math.max(8,(button:GetWidth()-(button.mosActionTrailing or 0)-18-textWidth)/2)
+        button.mosActionIcon:ClearAllPoints();button.mosActionIcon:SetPoint("LEFT",button,"LEFT",start,0)
+        label:ClearAllPoints();label:SetPoint("LEFT",button,"LEFT",start+18,0);label:SetWidth(textWidth);label:SetJustifyH("LEFT");label:SetJustifyV("MIDDLE")
+    end
+end
+
+-- Shared action icons use the authored gold atlas in either visual skin.
+function UI.SetActionButtonIcon(button,key,trailing)
+    if not button.mosActionIcon then button.mosActionIcon=UI.CreateTexture(button,nil,"OVERLAY") end
+    button.mosActionIcon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Icons\\"..key..".tga")
+    button.mosActionIcon:SetWidth(14);button.mosActionIcon:SetHeight(14)
+    button.mosActionIcon:SetVertexColor(unpack(UI.Theme.colors.goldIcon));button.mosActionIcon:Show()
+    button.mosActionIconKey=key;button.mosActionTrailing=trailing or 0
+    UI.FitButtonLabel(button,math.max(1,button:GetWidth()-16))
+    if not button.mosActionIconSkinCallback then
+        button.mosActionIconSkinCallback=true
+        UI.RegisterSkinCallback(function() UI.FitButtonLabel(button,math.max(1,button:GetWidth()-16)) end)
+    end
+end
+
+function UI.CreateAspectImage(parent,path,aspect,alpha,uvBottom)
+    local image=UI.CreateTexture(parent,nil,"BACKGROUND")
+    image:SetTexture(path);image:SetTexCoord(0,1,0,uvBottom or 1);image:SetAlpha(alpha or 1)
+    image.mosImageAspect=aspect
+    return image
+end
+
+function UI.LayoutAspectImage(image,parent,width,height)
+    local resolvedWidth=math.min(math.max(1,width),math.max(1,height)*image.mosImageAspect)
+    image:ClearAllPoints();image:SetPoint("CENTER",parent,"CENTER",0,0)
+    image:SetWidth(resolvedWidth);image:SetHeight(resolvedWidth/image.mosImageAspect)
 end
 
 function UI.ApplyGoldRadialHighlight(texture)
@@ -993,9 +1027,10 @@ function UI.LayoutFlow(parent, controls, x, top, width, gap)
 end
 function UI.CreateToolbarSurface(parent, topBorder, bottomBorder)
     local toolbar = UI.CreateContainer(nil, parent)
-    toolbar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+    local backdrop={ bgFile = "Interface\\Buttons\\WHITE8X8" }
+    toolbar:SetBackdrop(backdrop)
     toolbar:SetBackdropColor(0.025, 0.022, 0.016, 0.72)
-    UI.RegisterSkinnedSurface(toolbar, "content")
+    UI.RegisterSkinnedSurface(toolbar, "content",backdrop,{0.025,0.022,0.016,0.72},{0,0,0,0})
     UI.SetSurfaceHorizontalBorders(toolbar, topBorder, bottomBorder)
     return toolbar
 end
