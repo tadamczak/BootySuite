@@ -20,6 +20,11 @@ local function Memory(value)
     if math.abs(value) >= 1024 then return string.format("%.2f MB", value / 1024) end
     return string.format("%.1f KB", value)
 end
+local function SignedMemory(value)
+    if type(value)~="number" then return "Unavailable" end
+    return (value>0 and "+" or "")..Memory(value)
+end
+local function FPS(value) return type(value)=="number" and tostring(math.floor(value+0.5)) or "-" end
 local function CompareTime(a, b) if a.time == b.time then return a.name < b.name end return a.time > b.time end
 local function CompareCallbackTime(a,b)
     if (a.selfTime or 0)==(b.selfTime or 0) then
@@ -30,15 +35,48 @@ local function CompareCallbackTime(a,b)
 end
 local rowColor = {1,1,1}
 local emptyEntries = {}
+local FAMILY_PAGE_SIZE=50
 local tables = {
     operations = { first = "Operation", columns = {"Calls","Total","Average","Peak","Heap delta"}, minimum = 760, nameFraction = 0.34 },
     slow = { first = "Operation", columns = {"At","Duration","Heap delta","Event"}, minimum = 680, nameFraction = 0.34 },
     samples = { first = "At", columns = {"FPS","Lua heap","Latency"}, minimum = 460, nameFraction = 0.18 },
     memory = { first = "Addon", columns = {"Memory"}, minimum = 300, nameFraction = 0.70 },
     callbacks = { first = "Source addon", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
-    callbackDetails = { first = "Frame / script", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
+    callbackDetails = { first = "Frame family / script", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
     callbackSlow = { first = "Frame / script", columns = {"At","Duration","Self","Event","Errors"}, minimum = 760, nameFraction = 0.34 },
     diagnostic = { first = "Detail", columns = {"Value"}, minimum = 440, nameFraction = 0.60 },
+    heapDrops = { first = "At", columns = {"Net decrease","Window","Worst frame gap","Slow frames"}, minimum = 680, nameFraction = 0.18 },
+    frameGaps = { first = "At", columns = {"Frame gap"}, minimum = 360, nameFraction = 0.35 },
+}
+local columnHints={
+    Calls="Number of recorded calls. High frequency means more repeated processing.",
+    Total="Total measured duration of this operation, including profiler overhead.",
+    Average="Measured duration divided by recorded calls. Compare repeated operations with this value.",
+    Self="Measured duration excluding nested intercepted callbacks. Use this to compare callback work.",
+    Inclusive="Measured duration including nested callbacks. Parent and child totals overlap.",
+    Peak="Longest measured call. A large value can interrupt a frame.",
+    Errors="Original callbacks that raised a caught Lua error.",
+    ["Heap delta"]="Net shared Lua memory change during measured calls. Collection can make this negative.",
+    At="Seconds since recording started. Compare timestamps across tables.",
+    Duration="Measured call duration, including profiler overhead.",
+    Event="Client event handled by this call. A dash means no event.",
+    FPS="FPS sampled once per second; brief stalls can be missed.",
+    ["Lua heap"]="Lua memory shared by the UI and addons. This excludes total game process memory.",
+    Latency="Network response delay in milliseconds; it is separate from rendering speed.",
+    Memory="Last manual native memory measurement attributed by the client to this addon.",
+    ["Net decrease"]="Net Lua memory fall between samples. GC can contribute; this is not a confirmed collection event.",
+    Window="Time between the two valid memory samples. A decrease can include several collections and new allocations.",
+    ["Worst frame gap"]="Largest OnUpdate elapsed value in this memory window. Compare with heap decreases; this does not prove GC caused the stall.",
+    ["Slow frames"]="Observed frame gaps of at least 50 ms in this memory window.",
+    ["Frame gap"]="OnUpdate elapsed time between frames. At least 50 ms is retained here; this is not addon CPU time.",
+    Detail="Diagnostic being checked. Hover its label for its purpose and effect.",
+    Value="Observed diagnostic result for this recording.",
+}
+local firstHints={
+    operations="Selected MOS operation being measured.",slow="Selected MOS operation that reached the slow-call threshold.",
+    callbacks="Addon folder recovered from a function source. Missing file metadata is grouped as Unknown owner.",
+    callbackDetails="Observed frame family, not an addon owner. Expand to inspect its scripts; family totals include all captured members.",
+    callbackSlow="Frame script that reached the slow-call threshold.",memory="Addon named by the native memory API.",
 }
 local hints = {
     calls = "Calls to selected MOS operations; nested calls count once. More calls mean more work, not every addon action.",
@@ -51,14 +89,14 @@ local hints = {
     lua = "Lua memory shared by all addons. Drops commonly include garbage collection; no per-addon ownership.",
     latency = "Network response delay. High latency affects responses, separately from FPS.",
     callbacks = "Self: time excluding intercepted children; high totals mean more Lua work.\nInclusive: includes children; do not add to parent time.\nPeak: longest call; large peaks may stall frames.\nCalls: frequency; OnUpdate can run every frame.\nFrame scripts only; not total addon CPU.",
-    source = "Unknown: XML script labels omit their addon file, or function metadata is unavailable. Frame context helps inspection; it does not prove addon ownership.",
+    source = "Source files identify addons when available. XML labels and missing metadata can prevent attribution; frame families remain inspectable.",
     slow = "Calls above the slow threshold. Peaks may interrupt a frame; matching FPS samples does not prove causation.",
 }
 local sections = {
     operations={title="MOS operations",expanded=true,hint=hints.total},
     slow={title="Slow MOS calls",hint=hints.slow},
     callbacks={title="Addon source ranking",hint=hints.source},
-    callbackDetails={title="Frame callbacks",expanded=true,hint=hints.callbacks},
+    callbackDetails={title="Frame callbacks",expanded=true,hint="Grouped by observed frame naming or parent context. Families are not addon owners."},
     callbackSlow={title="Slow callbacks",hint=hints.slow},
     samples={title="FPS and memory samples",hint="One sample per second; newest ten shown. Use this timeline to locate drops, not infer their cause."},
     memory={title="Memory by addon",hint="Manual native memory capture. This client may expose shared Lua memory only."},
@@ -68,6 +106,9 @@ local sections = {
     technicalSources={title="Source identification",nested=true,hint="Why some callback sources cannot be attributed to addons."},
     technicalHealth={title="Capture health",nested=true,hint="Inspection, inventory and wrapper cleanup failures."},
     technicalSupport={title="Client support",nested=true,hint="Available APIs and extension markers; markers alone do not prove support."},
+    memoryGC={title="Memory and garbage collection",expanded=true,hint="Shared Lua memory, observed decreases and frame gaps. Decreases do not establish exact GC count or duration."},
+    heapDrops={title="Heap drop windows",hint="Compare net memory decreases with slow frames in the same sampling window."},
+    frameGaps={title="Slow frame gaps",hint="Frames taking at least 50 ms. This includes game and observer work, not just addon execution."},
 }
 local liveValues={"calls","count","time","selfTime","timedCalls","peak","failures","memory","maxTime","maxMemory"}
 local function ShortSource(value)
@@ -88,9 +129,7 @@ local function Elapsed(value)
 end
 local function TooltipTitle() return this.reportTitle or "" end
 local function TooltipBody()
-    local text,schema=this.reportHint or "",this.reportSchema
-    if schema then for index=1,table.getn(schema.columns) do text=text.."\n"..schema.columns[index]..": "..this.values[index] end end
-    return text
+    return this.reportHint or ""
 end
 local function FontSize(label,size)
     local font,_,flags=label:GetFont();label:SetFont(font,size+UI.GetTextSizeDelta(label:GetParent()),flags)
@@ -105,7 +144,7 @@ function Performance.Create(parent)
     page.title = UI.CreateHeading(page.header, "Performance", 1, "gold")
     page.message = UI.CreateLabel(page.canvas, nil, "OVERLAY", "GameFontHighlight")
     page.message:SetJustifyH("LEFT"); if page.message.SetWordWrap then page.message:SetWordWrap(true) end
-    local module = { frame = page, tab = "MOS", items = {}, rows = {}, sessionEntries = {}, callbackEntries = {}, callbackDetails = {}, metricFlow = {}, detailsExpanded = {}, sectionState = {}, snapshots = {} }
+    local module = { frame = page, tab = "MOS", items = {}, rows = {}, sessionEntries = {}, callbackEntries = {}, callbackDetails = {}, metricFlow = {}, detailsExpanded = {}, sectionState = {}, snapshots = {}, familyPages = {}, familyPage = 1 }
 
     local function AddItem(kind, text, data, value, hint)
         module.itemCount = module.itemCount + 1
@@ -160,13 +199,7 @@ function Performance.Create(parent)
         AddTable(section)
         for _,entry in ipairs(rows) do
             local title=entry.name or string.format("+%.1f s",entry.at)
-            local rowHint=hint
-            if kind=="callbackDetail" or kind=="callbackSlow" then
-                rowHint="Source: "..(entry.owner or "Unknown").."\n"..hint
-                if entry.source then rowHint=rowHint.."\n"..ShortSource(entry.source) end
-                if entry.frameContext then rowHint=rowHint.."\n"..entry.frameContext end
-            end
-            AddItem(kind,title,entry,nil,rowHint)
+            AddItem(kind,title,entry)
         end
     end
     function module:HistoryRows(history,limit)
@@ -200,7 +233,85 @@ function Performance.Create(parent)
         return calls, total, heap, largest, slowest, entries, slowestTime
     end
 
+    function module:CancelFamilyJob()
+        page:SetScript("OnUpdate",nil)
+        self.familyJob=nil;self.familyPending=nil
+    end
+    local function FamilyTick()
+        local job=module.familyJob
+        if not job then page:SetScript("OnUpdate",nil);return end
+        if not page:IsVisible() or module.tab~="All Addons" or not module:IsSectionExpanded("callbackDetails") then
+            module:CancelFamilyJob();return
+        end
+        local api=module.provider.CallbackFamilies
+        local complete
+        if job.phase=="sync" then
+            if api.Sync(job.model,128) then api.BeginUpdate(job.model);job.phase="update" end
+        elseif job.phase=="update" then
+            if api.UpdateStep(job.model,128) then
+                if job.build then api.BeginSort(job.model);job.phase="sort" else complete=true end
+            end
+        elseif job.phase=="sort" then complete=api.SortStep(job.model,1024) end
+        if complete then
+            local model=job.model
+            module:CancelFamilyJob();module.familyModel=model
+            module.familyUpdateReady=true;module:Refresh();module.familyUpdateReady=nil
+        end
+    end
+    function module:QueueFamilyJob(model,phase,build)
+        self.familyJob={model=model,phase=phase,build=build}
+        if build then self.familyPending=model end
+        page:SetScript("OnUpdate",FamilyTick)
+    end
+    function module:BuildFrameFamilies(callbacks,live)
+        for index=table.getn(self.callbackDetails),1,-1 do table.remove(self.callbackDetails,index) end
+        local api=self.provider.CallbackFamilies
+        if not api then AddItem("message","Update BootyProfiler to view frame families.");return end
+        local model=self.familyModel
+        if not model then
+            if not self.familyPending then
+                model=api.Create(callbacks.operations)
+                if model.total<=128 then api.Sync(model,128);api.Update(model);api.Sort(model);self.familyModel=model
+                else self:QueueFamilyJob(model,"sync",true) end
+            end
+            model=self.familyModel
+        elseif live and not self.familyJob and not self.familyUpdateReady then
+            if model.total<=128 then api.Update(model)
+            else api.BeginUpdate(model);self:QueueFamilyJob(model,"update",false) end
+        end
+        if not model then AddItem("message","Preparing frame families...");return end
+        local total=table.getn(model.families)
+        if total==0 then AddItem("message","No frame callbacks captured.");return end
+        AddTable("callbackDetails")
+        self.familyPage=math.max(1,math.min(self.familyPage,math.ceil(total/FAMILY_PAGE_SIZE)))
+        local first=(self.familyPage-1)*FAMILY_PAGE_SIZE+1
+        if total>FAMILY_PAGE_SIZE then AddItem("familyPager",string.format("Families %d-%d / %d",first,math.min(total,first+FAMILY_PAGE_SIZE-1),total),model) end
+        for index=first,math.min(total,first+FAMILY_PAGE_SIZE-1) do
+            local family=model.families[index]
+            local expanded=self.expandedFamily==family.name
+            AddItem("family",(expanded and "- " or "+ ")..family.name.." ("..family.count..")",family,family.name)
+            if expanded then
+                local childPage=math.max(1,math.min(self.familyPages[family.name] or 1,math.ceil(family.count/FAMILY_PAGE_SIZE)))
+                self.familyPages[family.name]=childPage
+                local childFirst=(childPage-1)*FAMILY_PAGE_SIZE+1
+                if family.count>FAMILY_PAGE_SIZE then AddItem("familyPager",string.format("Scripts %d-%d / %d",childFirst,math.min(family.count,childFirst+FAMILY_PAGE_SIZE-1),family.count),model,family.name) end
+                for child=childFirst,math.min(family.count,childFirst+FAMILY_PAGE_SIZE-1) do
+                    local entry=family.children[child]
+                    table.insert(self.callbackDetails,entry);AddItem("callbackDetail",entry.name,entry)
+                end
+            end
+        end
+    end
+    function module:ToggleFamily(name)
+        self.expandedFamily=self.expandedFamily~=name and name or nil;self:Refresh()
+    end
+    function module:SetFamilyPage(name,direction)
+        if name then self.familyPages[name]=math.max(1,(self.familyPages[name] or 1)+direction)
+        else self.familyPage=math.max(1,self.familyPage+direction) end
+        self:Refresh()
+    end
     function module:BuildCallbackItems(callbacks,session)
+        for index=table.getn(self.callbackDetails),1,-1 do table.remove(self.callbackDetails,index) end
         local entries,count=self.callbackEntries,0
         local previousCount=table.getn(entries)
         local live=self.provider.GetState().recording and not session.stopped
@@ -216,25 +327,29 @@ function Performance.Create(parent)
         end
         for index=table.getn(entries),count+1,-1 do table.remove(entries,index) end
         if rankSources then table.sort(entries,CompareCallbackTime) end
-        local top=self.callbackDetails
-        local rankDetails=not live or self:IsSectionExpanded("callbackDetails") and not self.snapshots[self.tab..":callbackDetails"]
-        if rankDetails then for index=table.getn(top),1,-1 do table.remove(top,index) end end
-        if rankDetails and callbacks.operations then
-            -- Keep twenty references without sorting or copying the backend inventory.
-            for _,entry in ipairs(callbacks.operations) do
-                local size=table.getn(top)
-                if size<20 or CompareCallbackTime(entry,top[size]) then
-                    local position=math.min(20,size+1)
-                    while position>1 and CompareCallbackTime(entry,top[position-1]) do position=position-1 end
-                    if size==20 then table.remove(top,20) end
-                    table.insert(top,position,entry)
-                end
-            end
-        end
-        AddRows("callbackDetails","callbackDetail",top,session,hints.callbacks,"No displayed callbacks. Use Refresh tables after discovery.",false,math.min(20,table.getn(callbacks.operations or emptyEntries)))
+        if AddSection("callbackDetails",table.getn(callbacks.operations or emptyEntries)) then self:BuildFrameFamilies(callbacks,live) end
         AddRows("callbacks","callback",entries,session,hints.source.."\n"..hints.callbacks,"No identified addon sources yet.",false,table.getn(callbacks.addons or emptyEntries))
         if callbacks.history then
             AddRows("callbackSlow","callbackSlow",self:HistoryRows(callbacks.history,64),session,hints.slow,"No callbacks reached the slow threshold.",true)
+        end
+    end
+
+    local function AddMemoryHistory(section,kind,history,session,empty)
+        if module:IsSectionExpanded(section) then
+            AddRows(section,kind,module:HistoryRows(history,64),session,nil,empty,true)
+        else AddSection(section,history.count or 0) end
+    end
+    function module:BuildMemoryItems(session)
+        local gc,gaps=session.gc or {},session.frameGaps or {}
+        if AddSection("memoryGC") then
+            AddMetric("Shared Lua memory",Memory(session.heap),columnHints["Lua heap"])
+            AddMetric("Change since Start",session.heap and session.startHeap and SignedMemory(session.heap-session.startHeap) or "Unavailable","Current shared Lua memory minus the first sample. A negative value includes memory reclaimed between samples.")
+            AddMetric("GC threshold",Memory(session.gcThreshold),"Lua's reported collection threshold. This is not the amount reclaimed or a per-addon memory limit.")
+            AddMetric("Observed heap drops",gc.heapDropCount or 0,"Memory samples with a net decrease. This can miss or combine collections; it is not an exact GC counter.")
+            AddMetric("Last heap drop",gc.lastHeapDrop and Memory(gc.lastHeapDrop) or "-","Net decrease during the last observed window. Open Heap drop windows to compare its worst frame gap.")
+            AddMetric("Worst frame gap",gaps.maximum and Duration(gaps.maximum) or "-",columnHints["Frame gap"])
+            if gc.history then AddMemoryHistory("heapDrops","heapDrop",gc.history,session,"No net memory decreases observed.") end
+            if gaps.history then AddMemoryHistory("frameGaps","frameGap",gaps.history,session,"No frame gaps reached 50 ms.") end
         end
     end
 
@@ -278,15 +393,17 @@ function Performance.Create(parent)
             end
             if AddSection("technicalSources") then
                 AddTable("diagnostic")
-                AddDiagnostic("Source method",callbacks.sourceMethod or "Unavailable",hints.source)
-                AddDiagnostic("Debug metadata reads",callbacks.sourceDebug or 0,"Function-source metadata supplied by an exposed debug API.")
-                AddDiagnostic("Bytecode source reads",callbacks.sourceDump or 0,"Lua5.0 function-source metadata; dumped bytecode is not executed.")
-                AddDiagnostic("Source unavailable",callbacks.sourceUnavailable or 0,"No usable function metadata; attribution remains Unknown.")
-                AddDiagnostic("Dump rejected",callbacks.sourceDumpRejected or 0,SourceHint(callbacks,"This client rejects C functions and closures with captured variables; their source is unavailable.","dump-rejected"))
+                local debugReads,dumpReads=callbacks.sourceDebug or 0,callbacks.sourceDump or 0
+                local lookup=debugReads>0 and (dumpReads>0 and "Debug + bytecode" or "Debug metadata") or dumpReads>0 and "Lua 5.0 bytecode" or "None succeeded"
+                AddDiagnostic("Source lookup",lookup,"Methods that recovered function labels. A recovered addon filename allows work to be assigned to its source addon.")
+                AddDiagnostic("Debug metadata reads",debugReads,"Functions whose source label was read through a debug API. File labels improve addon attribution.")
+                AddDiagnostic("Bytecode source reads",dumpReads,"Functions whose source label was recovered from Lua bytecode. Only labels with an addon filename identify a source addon.")
+                AddDiagnostic("Source unavailable",callbacks.sourceUnavailable or 0,"Functions without readable source metadata. Their execution still appears in frame families.")
+                AddDiagnostic("Dump rejected",callbacks.sourceDumpRejected or 0,SourceHint(callbacks,"The client refused this function dump. Its source cannot be read this way; frame timing remains available.","dump-rejected"))
                 AddDiagnostic("Unsupported dump",callbacks.sourceUnsupportedDump or 0,SourceHint(callbacks,"Bytecode format or size was unsupported; no source guess is made.","unsupported-dump"))
                 AddDiagnostic("Missing source API",callbacks.sourceApiUnavailable or 0,SourceHint(callbacks,"No usable function-source API was exposed.","no-source-api"))
                 AddDiagnostic("XML-shaped script labels",callbacks.sourceFrameScripts or 0,SourceHint(callbacks,"Frame:script labels contain no addon file. This cannot establish XML ownership.","frame-script"))
-                AddDiagnostic("Other non-file sources",math.max(0,(callbacks.sourceNonFile or 0)-(callbacks.sourceFrameScripts or 0)),SourceHint(callbacks,"Code chunks have no verified addon path; attribution remains Unknown.","code-chunk"))
+                AddDiagnostic("Other non-file sources",math.max(0,(callbacks.sourceNonFile or 0)-(callbacks.sourceFrameScripts or 0)),SourceHint(callbacks,"Code labels lack a verified addon path. These functions contribute to frame families but cannot be assigned to a source addon.","code-chunk"))
                 AddDiagnostic("Folder not in inventory",callbacks.sourceUnmatchedFolder or 0,SourceHint(callbacks,"Source folder did not match the installed addon inventory.","folder-unmatched"))
                 AddDiagnostic("Installed addon folders",callbacks.inventoryCount or 0,"Bounded inventory used to match actual source folders.")
             end
@@ -318,9 +435,10 @@ function Performance.Create(parent)
         local session=state.session
         if self.snapshotSession~=session or self.snapshotRecording~=state.recording then
             self.snapshots={};self.snapshotSession=session;self.snapshotRecording=state.recording
+            self:CancelFamilyJob();self.familyModel=nil
         end
-        if state.recording then AddItem("message","Counters live; Refresh tables updates rows and ranking.") end
         if not session or not session.callbacks then
+            self:CancelFamilyJob();self.familyModel=nil
             for index=table.getn(self.callbackEntries),1,-1 do table.remove(self.callbackEntries,index) end
             for index=table.getn(self.callbackDetails),1,-1 do table.remove(self.callbackDetails,index) end
         end
@@ -333,21 +451,16 @@ function Performance.Create(parent)
             AddMetric("Measured calls",calls,hints.calls);AddMetric("Measured time",Duration(total),hints.total)
             AddMetric("Peak call time",calls>0 and Duration(peak) or "-",hints.peak);AddMetric("Average call time",calls>0 and Duration(total/calls) or "-",hints.average)
             AddMetric("Heap delta",Memory(heap),hints.heap);AddMetric("Peak heap rise",Memory(largest),hints.heapPeak)
+            self:BuildMemoryItems(session)
             AddRows("operations","operation",entries,session,hints.total.."\n"..hints.heap,"No displayed MOS calls. Use Refresh tables after activity.")
             AddRows("slow","slow",self:HistoryRows(session.history,64),session,hints.slow.."\n"..hints.heap,"No MOS calls reached 5 ms.",true)
         else
             AddMetric("Sampled FPS",session.fps and string.format("%.1f",session.fps) or "Unavailable",hints.fps)
             AddMetric("Minimum FPS",session.minFps and string.format("%.1f",session.minFps) or "Unavailable",hints.fps)
-            AddMetric("Maximum FPS",session.maxFps and string.format("%.1f",session.maxFps) or "Unavailable",hints.fps)
-            AddMetric("Lua heap",Memory(session.heap),hints.lua)
-            AddMetric("Heap delta since Start",session.heap and session.startHeap and Memory(session.heap-session.startHeap) or "Unavailable",hints.heap)
             AddMetric("Network latency",session.latency and tostring(session.latency).." ms" or "Unavailable",hints.latency)
+            self:BuildMemoryItems(session)
             if session.callbacks then
                 local callbacks=session.callbacks
-                AddDiagnostic("Capture",callbacks.available==false and "Callbacks unavailable" or callbacks.pending and "Discovering callbacks" or callbacks.truncated and "Partial: limit reached" or "Frame callbacks only",hints.callbacks)
-                AddDiagnostic("Source identification",tostring(callbacks.unknownAtStop or callbacks.unknown or 0).." unknown hooks",hints.source)
-                local invalid,zero=callbacks.timingFailures or 0,callbacks.zeroDurations or 0
-                AddDiagnostic("Timing quality",invalid>0 and "Invalid readings" or zero>0 and "Rounded to zero" or "No invalid readings","Invalid: "..invalid.."; zero: "..zero..". Invalid readings are excluded; zero can mean timer rounding.")
                 self:BuildCallbackItems(callbacks,session)
             else
                 AddItem("message","Callbacks were not recorded. Start from All Addons to measure frame scripts.")
@@ -359,7 +472,7 @@ function Performance.Create(parent)
             if AddSection("memory",table.getn(entries)) then
                 if table.getn(entries)>0 then
                     AddTable("memory")
-                    for _,entry in ipairs(entries) do AddItem("memory",entry.name,entry,nil,"Last manual native memory capture; refresh to update.") end
+                    for _,entry in ipairs(entries) do AddItem("memory",entry.name,entry) end
                 else
                     AddItem("message",session and session.capabilities and session.capabilities.addonMemory==false and "Unavailable: this client reports shared Lua memory only." or "Use Refresh memory to request native addon statistics.")
                 end
@@ -381,7 +494,10 @@ function Performance.Create(parent)
             if label.SetNonSpaceWrap then label:SetNonSpaceWrap(true) end
         end
         UI.StyleSelectableTableRow(row,false,false)
+        local hoverEnter=row:GetScript("OnEnter")
         UI.AttachTooltip(row,TooltipTitle,TooltipBody)
+        local tooltipEnter=row:GetScript("OnEnter")
+        row:SetScript("OnEnter",function() if this.reportHint then tooltipEnter() elseif hoverEnter then hoverEnter() end end)
         table.insert(module.rows,row);return row
     end
     local function ResetRow(row,item,width)
@@ -389,6 +505,9 @@ function Performance.Create(parent)
         row.label:SetWidth(math.max(1,width-16));row.label:SetHeight(0);FontSize(row.label,12);row.label:SetJustifyV("TOP")
         row.label:SetText(item.text);row.label:SetTextColor(1,1,1);row.label:Show()
         row.detail:Hide();for column=1,5 do row.columns[column]:Hide() end
+        if row.headerHits then for _,hit in ipairs(row.headerHits) do hit:Hide() end end
+        if row.previous then row.previous:Hide();row.next:Hide() end
+        row:SetScript("OnClick",nil);row.familyName=nil
         row.reportTitle,row.reportHint,row.reportSchema=item.text,item.hint,nil
         if row.label.SetNonSpaceWrap then row.label:SetNonSpaceWrap(true) end
         row:EnableMouse(item.hint~=nil)
@@ -396,6 +515,39 @@ function Performance.Create(parent)
     end
     local function SetValue(row,index,value) row.values[index]=tostring(value) end
     local function SectionClick() this.reportModule:ToggleSection(this.reportSection) end
+    local function ColumnTitle() return this.columnTitle end
+    local function ColumnHint() return this.columnHint end
+    local function HeaderHit(row,index,label,title,hint,width,height)
+        row.headerHits=row.headerHits or {}
+        while table.getn(row.headerHits)<index do
+            local created=UI.CreateControl(nil,row);UI.AttachTooltip(created,ColumnTitle,ColumnHint);table.insert(row.headerHits,created)
+        end
+        local hit=row.headerHits[index]
+        hit.columnTitle,hit.columnHint=title,hint
+        hit:ClearAllPoints();hit:SetPoint("TOPLEFT",label,"TOPLEFT",0,0);hit:SetWidth(math.max(1,width));hit:SetHeight(math.max(1,height));hit:EnableMouse(true);hit:Show()
+    end
+    local function FirstHint(schema)
+        for name,entry in pairs(tables) do if entry==schema then return firstHints[name] or columnHints[schema.first] or columnHints.Detail end end
+    end
+    local function FamilyClick() this.reportModule:ToggleFamily(this.familyName) end
+    local function PagerClick() this.reportModule:SetFamilyPage(this.pagerFamily,this.direction) end
+    local function MeasurePager(row,item,width)
+        if not row.previous then
+            row.previous=UI.CreateButton(row,nil,"Previous",74,24);row.next=UI.CreateButton(row,nil,"Next",56,24)
+            row.pagerFlow={row.previous,row.next}
+            row.previous.mosFlowWidth=74;row.next.mosFlowWidth=56
+            row.previous.mosFlowFitLabel=true;row.next.mosFlowFitLabel=true
+            row.previous.direction=-1;row.next.direction=1
+            row.previous:SetScript("OnClick",PagerClick);row.next:SetScript("OnClick",PagerClick)
+        end
+        local model=item.operation
+        local total=item.value and model.familyMap[item.value].count or table.getn(model.families)
+        local current=item.value and module.familyPages[item.value] or module.familyPage
+        for _,button in ipairs(row.pagerFlow) do button.reportModule=module;button.pagerFamily=item.value;button:Show() end
+        UI.SetButtonEnabled(row.previous,current>1);UI.SetButtonEnabled(row.next,current<math.ceil(total/FAMILY_PAGE_SIZE))
+        local labelHeight=UI.MeasureTextHeight(row.label,width-16)
+        return UI.LayoutFlow(row,row.pagerFlow,8,labelHeight+10,math.max(1,width-16),4)+4
+    end
     local function MeasureTableRow(row,item,schema,width,stripe)
         local count=table.getn(schema.columns)
         row.reportSchema=schema
@@ -412,7 +564,11 @@ function Performance.Create(parent)
         elseif item.kind=="sample" then
             local data=item.operation
             SetValue(row,1,data.fps and string.format("%.1f",data.fps) or "-");SetValue(row,2,Memory(data.heap));SetValue(row,3,data.latency and data.latency.." ms" or "-")
-        elseif item.kind=="callback" or item.kind=="callbackDetail" then
+        elseif item.kind=="heapDrop" then
+            local data=item.operation
+            SetValue(row,1,Memory(data.heapDrop));SetValue(row,2,string.format("%.2f s",data.windowDuration));SetValue(row,3,Duration(data.maxFrameGap));SetValue(row,4,data.slowFrames or 0)
+        elseif item.kind=="frameGap" then SetValue(row,1,Duration(item.operation.elapsed))
+        elseif item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="family" then
             local data=item.operation
             local measured=data.timedCalls~=0
             SetValue(row,1,data.calls or 0);SetValue(row,2,measured and Duration(data.selfTime) or "Unavailable");SetValue(row,3,measured and Duration(data.time) or "Unavailable")
@@ -424,7 +580,12 @@ function Performance.Create(parent)
         else SetValue(row,1,Memory(item.operation.memory)) end
         if item.kind~="tableHeader" then
             UI.SetRowColor(row,rowColor,math.mod(stripe,2)==0 and 0.14 or 0.025);row:EnableMouse(true)
-            row.reportHint=item.hint or "Last explicit native memory capture."
+            row.reportHint=item.hint
+            if item.kind=="family" then
+                UI.SetRowColor(row,rowColor,0.16);UI.SetProjectButtonOutline(row,true)
+                row.familyName=item.value;row.reportModule=module;row:SetScript("OnClick",FamilyClick)
+                row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
+            end
         end
         if width>=schema.minimum then
             local nameWidth=math.floor((width-16)*schema.nameFraction)
@@ -432,17 +593,22 @@ function Performance.Create(parent)
             row.label:SetWidth(nameWidth-8)
             local height=math.max(28,UI.MeasureTextHeight(row.label,nameWidth-8)+12)
             row.label:SetHeight(height);row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,0);row.label:SetJustifyV("MIDDLE")
+            if item.kind=="callbackDetail" then row.label:SetPoint("TOPLEFT",row,"TOPLEFT",16,0);row.label:SetWidth(math.max(1,nameWidth-16)) end
             for index=1,count do
                 local label=row.columns[index];FontSize(label,12)
                 UI.Table.Cell(label,row,8+nameWidth+(index-1)*cellWidth,cellWidth-8,height,values[index]);label:SetJustifyH("RIGHT")
                 if item.kind=="tableHeader" then label:SetTextColor(unpack(UI.Theme.colors.goldText)) else label:SetTextColor(1,1,1) end
                 label:Show()
+                if item.kind=="tableHeader" then HeaderHit(row,index+1,label,schema.columns[index],columnHints[schema.columns[index]],cellWidth-8,height) end
             end
-            if item.kind=="tableHeader" then row.label:SetTextColor(unpack(UI.Theme.colors.goldText));row:EnableMouse(false) end
+            if item.kind=="tableHeader" then row.label:SetTextColor(unpack(UI.Theme.colors.goldText));row:EnableMouse(false);HeaderHit(row,1,row.label,schema.first,FirstHint(schema),nameWidth-8,height) end
             return height
         end
-        if item.kind=="tableHeader" then row.label:Hide();return 0 end
         local height=UI.MeasureTextHeight(row.label,width-16)+10
+        if item.kind=="tableHeader" then
+            row.label:SetTextColor(unpack(UI.Theme.colors.goldText));row:EnableMouse(false)
+            HeaderHit(row,1,row.label,schema.first,FirstHint(schema),width-16,height-10)
+        end
         local columns=width>=360 and 2 or 1
         local cellWidth=(width-16)/columns
         for first=1,count,columns do
@@ -453,9 +619,12 @@ function Performance.Create(parent)
                 label:SetWidth(math.max(1,cellWidth-8));label:SetHeight(0);label:SetJustifyH("LEFT")
                 if label.SetWordWrap then label:SetWordWrap(true) end
                 if label.SetNonSpaceWrap then label:SetNonSpaceWrap(true) end
-                label:SetText(item.kind=="diagnostic" and values[index] or schema.columns[index]..": "..values[index]);label:SetTextColor(0.86,0.86,0.86);label:Show()
+                label:SetText((item.kind=="diagnostic" or item.kind=="tableHeader") and values[index] or schema.columns[index]..": "..values[index]);label:SetTextColor(0.86,0.86,0.86);label:Show()
                 -- Reserve two lines so changing numeric precision does not move following sections.
                 bandHeight=math.max(bandHeight,28,UI.MeasureTextHeight(label,cellWidth-8))
+                if item.kind=="tableHeader" then
+                    label:SetTextColor(unpack(UI.Theme.colors.goldText));HeaderHit(row,index+1,label,schema.columns[index],columnHints[schema.columns[index]],cellWidth-8,bandHeight)
+                end
             end
             height=height+bandHeight+4
         end
@@ -491,8 +660,9 @@ function Performance.Create(parent)
                 local height=math.max(22,UI.MeasureTextHeight(row.label,width-16)+12)
                 if item.kind=="tableHeader" then schema=item.operation;stripe=0;height=MeasureTableRow(row,item,schema,width,0)
                 elseif item.kind=="diagnostic" then stripe=stripe+1;height=MeasureTableRow(row,item,tables.diagnostic,width,stripe)
-                elseif item.kind=="operation" or item.kind=="slow" or item.kind=="sample" or item.kind=="memory" or item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="callbackSlow" then
+                elseif item.kind=="operation" or item.kind=="slow" or item.kind=="sample" or item.kind=="memory" or item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="callbackSlow" or item.kind=="family" or item.kind=="heapDrop" or item.kind=="frameGap" then
                     stripe=stripe+1;height=MeasureTableRow(row,item,schema,width,stripe)
+                elseif item.kind=="familyPager" then height=MeasurePager(row,item,width)
                 elseif item.kind=="heading" then
                     FontSize(row.label,14);row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
                     height=UI.MeasureTextHeight(row.label,width-16)+16
@@ -592,7 +762,16 @@ function Performance.Create(parent)
         local state=self.provider.GetState()
         if self.monitor and self.monitor:IsVisible() then
             local session=state.session
-            self.monitor.text:SetText((state.recording and "Recording" or state.enabled and "Stopped" or "Disabled") .. "\nLua: " .. Memory(session and session.heap) .. "\nFPS: " .. tostring(session and session.fps or "-") .. "\nTime: " .. string.format("%.1f s",session and session.elapsed or 0))
+            local gc,gaps=session and session.gc or {},session and session.frameGaps or {}
+            local delta=session and session.heap and session.startHeap and session.heap-session.startHeap
+            self.monitor.text:SetText((state.recording and "Recording" or state.enabled and "Stopped" or "Disabled")
+                .."\nFPS: "..FPS(session and session.fps)
+                .."\nShared Lua memory: "..Memory(session and session.heap)
+                .."\nChange since Start: "..SignedMemory(delta)
+                .."\nGC threshold: "..Memory(session and session.gcThreshold)
+                .."\nHeap drops: "..(gc.heapDropCount or 0).." (last: "..(gc.lastHeapDrop and Memory(gc.lastHeapDrop) or "-")..")"
+                .."\nWorst frame gap: "..(gaps.maximum and Duration(gaps.maximum) or "-")
+                .."\nGap during last drop: "..(gc.lastHeapDropMaxFrameGap and Duration(gc.lastHeapDropMaxFrameGap) or "-"))
         end
         if not page:IsVisible() then return end
         self:EnsureUI();self:BuildItems()
@@ -620,16 +799,18 @@ function Performance.Create(parent)
     local function Subscribe()
         if module.provider then module.provider.SetListener((page:IsVisible() or module.monitor and module.monitor:IsVisible()) and Updated or nil) end
     end
-    function module:SelectTab(tab) self.tab=tab;page.canvas.layoutViewport:SetVerticalScroll(0);self:Refresh() end
+    function module:SelectTab(tab) self:CancelFamilyJob();self.familyModel=nil;self.tab=tab;page.canvas.layoutViewport:SetVerticalScroll(0);self:Refresh() end
     function module:ToggleSection(name)
         if name=="technical" then self.detailsExpanded[self.tab]=not self.detailsExpanded[self.tab]
         else self.sectionState[self.tab..":"..name]=not self:IsSectionExpanded(name) end
         if self:IsSectionExpanded(name) then self.snapshots[self.tab..":"..name]=nil end
+        if name=="callbackDetails" then self:CancelFamilyJob();self.familyModel=nil end
         self:Refresh()
     end
     function module:ToggleDetails() self:ToggleSection("technical") end
-    function module:RefreshTables() self.snapshots={};self:Refresh() end
+    function module:RefreshTables() self:CancelFamilyJob();self.familyModel=nil;self.snapshots={};self:Refresh() end
     function module:ReleasePresentation()
+        self:CancelFamilyJob();self.familyModel=nil
         self.snapshots={};self.snapshotSession=nil;self.snapshotRecording=nil
         for _,entries in ipairs({self.sessionEntries,self.callbackEntries,self.callbackDetails,self.historyEntries or emptyEntries}) do
             for index=table.getn(entries),1,-1 do table.remove(entries,index) end
@@ -639,10 +820,11 @@ function Performance.Create(parent)
     function module:Start()
         if not self.provider then return false end
         local ok,message=self.provider.Start({callbacks=self.tab=="All Addons"})
+        if ok then self.familyPages={};self.familyPage=1;self.expandedFamily=nil end
         self.notice=message;self:Refresh();return ok
     end
     function module:Stop() if self.provider then self.provider.Stop();self:Refresh() end end
-    function module:Reset() if self.provider then self.provider.Reset();self.notice=nil;page.canvas.layoutViewport:SetVerticalScroll(0);self:Refresh() end end
+    function module:Reset() if self.provider then self.provider.Reset();self.familyPages={};self.familyPage=1;self.expandedFamily=nil;self.notice=nil;page.canvas.layoutViewport:SetVerticalScroll(0);self:Refresh() end end
     function module:Export()
         local result,message=self.provider.Export()
         self.notice=result and "Report exported; reload or logout writes it to disk." or message
@@ -656,13 +838,13 @@ function Performance.Create(parent)
     end
     function module:ToggleMonitor()
         if not self.monitor then
-            local monitor=UI.CreateContainer(nil,UIParent);monitor:SetPoint("CENTER",UIParent,"CENTER",280,100);monitor:SetWidth(260);monitor:SetHeight(142)
+            local monitor=UI.CreateContainer(nil,UIParent);monitor:SetPoint("CENTER",UIParent,"CENTER",280,100);monitor:SetWidth(340);monitor:SetHeight(204)
             monitor:SetFrameStrata("FULLSCREEN_DIALOG");monitor:SetMovable(true);monitor:EnableMouse(true);monitor:RegisterForDrag("LeftButton")
             if monitor.SetClampedToScreen then monitor:SetClampedToScreen(true) end
             monitor.title=UI.CreateHeading(monitor,"BootyProfiler",3,"gold");monitor.title:SetPoint("TOPLEFT",monitor,"TOPLEFT",8,-8)
             monitor.close=UI.CreateWindowButton(monitor,nil,"close");monitor.close:SetPoint("TOPRIGHT",monitor,"TOPRIGHT",-8,-8)
             monitor.close:SetScript("OnClick",function() monitor:Hide();Subscribe() end)
-            monitor.text=UI.CreateLabel(monitor,nil,"OVERLAY","GameFontHighlightSmall");monitor.text:SetPoint("TOPLEFT",monitor,"TOPLEFT",8,-38);monitor.text:SetWidth(244);monitor.text:SetJustifyH("LEFT")
+            monitor.text=UI.CreateLabel(monitor,nil,"OVERLAY","GameFontHighlightSmall");monitor.text:SetPoint("TOPLEFT",monitor,"TOPLEFT",8,-38);monitor.text:SetWidth(324);monitor.text:SetJustifyH("LEFT")
             monitor:SetScript("OnDragStart",function() this:StartMoving() end);monitor:SetScript("OnDragStop",function() this:StopMovingOrSizing() end)
             monitor:SetScript("OnShow",Subscribe);monitor:SetScript("OnHide",Subscribe)
             UI.Window.StyleProjectDialog(monitor);monitor:Hide();self.monitor=monitor

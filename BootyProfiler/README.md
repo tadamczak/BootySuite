@@ -11,12 +11,14 @@ Copy the BootyProfiler folder into Interface/AddOns/, beside MuklaOfficerSuite. 
 In Performance, choose **Enable**, select **MOS** or **All Addons**, then **Start**. MOS starts the lighter MOS-only capture; All Addons also intercepts frame callbacks. Changing tabs does not change a recording already in progress. **Stop** keeps the report; **Disable** stops recording and removes owned hooks. Opening the page or enabling the module does not start a recording. Reload always starts disabled and stopped.
 
 - **MOS:** selected MOS entry points, count, total/average/maximum measured time, signed global heap deltas and the last 64 calls lasting at least 5 ms.
-- **All Addons:** gradual OnEvent/OnUpdate callback discovery, source-addon ranking, top frame/script callbacks and recent slow calls, alongside global Lua heap and sampled FPS/network latency. Self time excludes timed nested intercepted callbacks; inclusive times overlap. These are measured callbacks, not total addon CPU or proof of an FPS-drop cause.
-- **Live Monitor:** a movable summary; opening it does not start recording.
+- **All Addons:** gradual OnEvent/OnUpdate callback discovery, source-addon ranking, expandable frame families and recent slow calls, alongside shared Lua memory and sampled FPS/network latency. Family and child lists have pages of 50 records. Self time excludes timed nested intercepted callbacks; inclusive times overlap. These are measured callbacks, not total addon CPU or proof of an FPS-drop cause.
+- **Live Monitor:** integer FPS, shared Lua memory, change since Start and GC indicators in a movable summary; opening it does not start recording.
 - **Export:** after Stop, keep one bounded report in BootyProfiler SavedVariables. Reload or logout writes the report to disk.
 - **Refresh memory:** in All Addons, explicitly request native addon memory statistics when supported; up to 256 entries. It never starts a recording.
 
 Expand a report accordion to inspect its table. **Frame callbacks** is the main All Addons ranking. During recording, counters update live while displayed rows stay in place. **Refresh tables** updates row selection/order; **Stop** shows final rankings. Technical details groups timing, coverage, source identification and client support.
+
+**Memory and garbage collection** shows current shared Lua memory, its change since Start and the reported GC threshold. Expand **Heap drop windows** to compare observed memory decreases with the worst frame gap in each interval, or **Slow frame gaps** to inspect gaps of at least 50 ms. These are observations, not exact GC event counts, pause durations or proof of the cause of a stall. Hover a measurement column heading for its meaning.
 
 Discovery is incremental; wait for its status to finish before interpreting coverage. XML callback labels omit their addon file and some functions expose no source, so owners can remain Unknown. Frame names or observed parent/reference context identify their work without proving an addon owner. Source-addon labels identify the implementation source, including shared libraries, rather than exclusive responsibility for all callees. This client may expose only shared Lua memory; that cannot replace missing memory counters for individual addons.
 

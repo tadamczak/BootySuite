@@ -378,6 +378,19 @@ end
 
 function Dashboard.BindWindow(view, options)
     local frame, grip = view.frame, view.resizeGrip
+    -- Anchored child bounds can still describe the 250x40 shell during Show.
+    -- Reuse one finalizer and detach it after the next rendered frame.
+    local finalizer = CreateFrame("Frame", nil, frame)
+    finalizer:EnableMouse(false); finalizer:Hide()
+    view.restoreLayoutFinalizer = finalizer
+    local function CancelRestoreLayout()
+        finalizer:SetScript("OnUpdate", nil); finalizer:Hide()
+    end
+    local function FinishRestoreLayout()
+        CancelRestoreLayout()
+        if frame:IsVisible() and not view.minimized and not options.isLootMasterMode() then options.applyOrRefreshLayout() end
+    end
+    finalizer:SetScript("OnHide", function() finalizer:SetScript("OnUpdate", nil) end)
     -- Native layout-cache is loaded after VARIABLES_LOADED and can contain the
     -- 250x40 minimized shell. SavedVariables alone own durable geometry.
     frame:RegisterEvent("PLAYER_LOGIN")
@@ -422,6 +435,7 @@ function Dashboard.BindWindow(view, options)
 
     view.ToggleMinimize = function()
         if options.isLootMasterMode() then return end
+        CancelRestoreLayout()
         if view.minimized then
             view.minimizedLeft, view.minimizedBottom = frame:GetLeft(), frame:GetBottom()
             view.minimized = false; frame.mosMinimized = false
@@ -441,9 +455,13 @@ function Dashboard.BindWindow(view, options)
                 view.title:Hide(); view.classicTitle:Show(); view.classicLogo:Show(); view.classicTitleLeft:Show(); view.classicTitleRight:Show()
                 view.titleBar:ClearAllPoints(); view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8); view.titleBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8); view.titleBar:SetHeight(44)
             end
-            view.sidebar:Show(); view.contentPanel:Show(); options.statusBar:Show(); view.versionText:Show(); view.resizeGrip:Show(); view.sidebarToggle:Show()
+            view.sidebar:Show(); options.statusBar:Show(); view.versionText:Show(); view.resizeGrip:Show(); view.sidebarToggle:Show()
             if options.setNavigationVisible then options.setNavigationVisible(true) end
+            -- Restore owners and anchors before descendant OnShow handlers run;
+            -- chrome also reapplies hidden sidebar/footer preferences.
             options.applyOrRefreshLayout()
+            view.contentPanel:Show()
+            finalizer:SetScript("OnUpdate", FinishRestoreLayout); finalizer:Show()
         else
             view.widthBeforeMinimize = frame:GetWidth(); view.heightBeforeMinimize = frame:GetHeight(); view.leftBeforeMinimize = frame:GetLeft(); view.bottomBeforeMinimize = frame:GetBottom()
             options.saveGeometry()

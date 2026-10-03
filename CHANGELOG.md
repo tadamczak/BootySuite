@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.117 - 2026-10-03
+
+- Restore the complete Performance layout after minimizing the main window.
+- Group frame callbacks into expandable families with paged access to every captured record.
+- Explain measurement columns in header tooltips and simplify technical diagnostics.
+- Show integer FPS, shared memory and its change in Live Monitor; add heap-drop windows and slow frame gaps for GC investigations.
+
 ## 0.5.0-dev.116 - 2026-10-03
 
 - Present Performance measurements in collapsible tables with compact diagnostics and short metric explanations.
