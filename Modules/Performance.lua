@@ -411,6 +411,13 @@ function Performance.Create(parent)
         AddMetric("Change during login",SignedMemory(report.heapDelta),"Latest login sample minus the profiler-load baseline. Includes startup work and collection.")
         AddMetric("Observed login heap drops",report.heapDropCount or 0,"Loading windows with a net memory decrease. Collection may contribute; this is not an exact GC event count.")
         AddDiagnostic("Login capture",report.kind or capture.GetStatus(),"One requested loading capture. It ends after the first five seconds in the world.")
+        if report.baselineInventoryAvailable then
+            local incomplete=report.baselineInventoryTruncated or (report.baselineInventoryFailures or 0)>0
+            AddDiagnostic("Loaded at capture start",(incomplete and "At least " or "")..tostring(report.baselineLoadedAddonCount or 0),"Client-listed addons reporting loaded when capture began, excluding BootyProfiler. Their earlier loading is in the baseline; some clients also mark dependencies still loading.")
+        elseif report.baselineInventoryAvailable==false then
+            AddDiagnostic("Loaded at capture start","Unavailable","This client could not supply the starting addon inventory. Later observed loads are still recorded.")
+        end
+        AddDiagnostic("Later addon loads",report.addonEvents or 0,"Addon-loaded events observed after the baseline, including rows omitted when the history fills.")
         if report.kind~="completed" and report.reason then AddDiagnostic("Capture stopped",loginReasons[report.reason] or report.reason,"An interrupted report includes only the stages observed before capture stopped.") end
         if report.truncated then AddDiagnostic("Omitted records",report.omittedRecords or 0,"The report keeps at most 256 stage rows. Summary memory continues to update after the table fills.") end
         AddItem("message","Starts at BootyProfiler load; earlier addons are included in the baseline.")

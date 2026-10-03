@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.119 - 2026-10-03
+
+- Start BootyProfiler earlier through soft LoadWith triggers, preserving its normal loading fallback and saved settings.
+- Show the client-reported starting addon count and later captured addon loads in the login report.
+
 ## 0.5.0-dev.118 - 2026-10-03
 
 - Add opt-in callback heap growth, net change and peak measurements with source-addon and frame-family memory views.

@@ -3,8 +3,8 @@
 local P = BootyProfiler
 local L = {}
 P.LoginMemory = L
-local RECORD_LIMIT, SETTLE_SECONDS, SAMPLE_SECONDS = 256, 5, 1
-L.limits = { records = RECORD_LIMIT, settleSeconds = SETTLE_SECONDS, sampleSeconds = SAMPLE_SECONDS }
+local RECORD_LIMIT, SETTLE_SECONDS, SAMPLE_SECONDS, INVENTORY_LIMIT = 256, 5, 1, 256
+L.limits = { records = RECORD_LIMIT, settleSeconds = SETTLE_SECONDS, sampleSeconds = SAMPLE_SECONDS, inventory = INVENTORY_LIMIT }
 local driver, loaded, active, status = nil, false, nil, "waiting"
 local clock, heapReader, previousAt, previousHeap, deadline, sampleWait
 local listener
@@ -106,6 +106,44 @@ end
 local function Hidden()
     if active then Finish("partial", "capture-driver-hidden") end
 end
+local function BaselineCoverage(report)
+    local countReader = type(GetNumAddOns) == "function" and GetNumAddOns or nil
+    local infoReader = type(GetAddOnInfo) == "function" and GetAddOnInfo or nil
+    local loadedReader = type(IsAddOnLoaded) == "function" and IsAddOnLoaded or nil
+    if not loadedReader and type(C_AddOns) == "table" and type(C_AddOns.IsAddOnLoaded) == "function" then loadedReader = C_AddOns.IsAddOnLoaded end
+    report.baselineInventoryAvailable, report.baselineInventoryComplete = false, false
+    report.baselineInventoryInspected, report.baselineInventoryFailures, report.baselineInventoryTruncated = 0, 0, false
+    if not countReader or not infoReader or not loadedReader then
+        report.baselineInventoryReason = not loadedReader and "loaded-state-api-unavailable" or "addon-inventory-api-unavailable"
+        return active == report
+    end
+    local ok, count = pcall(countReader)
+    if active ~= report then return false end
+    if not ok or not Finite(count) or count ~= math.floor(count) then
+        report.baselineInventoryFailures = 1; report.baselineInventoryReason = "addon-count-unavailable-or-invalid"
+        return true
+    end
+    report.baselineInventoryAvailable, report.baselineInventoryCount, report.baselineLoadedAddonCount = true, count, 0
+    report.baselineInventoryTruncated = count > INVENTORY_LIMIT
+    -- One bounded query at the armed startup event; no names or API readers retained.
+    for index = 1, math.min(INVENTORY_LIMIT, count) do
+        local read, name = pcall(infoReader, index)
+        if active ~= report then return false end
+        if not read or type(name) ~= "string" or name == "" then report.baselineInventoryFailures = report.baselineInventoryFailures + 1
+        elseif name ~= "BootyProfiler" then
+            local checked, isLoaded = pcall(loadedReader, name)
+            if active ~= report then return false end
+            if not checked or isLoaded ~= nil and isLoaded ~= true and isLoaded ~= false and isLoaded ~= 0 and isLoaded ~= 1 then
+                report.baselineInventoryFailures = report.baselineInventoryFailures + 1
+            else
+                report.baselineInventoryInspected = report.baselineInventoryInspected + 1
+                if isLoaded == true or isLoaded == 1 then report.baselineLoadedAddonCount = report.baselineLoadedAddonCount + 1 end
+            end
+        end
+    end
+    report.baselineInventoryComplete = not report.baselineInventoryTruncated and report.baselineInventoryFailures == 0
+    return true
+end
 local function Start()
     clock, heapReader = type(GetTime) == "function" and GetTime or nil, type(gcinfo) == "function" and gcinfo or nil
     active = { schema = 1, profilerVersion = Text(P.version, 64), kind = "recording",
@@ -115,6 +153,8 @@ local function Start()
     status = "recording"
     local report = active
     if not clock or not heapReader then Finish("failed", "clock-or-heap-api-unavailable"); return end
+    -- Include this query's own allocations in the baseline, not a later addon window.
+    if not BaselineCoverage(report) or active ~= report then return end
     if not Sample("BASELINE", "BootyProfiler") or active ~= report then return end
     driver:RegisterEvent("ADDON_LOADED"); driver:RegisterEvent("VARIABLES_LOADED")
     driver:RegisterEvent("PLAYER_LOGIN"); driver:RegisterEvent("PLAYER_ENTERING_WORLD"); driver:RegisterEvent("PLAYER_LOGOUT")
