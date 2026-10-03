@@ -111,20 +111,20 @@ local hints = {
     slow = "Calls above the slow threshold. Peaks may interrupt a frame; matching FPS samples does not prove causation.",
 }
 local sections = {
-    operations={title="MOS operations",expanded=true,hint=hints.total},
-    slow={title="Slow MOS calls",hint=hints.slow},
-    callbacks={title="Addon source ranking",hint=hints.source},
-    callbackDetails={title="Frame callbacks",expanded=true,hint="Grouped by observed frame naming or parent context. Families are not addon owners."},
-    callbackSlow={title="Slow callbacks",hint=hints.slow},
+    operations={title="MOS operations",hint=hints.total,intro="Selected MOS work, ranked by measured time. High Total means repeated Lua work; a large Peak can delay a frame."},
+    slow={title="Slow MOS calls",hint=hints.slow,intro="Recent MOS calls lasting at least 5 ms. Large peaks can delay a frame; use the time and event to locate expensive work."},
+    callbacks={title="Addon source ranking",hint=hints.source,intro="Groups callbacks by verified source addon. High Self time means more measured Lua work. Unknown owner means its source file could not be identified."},
+    callbackDetails={title="Frame callbacks",hint="Grouped by observed frame naming or parent context. Families are not addon owners.",intro="Groups measured scripts into families. Expand to locate repeated Lua work or peaks that can delay a frame; a frame name does not prove addon ownership."},
+    callbackSlow={title="Slow callbacks",hint=hints.slow,intro="Recent frame callbacks lasting at least 5 ms. Check Duration and Event for spikes; matching a frame pause does not prove the callback caused it."},
     memory={title="Memory by addon",hint="Callback memory growth works without native addon counters. Native snapshots are shown separately when available."},
-    loginMemory={title="Login memory analysis",hint="One requested login capture: loading windows and the first five seconds in the world. Earlier addons belong to its baseline."},
+    loginMemory={title="Login results",hint="Loading windows and the first five seconds in the world.",intro="Each row ends a loading window. Memory change and Window belong to the interval after the previous row; neither is exclusive addon memory or loading time."},
     technical={title="Technical details",hint="Capture coverage, timing reliability and client support."},
     technicalTiming={title="Timing",nested=true,hint="Clocks, measurement precision and invalid readings."},
     technicalCoverage={title="Coverage",nested=true,hint="What was intercepted and how much discovery work ran."},
     technicalSources={title="Source identification",nested=true,hint="Why some callback sources cannot be attributed to addons."},
     technicalHealth={title="Capture health",nested=true,hint="Inspection, inventory and wrapper cleanup failures."},
     technicalSupport={title="Client support",nested=true,hint="Available APIs and extension markers; markers alone do not prove support."},
-    memoryGC={title="Memory and garbage collection",expanded=true,hint="Shared Lua memory, observed decreases and frame gaps. Decreases do not establish exact GC count or duration."},
+    memoryGC={title="Memory and garbage collection",hint="Shared Lua memory, observed decreases and frame gaps. Decreases do not establish exact GC count or duration."},
     heapDrops={title="Heap drop windows",nested=true,hint="Memory-decreasing windows and the slow frames observed in each. This does not prove GC caused a stall."},
     frameGaps={title="Other slow frame gaps",nested=true,hint="Frames of at least 50 ms outside the retained heap-drop windows. Includes game and profiler work; does not identify the cause."},
 }
@@ -140,11 +140,12 @@ local function SourceHint(callbacks,text,category)
     end
     return text
 end
-local function Elapsed(value)
-    value=math.max(0,math.floor(tonumber(value) or 0))
-    if value>=3600 then return string.format("%d:%02d:%02d",math.floor(value/3600),math.mod(math.floor(value/60),60),math.mod(value,60)) end
-    return string.format("%02d:%02d",math.floor(value/60),math.mod(value,60))
+local function ScanDate(value)
+    if type(value)~="string" then return "Date unavailable" end
+    local _,_,year,month,day,hour,minute=string.find(value,"^(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d)")
+    return year and day.."-"..month.."-"..year.." "..hour..":"..minute or value
 end
+local function ScanSeconds(value) return tostring(math.max(0,math.floor(tonumber(value) or 0))).."s" end
 local function TooltipTitle() return this.reportTitle or "" end
 local function TooltipBody()
     return this.reportHint or ""
@@ -170,6 +171,8 @@ function Performance.Create(parent)
         local item = module.items[module.itemCount]
         if not item then item = {}; table.insert(module.items, item) end
         item.kind, item.text, item.operation, item.value, item.hint = kind, text, data, value, hint
+        item.severity=nil
+        item.indent=module.contentIndent or 0
     end
     local function AddMetric(name, value, hint, severity)
         AddItem("metric",name,nil,tostring(value),hint)
@@ -186,8 +189,12 @@ function Performance.Create(parent)
     end
     local function AddSection(name,count)
         local section=sections[name]
+        module.contentIndent=section.nested and 1 or 0
         AddItem("section",section.title,name,count,section.hint)
-        return module:IsSectionExpanded(name)
+        local expanded=module:IsSectionExpanded(name)
+        module.contentIndent=expanded and module.contentIndent+1 or 0
+        if expanded and section.intro then AddItem("message",section.intro) end
+        return expanded
     end
     function module:SnapshotRows(name,entries,session,history)
         if not self.provider.GetState().recording then return entries end
@@ -313,6 +320,7 @@ function Performance.Create(parent)
             local expanded=self.expandedFamily==family.name
             AddItem("family",(expanded and "- " or "+ ")..family.name.." ("..family.count..")",family,family.name)
             if expanded then
+                self.contentIndent=self.contentIndent+1
                 local childPage=math.max(1,math.min(self.familyPages[family.name] or 1,math.ceil(family.count/FAMILY_PAGE_SIZE)))
                 self.familyPages[family.name]=childPage
                 local childFirst=(childPage-1)*FAMILY_PAGE_SIZE+1
@@ -324,6 +332,7 @@ function Performance.Create(parent)
                     local entry=family.children[child]
                     table.insert(self.callbackDetails,entry);AddItem("callbackDetail",entry.name,entry)
                 end
+                self.contentIndent=self.contentIndent-1
             end
         end
     end
@@ -442,12 +451,11 @@ function Performance.Create(parent)
         if not capture then return end
         local report=capture.GetReport()
         local count=report and table.getn(report.events or emptyEntries) or 0
-        if not AddSection("loginMemory",count) then return end
         if not report then AddItem("message",capture.IsArmed() and "Capture ready for the next login or reload." or "Use Analyze Login to record the next loading sequence.");return end
         if self.loginReport~=report then self.loginReport=report;self.loginPage=1 end
         local status=report.kind=="completed" and "Success" or report.kind=="recording" and "Recording" or report.kind=="failed" and "Failed" or report.kind=="cancelled" and "Cancelled" or "Interrupted"
         AddMetric("Login capture",status,"Success means the requested capture finished, including five seconds after entering the world.")
-        AddMetric("Login date",report.capturedDate or "Unavailable","Local date and time when this requested login capture began.")
+        AddMetric("Login date",ScanDate(report.capturedDate),"Local date and time when this requested login capture began.")
         AddMetric("Login time",Seconds(report.firstWorldAt),"Observed time from profiler startup to first entering the world. Excludes the five-second follow-up; earlier loading is not measured.")
         AddMetric("At profiler load",Memory(report.startHeap),columnHints["Lua heap"])
         AddMetric("Latest login memory",Memory(report.heap),columnHints["Lua heap"])
@@ -455,14 +463,15 @@ function Performance.Create(parent)
         AddMetric("Observed login heap drops",report.heapDropCount or 0,"Loading windows with a net memory decrease. Collection may contribute; this is not an exact GC event count.")
         if report.baselineInventoryAvailable then
             local incomplete=report.baselineInventoryTruncated or (report.baselineInventoryFailures or 0)>0
-            AddDiagnostic("Loaded at capture start",(incomplete and "At least " or "")..tostring(report.baselineLoadedAddonCount or 0),"Client-listed addons reporting loaded when capture began, excluding BootyProfiler. Their earlier loading is in the baseline; some clients also mark dependencies still loading.")
+            AddMetric("Loaded at capture start",(incomplete and "At least " or "")..tostring(report.baselineLoadedAddonCount or 0),"Addons already reporting loaded when observation began. Their earlier loading belongs to the baseline.")
         elseif report.baselineInventoryAvailable==false then
-            AddDiagnostic("Loaded at capture start","Unavailable","This client could not supply the starting addon inventory. Later observed loads are still recorded.")
+            AddMetric("Loaded at capture start","Unavailable","The starting addon inventory was unavailable; later loads are still recorded.")
         end
-        AddDiagnostic("Later addon loads",report.addonEvents or 0,"Addon-loaded events observed after the baseline, including rows omitted when the history fills.")
-        if report.kind~="completed" and report.reason then AddDiagnostic("Capture stopped",loginReasons[report.reason] or report.reason,"An interrupted report includes only the stages observed before capture stopped.") end
-        if report.truncated then AddDiagnostic("Omitted records",report.omittedRecords or 0,"The report keeps at most 256 stage rows. Summary memory continues to update after the table fills.") end
-        if count==0 then return end
+        AddMetric("Later addon loads",report.addonEvents or 0,"Addon-loaded events after the baseline, including omitted rows.")
+        if report.kind~="completed" and report.reason then AddItem("message","Capture stopped: "..(loginReasons[report.reason] or report.reason)) end
+        if report.truncated then AddItem("message","Omitted loading rows: "..tostring(report.omittedRecords or 0)) end
+        if not AddSection("loginMemory",count) then return end
+        if count==0 then AddItem("message","No loading rows recorded.");return end
         self.loginPage=math.max(1,math.min(self.loginPage,math.ceil(count/FAMILY_PAGE_SIZE)))
         local first=(self.loginPage-1)*FAMILY_PAGE_SIZE+1
         self.loginPaging.total=count
@@ -555,10 +564,39 @@ function Performance.Create(parent)
         end
     end
 
+    function module:BuildHealthItems(state)
+        local report=self.provider.GetLastHealthReport and self.provider.GetLastHealthReport()
+        self.healthReport,self.healthRecording=report,state.recording
+        if not report or not report.available then
+            AddItem("message",state.recording and "A scan is recording. Stop it to create a Health Check report." or "No completed scan. Choose Profile MOS or Profile All, record activity, then Stop.")
+            return
+        end
+        if state.recording then AddItem("message","A scan is recording. This report shows the previous completed scan.") end
+        AddMetric("Health",report.status,report.summary,report.severity or 0)
+        AddMetric("Profile",report.scope or "Unavailable")
+        AddMetric("Last scan",ScanDate(report.date))
+        AddMetric("Duration",ScanSeconds(report.elapsed))
+        if report.summary then AddItem("message",report.summary) end
+        for _,finding in ipairs(report.findings or emptyEntries) do
+            AddItem("heading",finding.title)
+            self.items[self.itemCount].severity=finding.severity
+            self.contentIndent=1
+            if finding.evidence then AddItem("message",finding.evidence) end
+            if finding.action then AddItem("message","Tip: "..finding.action) end
+            self.contentIndent=0
+        end
+        if report.coverage then AddItem("message",report.coverage) end
+    end
+
     function module:BuildItems()
-        self.itemCount=0
+        self.itemCount=0;self.contentIndent=0
         local state=self.provider.GetState()
         local session=state.session
+        if self.tab=="Analyze Login" or self.tab=="Health Check" then
+            if self.tab=="Analyze Login" then self:BuildLoginItems() else self:BuildHealthItems(state) end
+            for index=table.getn(self.items),self.itemCount+1,-1 do table.remove(self.items,index) end
+            return
+        end
         if self.snapshotSession~=session or self.snapshotRecording~=state.recording then
             self.snapshots={};self.snapshotSession=session;self.snapshotRecording=state.recording
             self:CancelFamilyJob();self.familyModel=nil
@@ -588,7 +626,7 @@ function Performance.Create(parent)
             AddRows("operations","operation",entries,session,hints.total.."\n"..hints.heap,"No displayed MOS calls. Use Refresh tables after activity.")
             AddRows("slow","slow",self:HistoryRows(session.history,64),session,hints.slow.."\n"..hints.heap,"No MOS calls reached 5 ms.",true)
         elseif not session.callbacksRequested then
-            AddItem("message","This is a Profile MOS capture. "..(state.recording and "Stop it, then Start here to measure all addons." or "Start here to measure all addons."))
+            AddItem("message",state.recording and "Another profile is recording. Stop it before starting this profile." or "No scan for this profile. Press Start to record it.")
         else
             AddMetric("FPS min / max",FPS(session.minFps).." / "..FPS(session.maxFps),"Lowest and highest valid once-per-second FPS readings in the whole session. Brief stalls can fall between readings.")
             AddMetric("Average FPS",FPS(session.averageFps),"Mean of valid FPS readings over the whole session, including samples older than the retained history.")
@@ -607,7 +645,6 @@ function Performance.Create(parent)
         if self.tab=="All Addons" and (not session or session.callbacksRequested) then
             self:BuildAddonMemoryItems(session,state)
         end
-        self:BuildLoginItems()
         if session and (self.tab=="MOS" or session.callbacksRequested) and AddSection("technical") then self:BuildTechnicalItems(session) end
         for index=table.getn(self.items),self.itemCount+1,-1 do table.remove(self.items,index) end
     end
@@ -739,7 +776,6 @@ function Performance.Create(parent)
             row.label:SetWidth(nameWidth-8)
             local height=math.max(24,UI.MeasureTextHeight(row.label,nameWidth-8)+8)
             row.label:SetHeight(height);row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,0);row.label:SetJustifyV("MIDDLE")
-            if item.kind=="callbackDetail" then row.label:SetPoint("TOPLEFT",row,"TOPLEFT",16,0);row.label:SetWidth(math.max(1,nameWidth-16)) end
             for index=1,count do
                 local label=row.columns[index];FontSize(label,11)
                 UI.Table.Cell(label,row,8+nameWidth+(index-1)*cellWidth,cellWidth-8,height,values[index]);label:SetJustifyH("RIGHT")
@@ -781,11 +817,13 @@ function Performance.Create(parent)
         for _,toggle in pairs(page.sectionToggles) do toggle:Hide() end
         while index<=module.itemCount do
             local item,row=module.items[index],EnsureRow(index)
+            local inset=(item.indent or 0)*16
+            local rowWidth=math.max(1,width-inset)
             if item.kind=="metric" then
-                local columns=math.min(3,math.max(1,math.floor((width+8)/228)))
-                local cardWidth=math.floor((width-(columns-1)*8)/columns)
+                local columns=math.min(3,math.max(1,math.floor((rowWidth+8)/228)))
+                local cardWidth=math.floor((rowWidth-(columns-1)*8)/columns)
                 local flow,count,height=module.metricFlow,0,0
-                while index<=module.itemCount and module.items[index].kind=="metric" do
+                while index<=module.itemCount and module.items[index].kind=="metric" and (module.items[index].indent or 0)*16==inset do
                     item,row=module.items[index],EnsureRow(index);ResetRow(row,item,cardWidth)
                     row.label:SetTextColor(unpack(UI.Theme.colors.goldText));row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,-8);row.label:SetWidth(math.max(1,cardWidth-16))
                     local labelHeight=UI.MeasureTextHeight(row.label,cardWidth-16)
@@ -802,18 +840,18 @@ function Performance.Create(parent)
                 end
                 for tail=table.getn(flow),count+1,-1 do table.remove(flow,tail) end
                 for card=1,count do flow[card]:SetHeight(height) end
-                y=UI.LayoutFlow(page.canvas,flow,8,y,width,8)+12
+                y=UI.LayoutFlow(page.canvas,flow,8+inset,y,rowWidth,8)+12
             else
-                ResetRow(row,item,width);row:ClearAllPoints();row:SetPoint("TOPLEFT",page.canvas,"TOPLEFT",8,-y)
-                local height=math.max(22,UI.MeasureTextHeight(row.label,width-16)+12)
-                if item.kind=="tableHeader" then schema=item.operation;stripe=0;height=MeasureTableRow(row,item,schema,width,0)
-                elseif item.kind=="diagnostic" then stripe=stripe+1;height=MeasureTableRow(row,item,tables.diagnostic,width,stripe)
+                ResetRow(row,item,rowWidth);row:ClearAllPoints();row:SetPoint("TOPLEFT",page.canvas,"TOPLEFT",8+inset,-y)
+                local height=math.max(22,UI.MeasureTextHeight(row.label,rowWidth-16)+12)
+                if item.kind=="tableHeader" then schema=item.operation;stripe=0;height=MeasureTableRow(row,item,schema,rowWidth,0)
+                elseif item.kind=="diagnostic" then stripe=stripe+1;height=MeasureTableRow(row,item,tables.diagnostic,rowWidth,stripe)
                 elseif item.kind=="operation" or item.kind=="slow" or item.kind=="memory" or item.kind=="memoryActivity" or item.kind=="loginMemory" or item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="callbackSlow" or item.kind=="family" or item.kind=="heapDrop" or item.kind=="frameGap" then
-                    stripe=stripe+1;height=MeasureTableRow(row,item,schema,width,stripe)
-                elseif item.kind=="familyPager" or item.kind=="loginPager" then height=MeasurePager(row,item,width)
+                    stripe=stripe+1;height=MeasureTableRow(row,item,schema,rowWidth,stripe)
+                elseif item.kind=="familyPager" or item.kind=="loginPager" then height=MeasurePager(row,item,rowWidth)
                 elseif item.kind=="heading" then
-                    FontSize(row.label,12);row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
-                    height=UI.MeasureTextHeight(row.label,width-16)+16
+                    FontSize(row.label,12);row.label:SetTextColor(unpack(item.severity and item.severity>=2 and healthColors[item.severity+1] or UI.Theme.colors.goldText))
+                    height=UI.MeasureTextHeight(row.label,rowWidth-16)+16
                 elseif item.kind=="section" then
                     row.label:Hide();row:EnableMouse(false)
                     local name=item.operation
@@ -831,12 +869,11 @@ function Performance.Create(parent)
                     UI.SetRowColor(row,rowColor,0.045);row.mosTableRowHovered=nil
                     toggle.sectionHovered=nil;UI.SetProjectButtonOutline(toggle,true)
                     local nested=sections[name].nested
-                    local inset=nested and 20 or 0
                     local sectionHeight=nested and 24 or 28
-                    toggle:ClearAllPoints();toggle:SetPoint("TOPLEFT",row,"TOPLEFT",inset,0);toggle:SetWidth(math.max(1,width-inset));toggle:SetHeight(sectionHeight)
+                    toggle:ClearAllPoints();toggle:SetPoint("TOPLEFT",row,"TOPLEFT",0,0);toggle:SetWidth(rowWidth);toggle:SetHeight(sectionHeight)
                     toggle.mosFitFontSize=FontSize(toggle.label,nested and 12 or 13)
                     toggle.label:SetText((module:IsSectionExpanded(name) and "- " or "+ ")..item.text..(item.value~=nil and " ("..item.value..")" or ""))
-                    UI.FitButtonLabel(toggle,math.max(1,width-inset-32));toggle.label:SetJustifyH("LEFT")
+                    UI.FitButtonLabel(toggle,math.max(1,rowWidth-32));toggle.label:SetJustifyH("LEFT")
                     toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT",toggle,"LEFT",8,0)
                     toggle.rule:Hide();toggle:SetExpanded(module:IsSectionExpanded(name));toggle:Show();height=sectionHeight
                 else row.label:SetTextColor(0.78,0.78,0.78) end
@@ -852,30 +889,35 @@ function Performance.Create(parent)
         if page.controls then return end
         page.tabs=UI.CreateToolbarSurface(page.header,true,true);page.controls=UI.CreateToolbarSurface(page.header,false,true)
         UI.AddToolbarBackground(page.tabs,0.42)
-        page.advancedButton=UI.CreateDropdownButton(page.tabs,nil,"Advanced Profiler",190)
+        page.advancedButton=UI.CreateButton(page.tabs,nil,"Advanced Profiler",170,26)
         page.enableButton=UI.CreateButton(page.tabs,nil,"Enable",110,26)
         page.startButton=UI.CreateButton(page.controls,nil,"Start",94,26)
         page.resetButton=UI.CreateButton(page.controls,nil,"Reset",94,26);page.exportButton=UI.CreateButton(page.controls,nil,"Export",94,26)
         page.monitorButton=UI.CreateButton(page.tabs,nil,"Live Monitor",140,26)
+        page.healthButton=UI.CreateButton(page.tabs,nil,"Health Check",140,26)
         page.refreshButton=UI.CreateButton(page.controls,nil,"Refresh tables",142,26)
         page.memoryButton=UI.CreateButton(page.controls,nil,"Refresh memory",154,26)
         page.memoryModeButton=UI.CreateButton(page.controls,nil,"Memory: OFF",132,26)
         page.callbackViewButton=UI.CreateButton(page.controls,nil,"View: Time",136,26)
-        page.loginButton=UI.CreateButton(page.tabs,nil,"Analyze Login",154,26)
-        page.tabFlow={page.advancedButton,page.monitorButton,page.loginButton};page.visibleTabs={};page.actions={page.startButton,page.resetButton,page.exportButton,page.refreshButton,page.memoryModeButton,page.callbackViewButton,page.memoryButton};page.flow={}
-        for _,flow in ipairs({page.tabFlow,page.actions,{page.enableButton}}) do for _,button in ipairs(flow) do button.mosFlowWidth=button:GetWidth();UI.StyleActionButton(button) end end
-        UI.SetActionButtonIcon(page.advancedButton,"performance",16);UI.SetActionButtonIcon(page.monitorButton,"performance");UI.SetActionButtonIcon(page.loginButton,"import")
-        UI.SetActionButtonIcon(page.enableButton,"check");UI.SetActionButtonIcon(page.startButton,"performance");UI.SetActionButtonIcon(page.resetButton,"reset")
-        UI.SetActionButtonIcon(page.exportButton,"save");UI.SetActionButtonIcon(page.refreshButton,"reset");UI.SetActionButtonIcon(page.memoryButton,"reset")
+        page.loginButton=UI.CreateButton(page.controls,nil,"Analyze Login",154,26)
+        page.tabFlow={page.monitorButton,page.advancedButton,page.healthButton};page.visibleTabs={};page.actions={page.startButton,page.resetButton,page.exportButton,page.memoryModeButton,page.callbackViewButton,page.memoryButton,page.refreshButton,page.loginButton};page.flow={}
+        for _,flow in ipairs({page.tabFlow,page.actions,{page.enableButton}}) do for _,button in ipairs(flow) do
+            button.mosFlowWidth=button:GetWidth();UI.StyleActionButton(button)
+            if button.label.SetWordWrap then button.label:SetWordWrap(false) end
+        end end
+        UI.SetActionButtonIcon(page.advancedButton,"performance");UI.SetActionButtonIcon(page.monitorButton,"monitor");UI.SetActionButtonIcon(page.healthButton,"health");UI.SetActionButtonIcon(page.loginButton,"start")
+        UI.SetActionButtonIcon(page.enableButton,"enable");UI.SetActionButtonIcon(page.startButton,"start");UI.SetActionButtonIcon(page.resetButton,"reset")
+        UI.SetActionButtonIcon(page.exportButton,"save");UI.SetActionButtonIcon(page.refreshButton,"refresh");UI.SetActionButtonIcon(page.memoryButton,"memory")
         UI.SetActionButtonIcon(page.memoryModeButton,"settings");UI.SetActionButtonIcon(page.callbackViewButton,"list")
-        page.advancedMenu=UI.CreateDropdownPanel(page.tabs,page.advancedButton,190,66)
-        for index,name in ipairs({"Profile MOS","Profile All"}) do
+        page.advancedMenu=UI.CreateDropdownPanel(page.tabs,page.advancedButton,190,96)
+        for index,name in ipairs({"Profile MOS","Profile All","Analyze Login"}) do
             local option=UI.CreateButton(page.advancedMenu,nil,name,182,26);UI.StyleActionButton(option)
             option:SetPoint("TOPLEFT",page.advancedMenu,"TOPLEFT",4,-4-(index-1)*30)
-            option.profile=index==1 and "MOS" or "All Addons";option:SetScript("OnClick",function() module:SelectTab(this.profile) end)
-            UI.SetActionButtonIcon(option,index==1 and "guild_stats" or "groups");table.insert(page.advancedMenu.options,option)
+            option.profile=index==1 and "MOS" or index==2 and "All Addons" or "Analyze Login";option:SetScript("OnClick",function() module:SelectTab(this.profile) end)
+            option.mosActionAlign="LEFT";option.mosLabelJustify="LEFT";if option.label.SetWordWrap then option.label:SetWordWrap(false) end
+            UI.SetActionButtonIcon(option,index==1 and "guild_stats" or index==2 and "groups" or "analyze");table.insert(page.advancedMenu.options,option)
         end
-        page.art=UI.CreateAspectImage(page.bodyHost,"Interface\\AddOns\\MuklaOfficerSuite\\Textures\\PerformanceBackground",1024/572,0.28,0.55859375)
+        page.art=UI.CreatePerformanceBackground(page.bodyHost)
         page.status=UI.CreateLabel(page.header,nil,"OVERLAY","GameFontHighlightSmall");page.status:SetJustifyH("LEFT");if page.status.SetWordWrap then page.status:SetWordWrap(true) end
         page.sectionToggles={}
         page.advancedButton:SetScript("OnClick",function() if page.advancedMenu:IsShown() then page.advancedMenu:Hide() else page.advancedMenu:Show() end end)
@@ -883,16 +925,21 @@ function Performance.Create(parent)
         page.startButton:SetScript("OnClick",function() if module.provider.GetState().recording then module:Stop() else module:Start() end end)
         page.resetButton:SetScript("OnClick",function() module:Reset() end);page.exportButton:SetScript("OnClick",function() module:Export() end)
         page.monitorButton:SetScript("OnClick",function() module:ToggleMonitor() end)
+        page.healthButton:SetScript("OnClick",function() module:SelectTab("Health Check") end)
         page.refreshButton:SetScript("OnClick",function() module:RefreshTables() end)
         page.memoryButton:SetScript("OnClick",function() module:RefreshAddons() end)
         page.memoryModeButton:SetScript("OnClick",function() module:ToggleMemoryCapture() end)
         page.callbackViewButton:SetScript("OnClick",function() module:ToggleCallbackView() end)
-        page.loginButton:SetScript("OnClick",function() module:ToggleLoginCapture() end)
+        page.loginButton:SetScript("OnClick",function()
+            if module.tab~="Analyze Login" then module:SelectTab("Analyze Login") end
+            module:ToggleLoginCapture()
+        end)
         UI.AttachTooltip(page.exportButton,"Export session","Stop first. Saves one report; reload or logout writes it to disk.")
         UI.AttachTooltip(page.enableButton,"Enable / Disable BootyProfiler","Changes whether the client loads BootyProfiler. Requires a UI reload; disabling stops its measurements first.")
         UI.AttachTooltip(page.startButton,"Start / Stop recording","Start records the chosen profile. Profile MOS measures selected MOS operations; Profile All also intercepts frame callbacks. Switching views does not restart a capture.")
-        UI.AttachTooltip(page.advancedButton,"Advanced Profiler","Choose Profile MOS or Profile All to open recording controls and results. Switching views does not start recording.")
+        UI.AttachTooltip(page.advancedButton,"Advanced Profiler","Choose a callback profile or login analysis. Selecting a view does not start recording.")
         UI.AttachTooltip(page.monitorButton,"Live Monitor","Lightweight current readings, once per second while its window is visible. Independent of advanced captures; no report is saved.")
+        UI.AttachTooltip(page.healthButton,"Health Check","Diagnosis and tips from the last completed scan. This view starts no measurement.")
         UI.AttachTooltip(page.refreshButton,"Refresh tables","Update displayed rows and ranking. While recording, row order stays fixed; counters keep updating. Histories update on refresh.")
         UI.AttachTooltip(page.memoryButton,"Native memory snapshot","Refresh the client's per-addon memory counters when available. Callback growth is measured separately.")
         UI.AttachTooltip(page.memoryModeButton,"Measure callback memory","Enable before Start in All Addons. Measures heap growth around callbacks, including profiling overhead; adds two reads per call.")
@@ -922,7 +969,7 @@ function Performance.Create(parent)
         local tabHeight=LayoutTabs(width)
         page.tabs:ClearAllPoints();page.tabs:SetPoint("TOPLEFT",page.header,"TOPLEFT",0,-38);page.tabs:SetWidth(width);page.tabs:SetHeight(tabHeight)
         if not module.provider or not module.tab then page.header:SetHeight(38+tabHeight);return 38+tabHeight end
-        local controlHeight=UI.LayoutFlow(page.controls,page.flow,8,8,width-16,8)+8
+        local controlHeight=page.controls:IsShown() and UI.LayoutFlow(page.controls,page.flow,8,8,width-16,8)+8 or 0
         page.controls:ClearAllPoints();page.controls:SetPoint("TOPLEFT",page.header,"TOPLEFT",0,-38-tabHeight);page.controls:SetWidth(width);page.controls:SetHeight(controlHeight)
         local top=38+tabHeight+controlHeight+8
         page.status:ClearAllPoints();page.status:SetPoint("TOPLEFT",page.header,"TOPLEFT",8,-top);page.status:SetWidth(math.max(1,width-16));page.status:SetHeight(0)
@@ -954,9 +1001,7 @@ function Performance.Create(parent)
         page.bodyHost:SetWidth(width);page.bodyHost:SetHeight(height)
         UI.LayoutResponsiveCanvas(page.canvas,MeasurePage,self,width,height)
         if page.art then
-            if not self.provider or not self.tab then
-                UI.LayoutAspectImage(page.art,page.bodyHost,width,height);page.art:Show()
-            else page.art:Hide() end
+            UI.LayoutPerformanceBackground(page.art,page.bodyHost,width,height);page.art:Show()
         end
     end
     function module:Refresh()
@@ -973,14 +1018,16 @@ function Performance.Create(parent)
             for _,toggle in pairs(page.sectionToggles) do toggle:Hide() end
             page.controls:Hide();page.status:Hide();self:Layout();return
         end
-        page.controls:Show();page.status:Show();self:BuildItems()
+        local profileView=self.tab=="MOS" or self.tab=="All Addons"
+        if self.tab=="Health Check" then page.controls:Hide() else page.controls:Show() end
+        page.status:Show();self:BuildItems()
         local memorySupported=state.session and state.session.capabilities and state.session.capabilities.addonMemory
         if self.provider.HasNativeAddonMemory then memorySupported=memorySupported~=false and self.provider.HasNativeAddonMemory() end
         local login=self.provider.LoginMemory
         local actionCount=0
         local previousCount=table.getn(page.flow)
         for _,button in ipairs(page.actions) do
-            local show=true
+            local show=profileView and button~=page.loginButton or self.tab=="Analyze Login" and button==page.loginButton
             if button==page.memoryModeButton or button==page.callbackViewButton then show=self.tab=="All Addons"
             elseif button==page.memoryButton then show=self.tab=="All Addons" and memorySupported~=false end
             if show then
@@ -991,7 +1038,7 @@ function Performance.Create(parent)
         end
         for index=table.getn(page.flow),actionCount+1,-1 do table.remove(page.flow,index) end
         page.startButton:SetText(state.recording and "Stop" or "Start")
-        UI.SetActionButtonIcon(page.startButton,state.recording and "quit" or "performance")
+        UI.SetActionButtonIcon(page.startButton,state.recording and "stop" or "start")
         local pendingDisable=self.addonStatus and self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false
         UI.SetButtonEnabled(page.startButton,not pendingDisable)
         UI.SetButtonEnabled(page.resetButton,state.session~=nil);UI.SetButtonEnabled(page.exportButton,state.session~=nil and not state.recording)
@@ -1002,21 +1049,42 @@ function Performance.Create(parent)
         UI.SetButtonEnabled(page.memoryModeButton,not state.recording)
         UI.SetButtonEnabled(page.callbackViewButton,self.measureMemory or state.session and state.session.callbackMemoryRequested)
         local capture=state.session
-        local viewing=self.tab=="MOS" and "Profile MOS" or "Profile All"
-        local actual=capture and (capture.callbacksRequested and "Profile All" or "Profile MOS") or viewing
-        local scope=actual==viewing and actual or viewing.." view | "..actual.." capture"
-        page.status:SetText(scope.." | "..(pendingDisable and "Disabled after next reload" or state.recording and "Recording" or capture and "Stopped" or "Ready") .. (capture and " | "..Elapsed(capture.elapsed).." | Started: "..(capture.capturedDate or "Date unavailable") or "") .. (login and login.IsArmed() and " | Login analysis ready for next reload" or "") .. (state.error and "\n" .. state.error or self.notice and "\n" .. self.notice or ""))
-        if state.recording then page.status:SetTextColor(unpack(UI.Theme.colors.goldText)) else page.status:SetTextColor(1,1,1) end
+        local viewing=self.tab=="MOS" and "Profile MOS" or self.tab=="All Addons" and "Profile All" or self.tab
+        local detail="Ready"
+        if self.tab=="Health Check" then
+            local report=self.healthReport
+            detail=report and report.available and "Last scan: "..ScanDate(report.date)..", "..ScanSeconds(report.elapsed) or "No completed scan"
+        elseif self.tab=="Analyze Login" then
+            local report=login and login.GetReport()
+            detail=report and (report.kind=="recording" and "Recording..." or "Last scan: "..ScanDate(report.capturedDate)..", "..ScanSeconds(report.elapsed)) or login and login.IsArmed() and "Ready for next reload" or "No login scan"
+        elseif capture and self.tab=="All Addons" and not capture.callbacksRequested then
+            detail=state.recording and "Another profile is recording" or "No scan for this profile"
+        elseif capture then
+            detail=state.recording and "Recording... "..ScanSeconds(capture.elapsed) or "Last scan: "..ScanDate(capture.capturedDate)..", "..ScanSeconds(capture.elapsed)
+        end
+        if pendingDisable then detail="Disabled after next reload" end
+        local gold=UI.Theme.colors.goldText
+        local prefix=string.format("|cff%02x%02x%02x",math.floor(gold[1]*255),math.floor(gold[2]*255),math.floor(gold[3]*255))
+        page.status:SetText(prefix..viewing.."|r | "..detail..(state.error and "\n"..state.error or self.notice and "\n"..self.notice or ""))
+        page.status:SetTextColor(1,1,1)
         self:Layout()
     end
-    local function Updated() module:Refresh() end
+    local function Updated()
+        if module.tab=="Health Check" then
+            local state=module.provider.GetState()
+            local report=module.provider.GetLastHealthReport and module.provider.GetLastHealthReport()
+            if module.healthRecording==state.recording and module.healthReport==report then return end
+        end
+        module:Refresh()
+    end
     local function Subscribe()
-        if module.provider then module.provider.SetListener(page:IsVisible() and module.tab and Updated or nil) end
-        if module.provider and module.provider.LoginMemory then module.provider.LoginMemory.SetListener(page:IsVisible() and module.tab and Updated or nil) end
+        if module.provider then module.provider.SetListener(page:IsVisible() and module.tab and module.tab~="Analyze Login" and Updated or nil) end
+        if module.provider and module.provider.LoginMemory then module.provider.LoginMemory.SetListener(page:IsVisible() and module.tab=="Analyze Login" and Updated or nil) end
     end
     function module:SelectTab(tab)
-        if tab~="MOS" and tab~="All Addons" then return false end
+        if tab~="MOS" and tab~="All Addons" and tab~="Analyze Login" and tab~="Health Check" then return false end
         self:CancelFamilyJob();self.familyModel=nil;self.tab=tab
+        self.sectionState={};self.detailsExpanded={};self.expandedFamily=nil;self.familyPages={};self.familyPage=1
         if page.advancedMenu then page.advancedMenu:Hide() end
         page.canvas.layoutViewport:SetVerticalScroll(0);Subscribe();self:Refresh();return true
     end
@@ -1046,7 +1114,6 @@ function Performance.Create(parent)
         if self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false then return end
         local ok,message=capture.Arm(true)
         self.notice=ok and nil or message
-        self.sectionState["MOS:loginMemory"]=true;self.sectionState["All Addons:loginMemory"]=true
         self:Refresh()
         if not ok then return end
         if not self.loginDialog then
@@ -1062,12 +1129,13 @@ function Performance.Create(parent)
     function module:UpdateAddonControl()
         local status=self.addonStatus or {}
         page.enableButton:SetText(status.reloadRequired and "Reload UI" or status.loaded and "Disable" or "Enable")
-        UI.SetActionButtonIcon(page.enableButton,status.reloadRequired and "reset" or status.loaded and "quit" or "check")
+        UI.SetActionButtonIcon(page.enableButton,status.reloadRequired and "reload" or status.loaded and "disable" or "enable")
         UI.SetButtonEnabled(page.enableButton,status.reloadRequired and status.canReload or status.loaded and status.canDisable or not status.loaded and status.canEnable or false)
         local ready=self.provider and not (status.reloadRequired and status.pendingEnabled==false)
         local login=self.provider and self.provider.LoginMemory
         UI.SetButtonEnabled(page.advancedButton,ready and true or false)
         UI.SetButtonEnabled(page.monitorButton,ready and self.provider.LiveMonitor and Performance.CreateLiveMonitor and true or false)
+        UI.SetButtonEnabled(page.healthButton,ready and self.provider.GetLastHealthReport and true or false)
         UI.SetButtonEnabled(page.loginButton,ready and login and not login.IsRecording() and status.canReload or false)
     end
     function module:UpdateAvailabilityMessage()
@@ -1106,6 +1174,8 @@ function Performance.Create(parent)
         if self.addonDialog then self.addonDialog:Hide() end
         self:CancelFamilyJob();self.familyModel=nil
         self.snapshots={};self.snapshotSession=nil;self.snapshotRecording=nil
+        self.sectionState={};self.detailsExpanded={};self.expandedFamily=nil;self.familyPages={};self.familyPage=1
+        self.healthReport,self.healthRecording=nil,nil
         self.loginReport=nil
         for _,entries in ipairs({self.sessionEntries,self.callbackEntries,self.callbackDetails,self.memoryEntries,self.historyEntries or emptyEntries,self.otherFrameGaps or emptyEntries}) do
             for index=table.getn(entries),1,-1 do table.remove(entries,index) end
@@ -1113,7 +1183,7 @@ function Performance.Create(parent)
         for _,item in ipairs(self.items) do item.operation=nil end
     end
     function module:Start()
-        if not self.provider or not self.tab then return false end
+        if not self.provider or self.tab~="MOS" and self.tab~="All Addons" then return false end
         if self.addonStatus and self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false then return false end
         if not self.provider.GetState().enabled then self.provider.Enable(true) end
         local ok,message=self.provider.Start({callbacks=self.tab=="All Addons",memory=self.measureMemory})

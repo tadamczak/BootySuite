@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.123 - 2026-10-04
+
+- Separate Analyze Login and add a Health Check view with findings and next steps from the last completed scan.
+- Simplify Performance navigation, capture status and initially closed, indented report sections.
+- Share Performance artwork across all views and Live Monitor; use distinct action icons and restore the minimized window's black project frame.
+
 ## 0.5.0-dev.122 - 2026-10-03
 
 - Compact Live Monitor with shorter labels and current memory / GC threshold in one row.

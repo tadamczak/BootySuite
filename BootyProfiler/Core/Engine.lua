@@ -215,20 +215,20 @@ function P.Start(options)
     if P.Health then session.health = P.Health.New() end
     if source.capabilities then
         local captured, capabilities = pcall(source.capabilities)
-        if not captured then P.Stop(); state.error = tostring(capabilities); Notify(); return false, state.error end
+        if not captured then P.Fail(capabilities); return false, state.error end
         session.capabilities = capabilities
     end
     local sampled, sampleError = pcall(P.Sample)
-    if not sampled then P.Stop(); state.error = tostring(sampleError); Notify(); return false, state.error end
+    if not sampled then P.Fail(sampleError); return false, state.error end
     if not state.recording then return false, state.error end
     if callbacksRequested and P.Callbacks then
         local activated, callbackError = pcall(P.Callbacks.Start, session)
-        if not activated then P.Stop(); state.error = tostring(callbackError); Notify(); return false, state.error end
+        if not activated then P.Fail(callbackError); return false, state.error end
     elseif callbacksRequested then
         session.allAddonsCoverage = "Frame callback profiling is unavailable in this BootyProfiler version. Global Lua heap and sampled FPS/latency only."
     end
     local running, runtimeError = pcall(P.Runtime.SetRunning, true)
-    if not running then P.Stop(); state.error = tostring(runtimeError); Notify(); return false, state.error end
+    if not running then P.Fail(runtimeError); return false, state.error end
     Notify()
     return true
 end
@@ -258,12 +258,35 @@ function P.Stop()
     if not ok then state.error = tostring(failure) end
     if not callbacksStopped then state.error = tostring(callbackError) end
     if not runtimeStopped then state.error = tostring(runtimeError) end
+    session.captureError = session.captureError or state.error
+    if P.HealthReport then
+        local built, report = pcall(P.HealthReport.Build, session)
+        if built and type(report)=="table" then
+            state.lastHealthReport, state.healthReportChecked, state.healthReportError = report, true, nil
+        elseif not built then state.healthReportError=tostring(report) end
+    end
     Notify()
     return ok and callbacksStopped and runtimeStopped
 end
 
 function P.Fail(message)
+    if state.session then state.session.captureError=tostring(message) end
     P.Stop(); state.error = tostring(message); Notify()
+end
+
+function P.GetLastHealthReport()
+    if state.lastHealthReport or state.healthReportChecked then return state.lastHealthReport end
+    if not P.HealthReport then return nil end
+    state.healthReportChecked=true
+    local saved=type(BootyProfilerDB)=="table" and BootyProfilerDB.schema==1 and BootyProfilerDB.lastSession
+    if type(saved)=="table" and saved.schema==1 then
+        -- lastSession is written only by explicit stopped Export. Accept old
+        -- exports without a stopped marker; never retain their frame metrics.
+        local built, report=pcall(P.HealthReport.Build,saved,true)
+        if built and type(report)=="table" then state.lastHealthReport=report
+        elseif not built then state.healthReportError=tostring(report) end
+    end
+    return state.lastHealthReport
 end
 
 function P.Enable(enabled)
@@ -277,6 +300,7 @@ function P.Reset()
     local callbacks = state.session and state.session.callbacksRequested
     local memory = state.session and state.session.callbackMemoryRequested
     P.Stop(); state.session, state.error = nil, nil
+    state.lastHealthReport, state.healthReportError, state.healthReportChecked=nil,nil,true
     if restart then return P.Start({ callbacks = callbacks, memory = memory }) end
     Notify(); return true
 end
@@ -333,7 +357,8 @@ function P.Export()
     if state.recording then return nil, "Stop recording before exporting." end
     local session = state.session
     if not session then return nil, "No recording to export." end
-    local result = { schema = 1, profilerVersion = P.version, elapsed = session.elapsed, clock = session.clock,
+    local result = { schema = 1, profilerVersion = P.version, elapsed = session.elapsed, clock = session.clock, stopped=true,
+        captureError=session.captureError,
         capturedAt = session.capturedAt, capturedDate = session.capturedDate,
         clockResolution = session.clockResolution, coverage = session.coverage, allAddonsCoverage = session.allAddonsCoverage,
         callbacksRequested = session.callbacksRequested,

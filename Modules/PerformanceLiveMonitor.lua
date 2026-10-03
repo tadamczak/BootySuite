@@ -19,6 +19,8 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend)
     frame.close=UI.CreateWindowButton(frame,nil,"close");frame.close:SetPoint("TOPRIGHT",frame,"TOPRIGHT",-4,-4)
     frame.close:SetScript("OnClick",function() frame:Close() end)
     frame:SetScript("OnDragStart",function() this:StartMoving() end);frame:SetScript("OnDragStop",function() this:StopMovingOrSizing() end)
+    frame.art=UI.CreatePerformanceBackground(frame,0.22)
+    UI.LayoutPerformanceBackground(frame.art,frame,292,130)
     frame.values={};frame.labels={}
     local names={"FPS","Memory / GC","Rate","Cleanup","Health"}
     local keys={"fps","memory","rate","cleanup","health"}
@@ -31,7 +33,7 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend)
         label:SetPoint("TOPLEFT",frame,"TOPLEFT",6,-28-(index-1)*20);label:SetText(names[index]);label:SetTextColor(unpack(UI.Theme.colors.goldText))
         UI.FitButtonLabel(label,76);label:SetJustifyV("MIDDLE")
         local value=UI.CreateLabel(frame,nil,"OVERLAY","GameFontHighlightSmall")
-        value:SetPoint("TOPRIGHT",frame,"TOPRIGHT",-6,-28-(index-1)*20);value:SetWidth(200);value:SetHeight(16);value:SetJustifyH("RIGHT")
+        value:SetPoint("TOPLEFT",frame,"TOPLEFT",88,-28-(index-1)*20);value:SetWidth(198);value:SetHeight(16);value:SetJustifyH("LEFT")
         frame.labels[key]=label;frame.values[key]=value;frame[key]=value
         local hit=UI.CreateControl(nil,frame);hit.monitorFrame=frame;hit:SetPoint("TOPLEFT",frame,"TOPLEFT",6,-26-(index-1)*20);hit:SetWidth(280);hit:SetHeight(20)
         UI.AttachTooltip(hit,names[index],hints[index])
@@ -48,7 +50,7 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend)
         self.health:SetText(health and health.status or "Checking")
         self.healthHint=health and health.reason or "Checking recent FPS, latency and memory readings."
         self.health:SetTextColor(unpack(healthColors[(health and health.severity or 0)+1] or healthColors[1]))
-        for _,value in pairs(self.values) do UI.FitButtonLabel(value,200);value:SetJustifyH("RIGHT") end
+        for _,value in pairs(self.values) do UI.FitButtonLabel(value,198);value:SetJustifyH("LEFT") end
     end
     local function Updated() frame:Refresh() end
     local function Shown()
@@ -65,6 +67,7 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend)
     frame:SetScript("OnShow",Shown)
     frame:SetScript("OnHide",function() backend.SetVisible(false) end)
     UI.Window.StyleProjectDialog(frame)
+    UI.LayoutPerformanceBackground(frame.art,frame,292,130)
     frame.title:ClearAllPoints();frame.title:SetPoint("TOPLEFT",frame,"TOPLEFT",6,-6)
     frame.close:ClearAllPoints();frame.close:SetPoint("TOPRIGHT",frame,"TOPRIGHT",-4,-4)
     frame:Hide()
