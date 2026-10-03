@@ -10,12 +10,22 @@ local function Memory(value)
     return string.format("%.1f KB", value)
 end
 local function CompareTime(a, b) if a.time == b.time then return a.name < b.name end return a.time > b.time end
+local function CompareCallbackTime(a,b)
+    if (a.selfTime or 0)==(b.selfTime or 0) then
+        if a.name==b.name then return (a.script or "")<(b.script or "") end
+        return a.name<b.name
+    end
+    return (a.selfTime or 0)>(b.selfTime or 0)
+end
 local rowColor = {1,1,1}
 local tables = {
     operations = { first = "Operation", columns = {"Calls","Total","Average","Peak","Heap delta"}, minimum = 760, nameFraction = 0.34 },
     slow = { first = "Operation", columns = {"At","Duration","Heap delta","Event"}, minimum = 680, nameFraction = 0.34 },
     samples = { first = "At", columns = {"FPS","Lua heap","Latency"}, minimum = 460, nameFraction = 0.18 },
     memory = { first = "Addon", columns = {"Memory"}, minimum = 300, nameFraction = 0.70 },
+    callbacks = { first = "Source addon", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
+    callbackDetails = { first = "Frame / script", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
+    callbackSlow = { first = "Frame / script", columns = {"At","Duration","Self","Event","Errors"}, minimum = 760, nameFraction = 0.34 },
 }
 local hints = {
     calls = "Successful calls to selected MOS entry points. Nested calls count once; this is not every addon action.",
@@ -27,6 +37,7 @@ local hints = {
     fps = "A sampled FPS reading, not individual frame timings or proof of the cause of a drop.",
     lua = "Memory reported by gcinfo for the shared Lua heap across addons.",
     latency = "Network latency from GetNetStats. It is separate from frame rendering time.",
+    callbacks = "Only intercepted frame callbacks are timed. Source addon identifies the function's proven source file, not every addon whose work it dispatches. Unknown means the source was not established. Self excludes nested intercepted callbacks, but includes ordinary internal helpers. Inclusive includes nested callbacks and must not be summed across addons. These values are not total addon CPU time or proof of the cause of an FPS drop.",
 }
 local function Elapsed(value)
     value=math.max(0,math.floor(tonumber(value) or 0))
@@ -52,7 +63,7 @@ function Performance.Create(parent)
     page.title = UI.CreateHeading(page.header, "Performance", 1, "gold")
     page.message = UI.CreateLabel(page.canvas, nil, "OVERLAY", "GameFontHighlight")
     page.message:SetJustifyH("LEFT"); if page.message.SetWordWrap then page.message:SetWordWrap(true) end
-    local module = { frame = page, tab = "MOS", items = {}, rows = {}, sessionEntries = {}, metricFlow = {}, detailsExpanded = {} }
+    local module = { frame = page, tab = "MOS", items = {}, rows = {}, sessionEntries = {}, callbackEntries = {}, callbackDetails = {}, metricFlow = {}, detailsExpanded = {} }
 
     local function AddItem(kind, text, data, value, hint)
         module.itemCount = module.itemCount + 1
@@ -87,12 +98,87 @@ function Performance.Create(parent)
         return calls, total, heap, largest, slowest, entries, slowestTime
     end
 
+    function module:BuildCallbackItems(callbacks,session)
+        AddItem("heading","Addon callbacks — sorted by self time")
+        AddItem("message","Intercepted frame callbacks only. Inclusive time overlaps; do not add it across addons.",nil,nil,hints.callbacks)
+        local coverage="Frames seen: "..tostring(callbacks.discovered or 0)
+        if session.stopped and callbacks.activeHookedAtStop then
+            coverage=coverage.." | Hooks at Stop: "..callbacks.activeHookedAtStop
+            if callbacks.unknownAtStop then coverage=coverage.." | Unattributed at Stop: "..callbacks.unknownAtStop end
+        else coverage=coverage.." | Active hooks: "..tostring(callbacks.hooked or 0).." | Unattributed hooks: "..tostring(callbacks.unknown or 0) end
+        if callbacks.everHooked then coverage=coverage.." | Wrapped callbacks: "..callbacks.everHooked end
+        AddItem("message",coverage)
+        if callbacks.status then AddItem("message",tostring(callbacks.status)) end
+        if callbacks.pending then AddItem("message","Discovery is in progress. Coverage is partial while frame callbacks are found gradually.") end
+        if session.stopped and callbacks.wasPendingAtStop and not callbacks.firstScanComplete then AddItem("message","Recording ended before initial discovery completed. This report covers only callbacks found so far.") end
+        if callbacks.truncated then AddItem("message","Partial coverage: discovery or report limit reached. See Technical details.") end
+        if callbacks.inventoryAvailable==false then AddItem("message","Installed addon inventory is unavailable; callback sources remain unattributed.") end
+        if callbacks.timingFailures and callbacks.timingFailures>0 then AddItem("message","Some callbacks could not be timed; displayed times exclude them.") end
+        if callbacks.zeroDurations and callbacks.zeroDurations>0 then AddItem("message","Some calls measured 0 ms; this can reflect timer granularity, not zero cost.") end
+        local entries,count=self.callbackEntries,0
+        if callbacks.addons then
+            for _,entry in ipairs(callbacks.addons) do
+                if count<256 then count=count+1;entries[count]=entry end
+            end
+            if table.getn(callbacks.addons)>256 then AddItem("message","Partial table: first 256 addon entries only.") end
+        end
+        for index=table.getn(entries),count+1,-1 do table.remove(entries,index) end
+        table.sort(entries,CompareCallbackTime)
+        if count==0 then
+            AddItem("message",callbacks.available==false and "Frame callback timing is unavailable. Global samples remain available." or "No intercepted frame callbacks in this recording yet.")
+        else
+            AddTable("callbacks")
+            for index=1,count do AddItem("callback",entries[index].name,entries[index],nil,hints.callbacks) end
+        end
+        local top=self.callbackDetails
+        for index=table.getn(top),1,-1 do table.remove(top,index) end
+        if callbacks.operations then
+            -- Inspect all retained callbacks but keep only twenty references. Never sort or copy the backend inventory.
+            for _,entry in ipairs(callbacks.operations) do
+                local size=table.getn(top)
+                if size<20 or CompareCallbackTime(entry,top[size]) then
+                    local position=math.min(20,size+1)
+                    while position>1 and CompareCallbackTime(entry,top[position-1]) do
+                        top[position]=top[position-1];position=position-1
+                    end
+                    top[position]=entry
+                end
+            end
+            if table.getn(top)>0 then
+                AddItem("heading","Top intercepted callbacks")
+                AddItem("message","Up to 20 frame scripts, sorted by self time. Hover a row for its function source.")
+                AddTable("callbackDetails")
+                for index=1,table.getn(top) do
+                    local entry=top[index]
+                    AddItem("callbackDetail",entry.name,entry,nil,"Function source: "..(entry.owner or "Unknown")..(entry.source and "\n"..entry.source or "").."\n"..hints.callbacks)
+                end
+            end
+            if callbacks.operationsTruncated then AddItem("message","Partial callback detail inventory: operation limit reached.") end
+        end
+        if callbacks.history then
+            AddItem("heading","Recent slow callbacks ("..callbacks.history.count.."/64)")
+            AddItem("message","Calls lasting at least "..string.format("%.0f",(session.slowThreshold or 0.005)*1000).." ms. Newest first; matching a sample time does not establish the cause of an FPS drop.")
+            if callbacks.history.count==0 then AddItem("message","No intercepted callbacks reached the slow-call threshold.")
+            else
+                AddTable("callbackSlow")
+                for index=callbacks.history.count,1,-1 do
+                    local entry=self.provider.HistoryEntry(callbacks.history,index)
+                    AddItem("callbackSlow",entry.name,entry,nil,"Function source: "..(entry.owner or "Unknown").."\n"..hints.callbacks)
+                end
+            end
+        end
+    end
+
     function module:BuildItems()
         self.itemCount = 0
         local state, session = self.provider.GetState(), self.provider.GetState().session
+        if not session or not session.callbacks then
+            for index=table.getn(self.callbackEntries),1,-1 do table.remove(self.callbackEntries,index) end
+            for index=table.getn(self.callbackDetails),1,-1 do table.remove(self.callbackDetails,index) end
+        end
         if not session then
             AddItem("message",state.enabled and "Ready to record. Press Start, use Roster or Raid, then Stop to inspect the results." or "Enable BootyProfiler, then press Start. Measurements stay off until you start a recording.")
-            if self.tab=="All Addons" then AddItem("message","Global Lua heap and sampled FPS/latency. Per-addon callback timings are not available.") end
+            if self.tab=="All Addons" then AddItem("message","Press Start to discover and time addon frame callbacks. Global Lua heap and FPS/latency are sampled during recording.") end
         elseif self.tab == "MOS" then
             local calls,total,heap,largest,slowest,entries,peak=self:GetSessionOperations()
             AddItem("message","Selected MOS operations. Heap values refer to shared Lua memory.")
@@ -117,13 +203,15 @@ function Performance.Create(parent)
                 end
             end
         else
-            AddItem("message","Sampled FPS and shared Lua memory. Per-addon callback timings are not available.")
+            AddItem("message",session.callbacks and "Sampled FPS and shared Lua memory. Callback timings cover intercepted frame scripts only." or "Sampled FPS and shared Lua memory. Per-addon callback timings are not available.")
             AddMetric("Sampled FPS",session.fps and string.format("%.1f",session.fps) or "Unavailable",hints.fps)
             AddMetric("Minimum FPS",session.minFps and string.format("%.1f",session.minFps) or "Unavailable",hints.fps)
             AddMetric("Maximum FPS",session.maxFps and string.format("%.1f",session.maxFps) or "Unavailable",hints.fps)
             AddMetric("Lua heap",Memory(session.heap),hints.lua)
             AddMetric("Heap delta since Start",session.heap and session.startHeap and Memory(session.heap-session.startHeap) or "Unavailable",hints.heap)
             AddMetric("Network latency",session.latency and tostring(session.latency).." ms" or "Unavailable",hints.latency)
+            if session.callbacks then self:BuildCallbackItems(session.callbacks,session) end
+            if session.callbacksRequested==false then AddItem("message","Frame callbacks were not recorded. Start a new recording from All Addons.") end
             AddItem("heading","Recent samples")
             AddItem("message","Up to one sample per second; last 10 shown, newest first. "..session.samples.count.."/600 retained.")
             AddTable("samples")
@@ -149,7 +237,27 @@ function Performance.Create(parent)
             if self.detailsExpanded[self.tab] then
                 AddItem("message","Clock: "..session.clock.."; resolution "..session.clockResolution..".")
                 AddItem("message",session.coverage.." "..hints.heap.." "..hints.fps)
-                if self.tab=="All Addons" then AddItem("message",session.allAddonsCoverage);AddItem("message","GC threshold: "..Memory(session.gcThreshold)) end
+                if self.tab=="All Addons" then
+                    AddItem("message",session.allAddonsCoverage);AddItem("message","GC threshold: "..Memory(session.gcThreshold))
+                    local callbacks=session.callbacks
+                    if callbacks then
+                        AddItem("message",callbacks.coverage or hints.callbacks)
+                        if callbacks.clock then AddItem("message","Callback clock: "..tostring(callbacks.clock)) end
+                        if callbacks.clockResolution then AddItem("message","Callback clock resolution: "..tostring(callbacks.clockResolution)..". Times include profiler overhead; no compensation is applied.") end
+                        if callbacks.overhead then AddItem("message","Measured clock baseline: "..Duration(callbacks.overhead)..". This is not the full hook overhead.") end
+                        if callbacks.zeroDurations then AddItem("message","Timing: "..callbacks.zeroDurations.." zero-duration calls | "..tostring(callbacks.timingFailures or 0).." invalid readings | "..tostring(callbacks.metricFailures or 0).." metric failures") end
+                        if callbacks.clockReadFailures then AddItem("message","Failed clock reads: "..callbacks.clockReadFailures) end
+                        if callbacks.clockMinPositiveDelta then AddItem("message","Smallest observed gap between clock reads: "..Duration(callbacks.clockMinPositiveDelta)..". This is not verified timer resolution.") end
+                        if callbacks.ownerSupport then AddItem("message",callbacks.ownerSupport) end
+                        if callbacks.sourceMethod then AddItem("message","Last source backend: "..callbacks.sourceMethod) end
+                        if callbacks.sourceDebug then AddItem("message","Source reads: "..callbacks.sourceDebug.." debug metadata | "..tostring(callbacks.sourceDump or 0).." bytecode metadata | "..tostring(callbacks.sourceUnavailable or 0).." unavailable") end
+                        if callbacks.sourceDebug==nil and callbacks.sourceMethod~="debug.getinfo" or callbacks.sourceDump and callbacks.sourceDump>0 or callbacks.sourceUnavailable and callbacks.sourceUnavailable>0 then AddItem("message","Some closures cannot expose their source on this client. Use frame/script rows to inspect unattributed work.") end
+                        if callbacks.discoveryTime then AddItem("message","Discovery: "..tostring(callbacks.scans or 0).." scans | "..Duration(callbacks.discoveryTime).." measured time | "..tostring(callbacks.sourceFailures or 0).." source failures") end
+                        if callbacks.inventoryCount then AddItem("message","Installed addon inventory: "..callbacks.inventoryCount.." entries | "..tostring(callbacks.inventoryReadFailures or 0).." failed reads") end
+                        if callbacks.replacements then AddItem("message","Script replacements: "..callbacks.replacements.." | Known client/profiler scripts skipped: "..tostring(callbacks.skippedKnown or 0)) end
+                        if callbacks.inspectionFailures then AddItem("message","Hooks: "..callbacks.inspectionFailures.." inspection failures | "..tostring(callbacks.restoreFailures or 0).." restoration failures | "..tostring(callbacks.depthSkipped or 0).." depth-limit skips") end
+                    end
+                end
                 AddItem("message","BootyProfiler "..tostring(self.provider.version))
                 if session.capabilities and MOS.Core.ClientCapabilities then
                     local runtime,extensions=MOS.Core.ClientCapabilities.Describe(session.capabilities)
@@ -203,6 +311,15 @@ function Performance.Create(parent)
         elseif item.kind=="sample" then
             local data=item.operation
             SetValue(row,1,data.fps and string.format("%.1f",data.fps) or "-");SetValue(row,2,Memory(data.heap));SetValue(row,3,data.latency and data.latency.." ms" or "-")
+        elseif item.kind=="callback" or item.kind=="callbackDetail" then
+            local data=item.operation
+            local measured=data.timedCalls~=0
+            SetValue(row,1,data.calls or 0);SetValue(row,2,measured and Duration(data.selfTime) or "Unavailable");SetValue(row,3,measured and Duration(data.time) or "Unavailable")
+            SetValue(row,4,measured and Duration(data.peak) or "Unavailable");SetValue(row,5,data.failures or 0)
+        elseif item.kind=="callbackSlow" then
+            local data=item.operation
+            SetValue(row,1,string.format("+%.1f s",data.at));SetValue(row,2,Duration(data.elapsed));SetValue(row,3,Duration(data.selfTime))
+            SetValue(row,4,data.event or "-");SetValue(row,5,data.failed and 1 or 0)
         else SetValue(row,1,Memory(item.operation.memory)) end
         if item.kind~="tableHeader" then
             UI.SetRowColor(row,rowColor,math.mod(stripe,2)==0 and 0.14 or 0.025);row:EnableMouse(true)
@@ -268,7 +385,7 @@ function Performance.Create(parent)
                 ResetRow(row,item,width);row:ClearAllPoints();row:SetPoint("TOPLEFT",page.canvas,"TOPLEFT",8,-y)
                 local height=math.max(22,UI.MeasureTextHeight(row.label,width-16)+12)
                 if item.kind=="tableHeader" then schema=item.operation;stripe=0;height=MeasureTableRow(row,item,schema,width,0)
-                elseif item.kind=="operation" or item.kind=="slow" or item.kind=="sample" or item.kind=="memory" then
+                elseif item.kind=="operation" or item.kind=="slow" or item.kind=="sample" or item.kind=="memory" or item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="callbackSlow" then
                     stripe=stripe+1;height=MeasureTableRow(row,item,schema,width,stripe)
                 elseif item.kind=="heading" then
                     FontSize(row.label,14);row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
@@ -312,6 +429,7 @@ function Performance.Create(parent)
         page.memoryButton:SetScript("OnClick",function() module:RefreshAddons() end)
         UI.AttachTooltip(page.exportButton,"Export session","Stores one bounded report in BootyProfiler SavedVariables. Stop first; /reload or logout writes it to disk.")
         UI.AttachTooltip(page.enableButton,"Enable / Disable","Enable does not record. Disable stops recording. Recording never resumes automatically after reload.")
+        UI.AttachTooltip(page.startButton,"Start recording","MOS records selected MOS operations. All Addons also intercepts frame callbacks. Switching tabs does not change a running recording.")
         UI.AttachTooltip(page.memoryButton,"Memory by addon","Explicitly refresh native addon memory statistics when available. This may perform work across all addons.")
     end
     local function MeasureHeader(width)
@@ -380,7 +498,11 @@ function Performance.Create(parent)
     end
     function module:SelectTab(tab) self.tab=tab;page.canvas.layoutViewport:SetVerticalScroll(0);self:Refresh() end
     function module:ToggleDetails() self.detailsExpanded[self.tab]=not self.detailsExpanded[self.tab];self:Refresh() end
-    function module:Start() if not self.provider then return false end local ok,message=self.provider.Start();self.notice=message;self:Refresh();return ok end
+    function module:Start()
+        if not self.provider then return false end
+        local ok,message=self.provider.Start({callbacks=self.tab=="All Addons"})
+        self.notice=message;self:Refresh();return ok
+    end
     function module:Stop() if self.provider then self.provider.Stop();self:Refresh() end end
     function module:Reset() if self.provider then self.provider.Reset();self.notice=nil;page.canvas.layoutViewport:SetVerticalScroll(0);self:Refresh() end end
     function module:Export()
