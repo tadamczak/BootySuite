@@ -1,6 +1,6 @@
 -- External script interception is installed only for an explicit recording.
--- Lua 5.0 creates implicit arg tables for the generic protected-call path;
--- retaining arbitrary nil arguments/results takes precedence over fixed arity.
+-- Proven fixed-arity scripts avoid implicit argument tables. Unknown/vararg
+-- signatures retain exact Lua semantics; their heap windows are not measured.
 local P = BootyProfiler
 local C = {}
 P.Callbacks = C
@@ -11,6 +11,8 @@ local SCAN_SECONDS, SCAN_LIMIT = 0.0005, 20000
 local PARENT_DEPTH_LIMIT, PARENT_FIELD_LIMIT = 8, 32
 local scripts = { "OnEvent", "OnUpdate" }
 local active, restorationBlocked
+local fixedFactories, fixedFactoryCount = {}, 0
+local FIXED_ARITY_LIMIT, FIXED_FACTORY_LIMIT = 16, 128
 C.limits = { frames = FRAME_LIMIT, wrappers = WRAPPER_LIMIT, addons = ADDON_LIMIT,
     operations = OPERATION_LIMIT, perStep = SCAN_BUDGET, depth = STACK_LIMIT, history = HISTORY_LIMIT,
     parentDepth = PARENT_DEPTH_LIMIT, parentFields = PARENT_FIELD_LIMIT }
@@ -118,14 +120,14 @@ end
 
 local function SourceOwner(run, callback)
     local cached = run.functionSources[callback]
-    if cached then return cached.owner, cached.source end
+    if cached then return cached.owner, cached.source, false, cached.shape end
     if run.sourceBudget <= 0 then return nil, nil, true end
     if run.sourceCount >= WRAPPER_LIMIT then run.metrics.truncated = true; return nil, nil end
     run.sourceBudget = run.sourceBudget - 1
-    local source, method, reason
+    local source, method, reason, shape
     if P.FunctionSource and type(P.FunctionSource.Get) == "function" then
-        local ok, value, backend, failure = pcall(P.FunctionSource.Get, callback)
-        if ok then source, method, reason = value, backend, failure else run.metrics.sourceFailures = run.metrics.sourceFailures + 1 end
+        local ok, value, backend, failure, callShape = pcall(P.FunctionSource.Get, callback, true)
+        if ok then source, method, reason, shape = value, backend, failure, callShape else run.metrics.sourceFailures = run.metrics.sourceFailures + 1 end
     elseif run.getinfo then
         local ok, info = pcall(run.getinfo, callback, "S")
         if ok and type(info) == "table" then source, method = info.source, "debug.getinfo" end
@@ -151,8 +153,8 @@ local function SourceOwner(run, callback)
                 SourceExample(run, "frame-script", source)
             else SourceExample(run, "code-chunk", source) end
         else SourceExample(run, reason or "no-metadata") end
-        run.functionSources[callback] = { owner = owner, source = source }
-        return owner, source
+        run.functionSources[callback] = { owner = owner, source = source, shape = shape, references = 0 }
+        return owner, source, false, shape
     end
     local lower = string.lower(source)
     local _, last = string.find(lower, "[/@]interface/addons/")
@@ -171,13 +173,13 @@ local function SourceOwner(run, callback)
         end
     end
     if string.find(lower, "[/@]interface/framexml/") or string.find(lower, "[/@]interface/sharedxml/") then owner = nil end
-    run.functionSources[callback] = { owner = owner, source = source }
-    return owner, source
+    run.functionSources[callback] = { owner = owner, source = source, shape = shape, references = 0 }
+    return owner, source, false, shape
 end
 
 local function NewMetric(name)
     return { name = name, calls = 0, timedCalls = 0, time = 0, selfTime = 0, peak = 0, failures = 0,
-        heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0, heapReadFailures = 0 }
+        heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0, heapReadFailures = 0, heapUnsupportedCalls = 0 }
 end
 
 local function AddonMetric(run, owner)
@@ -244,7 +246,7 @@ local function FinishRecord(run, record, slot, failed)
     end
     local ended = ReadClock(run)
     local heapDelta, heapFailures = nil, slot.heapFailures
-    if run.active and run.heap then
+    if run.active and run.heap and record.fixed and not slot.heapBlocked then
         local heapEnded = ReadHeap(run)
         if heapEnded == nil then heapFailures = heapFailures + 1
         elseif slot.heapStarted ~= nil then heapDelta = heapEnded - slot.heapStarted end
@@ -260,6 +262,13 @@ local function FinishRecord(run, record, slot, failed)
     if run.active and record.enabled then
         local metrics = run.metrics
         metrics.totalCalls = metrics.totalCalls + 1
+        local path = record.fixed and "fastCalls" or "genericCalls"
+        metrics[path] = metrics[path] + 1
+        if run.heap and (not record.fixed or slot.heapBlocked) then
+            metrics.heapUnsupportedCalls = metrics.heapUnsupportedCalls + 1
+            record.addon.heapUnsupportedCalls = record.addon.heapUnsupportedCalls + 1
+            if record.operation then record.operation.heapUnsupportedCalls = record.operation.heapUnsupportedCalls + 1 end
+        end
         if failed then metrics.failures = metrics.failures + 1 end
         AddMetric(record.addon, elapsed, own, failed, heapDelta, heapFailures)
         if record.operation then AddMetric(record.operation, elapsed, own, failed, heapDelta, heapFailures) end
@@ -277,7 +286,7 @@ local function FinishRecord(run, record, slot, failed)
             PushSlow(run, record, elapsed, own, slot.event, failed, heapDelta)
         end
     end
-    slot.started, slot.event, slot.children, slot.heapStarted, slot.heapFailures = nil, nil, 0, nil, 0
+    slot.started, slot.event, slot.children, slot.heapStarted, slot.heapFailures, slot.heapBlocked = nil, nil, 0, nil, 0, false
 end
 
 local function FinishCall(run, record, slot, ...)
@@ -299,24 +308,74 @@ local function FinishCall(run, record, slot, ...)
     return unpack(arg)
 end
 
-local function MakeWrapper(record)
+local function BeginCall(run, record)
+    run.depth = run.depth + 1
+    local slot = run.stack[run.depth]
+    slot.depth, slot.children = run.depth, 0
+    slot.event = record.script == "OnEvent" and type(event) == "string" and event or nil
+    slot.started = ReadClock(run)
+    slot.heapStarted, slot.heapFailures, slot.heapBlocked = nil, 0, not record.fixed
+    if run.active and run.heap and record.fixed then
+        slot.heapStarted = ReadHeap(run)
+        if slot.heapStarted == nil then slot.heapFailures = 1 end
+    end
+    return slot
+end
+
+local function FinishFixed(run, record, slot, success, failure)
+    local ok = pcall(FinishRecord, run, record, slot, not success)
+    if not ok then
+        run.depth = math.max(0, slot.depth - 1)
+        slot.started, slot.event, slot.children, slot.heapStarted, slot.heapFailures = nil, nil, 0, nil, 0
+        run.metrics.metricFailures = run.metrics.metricFailures + 1
+    end
+    if not success then error(failure, 0); assert(false, tostring(failure)) end
+end
+
+local function FixedFactory(shape)
+    if type(shape) ~= "table" or shape.proven ~= true then return nil end
+    local parameters, results = shape.parameters, shape.results
+    if not Finite(parameters) or parameters < 0 or parameters > FIXED_ARITY_LIMIT or parameters ~= math.floor(parameters)
+        or not Finite(results) or results < 0 or results > FIXED_ARITY_LIMIT or results ~= math.floor(results) then return nil end
+    local key = parameters * (FIXED_ARITY_LIMIT + 1) + results
+    if fixedFactories[key] then return fixedFactories[key] end
+    if fixedFactoryCount >= FIXED_FACTORY_LIMIT or type(loadstring) ~= "function" then return nil end
+    local args, values = {}, {}
+    for index = 1, parameters do args[index] = "a" .. index end
+    for index = 1, math.max(1, results) do values[index] = "r" .. index end
+    local arguments, outputs = table.concat(args, ","), table.concat(values, ",")
+    local original = "record.original(" .. arguments .. ")"
+    local result = results > 0 and "return " .. table.concat(values, ",", 1, results) or "return"
+    local protected = "pcall(record.original" .. (parameters > 0 and "," .. arguments or "") .. ")"
+    local code = "return function(record,begin,finish) return function(" .. arguments .. ") "
+        .. "local run=record.run if not run or not run.active or not record.enabled then return " .. original .. " end "
+        .. "if run.depth >= " .. STACK_LIMIT .. " then run.metrics.depthSkipped=run.metrics.depthSkipped+1 return " .. original .. " end "
+        .. "local slot=begin(run,record) local success," .. outputs .. "=" .. protected .. " "
+        .. "finish(run,record,slot,success,r1) " .. result .. " end end"
+    local compiled, chunk = pcall(loadstring, code, "=BootyProfiler fixed callback")
+    if not compiled or type(chunk) ~= "function" then return nil end
+    local evaluated, factory = pcall(chunk)
+    if not evaluated or type(factory) ~= "function" then return nil end
+    fixedFactories[key], fixedFactoryCount = factory, fixedFactoryCount + 1
+    return factory
+end
+
+local function MakeWrapper(record, shape)
+    local factory = FixedFactory(shape)
+    if factory then record.fixed = true; return factory(record, BeginCall, FinishFixed) end
     return function(...)
+        -- This implicit arg table also contaminates an active caller when a
+        -- third party retained an old, inert generic delegate after Stop.
+        if active and active.heap then
+            for depth = 1, active.depth do active.stack[depth].heapBlocked = true end
+        end
         local run = record.run
         if not run or not run.active or not record.enabled then return record.original(unpack(arg)) end
         if run.depth >= STACK_LIMIT then
             run.metrics.depthSkipped = run.metrics.depthSkipped + 1
             return record.original(unpack(arg))
         end
-        run.depth = run.depth + 1
-        local slot = run.stack[run.depth]
-        slot.depth, slot.children = run.depth, 0
-        slot.event = record.script == "OnEvent" and type(event) == "string" and event or nil
-        slot.started = ReadClock(run)
-        slot.heapStarted, slot.heapFailures = nil, 0
-        if run.active and run.heap then
-            slot.heapStarted = ReadHeap(run)
-            if slot.heapStarted == nil then slot.heapFailures = 1 end
-        end
+        local slot = BeginCall(run, record)
         return FinishCall(run, record, slot, pcall(record.original, unpack(arg)))
     end
 end
@@ -326,6 +385,8 @@ local function ReleaseRecord(run, record, restore)
     record.enabled = false
     run.metrics.hooked = math.max(0, run.metrics.hooked - 1)
     if record.owner == "Unknown owner" then run.metrics.unknown = math.max(0, run.metrics.unknown - 1) end
+    local path = record.fixed and "fastHooked" or "genericHooked"
+    run.metrics[path] = math.max(0, run.metrics[path] - 1)
     if restore and record.frame then
         local read, current = pcall(ReadScript, record.frame, record.script)
         if not read then run.metrics.restoreFailures = run.metrics.restoreFailures + 1; restorationBlocked = true
@@ -334,6 +395,18 @@ local function ReleaseRecord(run, record, restore)
             if not restored then run.metrics.restoreFailures = run.metrics.restoreFailures + 1; restorationBlocked = true end
         end
     end
+    local source = run.functionSources[record.original]
+    if source then
+        source.references = math.max(0, source.references - 1)
+        if source.references == 0 then
+            run.functionSources[record.original] = nil; run.sourceCount = math.max(0, run.sourceCount - 1)
+        end
+    end
+    local slot = record.slot
+    if slot and run.records[slot] == record then
+        run.records[slot] = false; table.insert(run.freeRecordSlots, slot)
+        run.metrics.retainedWrapperRecords = math.max(0, run.metrics.retainedWrapperRecords - 1)
+    end
     -- A third-party replacement can retain an old wrapper. It remains an inert
     -- delegate, without retaining the frame, capture or metric containers.
     record.run, record.frame, record.addon, record.operation = nil, nil, nil, nil
@@ -341,10 +414,10 @@ end
 
 local function Attach(run, frameRecord, script, callback)
     if type(callback) ~= "function" then return end
-    local owner, source, pending = SourceOwner(run, callback)
+    local owner, source, pending, shape = SourceOwner(run, callback)
     if pending then return false end
     if not owner then run.metrics.skippedKnown = run.metrics.skippedKnown + 1; return end
-    if table.getn(run.records) >= WRAPPER_LIMIT then run.metrics.truncated = true; return end
+    if table.getn(run.freeRecordSlots) == 0 and table.getn(run.records) >= WRAPPER_LIMIT then run.metrics.truncated = true; return end
     local record = { frame = frameRecord.frame, script = script, original = callback, owner = owner,
         name = frameRecord.name .. " / " .. script, source = source, run = run, enabled = true,
         frameLabel = frameRecord.name, frameContext = frameRecord.frameContext }
@@ -356,13 +429,28 @@ local function Attach(run, frameRecord, script, callback)
         table.insert(run.metrics.operations, operation)
         record.operation = operation
     else run.metrics.operationsTruncated = true end
-    record.wrapper = MakeWrapper(record)
+    record.wrapper = MakeWrapper(record, shape)
+    local capturePath = record.fixed and "fixed" or "generic"
+    if record.operation then
+        record.operation.capturePath = capturePath
+        record.operation.heapSupported = record.fixed == true and run.heap ~= nil
+    end
     run.wrapperMap[record.wrapper] = record
     -- Retain before SetScript: a modified API can install then throw. Stop must
     -- still be able to restore that exact wrapper during failed activation.
-    table.insert(run.records, record)
+    local slot = table.remove(run.freeRecordSlots)
+    if slot then run.metrics.wrapperSlotsReused = run.metrics.wrapperSlotsReused + 1
+    else slot = table.getn(run.records) + 1 end
+    record.slot, run.records[slot] = slot, record
+    local metadata = run.functionSources[callback]
+    if metadata then metadata.references = metadata.references + 1 end
+    run.metrics.retainedWrapperRecords = run.metrics.retainedWrapperRecords + 1
+    run.metrics.peakWrapperRecords = math.max(run.metrics.peakWrapperRecords, run.metrics.retainedWrapperRecords)
     run.metrics.hooked = run.metrics.hooked + 1
+    local path = record.fixed and "fastHooked" or "genericHooked"
+    run.metrics[path] = run.metrics[path] + 1
     if owner == "Unknown owner" then run.metrics.unknown = run.metrics.unknown + 1 end
+    run.metrics.installAttempts = run.metrics.installAttempts + 1
     local installed = pcall(WriteScript, record.frame, script, record.wrapper)
     if not installed then
         run.metrics.inspectionFailures = run.metrics.inspectionFailures + 1
@@ -371,6 +459,8 @@ local function Attach(run, frameRecord, script, callback)
         return
     end
     run.metrics.everHooked = run.metrics.everHooked + 1
+    path = record.fixed and "fastEverHooked" or "genericEverHooked"
+    run.metrics[path] = run.metrics[path] + 1
     if owner == "Unknown owner" then run.metrics.everUnknownHooked = run.metrics.everUnknownHooked + 1 end
     frameRecord[script] = record
     return true
@@ -399,7 +489,7 @@ local function InspectFrame(run, frame)
         entry = { frame = frame, name = name, frameContext = context }
         run.frameMap[frame] = entry
     end
-    local index, recordsBefore = nil, table.getn(run.records)
+    local index, attemptsBefore = nil, run.metrics.installAttempts
     for index = 1, table.getn(scripts) do
         local script = scripts[index]
         local read, current
@@ -407,7 +497,7 @@ local function InspectFrame(run, frame)
         else
             -- A modified OnEvent setter may also replace OnUpdate. Re-read only
             -- after an attempted install so a stale snapshot cannot overwrite it.
-            if table.getn(run.records) > recordsBefore then
+            if run.metrics.installAttempts > attemptsBefore then
                 updateRead, onUpdate = pcall(ReadScript, frame, "OnUpdate")
                 if not updateRead then run.metrics.inspectionFailures = run.metrics.inspectionFailures + 1 end
             end
@@ -450,6 +540,8 @@ function C.Start(session)
         memoryAvailable = session.callbackMemoryRequested == true and type(gcinfo) == "function",
         heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0, heapReadFailures = 0, heapDrops = 0,
         scans = 0, scanned = 0, inertSkipped = 0, discoveryTime = 0,
+        fastCalls = 0, genericCalls = 0, fastHooked = 0, genericHooked = 0, fastEverHooked = 0, genericEverHooked = 0,
+        heapUnsupportedCalls = 0, retainedWrapperRecords = 0, peakWrapperRecords = 0, wrapperSlotsReused = 0, installAttempts = 0,
         coverage = "Intercepted OnEvent and OnUpdate frame scripts only; not total addon CPU. Self time subtracts nested intercepted callbacks; unknown source owners are not guessed." }
     session.callbacks = metrics
     if restorationBlocked then
@@ -474,7 +566,7 @@ function C.Start(session)
     metrics.clock = scale == 0.001 and "debugprofilestop (differences; milliseconds)" or "GetTime"
     metrics.clockResolution = "Not verified in this client; zero and invalid durations are reported"
     local run = { session = session, metrics = metrics, clock = clock, clockScale = scale, active = true,
-        enumerate = EnumerateFrames, frameMap = {}, records = {}, wrapperMap = {}, addonMap = {}, stack = {}, depth = 0,
+        enumerate = EnumerateFrames, frameMap = {}, records = {}, freeRecordSlots = {}, wrapperMap = setmetatable({}, { __mode = "kv" }), addonMap = {}, stack = {}, depth = 0,
         functionSources = {}, sourceCount = 0, sourceBudget = 0, sourceSampleSeen = {}, inventoryMap = {}, inventoryNext = 1,
         getinfo = type(debug) == "table" and type(debug.getinfo) == "function" and debug.getinfo or nil,
         cursor = nil, scanning = true, cycleCount = 0, wait = 0, frameSerial = 0, contextScratch = {},
@@ -491,7 +583,10 @@ function C.Start(session)
     metrics.ownerSupport = metrics.inventoryAvailable and "Function source matched to installed addon folders; missing sources are Unknown owner"
         or "Installed addon inventory unavailable; callbacks are grouped as Unknown owner"
     local index
-    for index = 1, STACK_LIMIT do run.stack[index] = { children = 0 } end
+    for index = 1, STACK_LIMIT do
+        run.stack[index] = { depth = 0, children = 0, started = false, event = false,
+            heapStarted = false, heapFailures = 0, heapBlocked = false }
+    end
     active = run; metrics.available = true
     return true
 end
@@ -565,7 +660,7 @@ function C.Stop(session)
     local index
     for index = 1, table.getn(run.records) do ReleaseRecord(run, run.records[index], true) end
     run.cursor, run.pendingFrame, run.frameMap, run.records, run.wrapperMap, run.addonMap, run.functionSources, run.inventoryMap, run.sourceSampleSeen = nil, nil, nil, nil, nil, nil, nil, nil, nil
-    run.contextScratch = nil
+    run.contextScratch, run.freeRecordSlots = nil, nil
     run.heap = nil
     for index = 1, table.getn(run.stack) do run.stack[index].heapStarted, run.stack[index].heapFailures = nil, 0 end
     run.metrics.pending = false
