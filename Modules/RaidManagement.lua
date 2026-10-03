@@ -2549,7 +2549,7 @@ local function OnRosterDebounceUpdate()
     lifecycle:FlushRosterUpdate()
 end
 
-function RaidManagement.HandleWorldContext(options)
+function RaidManagement.HandleWorldContext(options, context, confirmed)
     local attendance = options.getAttendance()
     local zone = options.getZone() or ""
     local inInstance, instanceType = options.getInstanceState()
@@ -2568,17 +2568,83 @@ function RaidManagement.HandleWorldContext(options)
         end
         options.hideRaidStartReminder()
     end
-    if options.isTestRaid() or not hasSession then return end
-    local inRaid = options.isInRaid()
-    local leftRaidContext = not inRaid or (attendance.raidName and attendance.raidName ~= "" and attendance.raidName ~= zone)
-    if not leftRaidContext then
+    if options.isTestRaid() or not hasSession then
+        context.active = false
+        context.raidZone = nil
+        context.promptedContext = nil
         options.setContinuedContext(nil)
         options.hideSessionTransitionPrompt()
         return
     end
-    local contextKey = zone .. "|" .. (inRaid and "raid" or "solo")
-    if options.getContinuedContext() == contextKey then return end
+    local inRaid = options.isInRaid()
+    if not context.active or context.sessionId ~= attendance.snapshotId or context.startedAt ~= attendance.sessionStartedAt then
+        context.active = true
+        context.sessionId = attendance.snapshotId
+        context.startedAt = attendance.sessionStartedAt
+        context.raidZone = nil
+        context.promptedContext = nil
+        options.setContinuedContext(nil)
+        options.hideSessionTransitionPrompt()
+    end
+    -- A saved/session display name is not an instance identity. Observe the
+    -- actual client context instead, without persisting derived zone state.
+    if inRaid and (not instanceType or instanceType == "") then return end
+    local contextKey
+    if not inRaid then
+        contextKey = "outside-raid-context"
+    elseif context.raidZone and not inRaidInstance then
+        contextKey = "outside-raid-context"
+    elseif context.raidZone and zone ~= "" and context.raidZone ~= zone then
+        contextKey = "raid-instance|" .. zone
+    end
+    if not contextKey then
+        if inRaidInstance and zone ~= "" then context.raidZone = zone end
+        context.promptedContext = nil
+        options.setContinuedContext(nil)
+        options.hideSessionTransitionPrompt()
+        return
+    end
+    if options.getContinuedContext() == contextKey or context.promptedContext == contextKey then return end
+    if confirmed ~= contextKey then return contextKey end
+    context.promptedContext = contextKey
     options.showSessionTransitionPrompt(contextKey)
+end
+
+local function OnWorldContextConfirmationUpdate()
+    this.remaining = this.remaining - arg1
+    if this.remaining > 0 then return end
+    local controller = this.contextController
+    local contextKey = this.pendingContext
+    controller:CancelConfirmation()
+    controller.Update(contextKey)
+end
+
+function RaidManagement.CreateWorldContextController(options)
+    local controller = { options = options, context = {} }
+    function controller:CancelConfirmation()
+        if not self.timer then return end
+        self.timer:SetScript("OnUpdate", nil)
+        self.timer:Hide()
+        self.timer.pendingContext = nil
+    end
+    -- Event driven; a short one-shot confirmation exists only for a potential
+    -- departure. Roster bursts do not restart it or allocate more frames.
+    function controller.Update(confirmedContext)
+        local pending = RaidManagement.HandleWorldContext(options, controller.context, confirmedContext)
+        if not pending then controller:CancelConfirmation(); return end
+        local timer = controller.timer
+        if not timer then
+            timer = MOS.UI.Components.CreateContainer(nil, UIParent)
+            timer.contextController = controller
+            controller.timer = timer
+        end
+        if timer.pendingContext == pending then return end
+        timer.pendingContext = pending
+        timer.remaining = 2
+        timer:SetScript("OnUpdate", OnWorldContextConfirmationUpdate)
+        timer:Show()
+    end
+    return controller
 end
 
 function RaidManagement.CreateLifecycle(options)
