@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.116 - 2026-10-03
+
+- Present Performance measurements in collapsible tables with compact diagnostics and short metric explanations.
+- Keep live table rows stable; Refresh tables updates their selection and order.
+- Describe anonymous callbacks using observed frame context and distinguish frame-script source labels from missing metadata.
+- Make unavailable native addon memory explicit without substituting shared Lua heap changes.
+
 ## 0.5.0-dev.115 - 2026-10-03
 
 - Keep inert frames outside the callback discovery limit and recover capacity when scripts are removed.
