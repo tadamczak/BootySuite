@@ -48,3 +48,48 @@ function Bridge.Connect()
     end
     return provider
 end
+
+function Bridge.GetAddonStatus(refresh)
+    local service = MOS.Services and MOS.Services.ProfilerAddon
+    if not service then return nil end
+    if refresh then return service.Refresh() end
+    return service.GetStatus()
+end
+
+-- The addon loader toggle is separate from Engine.Enable. Stop transient
+-- profiling before asking the client to omit BootyProfiler on its next reload.
+function Bridge.PrepareDisable()
+    local provider = BootyProfiler
+    if type(provider) ~= "table" then return true end
+    local ready, failure = true, nil
+    if type(provider.GetState) == "function" and type(provider.Stop) == "function" then
+        local ok, state = pcall(provider.GetState)
+        if not ok or type(state) ~= "table" then ready, failure = false, "Profiler state is unavailable."
+        elseif state.recording then
+            local stopped, result = pcall(provider.Stop)
+            if not stopped or result == false then ready, failure = false, "Profiler cleanup failed." end
+        end
+    end
+    if type(provider.Enable) == "function" then
+        local ok = pcall(provider.Enable, false)
+        if not ok then ready, failure = false, "Profiler shutdown failed." end
+    end
+    local login = provider.LoginMemory
+    if type(login) == "table" and type(login.Cancel) == "function" then
+        local ok, result = pcall(login.Cancel)
+        if not ok or result == false then ready, failure = false, "Login capture cleanup failed." end
+    end
+    return ready, failure
+end
+
+function Bridge.SetAddonEnabled(enabled)
+    local service = MOS.Services and MOS.Services.ProfilerAddon
+    if not service then return false, "addon-control-unavailable" end
+    return service.SetEnabled(enabled, Bridge.PrepareDisable)
+end
+
+function Bridge.ReloadUI()
+    local service = MOS.Services and MOS.Services.ProfilerAddon
+    if not service then return false, "reload-unavailable" end
+    return service.Reload()
+end

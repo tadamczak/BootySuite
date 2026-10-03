@@ -71,6 +71,12 @@ function P.ObserveFrame(elapsed)
         session.gcWindowSlowFrames = session.gcWindowSlowFrames + 1
         local entry = Push(gaps.history, HISTORY_LIMIT)
         entry.at, entry.elapsed = gaps.elapsed, elapsed
+        -- Only retained slow gaps need the same wall-clock axis as heap
+        -- samples. Keep the original accumulated-elapsed timestamp too.
+        entry.sampleAt = nil
+        local now = Now()
+        local sampleAt = now and now - session.startedAt
+        if state.recording and state.session == session and FiniteNonnegative(sampleAt) then entry.sampleAt = sampleAt end
     end
     return elapsed
 end
@@ -132,12 +138,20 @@ function P.Sample()
             entry.fps = fps; session.fps = fps
             if not session.minFps or fps < session.minFps then session.minFps = fps end
             if not session.maxFps or fps > session.maxFps then session.maxFps = fps end
+            session.fpsSamples = session.fpsSamples + 1
+            session.averageFps = session.averageFps and session.averageFps + (fps - session.averageFps) / session.fpsSamples or fps
         else entry.fps = nil end
     end
     if type(GetNetStats) == "function" then
         local _, _, latency = GetNetStats()
         latency = tonumber(latency)
-        if FiniteNonnegative(latency) then entry.latency, session.latency = latency, latency end
+        if FiniteNonnegative(latency) then
+            entry.latency, session.latency = latency, latency
+            if not session.minLatency or latency < session.minLatency then session.minLatency = latency end
+            if not session.maxLatency or latency > session.maxLatency then session.maxLatency = latency end
+            session.latencySamples = session.latencySamples + 1
+            session.averageLatency = session.averageLatency and session.averageLatency + (latency - session.averageLatency) / session.latencySamples or latency
+        end
     end
     Notify()
 end
@@ -156,7 +170,10 @@ function P.Start(options)
     end
     local callbacksRequested = type(options) == "table" and options.callbacks and true or false
     local callbackMemoryRequested = callbacksRequested and options.memory and true or false
-    local session = { startedAt = now, elapsed = 0, history = { count = 0, total = 0 }, samples = { count = 0, total = 0 },
+    -- Session summaries retain only running means/counts and extrema. The
+    -- bounded sample ring may wrap without changing the summary's time span.
+    local session = { startedAt = now, elapsed = 0, fpsSamples = 0, latencySamples = 0,
+        history = { count = 0, total = 0 }, samples = { count = 0, total = 0 },
         gc = { heapDropCount = 0, heapDropTotal = 0, readFailures = 0, history = { count = 0, total = 0 } },
         frameGaps = { count = 0, slowCount = 0, invalidCount = 0, maximum = 0, elapsed = 0, threshold = FRAME_GAP_THRESHOLD,
             windowStart = 0, windowMax = 0, windowSlowFrames = 0, windowInvalidFrames = 0, history = { count = 0, total = 0 } },
@@ -292,6 +309,9 @@ function P.Export()
         callbacksRequested = session.callbacksRequested,
         callbackMemoryRequested = session.callbackMemoryRequested,
         startHeap = session.startHeap, endHeap = session.heap, minFps = session.minFps, maxFps = session.maxFps,
+        fpsSamples = session.fpsSamples, averageFps = session.averageFps,
+        latencySamples = session.latencySamples, minLatency = session.minLatency, maxLatency = session.maxLatency,
+        averageLatency = session.averageLatency,
         gcThreshold = session.gcThreshold,
         slowThreshold = session.slowThreshold, history = {}, samples = {}, operations = {} }
     local name, operation, index

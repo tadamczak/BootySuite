@@ -25,6 +25,8 @@ local function SignedMemory(value)
     return (value>0 and "+" or "")..Memory(value)
 end
 local function FPS(value) return type(value)=="number" and tostring(math.floor(value+0.5)) or "-" end
+local function Seconds(value) return type(value)=="number" and string.format("%.2f s",value) or "Pending" end
+local function Latency(value) return type(value)=="number" and string.format("%.0f ms",value) or "-" end
 local function CompareTime(a, b) if a.time == b.time then return a.name < b.name end return a.time > b.time end
 local function CompareCallbackTime(a,b)
     if (a.selfTime or 0)==(b.selfTime or 0) then
@@ -43,11 +45,13 @@ local FAMILY_PAGE_SIZE=50
 local tables = {
     operations = { first = "Operation", columns = {"Calls","Total","Average","Peak","Heap delta"}, minimum = 760, nameFraction = 0.34 },
     slow = { first = "Operation", columns = {"At","Duration","Heap delta","Event"}, minimum = 680, nameFraction = 0.34 },
-    samples = { first = "At", columns = {"FPS","Lua heap","Latency"}, minimum = 460, nameFraction = 0.18 },
     memory = { first = "Addon", columns = {"Memory"}, minimum = 300, nameFraction = 0.70 },
     memoryActivity = { first = "Source addon", columns = {"Calls","Heap growth","Net heap delta","Peak growth"}, minimum = 680, nameFraction = 0.34 },
     callbackMemory = { first = "Frame family / script", columns = {"Calls","Heap growth","Net heap delta","Peak growth","Errors"}, minimum = 760, nameFraction = 0.34 },
-    loginMemory = { first = "Stage / addon", columns = {"At","Lua heap","Net heap delta","Window"}, minimum = 680, nameFraction = 0.34 },
+    loginMemory = { first = "Stage / addon", columns = {"At","Lua heap","Net heap delta","Window"}, minimum = 680, nameFraction = 0.34,
+        hints={At="Seconds since the profiler began observing this login.",
+            ["Net heap delta"]="Shared Lua memory in this row minus the previous reading. This change belongs to the current window; GC can reduce it. It is not the addon's retained size.",
+            Window="Time from the previous reading to this row. Loaded-addon rows end when that addon reports loaded; includes loader, dependencies and event handlers."} },
     callbacks = { first = "Source addon", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
     callbackDetails = { first = "Frame family / script", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
     callbackSlow = { first = "Frame / script", columns = {"At","Duration","Self","Event","Errors"}, minimum = 760, nameFraction = 0.34 },
@@ -111,7 +115,6 @@ local sections = {
     callbacks={title="Addon source ranking",hint=hints.source},
     callbackDetails={title="Frame callbacks",expanded=true,hint="Grouped by observed frame naming or parent context. Families are not addon owners."},
     callbackSlow={title="Slow callbacks",hint=hints.slow},
-    samples={title="FPS and memory samples",hint="One sample per second; newest ten shown. Use this timeline to locate drops, not infer their cause."},
     memory={title="Memory by addon",hint="Callback memory growth works without native addon counters. Native snapshots are shown separately when available."},
     loginMemory={title="Login memory analysis",hint="One requested login capture: loading windows and the first five seconds in the world. Earlier addons belong to its baseline."},
     technical={title="Technical details",hint="Capture coverage, timing reliability and client support."},
@@ -121,8 +124,8 @@ local sections = {
     technicalHealth={title="Capture health",nested=true,hint="Inspection, inventory and wrapper cleanup failures."},
     technicalSupport={title="Client support",nested=true,hint="Available APIs and extension markers; markers alone do not prove support."},
     memoryGC={title="Memory and garbage collection",expanded=true,hint="Shared Lua memory, observed decreases and frame gaps. Decreases do not establish exact GC count or duration."},
-    heapDrops={title="Heap drop windows",hint="Compare net memory decreases with slow frames in the same sampling window."},
-    frameGaps={title="Slow frame gaps",hint="Frames taking at least 50 ms. This includes game and observer work, not just addon execution."},
+    heapDrops={title="Heap drop windows",nested=true,hint="Memory-decreasing windows and the slow frames observed in each. This does not prove GC caused a stall."},
+    frameGaps={title="Other slow frame gaps",nested=true,hint="Frames of at least 50 ms outside the retained heap-drop windows. Includes game and profiler work; does not identify the cause."},
 }
 local liveValues={"calls","count","time","selfTime","timedCalls","peak","failures","memory","maxTime","maxMemory","heapSamples","heapRise","heapDelta","heapPeak"}
 local function ShortSource(value)
@@ -146,7 +149,8 @@ local function TooltipBody()
     return this.reportHint or ""
 end
 local function FontSize(label,size)
-    local font,_,flags=label:GetFont();label:SetFont(font,size+UI.GetTextSizeDelta(label:GetParent()),flags)
+    local applied=size+(UI.GetTextSizeDelta(label:GetParent()) or 0)
+    local font,_,flags=label:GetFont();label:SetFont(font,applied,flags);return applied
 end
 
 function Performance.Create(parent)
@@ -156,8 +160,8 @@ function Performance.Create(parent)
     page.canvas = UI.CreateResponsiveCanvas(page.bodyHost, "MuklaOfficerSuitePerformanceBody")
     page.header=UI.CreateContainer(nil,page)
     page.title = UI.CreateHeading(page.header, "Performance", 1, "gold")
-    page.message = UI.CreateLabel(page.canvas, nil, "OVERLAY", "GameFontHighlight")
-    page.message:SetJustifyH("LEFT"); if page.message.SetWordWrap then page.message:SetWordWrap(true) end
+    page.message = UI.CreateLabel(page.bodyHost, nil, "OVERLAY", "GameFontHighlight")
+    page.message:SetJustifyH("CENTER");page.message:SetJustifyV("MIDDLE");if page.message.SetWordWrap then page.message:SetWordWrap(true) end
     local module = { frame = page, tab = "MOS", items = {}, rows = {}, sessionEntries = {}, callbackEntries = {}, callbackDetails = {}, memoryEntries = {}, metricFlow = {}, detailsExpanded = {}, sectionState = {}, snapshots = {}, familyPages = {}, familyPage = 1, callbackView = "time", measureMemory = false, loginPage = 1, loginPaging = {} }
 
     local function AddItem(kind, text, data, value, hint)
@@ -212,7 +216,7 @@ function Performance.Create(parent)
         end
         AddTable(section)
         for _,entry in ipairs(rows) do
-            local title=entry.name or string.format("+%.1f s",entry.at)
+            local title=entry.name or string.format("+%.1f s",entry.sampleAt or entry.at)
             AddItem(kind,title,entry)
         end
     end
@@ -296,10 +300,10 @@ function Performance.Create(parent)
         if not model then AddItem("message","Preparing frame families...");return end
         local total=table.getn(model.families)
         if total==0 then AddItem("message","No frame callbacks captured.");return end
-        AddTable(self.callbackView=="memory" and "callbackMemory" or "callbackDetails")
         self.familyPage=math.max(1,math.min(self.familyPage,math.ceil(total/FAMILY_PAGE_SIZE)))
         local first=(self.familyPage-1)*FAMILY_PAGE_SIZE+1
         if total>FAMILY_PAGE_SIZE then AddItem("familyPager",string.format("Families %d-%d / %d",first,math.min(total,first+FAMILY_PAGE_SIZE-1),total),model) end
+        AddTable(self.callbackView=="memory" and "callbackMemory" or "callbackDetails")
         for index=first,math.min(total,first+FAMILY_PAGE_SIZE-1) do
             local family=model.families[index]
             local expanded=self.expandedFamily==family.name
@@ -308,7 +312,10 @@ function Performance.Create(parent)
                 local childPage=math.max(1,math.min(self.familyPages[family.name] or 1,math.ceil(family.count/FAMILY_PAGE_SIZE)))
                 self.familyPages[family.name]=childPage
                 local childFirst=(childPage-1)*FAMILY_PAGE_SIZE+1
-                if family.count>FAMILY_PAGE_SIZE then AddItem("familyPager",string.format("Scripts %d-%d / %d",childFirst,math.min(family.count,childFirst+FAMILY_PAGE_SIZE-1),family.count),model,family.name) end
+                if family.count>FAMILY_PAGE_SIZE then
+                    AddItem("familyPager",string.format("Scripts %d-%d / %d",childFirst,math.min(family.count,childFirst+FAMILY_PAGE_SIZE-1),family.count),model,family.name)
+                    AddTable(self.callbackView=="memory" and "callbackMemory" or "callbackDetails")
+                end
                 for child=childFirst,math.min(family.count,childFirst+FAMILY_PAGE_SIZE-1) do
                     local entry=family.children[child]
                     table.insert(self.callbackDetails,entry);AddItem("callbackDetail",entry.name,entry)
@@ -363,7 +370,31 @@ function Performance.Create(parent)
             AddMetric("Last heap drop",gc.lastHeapDrop and Memory(gc.lastHeapDrop) or "-","Net decrease during the last observed window. Open Heap drop windows to compare its worst frame gap.")
             AddMetric("Worst frame gap",gaps.maximum and Duration(gaps.maximum) or "-",columnHints["Frame gap"])
             if gc.history then AddMemoryHistory("heapDrops","heapDrop",gc.history,session,"No net memory decreases observed.") end
-            if gaps.history then AddMemoryHistory("frameGaps","frameGap",gaps.history,session,"No frame gaps reached 50 ms.") end
+            if gaps.history then
+                local frozen=self.snapshots[self.tab..":frameGaps"]
+                if self:IsSectionExpanded("frameGaps") then
+                    local other=self.otherFrameGaps or {};self.otherFrameGaps=other
+                    if not frozen or session.stopped then
+                        for index=table.getn(other),1,-1 do table.remove(other,index) end
+                        local dropHistory=gc.history
+                        local dropIndex=dropHistory and dropHistory.count or 0
+                        local dropFirst=math.max(1,dropIndex-63)
+                        local drop=dropIndex>=dropFirst and self.provider.HistoryEntry(dropHistory,dropIndex) or nil
+                        for index=gaps.history.count,math.max(1,gaps.history.count-63),-1 do
+                            local gap=self.provider.HistoryEntry(gaps.history,index)
+                            local at=gap.sampleAt
+                            while at and drop and at<=drop.windowStart do
+                                dropIndex=dropIndex-1
+                                drop=dropIndex>=dropFirst and self.provider.HistoryEntry(dropHistory,dropIndex) or nil
+                            end
+                            if not at or not drop or at>drop.windowEnd then table.insert(other,gap) end
+                        end
+                    end
+                    AddRows("frameGaps","frameGap",other,session,nil,"No other retained frame gaps reached 50 ms.",true)
+                else
+                    AddSection("frameGaps",frozen and table.getn(frozen.rows) or nil)
+                end
+            end
         end
     end
 
@@ -371,6 +402,7 @@ function Performance.Create(parent)
         local callbacks=session and session.callbacks
         local native=state.addonEntries or emptyEntries
         local activity=callbacks and callbacks.memoryRequested and callbacks.memoryAvailable
+        if not activity and table.getn(native)==0 then return end
         local available=activity and table.getn(callbacks.addons or emptyEntries) or table.getn(native)
         if not AddSection("memory",available) then return end
         if activity then
@@ -404,13 +436,15 @@ function Performance.Create(parent)
         local report=capture.GetReport()
         local count=report and table.getn(report.events or emptyEntries) or 0
         if not AddSection("loginMemory",count) then return end
-        if not report then AddItem("message",capture.IsArmed() and "Capture armed for the next login or reload." or "Analyze next login records loading and the first five seconds in the world.");return end
+        if not report then AddItem("message",capture.IsArmed() and "Capture ready for the next login or reload." or "Use Analyze Login to record the next loading sequence.");return end
         if self.loginReport~=report then self.loginReport=report;self.loginPage=1 end
+        local status=report.kind=="completed" and "Success" or report.kind=="recording" and "Recording" or report.kind=="failed" and "Failed" or report.kind=="cancelled" and "Cancelled" or "Interrupted"
+        AddMetric("Login capture",status,"Success means the requested capture finished, including five seconds after entering the world.")
+        AddMetric("Login time",Seconds(report.firstWorldAt),"Observed time from profiler startup to first entering the world. Excludes the five-second follow-up; earlier loading is not measured.")
         AddMetric("At profiler load",Memory(report.startHeap),columnHints["Lua heap"])
         AddMetric("Latest login memory",Memory(report.heap),columnHints["Lua heap"])
         AddMetric("Change during login",SignedMemory(report.heapDelta),"Latest login sample minus the profiler-load baseline. Includes startup work and collection.")
         AddMetric("Observed login heap drops",report.heapDropCount or 0,"Loading windows with a net memory decrease. Collection may contribute; this is not an exact GC event count.")
-        AddDiagnostic("Login capture",report.kind or capture.GetStatus(),"One requested loading capture. It ends after the first five seconds in the world.")
         if report.baselineInventoryAvailable then
             local incomplete=report.baselineInventoryTruncated or (report.baselineInventoryFailures or 0)>0
             AddDiagnostic("Loaded at capture start",(incomplete and "At least " or "")..tostring(report.baselineLoadedAddonCount or 0),"Client-listed addons reporting loaded when capture began, excluding BootyProfiler. Their earlier loading is in the baseline; some clients also mark dependencies still loading.")
@@ -420,7 +454,6 @@ function Performance.Create(parent)
         AddDiagnostic("Later addon loads",report.addonEvents or 0,"Addon-loaded events observed after the baseline, including rows omitted when the history fills.")
         if report.kind~="completed" and report.reason then AddDiagnostic("Capture stopped",loginReasons[report.reason] or report.reason,"An interrupted report includes only the stages observed before capture stopped.") end
         if report.truncated then AddDiagnostic("Omitted records",report.omittedRecords or 0,"The report keeps at most 256 stage rows. Summary memory continues to update after the table fills.") end
-        AddItem("message","Starts at BootyProfiler load; earlier addons are included in the baseline.")
         if count==0 then return end
         self.loginPage=math.max(1,math.min(self.loginPage,math.ceil(count/FAMILY_PAGE_SIZE)))
         local first=(self.loginPage-1)*FAMILY_PAGE_SIZE+1
@@ -443,7 +476,6 @@ function Performance.Create(parent)
             if self.tab=="All Addons" then
                 AddDiagnostic("FPS sampling","1 per second",hints.fps)
                 AddDiagnostic("Memory API",session.capabilities and session.capabilities.addonMemory and "Per-addon available" or "Shared Lua only",hints.lua)
-                AddDiagnostic("GC threshold",Memory(session.gcThreshold),"Shared Lua collection threshold. It is not an addon memory limit.")
             end
             if callbacks and self.tab=="All Addons" then
                 AddDiagnostic("Callback clock",ClockName(callbacks.clock),"Durations are differences between clock reads; no overhead compensation.")
@@ -519,6 +551,7 @@ function Performance.Create(parent)
             self.snapshots={};self.snapshotSession=session;self.snapshotRecording=state.recording
             self:CancelFamilyJob();self.familyModel=nil
             for index=table.getn(self.memoryEntries),1,-1 do table.remove(self.memoryEntries,index) end
+            if self.otherFrameGaps then for index=table.getn(self.otherFrameGaps),1,-1 do table.remove(self.otherFrameGaps,index) end end
         end
         if not session or not session.callbacks then
             self:CancelFamilyJob();self.familyModel=nil
@@ -528,19 +561,22 @@ function Performance.Create(parent)
         if not session then
             for index=table.getn(self.sessionEntries),1,-1 do table.remove(self.sessionEntries,index) end
             for index=table.getn(self.historyEntries or emptyEntries),1,-1 do table.remove(self.historyEntries,index) end
-            AddItem("message",state.enabled and "Press Start, use the addon, then Stop to inspect results." or "Enable, then Start. Measurements are off until recording.")
+            AddItem("message","Press Start, use the addon, then Stop to inspect results.")
         elseif self.tab=="MOS" then
             local calls,total,heap,largest,_,entries,peak=self:GetSessionOperations()
             AddMetric("Measured calls",calls,hints.calls);AddMetric("Measured time",Duration(total),hints.total)
             AddMetric("Peak call time",calls>0 and Duration(peak) or "-",hints.peak);AddMetric("Average call time",calls>0 and Duration(total/calls) or "-",hints.average)
-            AddMetric("Heap delta",Memory(heap),hints.heap);AddMetric("Peak heap rise",Memory(largest),hints.heapPeak)
+            AddMetric("Heap delta during MOS calls",SignedMemory(heap),hints.heap);AddMetric("Peak heap rise during a call",Memory(largest),hints.heapPeak)
             self:BuildMemoryItems(session)
             AddRows("operations","operation",entries,session,hints.total.."\n"..hints.heap,"No displayed MOS calls. Use Refresh tables after activity.")
             AddRows("slow","slow",self:HistoryRows(session.history,64),session,hints.slow.."\n"..hints.heap,"No MOS calls reached 5 ms.",true)
         else
-            AddMetric("Sampled FPS",session.fps and string.format("%.1f",session.fps) or "Unavailable",hints.fps)
-            AddMetric("Minimum FPS",session.minFps and string.format("%.1f",session.minFps) or "Unavailable",hints.fps)
-            AddMetric("Network latency",session.latency and tostring(session.latency).." ms" or "Unavailable",hints.latency)
+            AddMetric("FPS min / max",FPS(session.minFps).." / "..FPS(session.maxFps),"Lowest and highest valid once-per-second FPS readings in the whole session. Brief stalls can fall between readings.")
+            AddMetric("Average FPS",FPS(session.averageFps),"Mean of valid FPS readings over the whole session, including samples older than the retained history.")
+            AddMetric("Current FPS",FPS(session.fps),hints.fps)
+            AddMetric("Latency min / max",Latency(session.minLatency).." / "..Latency(session.maxLatency),"Lowest and highest valid network-delay readings over the whole session.")
+            AddMetric("Average latency",Latency(session.averageLatency),"Mean of valid network-delay readings over the whole session. This is separate from rendering speed.")
+            AddMetric("Current latency",Latency(session.latency),hints.latency)
             self:BuildMemoryItems(session)
             if session.callbacks then
                 local callbacks=session.callbacks
@@ -548,7 +584,6 @@ function Performance.Create(parent)
             else
                 AddItem("message","Callbacks were not recorded. Start from All Addons to measure frame scripts.")
             end
-            AddRows("samples","sample",self:HistoryRows(session.samples,10),session,hints.fps.."\n"..hints.lua,"No samples yet.",true)
         end
         if self.tab=="All Addons" then
             self:BuildAddonMemoryItems(session,state)
@@ -578,7 +613,7 @@ function Performance.Create(parent)
     end
     local function ResetRow(row,item,width)
         row:SetWidth(width);row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,-6)
-        row.label:SetWidth(math.max(1,width-16));row.label:SetHeight(0);FontSize(row.label,12);row.label:SetJustifyV("TOP")
+        row.label:SetWidth(math.max(1,width-16));row.label:SetHeight(0);FontSize(row.label,11);row.label:SetJustifyV("TOP")
         row.label:SetText(item.text);row.label:SetTextColor(1,1,1);row.label:Show()
         row.detail:Hide();for column=1,5 do row.columns[column]:Hide() end
         if row.headerHits then for _,hit in ipairs(row.headerHits) do hit:Hide() end end
@@ -605,6 +640,7 @@ function Performance.Create(parent)
     local function FirstHint(schema)
         for name,entry in pairs(tables) do if entry==schema then return firstHints[name] or columnHints[schema.first] or columnHints.Detail end end
     end
+    local function ColumnHintFor(schema,name) return schema.hints and schema.hints[name] or columnHints[name] end
     local function FamilyClick() this.reportModule:ToggleFamily(this.familyName) end
     local function PagerClick()
         if this.pagerLogin then this.reportModule:SetLoginPage(this.direction)
@@ -641,9 +677,6 @@ function Performance.Create(parent)
         elseif item.kind=="slow" then
             local data=item.operation
             SetValue(row,1,string.format("+%.1f s",data.at));SetValue(row,2,Duration(data.elapsed));SetValue(row,3,Memory(data.heapChange));SetValue(row,4,data.event or "-")
-        elseif item.kind=="sample" then
-            local data=item.operation
-            SetValue(row,1,data.fps and string.format("%.1f",data.fps) or "-");SetValue(row,2,Memory(data.heap));SetValue(row,3,data.latency and data.latency.." ms" or "-")
         elseif item.kind=="heapDrop" then
             local data=item.operation
             SetValue(row,1,Memory(data.heapDrop));SetValue(row,2,string.format("%.2f s",data.windowDuration));SetValue(row,3,Duration(data.maxFrameGap));SetValue(row,4,data.slowFrames or 0)
@@ -681,15 +714,15 @@ function Performance.Create(parent)
             local nameWidth=math.floor((width-16)*schema.nameFraction)
             local cellWidth=(width-16-nameWidth)/count
             row.label:SetWidth(nameWidth-8)
-            local height=math.max(28,UI.MeasureTextHeight(row.label,nameWidth-8)+12)
+            local height=math.max(24,UI.MeasureTextHeight(row.label,nameWidth-8)+8)
             row.label:SetHeight(height);row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,0);row.label:SetJustifyV("MIDDLE")
             if item.kind=="callbackDetail" then row.label:SetPoint("TOPLEFT",row,"TOPLEFT",16,0);row.label:SetWidth(math.max(1,nameWidth-16)) end
             for index=1,count do
-                local label=row.columns[index];FontSize(label,12)
+                local label=row.columns[index];FontSize(label,11)
                 UI.Table.Cell(label,row,8+nameWidth+(index-1)*cellWidth,cellWidth-8,height,values[index]);label:SetJustifyH("RIGHT")
                 if item.kind=="tableHeader" then label:SetTextColor(unpack(UI.Theme.colors.goldText)) else label:SetTextColor(1,1,1) end
                 label:Show()
-                if item.kind=="tableHeader" then HeaderHit(row,index+1,label,schema.columns[index],columnHints[schema.columns[index]],cellWidth-8,height) end
+                if item.kind=="tableHeader" then HeaderHit(row,index+1,label,schema.columns[index],ColumnHintFor(schema,schema.columns[index]),cellWidth-8,height) end
             end
             if item.kind=="tableHeader" then row.label:SetTextColor(unpack(UI.Theme.colors.goldText));row:EnableMouse(false);HeaderHit(row,1,row.label,schema.first,FirstHint(schema),nameWidth-8,height) end
             return height
@@ -704,16 +737,16 @@ function Performance.Create(parent)
         for first=1,count,columns do
             local bandHeight=0
             for index=first,math.min(count,first+columns-1) do
-                local label=row.columns[index];FontSize(label,12);label:ClearAllPoints()
+                local label=row.columns[index];FontSize(label,11);label:ClearAllPoints()
                 label:SetPoint("TOPLEFT",row,"TOPLEFT",8+(index-first)*cellWidth,-height)
                 label:SetWidth(math.max(1,cellWidth-8));label:SetHeight(0);label:SetJustifyH("LEFT")
                 if label.SetWordWrap then label:SetWordWrap(true) end
                 if label.SetNonSpaceWrap then label:SetNonSpaceWrap(true) end
                 label:SetText((item.kind=="diagnostic" or item.kind=="tableHeader") and values[index] or schema.columns[index]..": "..values[index]);label:SetTextColor(0.86,0.86,0.86);label:Show()
                 -- Reserve two lines so changing numeric precision does not move following sections.
-                bandHeight=math.max(bandHeight,28,UI.MeasureTextHeight(label,cellWidth-8))
+                bandHeight=math.max(bandHeight,24,UI.MeasureTextHeight(label,cellWidth-8))
                 if item.kind=="tableHeader" then
-                    label:SetTextColor(unpack(UI.Theme.colors.goldText));HeaderHit(row,index+1,label,schema.columns[index],columnHints[schema.columns[index]],cellWidth-8,bandHeight)
+                    label:SetTextColor(unpack(UI.Theme.colors.goldText));HeaderHit(row,index+1,label,schema.columns[index],ColumnHintFor(schema,schema.columns[index]),cellWidth-8,bandHeight)
                 end
             end
             height=height+bandHeight+4
@@ -734,9 +767,9 @@ function Performance.Create(parent)
                     row.label:SetTextColor(unpack(UI.Theme.colors.goldText));row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,-8);row.label:SetWidth(math.max(1,cardWidth-16))
                     local labelHeight=UI.MeasureTextHeight(row.label,cardWidth-16)
                     row.detail:ClearAllPoints();row.detail:SetPoint("TOPLEFT",row,"TOPLEFT",8,-labelHeight-12);row.detail:SetWidth(math.max(1,cardWidth-16))
-                    FontSize(row.detail,18);row.detail:SetText(item.value);row.detail:SetTextColor(1,1,1);row.detail:Show()
-                    UI.FitButtonLabel(row.detail,math.max(1,cardWidth-16));row.detail:SetHeight(22);row.detail:SetJustifyV("MIDDLE")
-                    height=math.max(height,labelHeight+22+20)
+                    row.detail.mosFitFontSize=FontSize(row.detail,15);row.detail:SetText(item.value);row.detail:SetTextColor(1,1,1);row.detail:Show()
+                    UI.FitButtonLabel(row.detail,math.max(1,cardWidth-16));row.detail:SetHeight(18);row.detail:SetJustifyV("MIDDLE")
+                    height=math.max(height,labelHeight+18+16)
                     UI.SetRowColor(row,rowColor,0.045);row.mosFlowWidth=cardWidth;row:Show()
                     count=count+1
                     if count<=table.getn(flow) then flow[count]=row else table.insert(flow,row) end
@@ -750,11 +783,11 @@ function Performance.Create(parent)
                 local height=math.max(22,UI.MeasureTextHeight(row.label,width-16)+12)
                 if item.kind=="tableHeader" then schema=item.operation;stripe=0;height=MeasureTableRow(row,item,schema,width,0)
                 elseif item.kind=="diagnostic" then stripe=stripe+1;height=MeasureTableRow(row,item,tables.diagnostic,width,stripe)
-                elseif item.kind=="operation" or item.kind=="slow" or item.kind=="sample" or item.kind=="memory" or item.kind=="memoryActivity" or item.kind=="loginMemory" or item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="callbackSlow" or item.kind=="family" or item.kind=="heapDrop" or item.kind=="frameGap" then
+                elseif item.kind=="operation" or item.kind=="slow" or item.kind=="memory" or item.kind=="memoryActivity" or item.kind=="loginMemory" or item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="callbackSlow" or item.kind=="family" or item.kind=="heapDrop" or item.kind=="frameGap" then
                     stripe=stripe+1;height=MeasureTableRow(row,item,schema,width,stripe)
                 elseif item.kind=="familyPager" or item.kind=="loginPager" then height=MeasurePager(row,item,width)
                 elseif item.kind=="heading" then
-                    FontSize(row.label,14);row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
+                    FontSize(row.label,12);row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
                     height=UI.MeasureTextHeight(row.label,width-16)+16
                 elseif item.kind=="section" then
                     row.label:Hide();row:EnableMouse(false)
@@ -769,12 +802,15 @@ function Performance.Create(parent)
                         if name=="technical" then page.detailsToggle=toggle end
                     end
                     if toggle:GetParent()~=row then toggle:SetParent(row) end
-                    local inset=sections[name].nested and 8 or 0
-                    toggle:ClearAllPoints();toggle:SetPoint("TOPLEFT",row,"TOPLEFT",inset,0);toggle:SetWidth(math.max(1,width-inset));toggle:SetHeight(28)
+                    local nested=sections[name].nested
+                    local inset=nested and 20 or 0
+                    local sectionHeight=nested and 24 or 28
+                    toggle:ClearAllPoints();toggle:SetPoint("TOPLEFT",row,"TOPLEFT",inset,0);toggle:SetWidth(math.max(1,width-inset));toggle:SetHeight(sectionHeight)
+                    toggle.mosFitFontSize=FontSize(toggle.label,nested and 12 or 13)
                     toggle.label:SetText((module:IsSectionExpanded(name) and "- " or "+ ")..item.text..(item.value~=nil and " ("..item.value..")" or ""))
-                    UI.FitButtonLabel(toggle,width-32);toggle.label:SetJustifyH("LEFT")
+                    UI.FitButtonLabel(toggle,math.max(1,width-inset-32));toggle.label:SetJustifyH("LEFT")
                     toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT",toggle,"LEFT",8,0)
-                    toggle.rule:Hide();toggle:SetExpanded(module:IsSectionExpanded(name));toggle:Show();height=28
+                    toggle.rule:Hide();toggle:SetExpanded(module:IsSectionExpanded(name));toggle:Show();height=sectionHeight
                 else row.label:SetTextColor(0.78,0.78,0.78) end
                 row:SetHeight(math.max(1,height));if height>0 then row:Show();y=y+height+2 else row:Hide() end
                 index=index+1
@@ -788,22 +824,22 @@ function Performance.Create(parent)
         if page.controls then return end
         page.tabs=UI.CreateToolbarSurface(page.header,true,true);page.controls=UI.CreateToolbarSurface(page.header,false,true)
         page.mosTab=UI.CreateButton(page.tabs,nil,"MOS",90,26);page.allTab=UI.CreateButton(page.tabs,nil,"All Addons",120,26)
-        page.enableButton=UI.CreateButton(page.controls,nil,"Enable",88,26)
-        page.startButton=UI.CreateButton(page.controls,nil,"Start",82,26);page.stopButton=UI.CreateButton(page.controls,nil,"Stop",82,26)
+        page.enableButton=UI.CreateButton(page.tabs,nil,"Enable",88,26)
+        page.startButton=UI.CreateButton(page.controls,nil,"Start",82,26)
         page.resetButton=UI.CreateButton(page.controls,nil,"Reset",82,26);page.exportButton=UI.CreateButton(page.controls,nil,"Export",82,26)
         page.monitorButton=UI.CreateButton(page.controls,nil,"Live Monitor",126,26)
         page.refreshButton=UI.CreateButton(page.controls,nil,"Refresh tables",126,26)
         page.memoryButton=UI.CreateButton(page.controls,nil,"Refresh memory",142,26)
         page.memoryModeButton=UI.CreateButton(page.controls,nil,"Memory: OFF",116,26)
         page.callbackViewButton=UI.CreateButton(page.controls,nil,"View: Time",120,26)
-        page.loginButton=UI.CreateButton(page.controls,nil,"Analyze next login",166,26)
-        page.tabFlow={page.mosTab,page.allTab};page.actions={page.enableButton,page.startButton,page.stopButton,page.resetButton,page.exportButton,page.monitorButton,page.refreshButton,page.loginButton,page.memoryModeButton,page.callbackViewButton,page.memoryButton};page.flow={}
-        for _,flow in ipairs({page.tabFlow,page.actions}) do for _,button in ipairs(flow) do button.mosFlowWidth=button:GetWidth();UI.StyleActionButton(button) end end
+        page.loginButton=UI.CreateButton(page.tabs,nil,"Analyze Login",140,26)
+        page.tabFlow={page.mosTab,page.allTab,page.loginButton};page.visibleTabs={};page.actions={page.startButton,page.resetButton,page.exportButton,page.monitorButton,page.refreshButton,page.memoryModeButton,page.callbackViewButton,page.memoryButton};page.flow={}
+        for _,flow in ipairs({page.tabFlow,page.actions,{page.enableButton}}) do for _,button in ipairs(flow) do button.mosFlowWidth=button:GetWidth();UI.StyleActionButton(button) end end
         page.status=UI.CreateLabel(page.header,nil,"OVERLAY","GameFontHighlightSmall");page.status:SetJustifyH("LEFT");if page.status.SetWordWrap then page.status:SetWordWrap(true) end
         page.sectionToggles={}
         page.mosTab:SetScript("OnClick",function() module:SelectTab("MOS") end);page.allTab:SetScript("OnClick",function() module:SelectTab("All Addons") end)
-        page.enableButton:SetScript("OnClick",function() module.provider.Enable(not module.provider.GetState().enabled);module.notice=nil;module:Refresh() end)
-        page.startButton:SetScript("OnClick",function() module:Start() end);page.stopButton:SetScript("OnClick",function() module:Stop() end)
+        page.enableButton:SetScript("OnClick",function() module:ToggleAddon() end)
+        page.startButton:SetScript("OnClick",function() if module.provider.GetState().recording then module:Stop() else module:Start() end end)
         page.resetButton:SetScript("OnClick",function() module:Reset() end);page.exportButton:SetScript("OnClick",function() module:Export() end)
         page.monitorButton:SetScript("OnClick",function() module:ToggleMonitor() end)
         page.refreshButton:SetScript("OnClick",function() module:RefreshTables() end)
@@ -812,32 +848,51 @@ function Performance.Create(parent)
         page.callbackViewButton:SetScript("OnClick",function() module:ToggleCallbackView() end)
         page.loginButton:SetScript("OnClick",function() module:ToggleLoginCapture() end)
         UI.AttachTooltip(page.exportButton,"Export session","Stop first. Saves one report; reload or logout writes it to disk.")
-        UI.AttachTooltip(page.enableButton,"Enable / Disable","Enable allows capture; Start records. Disable stops it. Reload leaves capture off.")
-        UI.AttachTooltip(page.startButton,"Start recording","MOS: selected operations. All Addons: frame callbacks too. More hooks mean more profiler overhead.")
+        UI.AttachTooltip(page.enableButton,"Enable / Disable BootyProfiler","Changes whether the client loads BootyProfiler. Requires a UI reload; disabling stops its measurements first.")
+        UI.AttachTooltip(page.startButton,"Start / Stop recording","Start records selected MOS operations; All Addons also records frame callbacks. Stop releases capture hooks and keeps results for inspection.")
         UI.AttachTooltip(page.refreshButton,"Refresh tables","Update displayed rows and ranking. While recording, row order stays fixed; counters keep updating. Histories update on refresh.")
         UI.AttachTooltip(page.memoryButton,"Native memory snapshot","Refresh the client's per-addon memory counters when available. Callback growth is measured separately.")
         UI.AttachTooltip(page.memoryModeButton,"Measure callback memory","Enable before Start in All Addons. Measures heap growth around callbacks, including profiling overhead; adds two reads per call.")
         UI.AttachTooltip(page.callbackViewButton,"Callback view","Switch family columns and ranking between time and memory growth. This does not change a running capture.")
-        UI.AttachTooltip(page.loginButton,"Analyze next login","Record loading and the first five seconds in the world on the next login or reload. One capture; normal profiling stays off.")
+        UI.AttachTooltip(page.loginButton,"Analyze Login","Prepare one loading capture and choose whether to reload now or later. It also observes the first five seconds in the world.")
+    end
+    local function LayoutTabs(width)
+        local available=math.max(1,width-16)
+        local required,count=0,0
+        for _,button in ipairs(page.tabFlow) do if button:IsShown() then
+            required=required+button.mosFlowWidth+8;count=count+1
+            if count<=table.getn(page.visibleTabs) then page.visibleTabs[count]=button else table.insert(page.visibleTabs,button) end
+        end end
+        for index=table.getn(page.visibleTabs),count+1,-1 do table.remove(page.visibleTabs,index) end
+        if required>0 then required=required-8 end
+        local inline=count==0 or required+page.enableButton.mosFlowWidth+8<=available
+        local bottom=UI.LayoutFlow(page.tabs,page.visibleTabs,8,8,math.max(1,inline and available-page.enableButton.mosFlowWidth-8 or available),8)
+        local actionTop=inline and 8 or bottom+8
+        page.enableButton:ClearAllPoints();page.enableButton:SetPoint("TOPRIGHT",page.tabs,"TOPRIGHT",-8,-actionTop)
+        page.enableButton:SetWidth(math.min(page.enableButton.mosFlowWidth,available));UI.FitButtonLabel(page.enableButton,math.max(1,page.enableButton:GetWidth()-16))
+        return math.max(bottom,actionTop+26)+8
     end
     local function MeasureHeader(width)
         page.header:SetWidth(width)
         page.title:ClearAllPoints();page.title:SetPoint("TOPLEFT",page.header,"TOPLEFT",8,-8);UI.FitButtonLabel(page.title,width-16)
-        if not module.provider then page.header:SetHeight(38);return 38 end
-        local tabHeight=UI.LayoutFlow(page.tabs,page.tabFlow,8,8,width-16,8)+8
+        if not page.tabs then page.header:SetHeight(38);return 38 end
+        local tabHeight=LayoutTabs(width)
         page.tabs:ClearAllPoints();page.tabs:SetPoint("TOPLEFT",page.header,"TOPLEFT",0,-38);page.tabs:SetWidth(width);page.tabs:SetHeight(tabHeight)
+        if not module.provider then page.header:SetHeight(38+tabHeight);return 38+tabHeight end
         local controlHeight=UI.LayoutFlow(page.controls,page.flow,8,8,width-16,8)+8
         page.controls:ClearAllPoints();page.controls:SetPoint("TOPLEFT",page.header,"TOPLEFT",0,-38-tabHeight);page.controls:SetWidth(width);page.controls:SetHeight(controlHeight)
         local top=38+tabHeight+controlHeight+8
         page.status:ClearAllPoints();page.status:SetPoint("TOPLEFT",page.header,"TOPLEFT",8,-top);page.status:SetWidth(math.max(1,width-16));page.status:SetHeight(0)
-        top=top+math.max(32,UI.MeasureTextHeight(page.status,width-16))+8;page.header:SetHeight(top);return top
+        FontSize(page.status,11)
+        top=top+math.max(24,UI.MeasureTextHeight(page.status,width-16))+8;page.header:SetHeight(top);return top
     end
     local function MeasurePage(width)
         local top=8
         if not module.headerPinned then top=MeasureHeader(width)+8 end
         if not module.provider then
-            page.message:ClearAllPoints();page.message:SetPoint("TOPLEFT",page.canvas,"TOPLEFT",8,-top);page.message:SetWidth(math.max(1,width-16));page.message:SetHeight(0)
-            return top+8+UI.MeasureTextHeight(page.message,width-16)
+            page.message:ClearAllPoints();page.message:SetPoint("CENTER",page.bodyHost,"CENTER",0,0);page.message:SetWidth(math.max(1,width-32));FontSize(page.message,12)
+            page.message:SetHeight(UI.MeasureTextHeight(page.message,math.max(1,width-32)))
+            return 0
         end
         return MeasureItems(math.max(1,width-16),top)
     end
@@ -846,7 +901,7 @@ function Performance.Create(parent)
         width,height=math.max(80,width-3),math.max(80,height-4.5)
         page:SetWidth(width);page:SetHeight(height)
         local headerHeight=MeasureHeader(width)
-        self.headerPinned=self.provider~=nil and height>=headerHeight+120
+        self.headerPinned=self.provider==nil or height>=headerHeight+120
         local headerParent=self.headerPinned and page or page.canvas
         if page.header:GetParent()~=headerParent then page.header:SetParent(headerParent) end
         page.header:ClearAllPoints();page.header:SetPoint("TOPLEFT",headerParent,"TOPLEFT",0,0)
@@ -857,7 +912,10 @@ function Performance.Create(parent)
         UI.LayoutResponsiveCanvas(page.canvas,MeasurePage,self,width,height)
     end
     function module:Refresh()
-        if not self.provider then return end
+        if not self.provider then
+            if page:IsVisible() then self:EnsureUI();self:UpdateAddonControl();self:UpdateAvailabilityMessage();self:Layout() end
+            return
+        end
         local state=self.provider.GetState()
         if self.monitor and self.monitor:IsVisible() then
             local session=state.session
@@ -881,8 +939,7 @@ function Performance.Create(parent)
         local previousCount=table.getn(page.flow)
         for _,button in ipairs(page.actions) do
             local show=true
-            if button==page.loginButton then show=login~=nil
-            elseif button==page.memoryModeButton or button==page.callbackViewButton then show=self.tab=="All Addons"
+            if button==page.memoryModeButton or button==page.callbackViewButton then show=self.tab=="All Addons"
             elseif button==page.memoryButton then show=self.tab=="All Addons" and memorySupported~=false end
             if show then
                 actionCount=actionCount+1
@@ -891,19 +948,22 @@ function Performance.Create(parent)
             else button:Hide() end
         end
         for index=table.getn(page.flow),actionCount+1,-1 do table.remove(page.flow,index) end
-        page.enableButton:SetText(state.enabled and "Disable" or "Enable")
-        UI.SetButtonEnabled(page.startButton,state.enabled and not state.recording);UI.SetButtonEnabled(page.stopButton,state.recording)
+        self:UpdateAddonControl()
+        page.startButton:SetText(state.recording and "Stop" or "Start")
+        local pendingDisable=self.addonStatus and self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false
+        UI.SetButtonEnabled(page.startButton,not pendingDisable)
         UI.SetButtonEnabled(page.resetButton,state.session~=nil);UI.SetButtonEnabled(page.exportButton,state.session~=nil and not state.recording)
         UI.SetButtonEnabled(page.refreshButton,state.session~=nil or login and login.GetReport()~=nil)
-        UI.SetButtonEnabled(page.memoryButton,state.enabled and self.tab=="All Addons" and memorySupported~=false)
+        UI.SetButtonEnabled(page.memoryButton,not pendingDisable and self.tab=="All Addons" and memorySupported~=false)
         page.memoryModeButton:SetText(self.measureMemory and "Memory: ON" or "Memory: OFF")
         page.callbackViewButton:SetText(self.callbackView=="memory" and "View: Memory" or "View: Time")
         UI.SetButtonEnabled(page.memoryModeButton,not state.recording)
         UI.SetButtonEnabled(page.callbackViewButton,self.measureMemory or state.session and state.session.callbackMemoryRequested)
-        if login then page.loginButton:SetText(login.IsArmed() and "Login capture armed" or "Analyze next login");UI.SetButtonEnabled(page.loginButton,not login.IsRecording()) end
+        if login then page.loginButton:Show();UI.SetButtonEnabled(page.loginButton,not pendingDisable and not login.IsRecording() and self.addonStatus and self.addonStatus.canReload)
+        else page.loginButton:Hide() end
         if UI.SetClassicButtonSelected then UI.SetClassicButtonSelected(page.mosTab,self.tab=="MOS");UI.SetClassicButtonSelected(page.allTab,self.tab=="All Addons") end
         UI.SetProjectButtonOutline(page.mosTab,self.tab=="MOS");UI.SetProjectButtonOutline(page.allTab,self.tab=="All Addons")
-        page.status:SetText((state.recording and "Recording" or state.enabled and "Ready / stopped" or "Disabled") .. (state.session and " | "..Elapsed(state.session.elapsed) or "") .. (state.error and "\n" .. state.error or self.notice and "\n" .. self.notice or ""))
+        page.status:SetText((pendingDisable and "Disabled after next reload" or state.recording and "Recording" or "Ready") .. (state.session and " | "..Elapsed(state.session.elapsed) or "") .. (login and login.IsArmed() and " | Login analysis ready for next reload" or "") .. (state.error and "\n" .. state.error or self.notice and "\n" .. self.notice or ""))
         if state.recording then page.status:SetTextColor(unpack(UI.Theme.colors.goldText)) else page.status:SetTextColor(1,1,1) end
         self:Layout()
     end
@@ -933,25 +993,74 @@ function Performance.Create(parent)
         self:RefreshTables()
     end
     function module:ToggleLoginCapture()
-        local capture=self.provider.LoginMemory
+        local capture=self.provider and self.provider.LoginMemory
         if not capture then return end
-        local ok,message=capture.Arm(not capture.IsArmed())
+        if not self.addonStatus or not self.addonStatus.canReload then return end
+        if self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false then return end
+        local ok,message=capture.Arm(true)
         self.notice=ok and nil or message
         self.sectionState[self.tab..":loginMemory"]=true
         self:Refresh()
+        if not ok then return end
+        if not self.loginDialog then
+            self.loginDialog=UI.Window.CreateProjectConfirmation(nil,"Analyze Login","Reload now")
+            self.loginDialog:SetWidth(400);self.loginDialog.no:SetText("Later")
+            self.loginDialog.yes:SetWidth(110);self.loginDialog.no:ClearAllPoints();self.loginDialog.no:SetPoint("BOTTOMRIGHT",self.loginDialog,"BOTTOMRIGHT",-126,8)
+        end
+        self.loginDialog:Open("Records addon loading and memory changes on the next UI reload or login, then five seconds in the world. Reload now?",function()
+            local reloaded,failure=MOS.Core.ProfilerBridge.ReloadUI()
+            if not reloaded then module.notice="UI reload failed: "..tostring(failure);module:Refresh() end
+        end)
+    end
+    function module:UpdateAddonControl()
+        local status=self.addonStatus or {}
+        page.enableButton:SetText(status.reloadRequired and "Reload UI" or status.loaded and "Disable" or "Enable")
+        UI.SetButtonEnabled(page.enableButton,status.reloadRequired and status.canReload or status.loaded and status.canDisable or not status.loaded and status.canEnable or false)
+    end
+    function module:UpdateAvailabilityMessage()
+        local availability=self.addonStatus or {}
+        local message=availability.reloadRequired and "BootyProfiler is enabled. Click Reload UI to load it."
+            or availability.state=="absent" and "BootyProfiler is not installed. Install it beside MuklaOfficerSuite, then restart the game."
+            or availability.installed and not availability.loaded and "BootyProfiler is not loaded. Click Enable to load it. This will reload the UI."
+            or self.providerFailure or "BootyProfiler is unavailable."
+        page.message:SetText(message..(self.notice and "\n"..self.notice or ""));page.message:Show()
+    end
+    function module:ToggleAddon()
+        local status=self.addonStatus
+        if status and status.reloadRequired then
+            local ok,failure=MOS.Core.ProfilerBridge.ReloadUI()
+            if not ok then self.notice="UI reload failed: "..tostring(failure);self:Refresh() end
+            return
+        end
+        if not status or not (status.loaded and status.canDisable or not status.loaded and status.canEnable) then return end
+        local enable=not status.loaded
+        if not self.addonDialog then self.addonDialog=UI.Window.CreateProjectConfirmation(nil,"BootyProfiler","Reload now");self.addonDialog:SetWidth(400) end
+        self.addonDialog.title:SetText(enable and "Enable BootyProfiler" or "Disable BootyProfiler")
+        self.addonDialog:Open(enable and "Enable BootyProfiler and reload the UI to load it?" or "Stop measurements and disable BootyProfiler, then reload the UI? Export any recording you want to keep first.",function()
+            local bridge=MOS.Core.ProfilerBridge
+            local changed,failure=bridge.SetAddonEnabled(enable)
+            module.addonStatus=bridge.GetAddonStatus()
+            if not changed then module.notice="BootyProfiler change failed: "..tostring(failure);module:Refresh();return end
+            local reloaded,reason=bridge.ReloadUI()
+            if not reloaded then module.notice="UI reload failed: "..tostring(reason);module:Refresh() end
+        end)
     end
     function module:SetLoginPage(direction) self.loginPage=math.max(1,self.loginPage+direction);self:Refresh() end
     function module:ReleasePresentation()
+        if self.loginDialog then self.loginDialog:Hide() end
+        if self.addonDialog then self.addonDialog:Hide() end
         self:CancelFamilyJob();self.familyModel=nil
         self.snapshots={};self.snapshotSession=nil;self.snapshotRecording=nil
         self.loginReport=nil
-        for _,entries in ipairs({self.sessionEntries,self.callbackEntries,self.callbackDetails,self.memoryEntries,self.historyEntries or emptyEntries}) do
+        for _,entries in ipairs({self.sessionEntries,self.callbackEntries,self.callbackDetails,self.memoryEntries,self.historyEntries or emptyEntries,self.otherFrameGaps or emptyEntries}) do
             for index=table.getn(entries),1,-1 do table.remove(entries,index) end
         end
         for _,item in ipairs(self.items) do item.operation=nil end
     end
     function module:Start()
         if not self.provider then return false end
+        if self.addonStatus and self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false then return false end
+        if not self.provider.GetState().enabled then self.provider.Enable(true) end
         local ok,message=self.provider.Start({callbacks=self.tab=="All Addons",memory=self.measureMemory})
         if ok then self.familyPages={};self.familyPage=1;self.expandedFamily=nil end
         self.notice=message;self:Refresh();return ok
@@ -964,6 +1073,8 @@ function Performance.Create(parent)
         self:Refresh();return result
     end
     function module:RefreshAddons()
+        if self.addonStatus and self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false then return false end
+        if not self.provider.GetState().enabled then self.provider.Enable(true) end
         local ok,message=self.provider.ReadAddonMemory()
         self.addonEntries=self.provider.GetState().addonEntries
         self.notice=ok and "Native addon memory refreshed." or message
@@ -994,17 +1105,20 @@ function Performance.Create(parent)
             if self.provider.LoginMemory then self.provider.LoginMemory.SetListener(nil) end
         end
         self.provider=provider
+        self.providerFailure=failure
+        self.addonStatus=bridge and bridge.GetAddonStatus(true) or nil
+        self:EnsureUI();page.tabs:Show();self:UpdateAddonControl()
         if provider then
-            self:EnsureUI();page.message:Hide();page.tabs:Show();page.controls:Show();page.status:Show()
+            page.message:Hide();page.mosTab:Show();page.allTab:Show();page.controls:Show();page.status:Show()
         else
-            page.message:SetText(failure);page.message:Show()
-            if page.controls then page.tabs:Hide();page.controls:Hide();page.status:Hide() end
+            self:UpdateAvailabilityMessage()
+            page.mosTab:Hide();page.allTab:Hide();page.loginButton:Hide();page.controls:Hide();page.status:Hide()
             self.itemCount=0;for _,row in ipairs(self.rows) do row:Hide() end
         end
         self.showRefreshPerformed=false;page:Show();Subscribe()
         if provider then if not self.showRefreshPerformed then self:Refresh() end else self:Layout() end
     end
-    function module:Hide() self:ReleasePresentation();page:Hide();Subscribe() end
+    function module:Hide() self:ReleasePresentation();if self.loginDialog then self.loginDialog:Hide() end;if self.addonDialog then self.addonDialog:Hide() end;page:Hide();Subscribe() end
     function module:OnResize() if page:IsVisible() then self:Layout() end end
     page:SetScript("OnShow",function() Subscribe();if module.provider then module.showRefreshPerformed=true;module:Refresh() end end)
     page:SetScript("OnHide",function() module:ReleasePresentation();Subscribe() end)
