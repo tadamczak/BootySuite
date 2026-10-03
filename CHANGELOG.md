@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.118 - 2026-10-03
+
+- Add opt-in callback heap growth, net change and peak measurements with source-addon and frame-family memory views.
+- Add a one-shot next-login memory report with loading stages and five seconds after entering the world.
+- Preserve login settings and reports when exporting regular captures; reject invalid native memory readings.
+
 ## 0.5.0-dev.117 - 2026-10-03
 
 - Restore the complete Performance layout after minimizing the main window.
