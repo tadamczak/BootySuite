@@ -132,14 +132,14 @@ Restore keeps recent loot sources and roll rounds. Active awards and unfinished 
 ### Performance
 
 - **Optional BootyProfiler -** Without this addon, Performance shows installation instructions. With it enabled in the client, Performance contains **MOS** and **All Addons** tabs.
-- **Enable / Start -** Enable the profiler module, then press Start. Opening Performance or Live Monitor does not start measurement.
+- **Enable / Start -** Enable the module, then Start from MOS for the lighter selected-operation capture, or from All Addons to also intercept frame callbacks. Opening Performance or Live Monitor does not start measurement. Changing tabs does not change a recording already in progress.
 - **MOS -** Review selected MOS operations, call counts, total/average/maximum times and recent slow calls.
 - **Reading results -** Compact summaries highlight the main values. Tables label every column and keep field names in narrow windows. Recent calls and samples show newest first; expand Technical details for API and measurement limits. Hover summary values for short explanations. Recording controls stay visible while scrolling when the window has enough height.
-- **All Addons -** Review global Lua memory and sampled FPS/network latency. Refresh memory explicitly requests native addon memory statistics when supported. Other addons' callback profiling is planned for package 2.
-- **Stop / Disable -** Stop retains the report. Disable ends recording. An explicitly started session can continue while the main window is hidden; reload never resumes it automatically.
+- **All Addons -** Review intercepted OnEvent/OnUpdate costs by source addon, top frame/script callbacks and recent slow calls, alongside global Lua memory and sampled FPS/network latency. Discovery is gradual; unknown sources and partial coverage are explicit. Refresh memory requests native addon memory statistics when supported.
+- **Stop / Disable -** Stop retains the report. Disable ends recording and removes owned callback hooks. An explicitly started session can continue while the main window is hidden; reload never resumes it automatically.
 - **Live Monitor / Export -** Open a movable summary. After Stop, Export stores one bounded report in BootyProfiler SavedVariables; reload or logout writes it to disk.
 
-Measured heap change is the change in the global Lua heap during observed calls; it does not measure total allocations or memory owned by MOS. Only selected entry points are measured. FPS samples are not individual frame timings or proof of the cause of a drop. Clock resolution and profiling overhead need verification on your client.
+Measured heap change refers to the global Lua heap, not total allocations or owned memory. MOS measures selected entry points; All Addons measures intercepted frame callbacks. Source-addon labels identify implementation sources, including shared libraries; unknown sources remain unattributed. Self time excludes timed nested callbacks, while inclusive times overlap. FPS samples do not prove the cause of a drop. Clock quality and interception overhead need verification on your client.
 
 Statistics, CSR and Performance adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, choosing or clearing a calendar date refreshes the results immediately.
 

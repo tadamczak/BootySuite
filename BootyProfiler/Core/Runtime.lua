@@ -3,6 +3,11 @@ local Runtime = { driver = nil, elapsed = 0 }
 P.Runtime = Runtime
 
 local function Tick()
+    local state = P.GetState()
+    if state.recording and state.session.callbacksRequested and P.Callbacks then
+        local scanned, failure = pcall(P.Callbacks.Step, tonumber(arg1) or 0)
+        if not scanned then P.Fail(failure); return end
+    end
     Runtime.elapsed = Runtime.elapsed + (tonumber(arg1) or 0)
     if Runtime.elapsed >= 1 then
         Runtime.elapsed = 0

@@ -73,7 +73,7 @@ function P.Sample()
     Notify()
 end
 
-function P.Start()
+function P.Start(options)
     if not state.enabled then return false, "Enable BootyProfiler first." end
     if state.recording then return false, "A recording is already running." end
     local source, now = sources.MOS, Now()
@@ -85,10 +85,13 @@ function P.Start()
         pcall(source.stop, handle)
         state.error = "Profiling source returned an invalid handle."; Notify(); return false, state.error
     end
+    local callbacksRequested = type(options) == "table" and options.callbacks and true or false
     local session = { startedAt = now, elapsed = 0, history = { count = 0, total = 0 }, samples = { count = 0, total = 0 },
         slowThreshold = 0.005, source = source, handle = handle, operations = handle.operations,
         clock = "GetTime", clockResolution = "not verified in this client", coverage = "Selected MOS entry points; nested calls counted once.",
-        allAddonsCoverage = "Global Lua heap and sampled FPS/latency only. All-addon callback profiling is not included in package 1." }
+        callbacksRequested = callbacksRequested,
+        allAddonsCoverage = callbacksRequested and "Intercepted frame OnEvent/OnUpdate callbacks, global Lua heap and sampled FPS/latency. This is not total addon CPU or causal FPS attribution."
+            or "Global Lua heap and sampled FPS/latency. Start from All Addons to also intercept frame callbacks." }
     state.session, state.recording, state.error, state.listenerError = session, true, nil, nil
     if source.capabilities then
         local captured, capabilities = pcall(source.capabilities)
@@ -98,16 +101,33 @@ function P.Start()
     local sampled, sampleError = pcall(P.Sample)
     if not sampled then P.Stop(); state.error = tostring(sampleError); Notify(); return false, state.error end
     if not state.recording then return false, state.error end
-    P.Runtime.SetRunning(true)
+    if callbacksRequested and P.Callbacks then
+        local activated, callbackError = pcall(P.Callbacks.Start, session)
+        if not activated then P.Stop(); state.error = tostring(callbackError); Notify(); return false, state.error end
+    elseif callbacksRequested then
+        session.allAddonsCoverage = "Frame callback profiling is unavailable in this BootyProfiler version. Global Lua heap and sampled FPS/latency only."
+    end
+    local running, runtimeError = pcall(P.Runtime.SetRunning, true)
+    if not running then P.Stop(); state.error = tostring(runtimeError); Notify(); return false, state.error end
+    Notify()
     return true
 end
 
 function P.Stop()
     if not state.recording then return false end
-    P.Runtime.SetRunning(false)
     local session = state.session
-    local ok, failure = pcall(session.source.stop, session.handle)
+    -- One cleanup failure must not prevent the other measurement sources from
+    -- releasing their wrappers/scopes. Freeze the capture before teardown.
     state.recording = false
+    local runtimeStopped, runtimeError = pcall(P.Runtime.SetRunning, false)
+    local callbacksStopped, callbackError = true, nil
+    if session.callbacksRequested and P.Callbacks then
+        callbacksStopped, callbackError = pcall(P.Callbacks.Stop, session)
+        if callbacksStopped and callbackError == false then
+            callbacksStopped, callbackError = false, "Some callback wrappers could not be restored; retained wrappers are disabled."
+        end
+    end
+    local ok, failure = pcall(session.source.stop, session.handle)
     session.elapsed = math.max(session.elapsed, (Now() or session.startedAt) - session.startedAt)
     if type(gcinfo) == "function" then
         local measured, heap = pcall(gcinfo)
@@ -115,8 +135,10 @@ function P.Stop()
     end
     session.stopped = true
     if not ok then state.error = tostring(failure) end
+    if not callbacksStopped then state.error = tostring(callbackError) end
+    if not runtimeStopped then state.error = tostring(runtimeError) end
     Notify()
-    return ok
+    return ok and callbacksStopped and runtimeStopped
 end
 
 function P.Fail(message)
@@ -131,8 +153,9 @@ end
 
 function P.Reset()
     local restart = state.recording
+    local callbacks = state.session and state.session.callbacksRequested
     P.Stop(); state.session, state.error = nil, nil
-    if restart then return P.Start() end
+    if restart then return P.Start({ callbacks = callbacks }) end
     Notify(); return true
 end
 
@@ -149,6 +172,7 @@ local function CopyFields(value)
 end
 local function CompareTime(left, right) return left.time > right.time end
 local function CompareMemory(left,right) return left.memory > right.memory end
+local function CompareSelfTime(left,right) return left.selfTime > right.selfTime end
 
 function P.ReadAddonMemory()
     if not state.enabled then return false,"Enable BootyProfiler first." end
@@ -182,6 +206,7 @@ function P.Export()
     if not session then return nil, "No recording to export." end
     local result = { schema = 1, profilerVersion = P.version, elapsed = session.elapsed, clock = session.clock,
         clockResolution = session.clockResolution, coverage = session.coverage, allAddonsCoverage = session.allAddonsCoverage,
+        callbacksRequested = session.callbacksRequested,
         startHeap = session.startHeap, endHeap = session.heap, minFps = session.minFps, maxFps = session.maxFps,
         slowThreshold = session.slowThreshold, history = {}, samples = {}, operations = {} }
     local name, operation, index
@@ -193,6 +218,28 @@ function P.Export()
     for index = 1, session.history.count do table.insert(result.history, CopyFields(P.HistoryEntry(session.history, index))) end
     for index = 1, session.samples.count do table.insert(result.samples, CopyFields(P.HistoryEntry(session.samples, index))) end
     if session.capabilities then result.capabilities = CopyFields(session.capabilities) end
+    if session.callbacks then
+        local callbacks = session.callbacks
+        result.callbacks = CopyFields(callbacks)
+        result.callbacks.addons, result.callbacks.operations, result.callbacks.history = {}, {}, {}
+        for index = 1, math.min(256, table.getn(callbacks.addons or {})) do
+            table.insert(result.callbacks.addons, CopyFields(callbacks.addons[index]))
+        end
+        table.sort(result.callbacks.addons, CompareSelfTime)
+        -- Export is explicit and stopped. Select the actual highest-cost
+        -- callbacks across the bounded capture, rather than its first entries.
+        local ordered = {}
+        for index = 1, table.getn(callbacks.operations or {}) do table.insert(ordered, callbacks.operations[index]) end
+        table.sort(ordered, CompareSelfTime)
+        for index = 1, math.min(OPERATION_LIMIT, table.getn(ordered)) do
+            table.insert(result.callbacks.operations, CopyFields(ordered[index]))
+        end
+        result.callbacks.operationsTruncated = table.getn(ordered) > OPERATION_LIMIT
+        local history = callbacks.history
+        if history then
+            for index = 1, history.count do table.insert(result.callbacks.history, CopyFields(P.HistoryEntry(history,index))) end
+        end
+    end
     if state.addonEntries then
         result.addonMemory={}
         for index=1,table.getn(state.addonEntries) do table.insert(result.addonMemory,CopyFields(state.addonEntries[index])) end

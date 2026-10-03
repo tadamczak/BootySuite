@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.114 - 2026-10-03
+
+- Add explicit All Addons callback profiling with source-addon and frame/script rankings, slow-call history and bounded gradual discovery.
+- Restore profiler-owned callbacks on Stop/Disable, preserve third-party replacements and export detached, bounded reports.
+- Keep Start in MOS lightweight; report unknown sources, partial coverage and clock limitations explicitly.
+
 ## 0.5.0-dev.113 - 2026-10-03
 
 - Detect raid-session departures from actual group/instance context instead of the session name; confirm exits briefly and suppress repeated prompts after Continue Session.
