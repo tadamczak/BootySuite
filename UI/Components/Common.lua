@@ -797,7 +797,7 @@ function UI.FitButtonLabel(button, available)
     label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH(button.mosLabelJustify or (button.label and "CENTER" or "LEFT"))
     if button.mosActionIcon then
         local textWidth=math.min(math.max(1,available),math.max(1,label:GetStringWidth()))
-        local start=math.max(8,(button:GetWidth()-(button.mosActionTrailing or 0)-18-textWidth)/2)
+        local start=button.mosActionAlign=="LEFT" and 8 or math.max(8,(button:GetWidth()-(button.mosActionTrailing or 0)-18-textWidth)/2)
         button.mosActionIcon:ClearAllPoints();button.mosActionIcon:SetPoint("LEFT",button,"LEFT",start,0)
         label:ClearAllPoints();label:SetPoint("LEFT",button,"LEFT",start+18,0);label:SetWidth(textWidth);label:SetJustifyH("LEFT");label:SetJustifyV("MIDDLE")
     end
@@ -828,6 +828,14 @@ function UI.LayoutAspectImage(image,parent,width,height)
     local resolvedWidth=math.min(math.max(1,width),math.max(1,height)*image.mosImageAspect)
     image:ClearAllPoints();image:SetPoint("CENTER",parent,"CENTER",0,0)
     image:SetWidth(resolvedWidth);image:SetHeight(resolvedWidth/image.mosImageAspect)
+end
+
+function UI.CreatePerformanceBackground(parent,alpha)
+    return UI.CreateAspectImage(parent,"Interface\\AddOns\\MuklaOfficerSuite\\Textures\\PerformanceBackground",1024/572,alpha or 0.28,0.55859375)
+end
+
+function UI.LayoutPerformanceBackground(image,parent,width,height)
+    UI.LayoutAspectImage(image,parent,math.max(1,width-12),math.max(1,height-12))
 end
 
 function UI.ApplyGoldRadialHighlight(texture)

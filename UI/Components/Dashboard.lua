@@ -81,12 +81,32 @@ function Dashboard.PlaceWindowControls(view, inContent)
     controls:Show()
 end
 
+function Dashboard.ApplyMinimizedChrome(view)
+    local frame = view.frame
+    Dashboard.SetTabBody(view, false); Dashboard.SetBottomTabSeam(view, false)
+    frame:SetBackdrop(frame.mosWindowBackdrop)
+    frame:SetBackdropColor(0, 0, 0, 1); frame:SetBackdropBorderColor(0.68, 0.54, 0.27, 1)
+    -- One project outline owns the compact shell. Keep the inner header plain
+    -- and center its controls; expanded TOPRIGHT anchors leave unequal margins.
+    MOS.UI.Components.SetSurfaceTransparent(view.titleBar, true)
+    view.titleBar:ClearAllPoints()
+    view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -5)
+    view.titleBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 5)
+    view.titleBar:SetHeight(30); view.titleBar:Show()
+    view.windowControls:ClearAllPoints()
+    view.windowControls:SetPoint("RIGHT", view.titleBar, "RIGHT", -5, 0); view.windowControls:Show()
+    view.title:ClearAllPoints(); view.title:SetPoint("LEFT", view.titleBar, "LEFT", 5, 0)
+    view.title:SetWidth(156); view.title:SetHeight(18); view.title:SetJustifyH("LEFT"); view.title:SetFontObject(GameFontNormal)
+    view.title:SetText("Mukla Officer Suite"); view.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
+    view.classicTitle:Hide(); view.classicLogo:Hide(); view.classicTitleLeft:Hide(); view.classicTitleRight:Hide(); view.title:Show()
+    view.sidebar:Hide(); view.contentPanel:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
+    if frame.mosStatusBar then frame.mosStatusBar:Hide() end
+    if view.lootBorder then view.lootBorder:Hide() end
+end
+
 function Dashboard.ApplyChrome(view, get)
     if view.minimized then
-        Dashboard.SetTabBody(view, false); Dashboard.SetBottomTabSeam(view, false)
-        view.frame:SetBackdrop(nil)
-        MOS.UI.Components.SetSurfaceTransparent(view.titleBar, true)
-        view.sidebar:Hide(); view.contentPanel:Hide()
+        Dashboard.ApplyMinimizedChrome(view)
         return
     end
     local classic = MOS.UI.Components.IsClassicSkin()
@@ -468,20 +488,13 @@ function Dashboard.BindWindow(view, options)
             Dashboard.SetTabBody(view, false)
             view.titleBar:Show(); Dashboard.PlaceWindowControls(view, false)
             view.minimized = true; frame.mosMinimized = true
-            MOS.UI.Components.SetSurfaceTransparent(view.titleBar, true)
-            frame:SetBackdrop(nil)
-            if view.lootBorder then view.lootBorder:Hide() end
-            Dashboard.SetBottomTabSeam(view, false)
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end
             frame:SetMinResize(250, 40); frame:SetMaxResize(250, 40); frame:SetWidth(250); frame:SetHeight(40)
             frame:ClearAllPoints()
             frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.minimizedLeft or view.leftBeforeMinimize or 0, view.minimizedBottom or ((view.bottomBeforeMinimize or 0) + view.heightBeforeMinimize - 40))
-            view.titleBar:ClearAllPoints(); view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -5); view.titleBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 5)
-            view.title:ClearAllPoints(); view.title:SetPoint("LEFT", view.titleBar, "LEFT", 9, 1); view.title:SetWidth(156); view.title:SetHeight(18); view.title:SetJustifyH("LEFT"); view.title:SetFontObject(GameFontNormal)
-            view.title:SetText("Mukla Officer Suite"); view.title:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
             MOS.UI.Components.SetWindowButtonAction(view.minimizeButton, "maximize")
-            view.classicTitle:Hide(); view.classicLogo:Hide(); view.classicTitleLeft:Hide(); view.classicTitleRight:Hide(); view.title:Show()
+            Dashboard.ApplyMinimizedChrome(view)
         end
     end
     view.minimizeButton:SetScript("OnClick", view.ToggleMinimize)
