@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.113 - 2026-10-03
+
+- Detect raid-session departures from actual group/instance context instead of the session name; confirm exits briefly and suppress repeated prompts after Continue Session.
+
 ## 0.5.0-dev.112 - 2026-10-03
 
 - Replace Performance text reports with compact summaries, labeled tables and collapsible technical details.

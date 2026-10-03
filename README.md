@@ -196,7 +196,7 @@ Repeated update checks retain a known newer version until your installed version
 4. Start the raid session and confirm that the current roster is visible.
 5. If the session already exists, select it under **Saved raids** and choose **Load** instead.
 
-Leaving the instance does not automatically discard the session. Choose **Continue Session** to keep working or **End & Save** to finish it. Closing that prompt with the X ends the session without saving.
+Leaving the raid group or an observed raid instance does not automatically discard the session. After a short confirmation, choose **Continue Session** to keep working or **End & Save** to finish it. Continuing suppresses repeated prompts while travelling outside that context; returning rearms the next departure. Closing that prompt with the X ends the session without saving.
 
 ### 2. Import and validate Soft Reserves
 
