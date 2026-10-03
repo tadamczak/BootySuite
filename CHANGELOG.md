@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.120 - 2026-10-03
+
+- Enable or disable the installed BootyProfiler addon from Performance with a UI reload; combine Start/Stop and add Analyze Login beside the tabs.
+- Compact reports, clarify login time and memory windows, and show whole-session FPS and latency minimum, maximum and average.
+- Hide unused memory reports, move pagination above column headings and group memory details without duplicating recorded heap-drop gaps.
+
 ## 0.5.0-dev.119 - 2026-10-03
 
 - Start BootyProfiler earlier through soft LoadWith triggers, preserving its normal loading fallback and saved settings.
