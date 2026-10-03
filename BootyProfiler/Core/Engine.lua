@@ -222,6 +222,10 @@ function P.Export()
         local callbacks = session.callbacks
         result.callbacks = CopyFields(callbacks)
         result.callbacks.addons, result.callbacks.operations, result.callbacks.history = {}, {}, {}
+        result.callbacks.sourceExamples = {}
+        for index = 1, math.min(8, table.getn(callbacks.sourceExamples or {})) do
+            table.insert(result.callbacks.sourceExamples, CopyFields(callbacks.sourceExamples[index]))
+        end
         for index = 1, math.min(256, table.getn(callbacks.addons or {})) do
             table.insert(result.callbacks.addons, CopyFields(callbacks.addons[index]))
         end

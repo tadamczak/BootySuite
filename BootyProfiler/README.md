@@ -16,7 +16,9 @@ In Performance, choose **Enable**, select **MOS** or **All Addons**, then **Star
 - **Export:** after Stop, keep one bounded report in BootyProfiler SavedVariables. Reload or logout writes the report to disk.
 - **Refresh memory:** in All Addons, explicitly request native addon memory statistics when supported; up to 256 entries. It never starts a recording.
 
-Discovery is incremental; wait for its status to finish before interpreting coverage. Unknown sources stay unattributed; use **Top intercepted callbacks** to identify their frame/script work. Source-addon labels identify the implementation source, including shared libraries, rather than exclusive responsibility for all callees. Without source-introspection support, Lua 5.0 cannot identify closures with captured variables, so most addon labels can remain Unknown. Technical details show the observed reasons.
+Expand a report accordion to inspect its table. **Frame callbacks** is the main All Addons ranking. During recording, counters update live while displayed rows stay in place. **Refresh tables** updates row selection/order; **Stop** shows final rankings. Technical details groups timing, coverage, source identification and client support.
+
+Discovery is incremental; wait for its status to finish before interpreting coverage. XML callback labels omit their addon file and some functions expose no source, so owners can remain Unknown. Frame names or observed parent/reference context identify their work without proving an addon owner. Source-addon labels identify the implementation source, including shared libraries, rather than exclusive responsibility for all callees. This client may expose only shared Lua memory; that cannot replace missing memory counters for individual addons.
 
 If the client refuses to restore a callback when stopping, BootyProfiler disables its retained wrapper and requires reload before another callback capture. MOS/global recording remains available.
 

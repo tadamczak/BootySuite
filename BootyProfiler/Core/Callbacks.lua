@@ -8,10 +8,12 @@ P.Callbacks = C
 local FRAME_LIMIT, WRAPPER_LIMIT, ADDON_LIMIT, OPERATION_LIMIT = 4096, 4096, 256, 4096
 local SCAN_BUDGET, STACK_LIMIT, HISTORY_LIMIT, RESCAN_INTERVAL = 24, 64, 64, 5
 local SCAN_SECONDS, SCAN_LIMIT = 0.0005, 20000
+local PARENT_DEPTH_LIMIT, PARENT_FIELD_LIMIT = 8, 32
 local scripts = { "OnEvent", "OnUpdate" }
 local active, restorationBlocked
 C.limits = { frames = FRAME_LIMIT, wrappers = WRAPPER_LIMIT, addons = ADDON_LIMIT,
-    operations = OPERATION_LIMIT, perStep = SCAN_BUDGET, depth = STACK_LIMIT, history = HISTORY_LIMIT }
+    operations = OPERATION_LIMIT, perStep = SCAN_BUDGET, depth = STACK_LIMIT, history = HISTORY_LIMIT,
+    parentDepth = PARENT_DEPTH_LIMIT, parentFields = PARENT_FIELD_LIMIT }
 
 local function Finite(value)
     return type(value) == "number" and value == value and value < 1e300 and value > -1e300
@@ -33,6 +35,75 @@ end
 local function ReadScript(frame, script) return frame:GetScript(script) end
 local function WriteScript(frame, script, callback) frame:SetScript(script, callback) end
 local function ReadName(frame) return frame:GetName() end
+local function ReadParent(frame)
+    local getter = frame.GetParent
+    if type(getter) == "function" then return getter(frame) end
+end
+local function ReadFrameType(frame)
+    local getter = frame.GetFrameType
+    if type(getter) == "function" then return getter(frame) end
+end
+local function DisplayName(value)
+    return type(value) == "string" and value ~= "" and string.len(value) <= 256
+end
+local function ChildAlias(parent, child)
+    if type(parent) ~= "table" then return nil end
+    local key, value, index
+    for index = 1, PARENT_FIELD_LIMIT do
+        local ok
+        ok, key, value = pcall(next, parent, key)
+        if not ok or key == nil then return nil end
+        if value == child then
+            if type(key) == "string" and string.len(key) <= 64 and string.find(key, "^[%a_][%w_]*$") then
+                return "." .. key
+            elseif type(key) == "number" and key >= 0 and key <= 1000000 and math.floor(key) == key then
+                return "[" .. tostring(key) .. "]"
+            end
+        end
+    end
+end
+
+-- Parent/field context identifies a frame, never the owner of its callback.
+-- Resolve once during discovery; scratch references are cleared before return.
+local function DescribeFrame(run, frame, serial)
+    local named, name = pcall(ReadName, frame)
+    if named and DisplayName(name) then return name end
+    local typed, frameType = pcall(ReadFrameType, frame)
+    if not typed or not DisplayName(frameType) then frameType = "Frame" end
+    local leaf = frameType .. " #" .. serial
+    local seen, child, context, label, count = run.contextScratch, frame, nil, nil, 1
+    seen[1] = frame
+    local depth
+    for depth = 1, PARENT_DEPTH_LIMIT do
+        local read, parent = pcall(ReadParent, child)
+        if not read or (type(parent) ~= "table" and type(parent) ~= "userdata") then break end
+        local index, duplicate
+        for index = 1, count do if seen[index] == parent then duplicate = true; break end end
+        if duplicate then break end
+        count = count + 1; seen[count] = parent
+        local parentNamed, parentName = pcall(ReadName, parent)
+        if parentNamed and DisplayName(parentName) then
+            local alias = ChildAlias(parent, child)
+            context = parentName .. (alias or "")
+            label = alias and child == frame and context or (context .. " > " .. leaf)
+            break
+        end
+        child = parent
+    end
+    local index
+    for index = 1, count do seen[index] = nil end
+    return label or leaf, context
+end
+
+local function SourceExample(run, category, source)
+    if run.sourceSampleSeen[category] then return end
+    local samples = run.metrics.sourceExamples
+    if table.getn(samples) >= 8 then return end
+    run.sourceSampleSeen[category] = true
+    local text = type(source) == "string" and string.sub(source, 1, 160) or nil
+    if text then text = string.gsub(text, "[%c%s]+", " ") end
+    table.insert(samples, { category = category, source = text })
+end
 
 local function SourceOwner(run, callback)
     local cached = run.functionSources[callback]
@@ -60,7 +131,15 @@ local function SourceOwner(run, callback)
     if type(source) ~= "string" or string.len(source) > 1024 then source = nil end
     if source then source = string.gsub(source, "\\", "/") end
     if not source or string.sub(source, 1, 1) ~= "@" then
-        if source then run.metrics.sourceNonFile = run.metrics.sourceNonFile + 1 end
+        if source then
+            run.metrics.sourceNonFile = run.metrics.sourceNonFile + 1
+            -- Native XML compilation keeps frame:script, not the XML filename.
+            -- This identifies a script label, never the addon that defined it.
+            if not string.find(source, "[\r\n]") and (string.find(source, "^.+:OnEvent$") or string.find(source, "^.+:OnUpdate$")) then
+                run.metrics.sourceFrameScripts = run.metrics.sourceFrameScripts + 1
+                SourceExample(run, "frame-script", source)
+            else SourceExample(run, "code-chunk", source) end
+        else SourceExample(run, reason or "no-metadata") end
         run.functionSources[callback] = { owner = owner, source = source }
         return owner, source
     end
@@ -73,7 +152,10 @@ local function SourceOwner(run, callback)
             if string.lower(folder) == "bootyprofiler" then owner = nil
             else
                 owner = run.inventoryMap[string.lower(folder)] or "Unknown owner"
-                if owner == "Unknown owner" then run.metrics.sourceUnmatchedFolder = run.metrics.sourceUnmatchedFolder + 1 end
+                if owner == "Unknown owner" then
+                    run.metrics.sourceUnmatchedFolder = run.metrics.sourceUnmatchedFolder + 1
+                    SourceExample(run, "folder-unmatched", source)
+                end
             end
         end
     end
@@ -121,6 +203,7 @@ local function PushSlow(run, record, elapsed, own, callbackEvent, failed)
     buffer.total = buffer.total + 1
     buffer.count = math.min(buffer.total, HISTORY_LIMIT)
     entry.name, entry.owner, entry.script = record.name, record.owner, record.script
+    entry.frameLabel, entry.frameContext = record.frameLabel, record.frameContext
     entry.elapsed, entry.selfTime, entry.event, entry.failed = elapsed, own, callbackEvent, failed and true or false
     -- Session timestamps use GetTime; callback durations may use a finer clock.
     local timed, now = false, nil
@@ -221,11 +304,13 @@ local function Attach(run, frameRecord, script, callback)
     if not owner then run.metrics.skippedKnown = run.metrics.skippedKnown + 1; return end
     if table.getn(run.records) >= WRAPPER_LIMIT then run.metrics.truncated = true; return end
     local record = { frame = frameRecord.frame, script = script, original = callback, owner = owner,
-        name = frameRecord.name .. " / " .. script, source = source, run = run, enabled = true }
+        name = frameRecord.name .. " / " .. script, source = source, run = run, enabled = true,
+        frameLabel = frameRecord.name, frameContext = frameRecord.frameContext }
     record.addon = AddonMetric(run, owner)
     if table.getn(run.metrics.operations) < OPERATION_LIMIT then
         local operation = NewMetric(record.name)
         operation.owner, operation.script, operation.source = owner, script, source
+        operation.frameLabel, operation.frameContext = record.frameLabel, record.frameContext
         table.insert(run.metrics.operations, operation)
         record.operation = operation
     else run.metrics.operationsTruncated = true end
@@ -264,11 +349,10 @@ local function InspectFrame(run, frame)
             return true
         end
         if run.metrics.discovered >= FRAME_LIMIT then run.metrics.truncated = true; return end
-        local named, name = pcall(ReadName, frame)
         run.metrics.discovered = run.metrics.discovered + 1
         run.frameSerial = run.frameSerial + 1
-        if not named or type(name) ~= "string" or name == "" then name = "Unnamed frame " .. run.frameSerial end
-        entry = { frame = frame, name = name }
+        local name, context = DescribeFrame(run, frame, run.frameSerial)
+        entry = { frame = frame, name = name, frameContext = context }
         run.frameMap[frame] = entry
     end
     local index, recordsBefore = nil, table.getn(run.records)
@@ -317,7 +401,8 @@ function C.Start(session)
         restoreFailures = 0, timingFailures = 0, metricFailures = 0, zeroDurations = 0, depthSkipped = 0, sourceFailures = 0,
         everHooked = 0, everUnknownHooked = 0, replacements = 0, skippedKnown = 0, clockReadFailures = 0,
         sourceDebug = 0, sourceDump = 0, sourceUnavailable = 0, inventoryReadFailures = 0,
-        sourceDumpRejected = 0, sourceUnsupportedDump = 0, sourceApiUnavailable = 0, sourceNonFile = 0, sourceUnmatchedFolder = 0,
+        sourceDumpRejected = 0, sourceUnsupportedDump = 0, sourceApiUnavailable = 0, sourceNonFile = 0, sourceFrameScripts = 0, sourceUnmatchedFolder = 0,
+        sourceExamples = {},
         scans = 0, scanned = 0, inertSkipped = 0, discoveryTime = 0,
         coverage = "Intercepted OnEvent and OnUpdate frame scripts only; not total addon CPU. Self time subtracts nested intercepted callbacks; unknown source owners are not guessed." }
     session.callbacks = metrics
@@ -344,9 +429,9 @@ function C.Start(session)
     metrics.clockResolution = "Not verified in this client; zero and invalid durations are reported"
     local run = { session = session, metrics = metrics, clock = clock, clockScale = scale, active = true,
         enumerate = EnumerateFrames, frameMap = {}, records = {}, wrapperMap = {}, addonMap = {}, stack = {}, depth = 0,
-        functionSources = {}, sourceCount = 0, sourceBudget = 0, inventoryMap = {}, inventoryNext = 1,
+        functionSources = {}, sourceCount = 0, sourceBudget = 0, sourceSampleSeen = {}, inventoryMap = {}, inventoryNext = 1,
         getinfo = type(debug) == "table" and type(debug.getinfo) == "function" and debug.getinfo or nil,
-        cursor = nil, scanning = true, cycleCount = 0, wait = 0, frameSerial = 0 }
+        cursor = nil, scanning = true, cycleCount = 0, wait = 0, frameSerial = 0, contextScratch = {} }
     local inventoried, count = false, nil
     if type(GetNumAddOns) == "function" and type(GetAddOnInfo) == "function" then inventoried, count = pcall(GetNumAddOns) end
     if inventoried and Finite(count) and count >= 0 then
@@ -432,7 +517,8 @@ function C.Stop(session)
     run.metrics.wasPendingAtStop, run.metrics.activeHookedAtStop, run.metrics.unknownAtStop = run.metrics.pending, run.metrics.hooked, run.metrics.unknown
     local index
     for index = 1, table.getn(run.records) do ReleaseRecord(run, run.records[index], true) end
-    run.cursor, run.pendingFrame, run.frameMap, run.records, run.wrapperMap, run.addonMap, run.functionSources, run.inventoryMap = nil, nil, nil, nil, nil, nil, nil, nil
+    run.cursor, run.pendingFrame, run.frameMap, run.records, run.wrapperMap, run.addonMap, run.functionSources, run.inventoryMap, run.sourceSampleSeen = nil, nil, nil, nil, nil, nil, nil, nil, nil
+    run.contextScratch = nil
     run.metrics.pending = false
     if run.metrics.restoreFailures > 0 then run.metrics.status = "Stopped; restoration failures: " .. run.metrics.restoreFailures
     elseif run.metrics.wasPendingAtStop then run.metrics.status = "Stopped during discovery; callback wrappers removed"
