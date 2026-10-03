@@ -40,6 +40,7 @@ local function CompareHeapRise(a,b)
     return (a.heapRise or 0)>(b.heapRise or 0)
 end
 local rowColor = {1,1,1}
+local healthColors={{0.72,0.72,0.72},{0.45,0.85,0.45},{1,0.78,0.25},{1,0.35,0.25}}
 local emptyEntries = {}
 local FAMILY_PAGE_SIZE=50
 local tables = {
@@ -75,9 +76,9 @@ local columnHints={
     ["Lua heap"]="Lua memory shared by the UI and addons. This excludes total game process memory.",
     Latency="Network response delay in milliseconds; it is separate from rendering speed.",
     Memory="Last manual native memory measurement attributed by the client to this addon.",
-    ["Heap growth"]="Sum of positive shared Lua heap changes during measured calls. Use this to find growing callbacks; nested calls can overlap.",
-    ["Net heap delta"]="Signed shared Lua memory change. Negative values include collection; this is not memory owned by the addon.",
-    ["Peak growth"]="Largest observed positive heap change in one call. This is not retained memory.",
+    ["Heap growth"]="Sum of positive shared Lua changes in supported callbacks. * means some calls were not measured. Not owned RAM; nested calls can overlap.",
+    ["Net heap delta"]="Signed shared Lua change. * means partial coverage; negative values include cleanup. Not addon-owned memory.",
+    ["Peak growth"]="Largest positive shared Lua change in one measured call. * means partial coverage; not retained memory.",
     ["Net decrease"]="Net Lua memory fall between samples. GC can contribute; this is not a confirmed collection event.",
     Window="Elapsed time between the two valid memory readings.",
     ["Frame pause in window"]="Longest observed interval between frames in this memory-decreasing window. It includes all causes and is not the duration of GC.",
@@ -127,7 +128,7 @@ local sections = {
     heapDrops={title="Heap drop windows",nested=true,hint="Memory-decreasing windows and the slow frames observed in each. This does not prove GC caused a stall."},
     frameGaps={title="Other slow frame gaps",nested=true,hint="Frames of at least 50 ms outside the retained heap-drop windows. Includes game and profiler work; does not identify the cause."},
 }
-local liveValues={"calls","count","time","selfTime","timedCalls","peak","failures","memory","maxTime","maxMemory","heapSamples","heapRise","heapDelta","heapPeak"}
+local liveValues={"calls","count","time","selfTime","timedCalls","peak","failures","memory","maxTime","maxMemory","heapSamples","heapRise","heapDelta","heapPeak","heapUnsupportedCalls"}
 local function ShortSource(value)
     value=string.gsub(tostring(value or ""),"[%c]"," ")
     if string.len(value)>160 then value=string.sub(value,1,157).."..." end
@@ -170,7 +171,10 @@ function Performance.Create(parent)
         if not item then item = {}; table.insert(module.items, item) end
         item.kind, item.text, item.operation, item.value, item.hint = kind, text, data, value, hint
     end
-    local function AddMetric(name, value, hint) AddItem("metric",name,nil,tostring(value),hint) end
+    local function AddMetric(name, value, hint, severity)
+        AddItem("metric",name,nil,tostring(value),hint)
+        module.items[module.itemCount].severity=severity
+    end
     local function AddTable(name) AddItem("tableHeader",tables[name].first,tables[name]) end
     local function AddDiagnostic(name,value,hint) AddItem("diagnostic",name,nil,tostring(value or "Unavailable"),hint) end
 
@@ -348,7 +352,10 @@ function Performance.Create(parent)
         end
         for index=table.getn(entries),count+1,-1 do table.remove(entries,index) end
         if rankSources then table.sort(entries,CompareCallbackTime) end
-        if AddSection("callbackDetails",table.getn(callbacks.operations or emptyEntries)) then self:BuildFrameFamilies(callbacks,live) end
+        if AddSection("callbackDetails",table.getn(callbacks.operations or emptyEntries)) then
+            if callbacks.operationsTruncated then AddItem("message","Frame list limit reached; callback totals still include later calls.") end
+            self:BuildFrameFamilies(callbacks,live)
+        end
         AddRows("callbacks","callback",entries,session,hints.source.."\n"..hints.callbacks,"No identified addon sources yet.",false,table.getn(callbacks.addons or emptyEntries))
         if callbacks.history then
             AddRows("callbackSlow","callbackSlow",self:HistoryRows(callbacks.history,64),session,hints.slow,"No callbacks reached the slow threshold.",true)
@@ -363,9 +370,8 @@ function Performance.Create(parent)
     function module:BuildMemoryItems(session)
         local gc,gaps=session.gc or {},session.frameGaps or {}
         if AddSection("memoryGC") then
-            AddMetric("Shared Lua memory",Memory(session.heap),columnHints["Lua heap"])
+            AddMetric("Memory / GC",Memory(session.heap).." / "..Memory(session.gcThreshold),"Current shared Lua memory / current collection threshold. Includes addons and UI; not total game RAM.")
             AddMetric("Change since Start",session.heap and session.startHeap and SignedMemory(session.heap-session.startHeap) or "Unavailable","Current shared Lua memory minus the first sample. A negative value includes memory reclaimed between samples.")
-            AddMetric("GC threshold",Memory(session.gcThreshold),"Lua's reported collection threshold. This is not the amount reclaimed or a per-addon memory limit.")
             AddMetric("Observed heap drops",gc.heapDropCount or 0,"Memory samples with a net decrease. This can miss or combine collections; it is not an exact GC counter.")
             AddMetric("Last heap drop",gc.lastHeapDrop and Memory(gc.lastHeapDrop) or "-","Net decrease during the last observed window. Open Heap drop windows to compare frame pauses in that window.")
             AddMetric("Longest frame pause",gaps.maximum and Duration(gaps.maximum) or "-","Largest observed interval between frames, from any cause. This is not the time spent in garbage collection.")
@@ -406,6 +412,7 @@ function Performance.Create(parent)
         local available=activity and table.getn(callbacks.addons or emptyEntries) or table.getn(native)
         if not AddSection("memory",available) then return end
         if activity then
+            if (callbacks.heapUnsupportedCalls or 0)>0 then AddItem("message","Memory coverage is partial. * marks totals with unmeasured calls.") end
             local entries=self.memoryEntries
             local frozen=state.recording and self.snapshots[self.tab..":memoryActivity"]
             if not frozen then
@@ -497,6 +504,10 @@ function Performance.Create(parent)
                 AddDiagnostic(session.stopped and "Hooks at Stop" or "Active hooks",callbacks.activeHookedAtStop or callbacks.hooked or 0,"Only intercepted callbacks contribute to the ranking.")
                 AddDiagnostic("Unknown-source hooks",callbacks.unknownAtStop or callbacks.unknown or 0,hints.source)
                 AddDiagnostic("Callbacks wrapped",callbacks.everHooked or 0,"Cumulative wrapped callbacks; replacements can increase this count.")
+                if callbacks.fastCalls~=nil then
+                    AddDiagnostic("Optimized / compatibility calls",tostring(callbacks.fastCalls).." / "..tostring(callbacks.genericCalls or 0),"Optimized calls avoid temporary argument tables. Compatibility calls preserve uncertain arguments and results, with allocation overhead.")
+                    AddDiagnostic("Unmeasured memory calls",callbacks.heapUnsupportedCalls or 0,"Compatibility calls and their enclosing heap windows are excluded because temporary argument tables would contaminate memory readings.")
+                end
                 local discovery=callbacks.available==false and "Unavailable" or callbacks.pending and not session.stopped and "In progress" or callbacks.truncated and "Limit reached" or callbacks.firstScanComplete and "Initial scan complete" or session.stopped and "Stopped before first scan" or "Incomplete"
                 AddDiagnostic("Discovery",discovery,"Discovery runs gradually. Work before interception is not measured; coverage remains partial.")
                 AddDiagnostic("Completed sweeps",callbacks.scans or 0,"Later sweeps discover new or replaced scripts.")
@@ -559,6 +570,11 @@ function Performance.Create(parent)
             for index=table.getn(self.callbackEntries),1,-1 do table.remove(self.callbackEntries,index) end
             for index=table.getn(self.callbackDetails),1,-1 do table.remove(self.callbackDetails,index) end
         end
+        local compatible=session and (self.tab=="MOS" or session.callbacksRequested)
+        local health=compatible and session.health
+        local healthHint=health and health.reason or "Start this profile to check FPS, latency and memory."
+        if health and session.stopped then healthHint="Recorded result. "..healthHint end
+        AddMetric("Health check",health and health.status or compatible and "Checking" or "No capture",healthHint,health and health.severity or 0)
         if not session then
             for index=table.getn(self.sessionEntries),1,-1 do table.remove(self.sessionEntries,index) end
             for index=table.getn(self.historyEntries or emptyEntries),1,-1 do table.remove(self.historyEntries,index) end
@@ -692,8 +708,11 @@ function Performance.Create(parent)
         elseif item.kind=="memoryActivity" or schema==tables.callbackMemory then
             local data=item.operation
             local measured=(data.heapSamples or 0)>0
-            SetValue(row,1,data.calls or 0);SetValue(row,2,measured and Memory(data.heapRise) or "-")
-            SetValue(row,3,measured and SignedMemory(data.heapDelta) or "-");SetValue(row,4,measured and Memory(data.heapPeak) or "-")
+            local partial=(data.heapUnsupportedCalls or 0)>0
+            local suffix=partial and " *" or ""
+            local unavailable=partial and "Not measured" or "-"
+            SetValue(row,1,data.calls or 0);SetValue(row,2,measured and Memory(data.heapRise)..suffix or unavailable)
+            SetValue(row,3,measured and SignedMemory(data.heapDelta)..suffix or unavailable);SetValue(row,4,measured and Memory(data.heapPeak)..suffix or unavailable)
             if schema==tables.callbackMemory then SetValue(row,5,data.failures or 0) end
         elseif item.kind=="callback" or item.kind=="callbackDetail" or item.kind=="family" then
             local data=item.operation
@@ -771,7 +790,9 @@ function Performance.Create(parent)
                     row.label:SetTextColor(unpack(UI.Theme.colors.goldText));row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,-8);row.label:SetWidth(math.max(1,cardWidth-16))
                     local labelHeight=UI.MeasureTextHeight(row.label,cardWidth-16)
                     row.detail:ClearAllPoints();row.detail:SetPoint("TOPLEFT",row,"TOPLEFT",8,-labelHeight-12);row.detail:SetWidth(math.max(1,cardWidth-16))
-                    row.detail.mosFitFontSize=FontSize(row.detail,15);row.detail:SetText(item.value);row.detail:SetTextColor(1,1,1);row.detail:Show()
+                    row.detail.mosFitFontSize=FontSize(row.detail,15);row.detail:SetText(item.value)
+                    if item.severity~=nil then row.detail:SetTextColor(unpack(healthColors[item.severity+1] or healthColors[1])) else row.detail:SetTextColor(1,1,1) end
+                    row.detail:Show()
                     UI.FitButtonLabel(row.detail,math.max(1,cardWidth-16));row.detail:SetHeight(18);row.detail:SetJustifyV("MIDDLE")
                     height=math.max(height,labelHeight+18+16)
                     UI.SetRowColor(row,rowColor,0.045);row.mosFlowWidth=cardWidth;row:Show()

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.122 - 2026-10-03
+
+- Compact Live Monitor with shorter labels and current memory / GC threshold in one row.
+- Add Health Check to Live Monitor and profile summaries for FPS, latency, memory pressure and cleanup-related pauses.
+- Reduce callback profiling allocations and disclose memory coverage instead of assigning profiler-created garbage to addons.
+
 ## 0.5.0-dev.121 - 2026-10-03
 
 - Choose Profile MOS or Profile All from Advanced Profiler; keep Live Monitor and Analyze Login available beside it, with an illustrated initial view.

@@ -80,6 +80,7 @@ function P.ObserveFrame(elapsed)
         session.gcWindowInvalidFrames = session.gcWindowInvalidFrames + 1
         return 0
     end
+    if session.health and P.Health then P.Health.ObserveFrame(session.health, elapsed) end
     gaps.count, gaps.elapsed, gaps.latest = gaps.count + 1, gaps.elapsed + elapsed, elapsed
     if elapsed > gaps.maximum then gaps.maximum = elapsed end
     if elapsed > gaps.windowMax then gaps.windowMax = elapsed end
@@ -138,7 +139,10 @@ function P.Sample()
     local session = state.recording and state.session
     if not session then return end
     local now = Now()
-    if not now then state.error = "Client clock is unavailable."; P.Stop(); return end
+    if not now then
+        if session.health and P.Health then P.Health.Sample(session.health, nil, nil, nil, nil, nil) end
+        state.error = "Client clock is unavailable."; P.Stop(); return
+    end
     session.elapsed = math.max(0, now - session.startedAt)
     local entry = Push(session.samples, SAMPLE_LIMIT)
     -- A reused slot must never retain an old API reading or a previous drop.
@@ -170,6 +174,9 @@ function P.Sample()
             session.latencySamples = session.latencySamples + 1
             session.averageLatency = session.averageLatency and session.averageLatency + (latency - session.averageLatency) / session.latencySamples or latency
         end
+    end
+    if session.health and P.Health then
+        P.Health.Sample(session.health, entry.at, entry.fps, entry.latency, entry.heap, entry.gcThreshold)
     end
     Notify()
 end
@@ -205,6 +212,7 @@ function P.Start(options)
         allAddonsCoverage = callbacksRequested and "Intercepted frame OnEvent/OnUpdate callbacks, global Lua heap and sampled FPS/latency. This is not total addon CPU or causal FPS attribution."
             or "Global Lua heap and sampled FPS/latency. Start from All Addons to also intercept frame callbacks." }
     state.session, state.recording, state.error, state.listenerError = session, true, nil, nil
+    if P.Health then session.health = P.Health.New() end
     if source.capabilities then
         local captured, capabilities = pcall(source.capabilities)
         if not captured then P.Stop(); state.error = tostring(capabilities); Notify(); return false, state.error end
@@ -246,6 +254,7 @@ function P.Stop()
     session.gcPreviousHeap, session.gcPreviousAt = nil, nil
     session.gcWindowMaxFrameGap, session.gcWindowSlowFrames, session.gcWindowInvalidFrames = nil, nil, nil
     session.stopped = true
+    if session.health then session.health.stopped = true end
     if not ok then state.error = tostring(failure) end
     if not callbacksStopped then state.error = tostring(callbackError) end
     if not runtimeStopped then state.error = tostring(runtimeError) end
@@ -336,6 +345,11 @@ function P.Export()
         gcThreshold = session.gcThreshold,
         slowThreshold = session.slowThreshold, history = {}, samples = {}, operations = {} }
     local name, operation, index
+    if session.health then
+        -- Persist the diagnostic result, not the policy's rolling counters.
+        result.health = { code = session.health.code, status = session.health.status,
+            reason = session.health.reason, severity = session.health.severity, ready = session.health.ready }
+    end
     for name, operation in pairs(session.operations) do
         if table.getn(result.operations) < OPERATION_LIMIT then local copy = CopyFields(operation); copy.name = name; table.insert(result.operations, copy)
         else result.operationsTruncated = true end
@@ -373,9 +387,13 @@ function P.Export()
         for index = 1, math.min(OPERATION_LIMIT, table.getn(ordered)) do
             table.insert(result.callbacks.operations, CopyFields(ordered[index]))
         end
-        result.callbacks.operationsTruncated = table.getn(ordered) > OPERATION_LIMIT
+        result.callbacks.captureOperationsTruncated = callbacks.operationsTruncated == true
+        result.callbacks.exportOperationsTruncated = table.getn(ordered) > OPERATION_LIMIT
+        result.callbacks.operationsTruncated = result.callbacks.captureOperationsTruncated or result.callbacks.exportOperationsTruncated
         local history = callbacks.history
         if history then
+            result.callbacks.slowCalls = history.total
+            result.callbacks.slowCallsRetained = history.count
             for index = 1, history.count do table.insert(result.callbacks.history, CopyFields(P.HistoryEntry(history,index))) end
         end
     end

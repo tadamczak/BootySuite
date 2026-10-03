@@ -3,6 +3,8 @@ local P = BootyProfiler
 local Monitor = {}
 P.LiveMonitor = Monitor
 local state = { visible = false, samples = 0 }
+local health = P.Health and P.Health.New() or nil
+state.health = health
 local driver, listener, previousHeap, previousAt = nil, nil, nil, nil
 local elapsed, generation = 0, 0
 
@@ -31,7 +33,7 @@ end
 
 local function Sample(token)
     if not Current(token) then return end
-    local now, heap, threshold, fps = nil, nil, nil, nil
+    local now, heap, threshold, fps, latency = nil, nil, nil, nil, nil
     if type(GetTime) == "function" then
         local ok, value = pcall(GetTime)
         if not Current(token) then return end
@@ -48,14 +50,21 @@ local function Sample(token)
         if not Current(token) then return end
         if ok and Nonnegative(value) and value > 0 then fps = value end
     end
+    if type(GetNetStats) == "function" then
+        local ok, incoming, outgoing, value = pcall(GetNetStats)
+        if not Current(token) then return end
+        if ok and Nonnegative(value) then latency = value end
+    end
     if not Current(token) then return end
     state.samples = state.samples + 1
-    state.at, state.fps, state.heap, state.gcThreshold = now, fps, heap, threshold
+    state.at, state.fps, state.heap, state.gcThreshold, state.latency = now, fps, heap, threshold, latency
     state.clockAvailable, state.heapAvailable, state.fpsAvailable = now ~= nil, heap ~= nil, fps ~= nil
     state.thresholdAvailable = threshold ~= nil
+    state.latencyAvailable = latency ~= nil
     if not now then state.clockFailures = state.clockFailures + 1 end
     if not heap then state.heapFailures = state.heapFailures + 1 end
     if not fps then state.fpsFailures = state.fpsFailures + 1 end
+    if not latency then state.latencyFailures = state.latencyFailures + 1 end
     if heap and (not state.maxHeap or heap > state.maxHeap) then state.maxHeap = heap end
     if threshold and (not state.maxGcThreshold or threshold > state.maxGcThreshold) then state.maxGcThreshold = threshold end
 
@@ -78,6 +87,7 @@ local function Sample(token)
     else
         previousHeap, previousAt = nil, nil
     end
+    if health then P.Health.Sample(health, now, fps, latency, heap, threshold) end
     Notify(token)
 end
 
@@ -85,6 +95,7 @@ local function Tick()
     if not state.visible then return end
     local delta = tonumber(arg1)
     if not Nonnegative(delta) or elapsed + delta > 1e300 then return end
+    if health then P.Health.ObserveFrame(health, delta) end
     elapsed = elapsed + delta
     if elapsed >= 1 then
         elapsed = 0
@@ -122,11 +133,13 @@ function Monitor.SetVisible(visible)
     generation = generation + 1
     local token = generation
     state.visible, state.samples, elapsed = true, 0, 0
-    state.at, state.fps, state.heap, state.gcThreshold = nil, nil, nil, nil
+    state.at, state.fps, state.heap, state.gcThreshold, state.latency = nil, nil, nil, nil, nil
     state.maxHeap, state.maxGcThreshold, state.rate = nil, nil, nil
     state.lastCleanup, state.lastCleanupAt, state.lastCleanupAge = nil, nil, nil
     state.clockAvailable, state.heapAvailable, state.fpsAvailable, state.thresholdAvailable = false, false, false, false
     state.clockFailures, state.heapFailures, state.fpsFailures, state.listenerFailures = 0, 0, 0, 0
+    state.latencyAvailable, state.latencyFailures = false, 0
+    if health then P.Health.Reset(health) end
     previousHeap, previousAt = nil, nil
     if not driver then
         if type(CreateFrame) ~= "function" then

@@ -38,7 +38,7 @@ function F.FamilyName(operation)
 end
 
 local function NewTotals() return { calls = 0, time = 0, selfTime = 0, peak = 0, failures = 0, timedCalls = 0,
-    heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0 } end
+    heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0, heapUnsupportedCalls = 0 } end
 local familyMeta = { __index = function(family, key) return family.totals[family.model.published][key] end }
 local function Budget(value, maximum)
     value = tonumber(value) or BUILD_BUDGET
@@ -109,6 +109,7 @@ function F.UpdateStep(model, budget)
                 local totals = model.families[state.cursor].totals[state.write]
                 totals.calls, totals.time, totals.selfTime, totals.peak, totals.failures, totals.timedCalls = 0, 0, 0, 0, 0, 0
                 totals.heapSamples, totals.heapDelta, totals.heapRise, totals.heapPeak = 0, 0, 0, 0
+                totals.heapUnsupportedCalls = 0
                 budget = budget - 1
             end
         elseif state.cursor >= model.total then
@@ -131,6 +132,7 @@ function F.UpdateStep(model, budget)
                 totals.heapDelta = totals.heapDelta + SignedNumber(operation.heapDelta)
                 totals.heapRise = totals.heapRise + Number(operation.heapRise)
                 totals.heapPeak = math.max(totals.heapPeak, Number(operation.heapPeak))
+                totals.heapUnsupportedCalls = totals.heapUnsupportedCalls + Number(operation.heapUnsupportedCalls)
                 model.sortTimes[operation] = Number(operation[model.sortKey])
             end
             budget = budget - 1
