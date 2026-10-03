@@ -1034,8 +1034,10 @@ function UI.CreateResponsiveCanvas(host, name)
     return canvas
 end
 
-function UI.LayoutResponsiveCanvas(canvas, measure, context)
-    local width, height = UI.GetFrameSpan(canvas.layoutHost)
+function UI.LayoutResponsiveCanvas(canvas, measure, context, resolvedWidth, resolvedHeight)
+    local width, height
+    if resolvedWidth and resolvedHeight then width,height=resolvedWidth,resolvedHeight
+    else width,height=UI.GetFrameSpan(canvas.layoutHost) end
     canvas.layoutHeight = height
     local function Measure(available)
         canvas:SetWidth(available)

@@ -134,6 +134,7 @@ Restore keeps recent loot sources and roll rounds. Active awards and unfinished 
 - **Optional BootyProfiler -** Without this addon, Performance shows installation instructions. With it enabled in the client, Performance contains **MOS** and **All Addons** tabs.
 - **Enable / Start -** Enable the profiler module, then press Start. Opening Performance or Live Monitor does not start measurement.
 - **MOS -** Review selected MOS operations, call counts, total/average/maximum times and recent slow calls.
+- **Reading results -** Compact summaries highlight the main values. Tables label every column and keep field names in narrow windows. Recent calls and samples show newest first; expand Technical details for API and measurement limits. Hover summary values for short explanations. Recording controls stay visible while scrolling when the window has enough height.
 - **All Addons -** Review global Lua memory and sampled FPS/network latency. Refresh memory explicitly requests native addon memory statistics when supported. Other addons' callback profiling is planned for package 2.
 - **Stop / Disable -** Stop retains the report. Disable ends recording. An explicitly started session can continue while the main window is hidden; reload never resumes it automatically.
 - **Live Monitor / Export -** Open a movable summary. After Stop, Export stores one bounded report in BootyProfiler SavedVariables; reload or logout writes it to disk.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-dev.112 - 2026-10-03
+
+- Replace Performance text reports with compact summaries, labeled tables and collapsible technical details.
+- Keep recording controls visible while scrolling when space permits; use labeled stacked rows in narrow windows.
+
 ## 0.5.0-dev.111 - 2026-10-03
 
 - Fix opaque white row backgrounds in Performance, Guild Statistics and Raid Statistics by applying row opacity through SetAlpha.
