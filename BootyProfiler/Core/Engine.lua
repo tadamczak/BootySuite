@@ -155,6 +155,7 @@ function P.Start(options)
         state.error = "Profiling source returned an invalid handle."; Notify(); return false, state.error
     end
     local callbacksRequested = type(options) == "table" and options.callbacks and true or false
+    local callbackMemoryRequested = callbacksRequested and options.memory and true or false
     local session = { startedAt = now, elapsed = 0, history = { count = 0, total = 0 }, samples = { count = 0, total = 0 },
         gc = { heapDropCount = 0, heapDropTotal = 0, readFailures = 0, history = { count = 0, total = 0 } },
         frameGaps = { count = 0, slowCount = 0, invalidCount = 0, maximum = 0, elapsed = 0, threshold = FRAME_GAP_THRESHOLD,
@@ -163,6 +164,7 @@ function P.Start(options)
         slowThreshold = 0.005, source = source, handle = handle, operations = handle.operations,
         clock = "GetTime", clockResolution = "not verified in this client", coverage = "Selected MOS entry points; nested calls counted once.",
         callbacksRequested = callbacksRequested,
+        callbackMemoryRequested = callbackMemoryRequested,
         allAddonsCoverage = callbacksRequested and "Intercepted frame OnEvent/OnUpdate callbacks, global Lua heap and sampled FPS/latency. This is not total addon CPU or causal FPS attribution."
             or "Global Lua heap and sampled FPS/latency. Start from All Addons to also intercept frame callbacks." }
     state.session, state.recording, state.error, state.listenerError = session, true, nil, nil
@@ -227,8 +229,9 @@ end
 function P.Reset()
     local restart = state.recording
     local callbacks = state.session and state.session.callbacksRequested
+    local memory = state.session and state.session.callbackMemoryRequested
     P.Stop(); state.session, state.error = nil, nil
-    if restart then return P.Start({ callbacks = callbacks }) end
+    if restart then return P.Start({ callbacks = callbacks, memory = memory }) end
     Notify(); return true
 end
 
@@ -246,22 +249,29 @@ end
 local function CompareTime(left, right) return left.time > right.time end
 local function CompareMemory(left,right) return left.memory > right.memory end
 local function CompareSelfTime(left,right) return left.selfTime > right.selfTime end
+local function CompareHeapRise(left,right)
+    if (left.heapRise or 0)==(right.heapRise or 0) then return left.name<right.name end
+    return (left.heapRise or 0)>(right.heapRise or 0)
+end
 
+function P.HasNativeAddonMemory()
+    return type(UpdateAddOnMemoryUsage)=="function" and type(GetAddOnMemoryUsage)=="function"
+        and type(GetNumAddOns)=="function" and type(GetAddOnInfo)=="function"
+end
 function P.ReadAddonMemory()
     if not state.enabled then return false,"Enable BootyProfiler first." end
-    if type(UpdateAddOnMemoryUsage)~="function" or type(GetAddOnMemoryUsage)~="function"
-        or type(GetNumAddOns)~="function" or type(GetAddOnInfo)~="function" then return false,"Native addon memory statistics are unavailable in this client." end
+    if not P.HasNativeAddonMemory() then return false,"Native addon memory statistics are unavailable in this client." end
     local ok,failure=pcall(UpdateAddOnMemoryUsage)
     if not ok then return false,tostring(failure) end
     local counted,number=pcall(GetNumAddOns)
-    if not counted or type(number)~="number" then return false,"Addon inventory is unavailable." end
+    if not counted or not FiniteNonnegative(number) then return false,"Addon inventory is unavailable." end
     local entries=state.addonEntries
     if not entries then entries={};state.addonEntries=entries end
     local count=0
     for index=1,math.min(256,math.max(0,math.floor(number))) do
         local measured,amount=pcall(GetAddOnMemoryUsage,index)
         local named,name,title=pcall(GetAddOnInfo,index)
-        if measured and named and type(amount)=="number" and amount>=0 then
+        if measured and named and FiniteNonnegative(amount) then
             count=count+1
             local entry=entries[count]
             if not entry then entry={};table.insert(entries,entry) end
@@ -280,6 +290,7 @@ function P.Export()
     local result = { schema = 1, profilerVersion = P.version, elapsed = session.elapsed, clock = session.clock,
         clockResolution = session.clockResolution, coverage = session.coverage, allAddonsCoverage = session.allAddonsCoverage,
         callbacksRequested = session.callbacksRequested,
+        callbackMemoryRequested = session.callbackMemoryRequested,
         startHeap = session.startHeap, endHeap = session.heap, minFps = session.minFps, maxFps = session.maxFps,
         gcThreshold = session.gcThreshold,
         slowThreshold = session.slowThreshold, history = {}, samples = {}, operations = {} }
@@ -311,12 +322,13 @@ function P.Export()
         for index = 1, math.min(256, table.getn(callbacks.addons or {})) do
             table.insert(result.callbacks.addons, CopyFields(callbacks.addons[index]))
         end
-        table.sort(result.callbacks.addons, CompareSelfTime)
+        local callbackOrder=session.callbackMemoryRequested and CompareHeapRise or CompareSelfTime
+        table.sort(result.callbacks.addons, callbackOrder)
         -- Export is explicit and stopped. Select the actual highest-cost
         -- callbacks across the bounded capture, rather than its first entries.
         local ordered = {}
         for index = 1, table.getn(callbacks.operations or {}) do table.insert(ordered, callbacks.operations[index]) end
-        table.sort(ordered, CompareSelfTime)
+        table.sort(ordered, callbackOrder)
         for index = 1, math.min(OPERATION_LIMIT, table.getn(ordered)) do
             table.insert(result.callbacks.operations, CopyFields(ordered[index]))
         end
@@ -331,6 +343,7 @@ function P.Export()
         for index=1,table.getn(state.addonEntries) do table.insert(result.addonMemory,CopyFields(state.addonEntries[index])) end
         result.addonMemoryTruncated=state.addonMemoryTruncated
     end
-    BootyProfilerDB = { schema = 1, lastSession = result }
+    if type(BootyProfilerDB)~="table" then BootyProfilerDB={} end
+    BootyProfilerDB.schema, BootyProfilerDB.lastSession = 1, result
     return result
 end

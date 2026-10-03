@@ -32,6 +32,17 @@ local function ReadClock(run)
     return nil
 end
 
+-- Optional shared-heap activity, not retained memory owned by this callback.
+-- gcinfo() deltas include nested work, collection and instrumentation overhead.
+local function ReadHeap(run)
+    if not run.active then return nil end
+    local ok, value = pcall(run.heap)
+    if not run.active then return nil end
+    if ok and Finite(value) and value >= 0 then return value end
+    run.metrics.heapReadFailures = run.metrics.heapReadFailures + 1
+    return nil
+end
+
 local function ReadScript(frame, script) return frame:GetScript(script) end
 local function WriteScript(frame, script, callback) frame:SetScript(script, callback) end
 local function ReadName(frame) return frame:GetName() end
@@ -165,7 +176,8 @@ local function SourceOwner(run, callback)
 end
 
 local function NewMetric(name)
-    return { name = name, calls = 0, timedCalls = 0, time = 0, selfTime = 0, peak = 0, failures = 0 }
+    return { name = name, calls = 0, timedCalls = 0, time = 0, selfTime = 0, peak = 0, failures = 0,
+        heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0, heapReadFailures = 0 }
 end
 
 local function AddonMetric(run, owner)
@@ -184,9 +196,21 @@ local function AddonMetric(run, owner)
     return metric
 end
 
-local function AddMetric(metric, elapsed, own, failed)
+local function AddHeap(metric, delta, failures)
+    if failures and failures > 0 then metric.heapReadFailures = metric.heapReadFailures + failures end
+    if delta == nil then return end
+    metric.heapSamples = metric.heapSamples + 1
+    metric.heapDelta = metric.heapDelta + delta
+    if delta > 0 then
+        metric.heapRise = metric.heapRise + delta
+        if delta > metric.heapPeak then metric.heapPeak = delta end
+    end
+end
+
+local function AddMetric(metric, elapsed, own, failed, heapDelta, heapFailures)
     metric.calls = metric.calls + 1
     if failed then metric.failures = metric.failures + 1 end
+    if heapDelta ~= nil or heapFailures > 0 then AddHeap(metric, heapDelta, heapFailures) end
     if not elapsed then return end
     metric.timedCalls = metric.timedCalls + 1
     metric.time = metric.time + elapsed
@@ -194,7 +218,7 @@ local function AddMetric(metric, elapsed, own, failed)
     if elapsed > metric.peak then metric.peak = elapsed end
 end
 
-local function PushSlow(run, record, elapsed, own, callbackEvent, failed)
+local function PushSlow(run, record, elapsed, own, callbackEvent, failed, heapDelta)
     if elapsed < run.session.slowThreshold then return end
     local buffer = run.metrics.history
     local index = math.mod(buffer.total, HISTORY_LIMIT) + 1
@@ -205,6 +229,7 @@ local function PushSlow(run, record, elapsed, own, callbackEvent, failed)
     entry.name, entry.owner, entry.script = record.name, record.owner, record.script
     entry.frameLabel, entry.frameContext = record.frameLabel, record.frameContext
     entry.elapsed, entry.selfTime, entry.event, entry.failed = elapsed, own, callbackEvent, failed and true or false
+    entry.heapDelta = heapDelta
     -- Session timestamps use GetTime; callback durations may use a finer clock.
     local timed, now = false, nil
     if type(GetTime) == "function" then timed, now = pcall(GetTime) end
@@ -214,10 +239,16 @@ end
 local function FinishRecord(run, record, slot, failed)
     if not run.active then
         run.depth = run.depth - 1
-        slot.started, slot.event, slot.children = nil, nil, 0
+        slot.started, slot.event, slot.children, slot.heapStarted, slot.heapFailures = nil, nil, 0, nil, 0
         return
     end
     local ended = ReadClock(run)
+    local heapDelta, heapFailures = nil, slot.heapFailures
+    if run.active and run.heap then
+        local heapEnded = ReadHeap(run)
+        if heapEnded == nil then heapFailures = heapFailures + 1
+        elseif slot.heapStarted ~= nil then heapDelta = heapEnded - slot.heapStarted end
+    end
     local elapsed, own
     if slot.started and ended and ended >= slot.started then
         elapsed = ended - slot.started
@@ -230,17 +261,23 @@ local function FinishRecord(run, record, slot, failed)
         local metrics = run.metrics
         metrics.totalCalls = metrics.totalCalls + 1
         if failed then metrics.failures = metrics.failures + 1 end
-        AddMetric(record.addon, elapsed, own, failed)
-        if record.operation then AddMetric(record.operation, elapsed, own, failed) end
+        AddMetric(record.addon, elapsed, own, failed, heapDelta, heapFailures)
+        if record.operation then AddMetric(record.operation, elapsed, own, failed, heapDelta, heapFailures) end
+        if heapDelta ~= nil or heapFailures > 0 then
+            -- ReadHeap counts API failures globally; source/operation counters
+            -- count their own failed reads, without adding nested failures.
+            AddHeap(metrics, heapDelta)
+            if heapDelta and heapDelta < 0 then metrics.heapDrops = metrics.heapDrops + 1 end
+        end
         if elapsed then
             metrics.totalTimedCalls = metrics.totalTimedCalls + 1
             metrics.totalInclusiveTime = metrics.totalInclusiveTime + elapsed
             metrics.totalSelfTime = metrics.totalSelfTime + own
             if elapsed == 0 then metrics.zeroDurations = metrics.zeroDurations + 1 end
-            PushSlow(run, record, elapsed, own, slot.event, failed)
+            PushSlow(run, record, elapsed, own, slot.event, failed, heapDelta)
         end
     end
-    slot.started, slot.event, slot.children = nil, nil, 0
+    slot.started, slot.event, slot.children, slot.heapStarted, slot.heapFailures = nil, nil, 0, nil, 0
 end
 
 local function FinishCall(run, record, slot, ...)
@@ -248,7 +285,7 @@ local function FinishCall(run, record, slot, ...)
     local ok = pcall(FinishRecord, run, record, slot, not arg[1])
     if not ok then
         run.depth = math.max(0, slot.depth - 1)
-        slot.started, slot.event, slot.children = nil, nil, 0
+        slot.started, slot.event, slot.children, slot.heapStarted, slot.heapFailures = nil, nil, 0, nil, 0
         run.metrics.metricFailures = run.metrics.metricFailures + 1
     end
     if not arg[1] then
@@ -275,6 +312,11 @@ local function MakeWrapper(record)
         slot.depth, slot.children = run.depth, 0
         slot.event = record.script == "OnEvent" and type(event) == "string" and event or nil
         slot.started = ReadClock(run)
+        slot.heapStarted, slot.heapFailures = nil, 0
+        if run.active and run.heap then
+            slot.heapStarted = ReadHeap(run)
+            if slot.heapStarted == nil then slot.heapFailures = 1 end
+        end
         return FinishCall(run, record, slot, pcall(record.original, unpack(arg)))
     end
 end
@@ -336,6 +378,7 @@ end
 
 local function InspectFrame(run, frame)
     if P.Runtime and frame == P.Runtime.driver then return end
+    if P.LoginMemory and type(P.LoginMemory.IsOwnFrame) == "function" and P.LoginMemory.IsOwnFrame(frame) then return end
     local entry = run.frameMap[frame]
     -- Enumeration includes every inert UI frame. Read supported scripts before
     -- retaining a frame so that inert frames cannot exhaust callback capacity.
@@ -402,7 +445,9 @@ function C.Start(session)
         everHooked = 0, everUnknownHooked = 0, replacements = 0, skippedKnown = 0, clockReadFailures = 0,
         sourceDebug = 0, sourceDump = 0, sourceUnavailable = 0, inventoryReadFailures = 0,
         sourceDumpRejected = 0, sourceUnsupportedDump = 0, sourceApiUnavailable = 0, sourceNonFile = 0, sourceFrameScripts = 0, sourceUnmatchedFolder = 0,
-        sourceExamples = {},
+        sourceExamples = {}, memoryRequested = session.callbackMemoryRequested == true,
+        memoryAvailable = session.callbackMemoryRequested == true and type(gcinfo) == "function",
+        heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0, heapReadFailures = 0, heapDrops = 0,
         scans = 0, scanned = 0, inertSkipped = 0, discoveryTime = 0,
         coverage = "Intercepted OnEvent and OnUpdate frame scripts only; not total addon CPU. Self time subtracts nested intercepted callbacks; unknown source owners are not guessed." }
     session.callbacks = metrics
@@ -431,7 +476,8 @@ function C.Start(session)
         enumerate = EnumerateFrames, frameMap = {}, records = {}, wrapperMap = {}, addonMap = {}, stack = {}, depth = 0,
         functionSources = {}, sourceCount = 0, sourceBudget = 0, sourceSampleSeen = {}, inventoryMap = {}, inventoryNext = 1,
         getinfo = type(debug) == "table" and type(debug.getinfo) == "function" and debug.getinfo or nil,
-        cursor = nil, scanning = true, cycleCount = 0, wait = 0, frameSerial = 0, contextScratch = {} }
+        cursor = nil, scanning = true, cycleCount = 0, wait = 0, frameSerial = 0, contextScratch = {},
+        heap = metrics.memoryAvailable and gcinfo or nil }
     local inventoried, count = false, nil
     if type(GetNumAddOns) == "function" and type(GetAddOnInfo) == "function" then inventoried, count = pcall(GetNumAddOns) end
     if inventoried and Finite(count) and count >= 0 then
@@ -519,6 +565,8 @@ function C.Stop(session)
     for index = 1, table.getn(run.records) do ReleaseRecord(run, run.records[index], true) end
     run.cursor, run.pendingFrame, run.frameMap, run.records, run.wrapperMap, run.addonMap, run.functionSources, run.inventoryMap, run.sourceSampleSeen = nil, nil, nil, nil, nil, nil, nil, nil, nil
     run.contextScratch = nil
+    run.heap = nil
+    for index = 1, table.getn(run.stack) do run.stack[index].heapStarted, run.stack[index].heapFailures = nil, 0 end
     run.metrics.pending = false
     if run.metrics.restoreFailures > 0 then run.metrics.status = "Stopped; restoration failures: " .. run.metrics.restoreFailures
     elseif run.metrics.wasPendingAtStop then run.metrics.status = "Stopped during discovery; callback wrappers removed"

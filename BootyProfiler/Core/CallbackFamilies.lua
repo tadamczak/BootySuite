@@ -37,7 +37,8 @@ function F.FamilyName(operation)
     return NamedFamily(label)
 end
 
-local function NewTotals() return { calls = 0, time = 0, selfTime = 0, peak = 0, failures = 0, timedCalls = 0 } end
+local function NewTotals() return { calls = 0, time = 0, selfTime = 0, peak = 0, failures = 0, timedCalls = 0,
+    heapSamples = 0, heapDelta = 0, heapRise = 0, heapPeak = 0 } end
 local familyMeta = { __index = function(family, key) return family.totals[family.model.published][key] end }
 local function Budget(value, maximum)
     value = tonumber(value) or BUILD_BUDGET
@@ -45,14 +46,14 @@ local function Budget(value, maximum)
     return math.min(maximum, math.floor(value))
 end
 
-function F.Create(operations)
+function F.Create(operations, sortKey)
     operations = type(operations) == "table" and operations or {}
     local length = table.getn(operations)
     local total = math.min(OPERATION_LIMIT, length)
     return { source = operations, total = total, target = total, cursor = 0,
         pending = total > 0, truncated = length > OPERATION_LIMIT, indexed = 0,
         families = {}, familyMap = {}, members = {}, order = {}, sortTimes = {},
-        published = 1, updateState = {}, sortState = {}, sortScratch = {} }
+        published = 1, updateState = {}, sortState = {}, sortScratch = {}, sortKey = sortKey == "heapRise" and "heapRise" or "selfTime" }
 end
 
 function F.Sync(model, budget)
@@ -83,6 +84,10 @@ local function Number(value)
     if type(value) ~= "number" or value ~= value or value < 0 or value >= 1e300 then return 0 end
     return value
 end
+local function SignedNumber(value)
+    if type(value) ~= "number" or value ~= value or value <= -1e300 or value >= 1e300 then return 0 end
+    return value
+end
 
 function F.BeginUpdate(model)
     if model.pending or model.updating or model.sorting then return false end
@@ -103,6 +108,7 @@ function F.UpdateStep(model, budget)
                 state.cursor = state.cursor + 1
                 local totals = model.families[state.cursor].totals[state.write]
                 totals.calls, totals.time, totals.selfTime, totals.peak, totals.failures, totals.timedCalls = 0, 0, 0, 0, 0, 0
+                totals.heapSamples, totals.heapDelta, totals.heapRise, totals.heapPeak = 0, 0, 0, 0
                 budget = budget - 1
             end
         elseif state.cursor >= model.total then
@@ -121,7 +127,11 @@ function F.UpdateStep(model, budget)
                 totals.time = totals.time + Number(operation.time); totals.selfTime = totals.selfTime + own
                 totals.peak = math.max(totals.peak, Number(operation.peak)); totals.failures = totals.failures + Number(operation.failures)
                 totals.timedCalls = totals.timedCalls + Number(operation.timedCalls == nil and operation.calls or operation.timedCalls)
-                model.sortTimes[operation] = own
+                totals.heapSamples = totals.heapSamples + Number(operation.heapSamples)
+                totals.heapDelta = totals.heapDelta + SignedNumber(operation.heapDelta)
+                totals.heapRise = totals.heapRise + Number(operation.heapRise)
+                totals.heapPeak = math.max(totals.heapPeak, Number(operation.heapPeak))
+                model.sortTimes[operation] = Number(operation[model.sortKey])
             end
             budget = budget - 1
         end
@@ -139,7 +149,7 @@ end
 local function Compare(model, families, left, right)
     local leftTime, rightTime
     if families then
-        leftTime, rightTime = left.totals[model.published].selfTime, right.totals[model.published].selfTime
+        leftTime, rightTime = left.totals[model.published][model.sortKey], right.totals[model.published][model.sortKey]
     else leftTime, rightTime = model.sortTimes[left], model.sortTimes[right] end
     if leftTime ~= rightTime then return leftTime > rightTime end
     local leftName, rightName = Text(left.name) or "", Text(right.name) or ""
