@@ -1,8 +1,13 @@
 local P = BootyProfiler
 local sources, listener = {}, nil
 local state = { enabled = false, recording = false, session = nil }
-local HISTORY_LIMIT, SAMPLE_LIMIT, OPERATION_LIMIT = 64, 600, 128
-P.limits = { history = HISTORY_LIMIT, samples = SAMPLE_LIMIT, operations = OPERATION_LIMIT }
+local HISTORY_LIMIT, SAMPLE_LIMIT, OPERATION_LIMIT, FRAME_GAP_THRESHOLD = 64, 600, 128, 0.050
+P.limits = { history = HISTORY_LIMIT, samples = SAMPLE_LIMIT, operations = OPERATION_LIMIT,
+    heapDrops = HISTORY_LIMIT, frameGaps = HISTORY_LIMIT, frameGapThreshold = FRAME_GAP_THRESHOLD }
+
+local function FiniteNonnegative(value)
+    return type(value) == "number" and value == value and value >= 0 and value <= 1e300
+end
 
 local function Notify()
     if listener then
@@ -45,6 +50,66 @@ function P.RegisterSource(name, source)
     return true
 end
 
+-- The existing recording driver supplies frame elapsed time. No API reads,
+-- function wrapping, or strings are needed on the usual subthreshold frame.
+function P.ObserveFrame(elapsed)
+    local session = state.recording and state.session
+    if not session then return 0 end
+    local gaps = session.frameGaps
+    if not FiniteNonnegative(elapsed) or gaps.elapsed + elapsed > 1e300 then
+        gaps.invalidCount = gaps.invalidCount + 1
+        gaps.windowInvalidFrames = gaps.windowInvalidFrames + 1
+        session.gcWindowInvalidFrames = session.gcWindowInvalidFrames + 1
+        return 0
+    end
+    gaps.count, gaps.elapsed, gaps.latest = gaps.count + 1, gaps.elapsed + elapsed, elapsed
+    if elapsed > gaps.maximum then gaps.maximum = elapsed end
+    if elapsed > gaps.windowMax then gaps.windowMax = elapsed end
+    if elapsed > session.gcWindowMaxFrameGap then session.gcWindowMaxFrameGap = elapsed end
+    if elapsed >= FRAME_GAP_THRESHOLD then
+        gaps.slowCount, gaps.windowSlowFrames = gaps.slowCount + 1, gaps.windowSlowFrames + 1
+        session.gcWindowSlowFrames = session.gcWindowSlowFrames + 1
+        local entry = Push(gaps.history, HISTORY_LIMIT)
+        entry.at, entry.elapsed = gaps.elapsed, elapsed
+    end
+    return elapsed
+end
+
+local function ReadHeap()
+    if type(gcinfo) ~= "function" then return nil, nil, false end
+    local ok, heap, threshold = pcall(gcinfo)
+    if not ok or not FiniteNonnegative(heap) then return nil, nil, false end
+    if not FiniteNonnegative(threshold) then threshold = nil end
+    return heap, threshold, true
+end
+
+local function SampleHeap(session, entry)
+    local heap, threshold, valid = ReadHeap()
+    local gc = session.gc
+    if not valid then gc.readFailures = gc.readFailures + 1; return end
+    entry.heap, entry.gcThreshold, session.heap, session.gcThreshold = heap, threshold, heap, threshold
+    if not session.startHeap then session.startHeap = heap end
+    local previousHeap, previousAt = session.gcPreviousHeap, session.gcPreviousAt
+    if previousHeap then
+        entry.heapDelta = heap - previousHeap
+        if heap < previousHeap then
+            local amount = previousHeap - heap
+            gc.heapDropCount, gc.heapDropTotal = gc.heapDropCount + 1, gc.heapDropTotal + amount
+            gc.lastHeapDrop, gc.lastHeapDropAt = amount, entry.at
+            gc.lastHeapDropWindowStart, gc.lastHeapDropWindowEnd = previousAt, entry.at
+            gc.lastHeapDropWindowDuration = math.max(0, entry.at - previousAt)
+            gc.lastHeapDropMaxFrameGap, gc.lastHeapDropSlowFrames = session.gcWindowMaxFrameGap, session.gcWindowSlowFrames
+            gc.lastHeapDropInvalidFrames = session.gcWindowInvalidFrames
+            local drop = Push(gc.history, HISTORY_LIMIT)
+            drop.at, drop.heapDrop, drop.beforeHeap, drop.afterHeap = entry.at, amount, previousHeap, heap
+            drop.windowStart, drop.windowEnd, drop.windowDuration = previousAt, entry.at, gc.lastHeapDropWindowDuration
+            drop.maxFrameGap, drop.slowFrames, drop.invalidFrames = session.gcWindowMaxFrameGap, session.gcWindowSlowFrames, session.gcWindowInvalidFrames
+        end
+    end
+    session.gcPreviousHeap, session.gcPreviousAt = heap, entry.at
+    session.gcWindowMaxFrameGap, session.gcWindowSlowFrames, session.gcWindowInvalidFrames = 0, 0, 0
+end
+
 function P.Sample()
     local session = state.recording and state.session
     if not session then return end
@@ -52,15 +117,18 @@ function P.Sample()
     if not now then state.error = "Client clock is unavailable."; P.Stop(); return end
     session.elapsed = math.max(0, now - session.startedAt)
     local entry = Push(session.samples, SAMPLE_LIMIT)
+    -- A reused slot must never retain an old API reading or a previous drop.
+    entry.heap, entry.gcThreshold, entry.heapDelta, entry.fps, entry.latency = nil, nil, nil, nil, nil
     entry.at = session.elapsed
-    if type(gcinfo) == "function" then
-        entry.heap, session.gcThreshold = gcinfo()
-        session.heap = entry.heap
-        if not session.startHeap then session.startHeap = entry.heap end
-    end
+    local gaps = session.frameGaps
+    entry.windowStart, entry.windowMaxFrameGap = gaps.windowStart, gaps.windowMax
+    entry.windowSlowFrames, entry.windowInvalidFrames = gaps.windowSlowFrames, gaps.windowInvalidFrames
+    gaps.lastWindowMax, gaps.lastWindowSlowFrames, gaps.lastWindowInvalidFrames = gaps.windowMax, gaps.windowSlowFrames, gaps.windowInvalidFrames
+    gaps.windowStart, gaps.windowMax, gaps.windowSlowFrames, gaps.windowInvalidFrames = entry.at, 0, 0, 0
+    SampleHeap(session, entry)
     if type(GetFramerate) == "function" then
         local fps = tonumber(GetFramerate())
-        if fps and fps > 0 then
+        if FiniteNonnegative(fps) and fps > 0 then
             entry.fps = fps; session.fps = fps
             if not session.minFps or fps < session.minFps then session.minFps = fps end
             if not session.maxFps or fps > session.maxFps then session.maxFps = fps end
@@ -68,7 +136,8 @@ function P.Sample()
     end
     if type(GetNetStats) == "function" then
         local _, _, latency = GetNetStats()
-        entry.latency = tonumber(latency); session.latency = entry.latency
+        latency = tonumber(latency)
+        if FiniteNonnegative(latency) then entry.latency, session.latency = latency, latency end
     end
     Notify()
 end
@@ -87,6 +156,10 @@ function P.Start(options)
     end
     local callbacksRequested = type(options) == "table" and options.callbacks and true or false
     local session = { startedAt = now, elapsed = 0, history = { count = 0, total = 0 }, samples = { count = 0, total = 0 },
+        gc = { heapDropCount = 0, heapDropTotal = 0, readFailures = 0, history = { count = 0, total = 0 } },
+        frameGaps = { count = 0, slowCount = 0, invalidCount = 0, maximum = 0, elapsed = 0, threshold = FRAME_GAP_THRESHOLD,
+            windowStart = 0, windowMax = 0, windowSlowFrames = 0, windowInvalidFrames = 0, history = { count = 0, total = 0 } },
+        gcWindowMaxFrameGap = 0, gcWindowSlowFrames = 0, gcWindowInvalidFrames = 0,
         slowThreshold = 0.005, source = source, handle = handle, operations = handle.operations,
         clock = "GetTime", clockResolution = "not verified in this client", coverage = "Selected MOS entry points; nested calls counted once.",
         callbacksRequested = callbacksRequested,
@@ -129,10 +202,10 @@ function P.Stop()
     end
     local ok, failure = pcall(session.source.stop, session.handle)
     session.elapsed = math.max(session.elapsed, (Now() or session.startedAt) - session.startedAt)
-    if type(gcinfo) == "function" then
-        local measured, heap = pcall(gcinfo)
-        if measured and type(heap) == "number" then session.heap = heap end
-    end
+    local heap, threshold, valid = ReadHeap()
+    if valid then session.heap, session.gcThreshold = heap, threshold end
+    session.gcPreviousHeap, session.gcPreviousAt = nil, nil
+    session.gcWindowMaxFrameGap, session.gcWindowSlowFrames, session.gcWindowInvalidFrames = nil, nil, nil
     session.stopped = true
     if not ok then state.error = tostring(failure) end
     if not callbacksStopped then state.error = tostring(callbackError) end
@@ -208,6 +281,7 @@ function P.Export()
         clockResolution = session.clockResolution, coverage = session.coverage, allAddonsCoverage = session.allAddonsCoverage,
         callbacksRequested = session.callbacksRequested,
         startHeap = session.startHeap, endHeap = session.heap, minFps = session.minFps, maxFps = session.maxFps,
+        gcThreshold = session.gcThreshold,
         slowThreshold = session.slowThreshold, history = {}, samples = {}, operations = {} }
     local name, operation, index
     for name, operation in pairs(session.operations) do
@@ -217,6 +291,14 @@ function P.Export()
     table.sort(result.operations, CompareTime)
     for index = 1, session.history.count do table.insert(result.history, CopyFields(P.HistoryEntry(session.history, index))) end
     for index = 1, session.samples.count do table.insert(result.samples, CopyFields(P.HistoryEntry(session.samples, index))) end
+    if session.gc then
+        result.gc = CopyFields(session.gc); result.gc.history = {}
+        for index = 1, session.gc.history.count do table.insert(result.gc.history, CopyFields(P.HistoryEntry(session.gc.history, index))) end
+    end
+    if session.frameGaps then
+        result.frameGaps = CopyFields(session.frameGaps); result.frameGaps.history = {}
+        for index = 1, session.frameGaps.history.count do table.insert(result.frameGaps.history, CopyFields(P.HistoryEntry(session.frameGaps.history, index))) end
+    end
     if session.capabilities then result.capabilities = CopyFields(session.capabilities) end
     if session.callbacks then
         local callbacks = session.callbacks
