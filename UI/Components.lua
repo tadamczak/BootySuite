@@ -10,6 +10,7 @@ local Components = MOS.UI.Components
 local textHeightProbe
 local probeFont, probeSize, probeFlags, probeSpacing, probeNonSpaceWrap
 function Components.MeasureTextHeight(label, resolvedWidth, nonSpaceWrap)
+    if resolvedWidth then resolvedWidth = math.max(1, resolvedWidth - (label.mosHeadingIconInset or 0)) end
     if resolvedWidth then label.mosTextMeasureWidth = math.max(1, resolvedWidth) end
     if type(label.GetStringHeight) == "function" then return label:GetStringHeight() or 0 end
     local text = label:GetText()

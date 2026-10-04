@@ -121,3 +121,105 @@ end
 function Session:StartTest()
     self.dependencies.testRaid.Start()
 end
+
+local function ClearNames(names)
+    local name
+    for name in pairs(names) do names[name] = nil end
+end
+
+local function CopyMemberNames(names, members, playerName)
+    ClearNames(names)
+    local index, count = 0, 0
+    if not members then return count end
+    for index = 1, table.getn(members) do
+        local name = members[index].name
+        if name then
+            name = string.lower(name)
+            if name ~= playerName and not names[name] then names[name] = true; count = count + 1 end
+        end
+    end
+    return count
+end
+
+function Session:ResetPhysicalRaid()
+    local physical = self.physicalRaid
+    if not physical then return end
+    ClearNames(physical.reference); ClearNames(physical.current)
+    physical.sessionId, physical.startedAt, physical.initialized = nil, nil, false
+    physical.left, physical.candidate = false, nil
+    physical.present, physical.ready, physical.currentCount, physical.referenceCount = false, false, 0, 0
+end
+
+-- The 1.12 client has no physical raid ID. Use observed group departure and
+-- overlap with the accepted roster; subgroup/leader changes are not a new raid.
+-- Tables are reused, and this is called only by client context events or their
+-- existing one-shot confirmation, never an idle poll or a roster capture.
+function Session:ReadPhysicalRaid(attendance)
+    if type(GetNumRaidMembers) ~= "function" or type(GetRaidRosterInfo) ~= "function" then return nil, false end
+    local physical = self.physicalRaid
+    if not physical then
+        physical = { reference = {}, current = {}, serial = 0 }
+        self.physicalRaid = physical
+    end
+    local playerName = type(UnitName) == "function" and UnitName("player") or nil
+    playerName = playerName and string.lower(playerName)
+    if not attendance then self:ResetPhysicalRaid(); return nil, true end
+    if not physical.initialized or physical.sessionId ~= attendance.snapshotId or physical.startedAt ~= attendance.sessionStartedAt then
+        physical.sessionId, physical.startedAt = attendance.snapshotId, attendance.sessionStartedAt
+        physical.referenceCount = CopyMemberNames(physical.reference, attendance.members, playerName)
+        physical.initialized, physical.left, physical.candidate = true, false, nil
+    end
+    local count = math.min(40, tonumber(GetNumRaidMembers()) or 0)
+    ClearNames(physical.current)
+    physical.currentCount = 0
+    if count <= 0 then physical.present = false; physical.ready = true; return nil, true end
+    local index, namedCount, overlap = 0, 0, false
+    for index = 1, count do
+        local name = GetRaidRosterInfo(index)
+        if name then
+            namedCount = namedCount + 1; name = string.lower(name)
+            if name ~= playerName then
+                if not physical.current[name] then physical.currentCount = physical.currentCount + 1 end
+                physical.current[name] = true
+                if physical.reference[name] then overlap = true end
+            end
+        end
+    end
+    physical.present = true
+    physical.ready = namedCount == count
+    if not physical.ready then return nil, false end
+    local different = physical.left or (physical.referenceCount > 0 and physical.currentCount > 0 and not overlap)
+    if not different then
+        ClearNames(physical.reference)
+        local name
+        for name in pairs(physical.current) do physical.reference[name] = true end
+        physical.referenceCount = physical.currentCount
+        physical.candidate = nil
+        return nil, true
+    end
+    if not physical.candidate then
+        physical.serial = physical.serial + 1
+        physical.candidate = "different-raid-context|" .. physical.serial
+    end
+    return physical.candidate, true
+end
+
+function Session:GetPhysicalTransition()
+    if self.dependencies.testRaid.IsActive() then return nil, true end
+    return self:ReadPhysicalRaid(self.dependencies.database.GetRaidAttendance())
+end
+
+function Session:ConfirmPhysicalDeparture()
+    if self.physicalRaid and not self.physicalRaid.present then self.physicalRaid.left = true end
+end
+
+function Session:AcceptPhysicalRaid()
+    local physical = self.physicalRaid
+    if not physical or not physical.present or not physical.ready then return false end
+    ClearNames(physical.reference)
+    local name
+    for name in pairs(physical.current) do physical.reference[name] = true end
+    physical.referenceCount = physical.currentCount
+    physical.left, physical.candidate = false, nil
+    return true
+end

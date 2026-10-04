@@ -74,6 +74,8 @@ Expanded roster rows stay highlighted. Guild rows expand with player name, level
 
 ### Guild Statistics
 
+This tab is grey and unavailable when your character is not in a guild.
+
 - **Export Guild -** Scan the guild roster and confirm a reload to save it to disk.
 - **Member filters -** Filter the saved roster independently by rank, class, exact level, or the `Search...` field. Rank and Class remain as the default captions when every option is active; one selected option is shown by name and larger selections use an `X selected` count. **Select all** toggles every option on or off.
 - **Grouping and sorting -** Sort by any column, or group by class, rank, or level. Group rows expand as accordions; sorting applies inside each group.
@@ -82,7 +84,7 @@ Expanded roster rows stay highlighted. Guild rows expand with player name, level
 
 ### Raid
 
-- **Raid sessions -** Start a new raid, continue an active session, save it, or load a saved session.
+- **Raid sessions -** Start a new raid with or without a guild, continue an active session, save it, or load a saved session. Joining a different raid while a session is open asks whether to Continue or Save and End; Continue then offers a separate Refresh choice.
 - **Raid type -** Assign Blackwing Lair, Molten Core, Onyxia's Lair, Karazhan10, Zul'Gurub, or Other.
 - **Attendance -** Track the raid roster and optionally include attendance when saving statistics.
 - **Raid views -** Switch between the member list and a centered, configurable group layout with adjustable sizing, spacing, and typography.
@@ -116,7 +118,7 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 
 Pending trades survive closing the loot window or refreshing the current roster. Starting, loading or ending a raid cancels its previous pending transactions.
 
-Restore keeps recent loot sources and roll rounds. Active awards and unfinished trades stay available. Repeated ordinary loot combines into one quantity entry; separately assigned items and tracked trades keep their own records.
+Saved raids retain received loot, completed roll/trade history and used SR/Reycoin rights, even for players who leave before you save. Loading creates an independent copy of that history. Older snapshots retain only information they originally saved. Active awards and unfinished trades stay available. Repeated ordinary loot combines into one quantity entry; separately assigned items and tracked trades keep their own records.
 
 ### Raid Statistics
 
@@ -137,7 +139,7 @@ Restore keeps recent loot sources and roll rounds. Active awards and unfinished 
 
 ### Profiler
 
-- **Optional BootyProfiler -** Install the separate addon beside MOS. Profiler keeps its illustrated background across all views and shows installation/load information when needed. **Enable** activates an installed addon with a UI reload; it is unavailable when BootyProfiler is missing. **Disable** is at the right of the top toolbar.
+- **Optional BootyProfiler -** Install the separate addon beside MOS. Profiler keeps its illustrated background across all views and dims the complete result area while content is selected and shows installation/load information when needed. **Enable** activates an installed addon with a UI reload; it is unavailable when BootyProfiler is missing. **Disable** is at the right of the top toolbar.
 - **Minimap shortcuts -** Profiler's quick menu offers Live Monitor, advanced Start/Stop, Reset, Export, a Memory checkbox, Health Check and Enable/Disable at the end. Switching Memory keeps the menu open. A first quick Start records **All Addons**; later starts use your last selected MOS/All profile. Memory applies to the next All Addons scan and cannot change while recording. A missing BootyProfiler makes this menu unavailable. Export recordings before confirming Disable and its UI reload.
 - **Advanced Profiler -** Beside **Live Monitor**, choose **Profile MOS**, **Profile All** or **Analyze Login** from Advanced Profiler. Profile views have one **Start / Stop** button. MOS measures selected operations; All also intercepts frame callbacks. Opening or changing views does not start or change a capture. Each view shows its matching capture status and last-scan date/duration. While one profile is recording, the other profile shows a centered notice and its recording controls are disabled; return to the recording profile to stop it.
 - **MOS -** Review selected MOS operations, call counts, total/average/maximum times and recent slow calls.
@@ -156,7 +158,7 @@ Statistics, CSR and Profiler adapt their controls and tables to the window size.
 
 ### Settings
 
-**Keybindings > General > Use MOS as default Raid tab** replaces the game's Raid tab with a compact MOS group view. It works without starting or saving a MOS raid session. The native Raid header keeps its action buttons and shows the MOS minimap logo while this view is selected. Disable the option to return to the standard panel. Raid Info shows your saved instance IDs and reset times; raid leaders and assistants can use Ready Check from Raid Leader Tools.
+**UI > Interface > Layout > Use MOS as default Raid tab** replaces the game's Raid tab with a compact MOS group view. It works without starting or saving a MOS raid session. The native Raid header keeps its action buttons and shows the MOS minimap logo while this view is selected. Disable the option to return to the standard panel. Raid Info shows your saved instance IDs and reset times; raid leaders and assistants can use Ready Check from Raid Leader Tools.
 
 UI settings group Guild, Raid, Guild Statistics, Raid Statistics, CSR and Profiler in indented sections. New sections contain General and Layout placeholders for future options. Minimizing Settings temporarily narrows it; restoring returns its expanded size. Live Monitor remembers the size chosen by dragging its resize corner, including after a UI reload.
 

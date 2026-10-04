@@ -443,9 +443,9 @@ end
 function GuildStatistics.CreateView(host, styleButton, refresh)
     local page = UI.CreateResponsiveCanvas(host, "MOSGuildStatisticsPage")
     local view = { page = page, host = host, onFilterChanged = refresh }
-    view.title = UI.CreateHeading(page, "", 1, "gold"); view.title:SetText("Guild Statistics")
+    view.title = UI.CreateHeading(page, "", 1, "gold", "guild_stats"); view.title:SetText("Guild Statistics")
     view.titleSeparator = UI.CreateHeading(page, "", 1, "white"); view.titleSeparator:SetText("|"); view.titleSeparator:SetTextColor(1,1,1)
-    view.guildTitle = UI.CreateHeading(page, "", 1, "orange"); view.guildTitle:SetText("Guild")
+    view.guildTitle = UI.CreateHeading(page, "", 1, "orange", "roster"); view.guildTitle:SetText("Guild")
     local headingFont,_,headingFlags=view.guildTitle:GetFont();view.titleSeparator:SetFont(headingFont,13,headingFlags);view.guildTitle:SetFont(headingFont,13,headingFlags)
     view.actionPanel=UI.CreateToolbarSurface(page,true,true);UI.AddToolbarBackground(view.actionPanel,0.42)
     view.refreshButton = UI.CreateControl(nil, view.actionPanel); view.refreshButton:SetWidth(108); view.refreshButton:SetHeight(26); styleButton(view.refreshButton, "Refresh Data"); view.refreshButton:Hide()
@@ -539,8 +539,12 @@ end
 local function LayoutContent(width,height,controller)
     local view,page=controller.view,controller.page
     local available=math.max(80,width-16)
-    local titleWidth=math.min(view.title:GetStringWidth()+2,available*0.55)
+    local font,size,flags=view.title:GetFont()
+    view.title.mosFitFontSize=view.title.mosFitFontSize or size
+    view.title:SetFont(font,view.title.mosFitFontSize,flags);view.title:SetWidth(0)
+    local titleWidth=math.min(view.title:GetStringWidth()+(view.title.mosHeadingIconInset or 0)+2,available*0.55)
     view.title:ClearAllPoints();view.title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8);view.title:SetWidth(titleWidth)
+    UI.FitButtonLabel(view.title,titleWidth)
     view.titleSeparator:ClearAllPoints();view.titleSeparator:SetPoint("BOTTOMLEFT",view.title,"BOTTOMRIGHT",8,0);view.titleSeparator:SetWidth(8);view.titleSeparator:SetHeight(16)
     local guildWidth=math.max(1,available-titleWidth-32)
     view.guildTitle:ClearAllPoints();view.guildTitle:SetPoint("BOTTOMLEFT",view.titleSeparator,"BOTTOMRIGHT",8,0);view.guildTitle:SetWidth(guildWidth);view.guildTitle:SetHeight(16);UI.FitButtonLabel(view.guildTitle,guildWidth)

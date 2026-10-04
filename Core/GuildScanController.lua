@@ -40,6 +40,12 @@ local function OnScanUpdate()
     this.delay = math.max(0, (this.delay or 0) - arg1)
     if this.delay > 0 then return end
     local now = GetTime()
+    if controller.raidOnly then
+        -- Raid membership does not depend on the guild cache. This one-shot
+        -- path never requests or retries guild data for a guildless character.
+        if not controller.tryComplete() then Fail(controller, "raid_unavailable") end
+        return
+    end
     if not controller.startSnapshot then
         -- Explicit legacy factories remain supported; the composition root injects staged APIs.
         if controller.tryComplete() then return end
@@ -93,11 +99,14 @@ local function Begin(controller, mode, delay)
         controller.printMessage("A guild data scan is already in progress.")
         return false
     end
-    if not controller.isInGuild() then
+    local inGuild = controller.isInGuild()
+    inGuild = inGuild ~= nil and inGuild ~= false and inGuild ~= 0
+    if not inGuild and mode ~= "raid" then
         controller.printMessage("This character is not in a guild.")
         return false
     end
     controller.mode = mode or "manual"
+    controller.raidOnly = mode == "raid" and not inGuild or false
     controller.startedAt = GetTime()
     controller.attempts = 1
     controller.deadline = controller.startedAt + READINESS_TIMEOUT
@@ -111,6 +120,7 @@ end
 
 function GuildScanController.Request(controller, mode)
     if not Begin(controller, mode, 1) then return false end
+    if controller.raidOnly then controller.frame.delay = 0; return true end
     controller.requestRoster()
     controller.printMessage((mode == "reload" or mode == "csr_reload") and
         "Requesting guild roster. Save confirmation will appear when the scan completes..." or
@@ -151,6 +161,7 @@ end
 function GuildScanController.HandleRosterUpdate(controller)
     controller.generation = controller.generation + 1
     if not controller.mode then return false end
+    if controller.raidOnly then return false end
     CancelJob(controller, "roster_changed")
     ScheduleTrailing(controller)
     return true
@@ -166,6 +177,7 @@ end
 function GuildScanController.Finish(controller)
     CancelJob(controller, "finished")
     controller.mode, controller.startedAt, controller.deadline = nil, nil, nil
+    controller.raidOnly = false
     controller.attempts, controller.burstStartedAt = 0, nil
     controller.frame.delay = nil
     controller.frame:SetScript("OnUpdate", nil)

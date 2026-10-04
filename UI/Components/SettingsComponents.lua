@@ -4,7 +4,7 @@ MOS.UI.Components.Settings = MOS.UI.Components.Settings or {}
 local Settings = MOS.UI.Components.Settings
 
 function Settings.CreateSection(parent, title, y)
-    local heading = MOS.UI.Components.CreateHeading(parent, "", 2, "orange")
+    local heading = MOS.UI.Components.CreateHeading(parent, "", 2, "orange", "settings")
     heading:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
     heading:SetText(title)
     local rule = parent:CreateTexture(nil, "ARTWORK")
@@ -15,7 +15,7 @@ function Settings.CreateSection(parent, title, y)
     return heading, rule
 end
 
-function Settings.CreateAccordion(parent, text, y)
+function Settings.CreateAccordion(parent, text, y, iconKey)
     local button = CreateFrame("Button", nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", 24, y)
     button:SetWidth(180)
@@ -27,6 +27,7 @@ function Settings.CreateAccordion(parent, text, y)
     button.label:SetPoint("LEFT", button, "LEFT", 0, 0)
     button.baseText = text
     button.label:SetText("+  " .. text)
+    if MOS.UI.Components.SetHeadingIcon and iconKey ~= false then MOS.UI.Components.SetHeadingIcon(button.label, iconKey or "settings") end
     button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     -- Section decoration belongs to the heading, so collapsed feature groups
     -- cannot leave their rules visible in the shared scroll child.
@@ -36,8 +37,8 @@ function Settings.CreateAccordion(parent, text, y)
     return button
 end
 
-function Settings.CreateSectionAccordion(parent, text, y, inset)
-    local button = Settings.CreateAccordion(parent, text, y)
+function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel)
+    local button = Settings.CreateAccordion(parent, text, y, false)
     button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button:SetHeight(20)
     button.label:SetTextColor(unpack(MOS.UI.Components.TextColors.gold))
@@ -55,7 +56,7 @@ function Settings.CreateSectionAccordion(parent, text, y, inset)
         -- Measure the caption instead of anchoring a rule to that stale edge.
         self.label:SetWidth(0)
         self.rule:ClearAllPoints()
-        self.rule:SetPoint("LEFT", self, "LEFT", self.label:GetStringWidth() + 10, 0)
+        self.rule:SetPoint("LEFT", self, "LEFT", (self.label.mosHeadingIconInset or 0) + self.label:GetStringWidth() + 10, 0)
         self.rule:SetPoint("RIGHT", self, "RIGHT", 0, 0)
         self.rule:SetHeight(1)
     end
@@ -71,7 +72,8 @@ function Settings.CreateSectionAccordion(parent, text, y, inset)
     button:SetScript("OnShow", function() this:RefreshRule() end)
     button.sectionFill:SetWidth(30); button:SetExpanded(false)
     local font, _, flags = button.label:GetFont()
-    button.label:SetFont(font, MOS.UI.Components.HeadingSizes[2] + MOS.UI.Components.GetTextSizeDelta(parent), flags)
+    button.label:SetFont(font, MOS.UI.Components.HeadingSizes[headingLevel or 2] + MOS.UI.Components.GetTextSizeDelta(parent), flags)
+    if MOS.UI.Components.SetHeadingIcon then MOS.UI.Components.SetHeadingIcon(button.label, "settings") end
     button.mosSectionInset = inset or 0
     button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", button.mosSectionInset, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button:RefreshRule()

@@ -15,6 +15,7 @@ function RaidSessionController.Create(dependencies)
     local function PendingName() return state.pendingRaidName end
 
     function controller:CaptureActiveRoster()
+        if state.raidSessionTransitionPending then return nil end
         return session:CaptureActiveRoster(IsDraft)
     end
 
@@ -31,6 +32,9 @@ function RaidSessionController.Create(dependencies)
         if not session:Complete(saveOptions) then return false end
         state.raidSessionDraft = false; state.raidSessionPaused = true; state.raidLiveTracking = false
         state.raidScanReady = false; state.raidSessionContinuedContext = nil
+        state.raidSessionTransitionPending = false; state.raidSessionMismatchContext = nil
+        state.raidPhysicalRosterReady = nil; state.raidSessionAwaitingPhysicalAcceptance = nil
+        if session.ResetPhysicalRaid then session:ResetPhysicalRaid() end
         dependencies.setHistoricalLoaded(false); dependencies.clearSelection()
         dependencies.showSavedPopup()
         return true
@@ -39,25 +43,92 @@ function RaidSessionController.Create(dependencies)
     function controller:Begin()
         state.raidSessionPaused = false; state.raidSessionDraft = true
         state.raidSessionContinuedContext = nil
+        state.raidSessionTransitionPending = false; state.raidSessionMismatchContext = nil
+        state.raidPhysicalRosterReady = nil; state.raidSessionAwaitingPhysicalAcceptance = nil
+        if session.ResetPhysicalRaid then session:ResetPhysicalRaid() end
         session:BeginDraft()
     end
 
     function controller:StartNew(raidId, raidName)
+        if dependencies.canStartNewRaid and not dependencies.canStartNewRaid() then return false end
         state.pendingRaidSessionId = raidId; state.pendingRaidName = raidName
         session:ClearAttendance()
         dependencies.setHistoricalLoaded(false)
         state.raidSessionPaused = false; state.raidSessionDraft = true
+        state.raidSessionTransitionPending = false; state.raidSessionMismatchContext = nil
+        state.raidPhysicalRosterReady = nil; state.raidSessionAwaitingPhysicalAcceptance = nil
+        if session.ResetPhysicalRaid then session:ResetPhysicalRaid() end
+        return true
+    end
+
+    function controller:CancelPendingRaidScan()
+        if not state.pendingRaidSessionId then return false end
+        state.pendingRaidSessionId = nil; state.pendingRaidName = nil
+        state.raidSessionDraft = false; state.raidScanReady = false
+        state.raidLiveTracking = false; state.raidSessionPaused = true
+        return true
     end
 
     function controller:Quit()
+        if dependencies.cancelRaidScan then dependencies.cancelRaidScan() end
         session:Quit()
+        state.pendingRaidSessionId = nil; state.pendingRaidName = nil
         state.raidSessionPaused = true; state.raidSessionDraft = false; state.raidLiveTracking = false
         dependencies.setHistoricalLoaded(false); state.raidScanReady = false; dependencies.clearSelection()
         state.raidSessionContinuedContext = nil
+        state.raidSessionTransitionPending = false; state.raidSessionMismatchContext = nil
+        state.raidPhysicalRosterReady = nil; state.raidSessionAwaitingPhysicalAcceptance = nil
+        if session.ResetPhysicalRaid then session:ResetPhysicalRaid() end
     end
 
     function controller:Continue(contextKey)
         state.raidSessionContinuedContext = contextKey; state.raidSessionPaused = false
+        state.raidSessionTransitionPending = state.raidPhysicalRosterReady == false
+        if contextKey and string.find(contextKey, "different-raid-context|", 1, true) == 1 then
+            if session.AcceptPhysicalRaid and session:AcceptPhysicalRaid() == false then state.raidSessionAwaitingPhysicalAcceptance = contextKey end
+            state.raidSessionMismatchContext = nil; state.raidSessionPaused = true
+            dependencies.setHistoricalLoaded(true)
+        end
+    end
+
+    function controller:GetTransitionContext()
+        if not state.raidSessionDraft or not session.GetPhysicalTransition then return nil end
+        local contextKey, ready = session:GetPhysicalTransition()
+        state.raidPhysicalRosterReady = ready
+        if ready and contextKey and contextKey == state.raidSessionAwaitingPhysicalAcceptance then
+            session:AcceptPhysicalRaid()
+            state.raidSessionAwaitingPhysicalAcceptance = nil; contextKey = nil
+        end
+        if ready and state.raidSessionContinuedContext == "outside-raid-context" and session.ConfirmPhysicalDeparture then session:ConfirmPhysicalDeparture() end
+        if ready then state.raidSessionMismatchContext = contextKey end
+        state.raidSessionTransitionPending = not ready or state.raidSessionMismatchContext ~= nil
+        if state.raidSessionTransitionPending then state.raidLiveTracking = false end
+        return state.raidSessionMismatchContext
+    end
+
+    function controller:SetTransitionPending(contextKey)
+        state.raidSessionTransitionPending = contextKey ~= nil or state.raidPhysicalRosterReady == false
+        if state.raidSessionTransitionPending then state.raidLiveTracking = false end
+    end
+
+    function controller:ConfirmTransition(contextKey)
+        if contextKey == "outside-raid-context" and session.ConfirmPhysicalDeparture then session:ConfirmPhysicalDeparture() end
+    end
+
+    function controller:DismissTransition(contextKey)
+        state.raidSessionContinuedContext = contextKey
+        state.raidSessionPaused = true; state.raidLiveTracking = false
+        state.raidSessionTransitionPending = true
+    end
+
+    function controller:RefreshCurrentRaid()
+        if state.raidSessionTransitionPending then return false end
+        local count = self:CaptureActiveRoster()
+        if not count or count <= 0 then return false end
+        if session.AcceptPhysicalRaid then session:AcceptPhysicalRaid() end
+        state.raidSessionPaused = false; state.raidScanReady = true
+        dependencies.setHistoricalLoaded(false)
+        return true
     end
 
     function controller:StartTest()
@@ -66,6 +137,9 @@ function RaidSessionController.Create(dependencies)
 
     local function RestoreState(ready, draft)
         state.raidScanReady = ready; state.raidSessionDraft = draft; state.raidSessionPaused = false
+        state.raidSessionTransitionPending = false; state.raidSessionMismatchContext = nil
+        state.raidPhysicalRosterReady = nil; state.raidSessionAwaitingPhysicalAcceptance = nil
+        if session.ResetPhysicalRaid then session:ResetPhysicalRaid() end
         dependencies.setHistoricalLoaded(false)
     end
     function controller:RestoreActive()

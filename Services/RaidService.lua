@@ -63,6 +63,51 @@ local function ActiveLootAttendance()
     return MOS.Database.GetRaidAttendance()
 end
 
+local function FindLootMember(attendance, name)
+    if not attendance or not name then return nil end
+    local wanted, collectionIndex, memberIndex = string.lower(name), nil, nil
+    for collectionIndex = 1, 2 do
+        local collection = collectionIndex == 1 and attendance.members or attendance.departedMembers
+        for memberIndex = 1, table.getn(collection or {}) do
+            local member = collection[memberIndex]
+            if member.name and string.lower(member.name) == wanted then return member end
+        end
+    end
+    return nil
+end
+
+local function ArchiveLootMember(member)
+    if not member then return nil end
+    return { name=member.name, class=member.class, classFile=member.classFile,
+        level=member.level, guildRank=member.guildRank, guildMember=member.guildMember,
+        sr=member.sr, srItemIds=member.srItemIds, srSourceName=member.srSourceName,
+        loot=member.loot, srConsumedAt=member.srConsumedAt,
+        reyCoinUsedAt=member.reyCoinUsedAt, reyCoinItemLink=member.reyCoinItemLink }
+end
+
+local function EnsureConfirmedLootMember(attendance, name, source)
+    local member = FindLootMember(attendance, name)
+    if member then return member end
+    if not source or string.lower(source.name or "") ~= string.lower(name or "") then return nil end
+    -- Pending context is transient. A matching confirmed receipt/trade is the
+    -- only path that turns an otherwise empty departed recipient into history.
+    member = ArchiveLootMember(source)
+    member.loot = {}
+    if source.srItemIds then
+        member.srItemIds = {}
+        local index
+        for index = 1, table.getn(source.srItemIds) do table.insert(member.srItemIds, source.srItemIds[index]) end
+    end
+    if source.srConsumedAt then
+        member.srConsumedAt = {}
+        local itemId, usedAt
+        for itemId, usedAt in pairs(source.srConsumedAt) do member.srConsumedAt[itemId] = usedAt end
+    end
+    attendance.departedMembers = attendance.departedMembers or {}
+    table.insert(attendance.departedMembers, member)
+    return member
+end
+
 local function NotifyLootExpiryChanged()
     if RaidService.onPendingLootExpiryChanged then RaidService.onPendingLootExpiryChanged() end
 end
@@ -200,6 +245,9 @@ end
 local function CompletePendingReyCoin(transfer, recipient, traded)
     if not RaidService.IsLootSessionCurrent(transfer.lootSessionToken) then return false end
     local index = FindPendingReyCoinIndex(transfer)
+    if index and transfer.recipientStates then
+        EnsureConfirmedLootMember(ActiveLootAttendance(), recipient, transfer.recipientStates[string.lower(recipient or "")])
+    end
     if not index or not RaidService.SetReyCoinUsage(recipient, transfer.link, true, transfer.lootSessionToken) then return false end
     if not RaidService.IsLootSessionCurrent(transfer.lootSessionToken) then return false end
     index = FindPendingReyCoinIndex(transfer)
@@ -301,7 +349,7 @@ function RaidService.GetSoftReserveRollRights(itemLink)
     local testRaid = MOS.Services.TestRaid
     local testing = testRaid and testRaid.IsActive and testRaid.IsActive()
     local attendance = testing and testRaid.GetAttendance() or MOS.Database.GetRaidAttendance()
-    if not testing then
+    if not testing and not MOS.raidSessionTransitionPending then
         local raidCount = GetNumRaidMembers() or 0
         if raidCount > 0 then
             local needsSync = not attendance or not attendance.members or table.getn(attendance.members) ~= raidCount
@@ -507,14 +555,11 @@ function RaidService.ConfirmSoftReserveReceipt(recipient, itemLink, expectedSess
     local itemId = tonumber(Match(tostring(itemLink or ""), "item:(%d+)"))
     local attendance = ActiveLootAttendance()
     if not recipient or not itemId or not attendance or not attendance.members then return false end
-    local index
-    for index = 1, table.getn(attendance.members) do
-        local member = attendance.members[index]
-        if member.name and string.lower(member.name) == string.lower(recipient) then
-            member.srConsumedAt = member.srConsumedAt or {}
-            member.srConsumedAt[itemId] = time()
-            return true
-        end
+    local member = FindLootMember(attendance, recipient)
+    if member then
+        member.srConsumedAt = member.srConsumedAt or {}
+        member.srConsumedAt[itemId] = time()
+        return true
     end
     return false
 end
@@ -528,15 +573,11 @@ end
 function RaidService.HasUsedReyCoin(playerName)
     local attendance = RaidService.GetReyCoinAttendance()
     if not playerName or not attendance or not attendance.members then return false end
-    local wanted = string.lower(playerName)
-    local index
-    for index = 1, table.getn(attendance.members) do
-        local member = attendance.members[index]
-        if member.name and string.lower(member.name) == wanted then
-            local usedAt = tonumber(member.reyCoinUsedAt) or 0
-            local used = usedAt > 0 and usedAt >= (tonumber(attendance.sessionStartedAt) or 0)
-            return used, used and member.reyCoinItemLink or nil
-        end
+    local member = FindLootMember(attendance, playerName)
+    if member then
+        local usedAt = tonumber(member.reyCoinUsedAt) or 0
+        local used = usedAt > 0 and usedAt >= (tonumber(attendance.sessionStartedAt) or 0)
+        return used, used and member.reyCoinItemLink or nil
     end
     return false
 end
@@ -545,21 +586,12 @@ function RaidService.SetReyCoinUsage(playerName, itemLink, used, expectedSession
     if expectedSessionToken ~= nil and not RaidService.IsLootSessionCurrent(expectedSessionToken) then return false end
     local attendance = RaidService.GetReyCoinAttendance()
     if not playerName then return false end
-    local wanted = string.lower(playerName)
-    local member
-    local index
-    for index = 1, table.getn(attendance and attendance.members or {}) do
-        local candidate = attendance.members[index]
-        if candidate.name and string.lower(candidate.name) == wanted then member = candidate; break end
-    end
+    local member = FindLootMember(attendance, playerName)
     local testRaid = MOS.Services.TestRaid
-    if not member and not (testRaid and testRaid.IsActive and testRaid.IsActive()) and (GetNumRaidMembers() or 0) > 0 then
+    if not member and not MOS.raidSessionTransitionPending and not (testRaid and testRaid.IsActive and testRaid.IsActive()) and (GetNumRaidMembers() or 0) > 0 then
         RaidService.SaveRoster()
         attendance = MOS.Database.GetRaidAttendance()
-        for index = 1, table.getn(attendance and attendance.members or {}) do
-            local candidate = attendance.members[index]
-            if candidate.name and string.lower(candidate.name) == wanted then member = candidate; break end
-        end
+        member = FindLootMember(attendance, playerName)
     end
     if expectedSessionToken ~= nil and not RaidService.IsLootSessionCurrent(expectedSessionToken) then return false end
     if not member then
@@ -573,10 +605,13 @@ end
 
 function RaidService.ResetReyCoinUsage(attendance)
     if attendance and attendance.members then
-        local index
-        for index = 1, table.getn(attendance.members) do
-            attendance.members[index].reyCoinUsedAt = nil
-            attendance.members[index].reyCoinItemLink = nil
+        local index, collectionIndex
+        for collectionIndex = 1, 2 do
+            local collection = collectionIndex == 1 and attendance.members or attendance.departedMembers
+            for index = 1, table.getn(collection or {}) do
+                collection[index].reyCoinUsedAt = nil
+                collection[index].reyCoinItemLink = nil
+            end
         end
     end
     pendingReyCoinAwards = {}
@@ -611,6 +646,8 @@ function RaidService.QueueReyCoinAward(winner, itemLink, carrier, reyCoinRollers
     if not winner or not itemId then return false end
     reyCoinRollers = reyCoinRollers or {}
     reyCoinRollers[string.lower(winner)] = true
+    local recipientStates, name = {}, nil
+    for name in pairs(reyCoinRollers) do recipientStates[string.lower(name)] = ArchiveLootMember(FindLootMember(lootSessionAttendance, name)) end
     nextReyCoinTransactionId = nextReyCoinTransactionId + 1
     if RaidService.debugReyCoin and DEFAULT_CHAT_FRAME then
         DEFAULT_CHAT_FRAME:AddMessage("MOS Reycoin trace: queued winner=" .. tostring(winner)
@@ -621,6 +658,7 @@ function RaidService.QueueReyCoinAward(winner, itemLink, carrier, reyCoinRollers
         lootSessionToken = token,
         winner = winner, carrier = carrier or winner, link = itemLink, itemId = itemId,
         reyCoinRollers = reyCoinRollers, historyKey = historyKey, rollHistory = rollHistory,
+        recipientStates = recipientStates,
         quantity = quantity and LootQuantity(quantity) or nil,
     })
     NotifyPendingReyCoinChanged()
@@ -762,6 +800,7 @@ function RaidService.QueueLootAwardForReceipt(recipient, itemLink, historyKey, l
     local now = GetTime()
     pendingRollAwards[string.lower(recipient) .. ":" .. itemId] = {
         lines = copy, at = now, lootSessionToken = token, historyKey = historyKey,
+        recipientState = ArchiveLootMember(FindLootMember(lootSessionAttendance, recipient)),
         quantity = quantity and LootQuantity(quantity) or nil }
     ScheduleLootExpiry(now + 30)
     return true
@@ -795,13 +834,8 @@ function RaidService.RecordReyCoinTrade(pending, recipient)
     local attendance = ActiveLootAttendance()
     if not attendance or not attendance.members or not pending or not recipient then return false end
     local sender = pending.carrier
-    local senderMember, recipientMember
+    local senderMember, recipientMember = FindLootMember(attendance, sender), FindLootMember(attendance, recipient)
     local index
-    for index = 1, table.getn(attendance.members) do
-        local member = attendance.members[index]
-        if member.name and string.lower(member.name) == string.lower(sender or "") then senderMember = member end
-        if member.name and string.lower(member.name) == string.lower(recipient) then recipientMember = member end
-    end
     if not recipientMember then return false end
     local loot, candidateIndex, fallbackIndex
     if senderMember and senderMember.loot then
@@ -894,6 +928,7 @@ function RaidService.QueueSoftReserveTrade(recipient, itemLink, carrier, history
     for index = 1, table.getn(rollHistory or {}) do copy[index] = rollHistory[index] end
     table.insert(pendingSoftReserveTrades, {
         recipient = recipient, carrier = carrier, link = itemLink, itemId = itemId,
+        recipientState = ArchiveLootMember(FindLootMember(lootSessionAttendance, recipient)),
         historyKey = historyKey, rollHistory = copy, state = "awaiting_receipt", lootSessionToken = token,
         quantity = quantity and LootQuantity(quantity) or nil })
     NotifySoftReserveTradeChanged()
@@ -943,6 +978,7 @@ function RaidService.ConfirmSoftReserveTrade(sender, recipient, itemReference)
             and string.lower(pending.recipient) == string.lower(recipient)
             and ((itemId and pending.itemId == itemId)
                 or (expectedName and string.lower(expectedName) == string.lower(itemName))) then
+            EnsureConfirmedLootMember(ActiveLootAttendance(), recipient, pending.recipientState)
             if not RaidService.ConfirmSoftReserveReceipt(recipient, pending.link, pending.lootSessionToken) then return false end
             RaidService.RecordReyCoinTrade(pending, recipient)
             table.remove(pendingSoftReserveTrades, index)
@@ -970,10 +1006,36 @@ local function GetGuildMemberIndex(guildData)
     return indexedGuildMembers
 end
 
+local function HasRecordedLootState(member)
+    return member and ((member.loot and table.getn(member.loot) > 0)
+        or (tonumber(member.reyCoinUsedAt) or 0) > 0
+        or (member.srConsumedAt and next(member.srConsumedAt) ~= nil))
+end
+
+function RaidService.ResetRecordedLoot(attendance)
+    if attendance then
+        local collectionIndex, memberIndex
+        for collectionIndex = 1, 2 do
+            local collection = collectionIndex == 1 and attendance.members or attendance.departedMembers
+            for memberIndex = 1, table.getn(collection or {}) do collection[memberIndex].loot = {} end
+        end
+        RaidService.ResetReyCoinUsage(attendance)
+        for memberIndex = table.getn(attendance.departedMembers or {}), 1, -1 do
+            if not HasRecordedLootState(attendance.departedMembers[memberIndex]) then table.remove(attendance.departedMembers, memberIndex) end
+        end
+        if attendance.departedMembers and table.getn(attendance.departedMembers) == 0 then attendance.departedMembers = nil end
+    else RaidService.ResetReyCoinUsage(attendance) end
+    RaidService.ResetLootSession()
+end
+
 function RaidService.SaveRoster()
     MOS.Diagnostics.Count("scans")
     MOS.Database.Ensure()
     local guildData = MOS.Database.GetRosterData()
+    if type(IsInGuild) == "function" then
+        local inGuild = IsInGuild()
+        if not inGuild or inGuild == 0 then guildData = nil end
+    end
     local guildMembers = GetGuildMemberIndex(guildData)
 
     local previousLoot, previousReserves, previousReyCoin, previousReyCoinItems, previousSrConsumed = {}, {}, {}, {}, {}
@@ -987,22 +1049,27 @@ function RaidService.SaveRoster()
     local preservePrevious = previousAttendance and previousAttendance.members
         and (activeSession or previousAttendance.raidName == currentRaidName)
     if preservePrevious then
-        local previousIndex
-        for previousIndex = 1, table.getn(previousAttendance.members) do
-            local previousMember = previousAttendance.members[previousIndex]
-            previousLoot[string.lower(previousMember.name or "")] = previousMember.loot or {}
-            previousReserves[string.lower(previousMember.name or "")] = { text = previousMember.sr or "", itemIds = previousMember.srItemIds, sourceName = previousMember.srSourceName }
-            previousReyCoin[string.lower(previousMember.name or "")] = previousMember.reyCoinUsedAt
-            previousReyCoinItems[string.lower(previousMember.name or "")] = previousMember.reyCoinItemLink
-            previousSrConsumed[string.lower(previousMember.name or "")] = previousMember.srConsumedAt
+        local previousIndex, collectionIndex
+        for collectionIndex = 1, 2 do
+            local collection = collectionIndex == 1 and previousAttendance.departedMembers or previousAttendance.members
+            for previousIndex = 1, table.getn(collection or {}) do
+                local previousMember = collection[previousIndex]
+                local key = string.lower(previousMember.name or "")
+                previousLoot[key] = previousMember.loot or {}
+                previousReserves[key] = { text = previousMember.sr or "", itemIds = previousMember.srItemIds, sourceName = previousMember.srSourceName }
+                previousReyCoin[key] = previousMember.reyCoinUsedAt
+                previousReyCoinItems[key] = previousMember.reyCoinItemLink
+                previousSrConsumed[key] = previousMember.srConsumedAt
+            end
         end
     end
 
-    local members = {}
+    local members, presentNames = {}, {}
     local raidIndex
     for raidIndex = 1, total do
         local name, raidRank, subgroup, level, class, classFile, zone, online, dead = GetRaidRosterInfo(raidIndex)
         if name then
+            presentNames[string.lower(name)] = true
             local guildMember = guildMembers[string.lower(name)]
             local previousReserve = previousReserves[string.lower(name)]
             table.insert(members, {
@@ -1031,6 +1098,25 @@ function RaidService.SaveRoster()
         end
     end
 
+    -- A departing player leaves the physical roster, but their confirmed loot
+    -- remains part of this session. Rejoins move that same aggregate back above.
+    local departedMembers
+    if preservePrevious then
+        local archivedNames, collectionIndex, previousIndex = {}, nil, nil
+        for collectionIndex = 1, 2 do
+            local collection = collectionIndex == 1 and previousAttendance.members or previousAttendance.departedMembers
+            for previousIndex = 1, table.getn(collection or {}) do
+                local member = collection[previousIndex]
+                local key = string.lower(member.name or "")
+                if key ~= "" and not presentNames[key] and not archivedNames[key] and HasRecordedLootState(member) then
+                    departedMembers = departedMembers or {}
+                    table.insert(departedMembers, collectionIndex == 1 and ArchiveLootMember(member) or member)
+                    archivedNames[key] = true
+                end
+            end
+        end
+    end
+
     local scanTimestamp = time()
     local attendance = {
         addonVersion = MOS.version,
@@ -1039,6 +1125,7 @@ function RaidService.SaveRoster()
         raidName = activeSession and previousAttendance.raidName or currentRaidName,
         updatedBy = UnitName("player"),
         members = members,
+        departedMembers = departedMembers,
         snapshotId = previousAttendance and previousAttendance.snapshotId or nil,
         _loadedSnapshotId = previousAttendance and previousAttendance._loadedSnapshotId or nil,
         sessionStartedAt = previousAttendance and previousAttendance.sessionStartedAt or nil,
@@ -1076,6 +1163,7 @@ function RaidService.RecordLoot(message, confirmedAward)
     local itemStart, itemEnd, itemLink = string.find(message, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
     if not itemLink then itemStart, itemEnd, itemLink = string.find(message, "(|Hitem:.-|h%[.-%]|h)") end
     if not itemLink then return false end
+    local _, _, parsedItemId = string.find(itemLink, "item:(%d+)")
     local _, _, parsedQuantity = string.find(string.sub(message, itemEnd + 1), "x(%d+)")
     local quantity = LootQuantity(parsedQuantity)
     local recipient
@@ -1086,26 +1174,21 @@ function RaidService.RecordLoot(message, confirmedAward)
     else
         local prefix = string.sub(message, 1, math.max(0, (itemStart or 1) - 1))
         local prefixName = Match(prefix, "^%s*([^%s:]+)")
-        local memberIndex
-        for memberIndex = 1, table.getn(attendance.members) do
-            local memberName = attendance.members[memberIndex].name
-            if memberName and prefixName and string.lower(prefixName) == string.lower(memberName) then recipient = memberName; break end
-        end
+        local found = FindLootMember(attendance, prefixName)
+        recipient = found and found.name or prefixName
     end
     if not recipient then return false end
 
-    local member
-    local memberIndex
-    for memberIndex = 1, table.getn(attendance.members) do
-        if string.lower(attendance.members[memberIndex].name or "") == string.lower(recipient) then
-            member = attendance.members[memberIndex]
-            break
+    local member = FindLootMember(attendance, recipient)
+    if not member and parsedItemId then
+        local pending = pendingRollAwards[string.lower(recipient) .. ":" .. parsedItemId]
+        if pending and pending.lootSessionToken == lootSessionToken and GetTime() - pending.at < 30 then
+            member = EnsureConfirmedLootMember(attendance, recipient, pending.recipientState)
         end
     end
     if not member then return false end
 
     local _, _, parsedItemName = string.find(itemLink, "%[([^%]]+)%]")
-    local _, _, parsedItemId = string.find(itemLink, "item:(%d+)")
     local itemName = parsedItemName or "Unknown item"
     local itemId = parsedItemId or itemName
     local receiptKey = string.lower(recipient) .. ":" .. tostring(itemId)

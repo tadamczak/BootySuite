@@ -13,7 +13,7 @@ function RaidManagement.CreateLootRulesDialog(options)
     local UI = MOS.UI.Components
     UI.Window.ApplyProjectSurface(frame)
     UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(frame) end)
-    frame.title = UI.CreateHeading(frame, "Set Loot Rules", 3, "gold")
+    frame.title = UI.CreateHeading(frame, "Set Loot Rules", 3, "gold", "rules")
     local titleFont, _, titleFlags = frame.title:GetFont(); frame.title:SetFont(titleFont, 13, titleFlags)
     frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
     frame.close = UI.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)

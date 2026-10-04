@@ -63,9 +63,9 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.classicSummary = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontDisableSmall")
     view.classicSummary:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -31); view.classicSummary:SetWidth(245); view.classicSummary:SetHeight(14); view.classicSummary:SetJustifyH("LEFT"); view.classicSummary:Hide()
     page.classicSummary = view.classicSummary
-    view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
+    view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "raids")
     view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); view.title:SetText("Raid")
-    view.classicRaidName = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
+    view.classicRaidName = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "raids")
     view.classicRaidName:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); view.classicRaidName:SetWidth(120); view.classicRaidName:SetJustifyH("LEFT"); view.classicRaidName:Hide()
     view.classicMeta = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     view.classicMeta:SetPoint("LEFT", view.classicRaidName, "RIGHT", 10, 0); view.classicMeta:SetWidth(82); view.classicMeta:SetJustifyH("LEFT"); view.classicMeta:Hide()
@@ -110,6 +110,8 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.lmConfigClose:SetScript("OnClick", function() page.lmConfigOpen = false; view.lmConfigPanel:Hide() end)
     page.lmConfigClose = view.lmConfigClose
     view.lmConfigTitle:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
+    MOS.UI.Components.SetHeadingIcon(view.lmConfigTitle,"settings")
+    view.lmConfigTitle:SetPoint("TOPRIGHT",view.lmConfigPanel,"TOPRIGHT",-34,-8)
     RaidManagement.CreateAutoLootControls(page, view)
     view.lmConfigToggle = MOS.UI.Components.CreateButton(page, nil, "", 18, 18)
     MOS.UI.Components.SetClassicButtonCompact(view.lmConfigToggle, true)
@@ -144,6 +146,8 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.reyCoinTitle:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 8, -8)
     view.reyCoinTitle:SetText("Reycoin list")
     view.reyCoinTitle:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
+    MOS.UI.Components.SetHeadingIcon(view.reyCoinTitle,"list")
+    view.reyCoinTitle:SetPoint("TOPRIGHT",view.reyCoinPanel,"TOPRIGHT",-34,-8)
     view.reyCoinScroll = MOS.UI.Components.CreateScrollFrame(nil, view.reyCoinPanel)
     view.reyCoinScroll:SetPoint("TOPLEFT", view.reyCoinPanel, "TOPLEFT", 6, -29)
     view.reyCoinScroll:SetPoint("BOTTOMRIGHT", view.reyCoinPanel, "BOTTOMRIGHT", -6, 61)
@@ -346,6 +350,7 @@ function RaidManagement.CreateActionControls(page)
     controls.testRaid = MOS.UI.Components.CreateButton(page, nil, "Test Raid", 88, 24); controls.testRaid:Hide()
     MOS.UI.Components.AttachTooltip(controls.testRaid, "Test Raid", "Open a transient 40-player raid sandbox. Test data is never saved.")
     controls.historyTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controls.historyTitle:SetText("Saved raids"); controls.historyTitle:Hide()
+    MOS.UI.Components.SetHeadingIcon(controls.historyTitle,"archive")
     controls.historyScroll = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidHistoryScroll", page, "UIPanelScrollFrameTemplate")
     MOS.UI.Components.RegisterSkinnedScrollBar(getglobal("MuklaOfficerSuiteRaidHistoryScrollScrollBar"))
     controls.historyCanvas = MOS.UI.Components.CreateContainer(nil, controls.historyScroll)
@@ -446,16 +451,12 @@ function RaidManagement.CreateActionControls(page)
 end
 
 function RaidManagement.RegisterResetLootDialog(options)
-    RaidManagement.resetLootDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteResetLootDialog", "Reset Loot", "Reset Loot")
+    RaidManagement.resetLootDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteResetLootDialog", "Reset Loot", "Reset Loot", "reset")
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_RESET_LOOT"] = {
         text = "Reset all recorded raid loot?", button1 = "Reset loot", button2 = "Cancel",
         OnAccept = function()
             local attendance = options.getAttendance()
-            if attendance and attendance.members then
-                local memberIndex
-                for memberIndex = 1, table.getn(attendance.members) do attendance.members[memberIndex].loot = {} end
-            end
-            MOS.Services.Raid.ResetReyCoinUsage(attendance)
+            MOS.Services.Raid.ResetRecordedLoot(attendance)
             options.clearSelection(); options.refresh(); options.printMessage("Raid loot history reset.")
         end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
@@ -805,7 +806,7 @@ function RaidManagement.MountList(page, chrome, options)
         OnCancel = function() pendingSoftReserveRemoval = nil end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    local removeSRDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteRemoveMemberSR", "Remove Soft Reserve", "Remove SR")
+    local removeSRDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteRemoveMemberSR", "Remove Soft Reserve", "Remove SR", "fix")
     local controller = RaidManagement.CreateListController({
         page = page, runMemberAction = options.runMemberAction, isSelected = options.isSelected,
         refresh = options.refresh, onSelect = options.onSelect, removeSoftReserve = function(memberName)
@@ -2817,6 +2818,7 @@ local function OnRosterDebounceUpdate()
 end
 
 function RaidManagement.HandleWorldContext(options, context, confirmed)
+    if options.setTransitionPending then options.setTransitionPending(nil) end
     local attendance = options.getAttendance()
     local zone = options.getZone() or ""
     local inInstance, instanceType = options.getInstanceState()
@@ -2855,9 +2857,12 @@ function RaidManagement.HandleWorldContext(options, context, confirmed)
     end
     -- A saved/session display name is not an instance identity. Observe the
     -- actual client context instead, without persisting derived zone state.
-    if inRaid and (not instanceType or instanceType == "") then return end
-    local contextKey
-    if not inRaid then
+    local contextKey = options.getSessionTransitionContext and options.getSessionTransitionContext()
+    if not contextKey and inRaid and (not instanceType or instanceType == "") then return end
+    if contextKey then
+        -- A saved roster can belong to another physical group in the same zone.
+        -- Preserve it until the user makes the existing session choice.
+    elseif not inRaid then
         contextKey = "outside-raid-context"
     elseif context.raidZone and not inRaidInstance then
         contextKey = "outside-raid-context"
@@ -2871,7 +2876,12 @@ function RaidManagement.HandleWorldContext(options, context, confirmed)
         options.hideSessionTransitionPrompt()
         return
     end
-    if options.getContinuedContext() == contextKey or context.promptedContext == contextKey then return end
+    if options.setTransitionPending then options.setTransitionPending(contextKey) end
+    if options.getContinuedContext() == contextKey then
+        if options.setTransitionPending then options.setTransitionPending(nil) end
+        return
+    end
+    if context.promptedContext == contextKey then return end
     if confirmed ~= contextKey then return contextKey end
     context.promptedContext = contextKey
     options.showSessionTransitionPrompt(contextKey)
@@ -2967,6 +2977,7 @@ function RaidManagement.CreateLifecycle(options)
 
     function lifecycle:Show()
         options.page:Show()
+        self:OnWorldContextChanged()
         self:SyncTrackingSetting()
     end
 
@@ -3130,11 +3141,8 @@ function RaidManagement.CreateLootMasterController(options)
 
     local function LayoutToolbar()
         local available = math.max(1, window:GetWidth() - 172)
-        local font, _, flags = title:GetFont()
-        title:SetWidth(0); title:SetFont(font, 12, flags)
-        local width = title:GetStringWidth()
-        if width > available then title:SetFont(font, math.max(8, 12 * available / width), flags) end
-        title:SetWidth(available); title:SetHeight(18)
+        title.mosFitFontSize = 12
+        UI.FitButtonLabel(title, available); title:SetHeight(18)
     end
 
     controller.Refresh = function()
@@ -3250,7 +3258,7 @@ function RaidManagement.CreateLootMasterController(options)
         newRoll:SetScript("OnClick",function() if MOS.Modules.MasterLootWindow then MOS.Modules.MasterLootWindow.OpenNewRollDialog() end end)
         UI.AttachTooltip(sr, "SR", "Import SR or share the SR link.")
         UI.AttachTooltip(rules, "Loot Rules", "Set or share loot rules.")
-        title = UI.CreateHeading(window, "Loot Master Mode", 3, "gold")
+        title = UI.CreateHeading(window, "Loot Master Mode", 3, "gold", "lootmaster")
         title:SetText("Loot Master Mode"); title:SetPoint("TOPLEFT", window, "TOPLEFT", 6, -6)
         title:SetJustifyH("LEFT"); title:SetJustifyV("MIDDLE"); title:SetHeight(18)
         controller.title = title; controller.configButton = config; controller.reycoinButton = reycoin
@@ -3339,12 +3347,18 @@ function RaidManagement.AttachActionHandlers(options)
         value = string.gsub(tostring(value or ""), "^%s+", ""); value = string.gsub(value, "%s+$", "")
         if value == "" then return false, "Raid ID is required." end
         if options.raidIdExists(value) then return false, "This raid ID already exists." end
-        options.startNewRaid(value, selectedRaidName)
-        controls.scan:Hide(); controls.status:SetText("Scanning raid and guild data...")
-        options.requestRosterScan("raid")
+        if not options.isInRaid() then return false, "Join a raid before starting a session." end
+        if options.startNewRaid(value, selectedRaidName) == false then return false, "Finish the current session or scan first." end
+        if options.requestRosterScan("raid") == false then
+            if options.cancelPendingRaidScan then options.cancelPendingRaidScan() end
+            options.refresh()
+            return false, "The scan could not start. Please try again."
+        end
+        controls.scan:Hide(); controls.status:SetText("Scanning raid...")
         return true
     end)
     newRaidDialog:SetHeight(190)
+    MOS.UI.Components.SetHeadingIcon(newRaidDialog.title,"raids")
     newRaidDialog.raidLabel = MOS.UI.Components.CreateLabel(newRaidDialog, nil, "OVERLAY", "GameFontHighlightSmall")
     newRaidDialog.raidLabel:SetPoint("TOPLEFT", newRaidDialog, "TOPLEFT", 18, -91); newRaidDialog.raidLabel:SetText("Raid")
     newRaidDialog.raidSelect = MOS.UI.Components.CreateDropdownButton(newRaidDialog, nil, selectedRaidName, 180)
@@ -3368,6 +3382,7 @@ function RaidManagement.AttachActionHandlers(options)
         if accepted then pendingShareAction = nil end
         return accepted, message
     end, 500)
+    MOS.UI.Components.SetHeadingIcon(shareSrDialog.title,"link")
     local function ShareWithUrl(action)
         local url = options.getSrUrl()
         if url and url ~= "" then
@@ -3420,7 +3435,7 @@ function RaidManagement.AttachActionHandlers(options)
             MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_DELETE_RAID_SNAPSHOT")
         end)
     end
-    local liveLoadDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteLiveLoad", "Live Tracking", "Yes")
+    local liveLoadDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteLiveLoad", "Live Tracking", "Yes", "refresh")
     liveLoadDialog.no:SetText("No")
     liveLoadDialog.close:Hide()
     local function StopLoadedTracking()
@@ -3429,6 +3444,16 @@ function RaidManagement.AttachActionHandlers(options)
         controls.refreshButton:SetInactive(false)
         options.refresh()
     end
+    local function OfferCurrentRaidRefresh()
+        if not options.isInRaid() then return end
+        liveLoadDialog:Open("Refresh members from your current raid? This replaces the member list. Matching members keep their loot and SR. Choose No to keep the current data.", function()
+            local updated
+            if options.refreshCurrentRaid then updated = options.refreshCurrentRaid()
+            else options.saveRaidRoster(); options.setHistoricalLoaded(false); updated = true end
+            if updated == false then return end
+            MOS.Database.SetSetting("raidLiveTrackingEnabled", true); options.setLiveTracking(true); options.refresh()
+        end, StopLoadedTracking)
+    end
     local function LoadSelectedRaid()
         if not options.page.selectedRaidHistoryId then return false end
         local resumeTracking = MOS.Database.GetSetting("raidLiveTrackingEnabled")
@@ -3436,7 +3461,7 @@ function RaidManagement.AttachActionHandlers(options)
             if resumeTracking then MOS.Database.SetSetting("raidLiveTrackingEnabled", false); options.setLiveTracking(false) end
             RaidManagement.ResetIssueAttention(options.page)
             options.beginRaidSession(); options.setHistoricalLoaded(true); options.setScanReady(true); options.refresh()
-            if resumeTracking then
+            if resumeTracking and not (options.hasPendingRaidTransition and options.hasPendingRaidTransition()) then
                 options.setLiveTracking(false)
                 liveLoadDialog:Open("Do you want to refresh saved raid data with current raid? Pressing No turns off Live Tracking option in Settings. Remember to turn it on if desired.", function()
                     options.saveRaidRoster(); options.setHistoricalLoaded(false); MOS.Database.SetSetting("raidLiveTrackingEnabled", true); options.setLiveTracking(true); options.refresh()
@@ -3459,8 +3484,13 @@ function RaidManagement.AttachActionHandlers(options)
     MOS.UI.Components.AttachPlaceholder(controls.searchBox,"Search...")
     controls.refreshButton:SetScript("OnClick", function()
         if this.inactive or not options.isInRaid() then return end
+        if options.hasPendingRaidTransition and options.hasPendingRaidTransition() then
+            options.page.ShowSessionTransitionPrompt("different-raid-context|refresh")
+            return
+        end
         this:SetInactive(true)
-        options.saveRaidRoster(); options.setScanReady(true); options.refresh()
+        if options.refreshCurrentRaid then options.refreshCurrentRaid() else options.saveRaidRoster() end
+        options.setScanReady(true); options.refresh()
         this:SetInactive(false)
     end)
     controls.scan:SetScript("OnClick", function()
@@ -3470,13 +3500,14 @@ function RaidManagement.AttachActionHandlers(options)
     controls.testRaid:SetScript("OnClick", function()
         options.startTestRaid(); options.beginRaidSession(); options.setHistoricalLoaded(false); options.setScanReady(true); options.refresh()
     end)
+    local sessionPrompt
     local saveDialog = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteSaveRaidSessionDialog", UIParent)
     saveDialog:SetWidth(300); saveDialog:SetHeight(218); saveDialog:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
     saveDialog:SetFrameStrata("FULLSCREEN_DIALOG"); saveDialog:SetFrameLevel(245); saveDialog:EnableMouse(true)
     saveDialog:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
     saveDialog:SetBackdropColor(0.03, 0.025, 0.02, 1)
     if saveDialog.SetClampedToScreen then saveDialog:SetClampedToScreen(true) end
-    saveDialog.title = MOS.UI.Components.CreateHeading(saveDialog, "", 1, "gold")
+    saveDialog.title = MOS.UI.Components.CreateHeading(saveDialog, "", 1, "gold", "save")
     saveDialog.title:SetPoint("TOPLEFT", saveDialog, "TOPLEFT", 18, -17); saveDialog.title:SetText("Save Raid")
     local function CreateSaveCheckbox(label, y)
         local checkbox = MOS.UI.Components.CreateCheckButton(nil, saveDialog, "UICheckButtonTemplate")
@@ -3504,7 +3535,11 @@ function RaidManagement.AttachActionHandlers(options)
     saveDialog.cancel:SetPoint("BOTTOMLEFT", saveDialog, "BOTTOMLEFT", 12, 12)
     saveDialog.save = MOS.UI.Components.CreateButton(saveDialog, nil, "Save Raid", 112, 24)
     saveDialog.save:SetPoint("BOTTOMRIGHT", saveDialog, "BOTTOMRIGHT", -12, 12)
-    saveDialog.cancel:SetScript("OnClick", function() saveDialog:Hide() end)
+    saveDialog.cancel:SetScript("OnClick", function()
+        saveDialog:Hide()
+        if saveDialog.transitionContext and sessionPrompt then sessionPrompt:Show() end
+        saveDialog.transitionContext = nil
+    end)
     saveDialog.save:SetScript("OnClick", function()
         local raidId=string.gsub(tostring(saveDialog.raidId:GetText() or ""),"^%s+","");raidId=string.gsub(raidId,"%s+$","")
         if raidId=="" then saveDialog.error:SetText("Raid ID is required.");saveDialog.error:Show();return end
@@ -3512,7 +3547,7 @@ function RaidManagement.AttachActionHandlers(options)
         local saveStatistics = saveDialog.statistics:GetChecked() and true or false
         local saveAttendance = saveStatistics and saveDialog.attendance:GetChecked() and true or false
         local saveCSR = saveDialog.csr:GetChecked() and true or false
-        if options.saveRaidSession({raidId=raidId,saveRaidStatistics=saveStatistics,saveAttendance=saveAttendance,saveCSR=saveCSR})~=false then saveDialog:Hide()
+        if options.saveRaidSession({raidId=raidId,saveRaidStatistics=saveStatistics,saveAttendance=saveAttendance,saveCSR=saveCSR})~=false then saveDialog.transitionContext=nil; saveDialog:Hide()
         else saveDialog.error:SetText("Raid ID could not be saved.");saveDialog.error:Show() end
     end)
     saveDialog.Open = function(self)
@@ -3524,6 +3559,7 @@ function RaidManagement.AttachActionHandlers(options)
     options.page.saveSessionDialog = saveDialog
     controls.export:SetScript("OnClick", function()
         if options.isTestRaid and options.isTestRaid() then return end
+        saveDialog.transitionContext = nil
         saveDialog:Open()
     end)
     controls.addStatistics:Hide()
@@ -3532,17 +3568,17 @@ function RaidManagement.AttachActionHandlers(options)
         OnAccept = function() options.quitRaidSession(); RaidManagement.ResetIssueAttention(options.page); options.refresh() end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    local quitDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteQuitRaidDialog", "Quit Raid", "Quit")
+    local quitDialog = MOS.UI.Components.Window.CreateProjectConfirmation("MuklaOfficerSuiteQuitRaidDialog", "Quit Raid", "Quit", "quit")
     options.page.quitDialog = quitDialog
     controls.quit:SetScript("OnClick", function() quitDialog:Open("Quit the current raid session without saving?", StaticPopupDialogs.MUKLA_OFFICER_SUITE_QUIT_RAID_SESSION.OnAccept) end)
 
-    local sessionPrompt = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteRaidSessionPrompt", UIParent)
+    sessionPrompt = MOS.UI.Components.CreateContainer("MuklaOfficerSuiteRaidSessionPrompt", UIParent)
     sessionPrompt:SetWidth(390); sessionPrompt:SetHeight(150); sessionPrompt:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
     sessionPrompt:SetFrameStrata("FULLSCREEN_DIALOG"); sessionPrompt:SetFrameLevel(240); sessionPrompt:EnableMouse(true)
     sessionPrompt:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
     sessionPrompt:SetBackdropColor(0.03, 0.025, 0.02, 1)
     if sessionPrompt.SetClampedToScreen then sessionPrompt:SetClampedToScreen(true) end
-    local promptTitle = MOS.UI.Components.CreateHeading(sessionPrompt, "", 1, "gold")
+    local promptTitle = MOS.UI.Components.CreateHeading(sessionPrompt, "", 1, "gold", "raids")
     promptTitle:SetPoint("TOPLEFT", sessionPrompt, "TOPLEFT", 18, -16); promptTitle:SetText("Raid session is still active")
     local promptText = MOS.UI.Components.CreateLabel(sessionPrompt, nil, "OVERLAY", "GameFontHighlight")
     promptText:SetPoint("TOPLEFT", promptTitle, "BOTTOMLEFT", 0, -12); promptText:SetWidth(350); promptText:SetJustifyH("LEFT")
@@ -3553,20 +3589,31 @@ function RaidManagement.AttachActionHandlers(options)
     continueButton:SetPoint("LEFT", saveButton, "RIGHT", 18, 0)
     local closeButton = MOS.UI.Components.CreateWindowButton(sessionPrompt, nil, "close")
     closeButton:SetPoint("TOPRIGHT", sessionPrompt, "TOPRIGHT", -10, -10)
-    MOS.UI.Components.AttachTooltip(closeButton, "End without saving", "Close the current raid session and discard its unsaved data.")
+    MOS.UI.Components.AttachTooltip(closeButton, "Not now", "Keep the session data and pause tracking until you choose what to do.")
+    MOS.UI.Components.Window.StyleProjectDialog(sessionPrompt)
+    sessionPrompt.continueButton, sessionPrompt.saveButton, sessionPrompt.closeButton = continueButton, saveButton, closeButton
     sessionPrompt:Hide()
     continueButton:SetScript("OnClick", function()
         sessionPrompt:Hide()
         if options.continueRaidSession then options.continueRaidSession(sessionPrompt.contextKey) end
+        if sessionPrompt.contextKey and string.find(sessionPrompt.contextKey, "different-raid-context|", 1, true) == 1 then OfferCurrentRaidRefresh() end
     end)
     saveButton:SetScript("OnClick", function()
         sessionPrompt:Hide()
+        saveDialog.transitionContext = sessionPrompt.contextKey
         saveDialog:Open()
     end)
-    closeButton:SetScript("OnClick", function() sessionPrompt:Hide(); options.quitRaidSession(); RaidManagement.ResetIssueAttention(options.page); options.refresh() end)
+    closeButton:SetScript("OnClick", function()
+        sessionPrompt:Hide()
+        if options.dismissRaidSessionTransition then options.dismissRaidSessionTransition(sessionPrompt.contextKey) end
+        options.refresh()
+    end)
     options.page.ShowSessionTransitionPrompt = function(contextKey)
         if sessionPrompt:IsVisible() then return end
         sessionPrompt.contextKey = contextKey
+        if contextKey and string.find(contextKey, "different-raid-context|", 1, true) == 1 then
+            promptText:SetText("You joined a different raid. Continue this session, or save and end it before starting a new one?")
+        else promptText:SetText("You left the raid context. Continue this session, or save and end it?") end
         sessionPrompt:Show()
     end
     options.page.HideSessionTransitionPrompt = function() sessionPrompt:Hide() end

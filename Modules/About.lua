@@ -5,7 +5,7 @@ local About = {}
 MOS.Modules.About = About
 
 function About.Create(page, version, options)
-    local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
+    local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "about")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10)
     title:SetText("About")
     title:Hide()
@@ -21,7 +21,7 @@ function About.Create(page, version, options)
     end
     page:SetScript("OnSizeChanged", ResizeArtwork)
     ResizeArtwork()
-    local name = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
+    local name = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "about")
     name:SetPoint("CENTER", page, "LEFT", 105, 34)
     name:SetText("Mukla Officer Suite")
     local versionLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")

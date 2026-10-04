@@ -25,7 +25,7 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend,options)
     frame:SetPoint("CENTER",UIParent,"CENTER",280,100);frame:SetWidth(width);frame:SetHeight(height)
     frame:SetFrameStrata("FULLSCREEN_DIALOG");frame:SetMovable(true);frame:SetResizable(true);frame:EnableMouse(true);frame:RegisterForDrag("LeftButton")
     if frame.SetClampedToScreen then frame:SetClampedToScreen(true) end
-    frame.title=UI.CreateHeading(frame,"Live Monitor",3,"gold");frame.title:SetPoint("TOPLEFT",frame,"TOPLEFT",6,-5)
+    frame.title=UI.CreateHeading(frame,"Live Monitor",3,"gold","monitor");frame.title:SetPoint("TOPLEFT",frame,"TOPLEFT",6,-5)
     local font,_,flags=frame.title:GetFont();frame.title:SetFont(font,13,flags)
     frame.close=UI.CreateWindowButton(frame,nil,"close");frame.close:SetPoint("TOPRIGHT",frame,"TOPRIGHT",-4,-4)
     frame.close:SetScript("OnClick",function() frame:Close() end)

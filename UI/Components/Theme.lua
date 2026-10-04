@@ -117,8 +117,65 @@ local function CreateTextPreset(parent, text, template, color, size)
     return label
 end
 
-function UI.CreateHeading(parent, text, level, color)
-    return CreateTextPreset(parent, text, "GameFontNormalLarge", color or "orange", UI.HeadingSizes[level or 1] or UI.HeadingSizes[1])
+-- Keep a native FontString contract while reserving a stable icon gutter.
+-- Callers provide semantic icon keys; the reusable control owns no page rules.
+function UI.SetHeadingIcon(label, key)
+    if not label.mosHeadingIcon then
+        local anchors = {}
+        if label.GetPoint then
+            for index = 1, label.GetNumPoints and label:GetNumPoints() or 1 do
+                local anchor, relative, relativeAnchor, x, y = label:GetPoint(index)
+                if anchor then table.insert(anchors, {anchor, relative, relativeAnchor, x, y}) end
+            end
+        end
+        local icon = UI.CreateTexture(label:GetParent(), nil, "OVERLAY")
+        local _, size = label:GetFont()
+        local iconSize = math.max(10, math.min(20, size or 14))
+        label.mosHeadingIcon, label.mosHeadingIconInset = icon, iconSize + 6
+        icon:SetWidth(iconSize); icon:SetHeight(iconSize)
+        icon:SetPoint("RIGHT", label, "LEFT", -6, 0)
+        local point, width, show, hide, text, font = label.SetPoint, label.SetWidth, label.Show, label.Hide, label.SetText, label.SetFont
+        label.SetPoint = function(self, anchor, relative, relativeAnchor, x, y)
+            local inset = string.find(anchor, "LEFT", 1, true) and self.mosHeadingIconInset or anchor == "CENTER" and self.mosHeadingIconInset / 2 or 0
+            if type(relative) == "number" then return point(self, anchor, relative + inset, relativeAnchor) end
+            if type(relativeAnchor) == "number" then return point(self, anchor, relative, relativeAnchor + inset, x) end
+            return point(self, anchor, relative, relativeAnchor, (x or 0) + inset, y or 0)
+        end
+        label.SetWidth = function(self, value)
+            return width(self, value > 0 and math.max(1, value - self.mosHeadingIconInset) or value)
+        end
+        label.Show = function(self)
+            show(self)
+            if self:GetText() and self:GetText() ~= "" then self.mosHeadingIcon:Show() end
+        end
+        label.Hide = function(self) hide(self); self.mosHeadingIcon:Hide() end
+        label.SetText = function(self, value)
+            text(self, value)
+            if value and value ~= "" and self:IsShown() then self.mosHeadingIcon:Show() else self.mosHeadingIcon:Hide() end
+        end
+        label.SetFont = function(self, path, value, flags)
+            local result = font(self, path, value, flags)
+            local fitted = math.max(10, math.min(20, value or 14))
+            self.mosHeadingIcon:SetWidth(fitted); self.mosHeadingIcon:SetHeight(fitted)
+            return result
+        end
+        if table.getn(anchors) > 0 then
+            label:ClearAllPoints()
+            for _,anchor in ipairs(anchors) do label:SetPoint(unpack(anchor)) end
+        end
+        label:SetJustifyH("LEFT")
+    end
+    label.mosHeadingIconKey = key
+    label.mosHeadingIcon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Icons\\" .. key .. ".tga")
+    label.mosHeadingIcon:SetVertexColor(unpack(UI.Theme.colors.goldIcon))
+    if label:GetText() and label:GetText() ~= "" and label:IsShown() then label.mosHeadingIcon:Show() else label.mosHeadingIcon:Hide() end
+    return label
+end
+
+function UI.CreateHeading(parent, text, level, color, iconKey)
+    local label = CreateTextPreset(parent, text, "GameFontNormalLarge", color or "orange", UI.HeadingSizes[level or 1] or UI.HeadingSizes[1])
+    if iconKey then UI.SetHeadingIcon(label, iconKey) end
+    return label
 end
 
 function UI.CreateComponentLabel(parent, text, color)
