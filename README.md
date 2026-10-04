@@ -43,13 +43,13 @@ LM config and Reycoin list use the same diagonal resize grip as the main window.
 
 The top-right buttons open Settings, minimize or restore the dashboard, and close it. Addon windows use matching gold controls: a line minimizes, a square restores, and X closes. The minimized window remembers its dragged position during the current session; restoring returns to the expanded window's previous position.
 
-Left-click the minimap icon to open or close the dashboard, or restore it when minimized. Right-click for a compact gold quick menu with guild dialogs, raid controls, the five latest saved raids, statistics, CSR, Performance and About. Drag the icon around the minimap to reposition it. **Test Raid** and quick **Load Raid** are unavailable during an active raid session; **Start new raid** becomes **Open Raid**. Add Member appears only with invite permission. Loot Master shortcuts open their chosen dialog directly.
+Left-click the minimap icon to open or close the dashboard, or restore it when minimized. Right-click for a compact gold quick menu with guild dialogs, raid controls, the five latest saved raids, statistics, CSR, Profiler and About. Drag the icon anywhere on screen; its position survives reloads. **Test Raid** and quick **Load Raid** are unavailable during an active raid session; **New raid** becomes **Open Raid**. Add Member appears only with invite permission. Loot Master shortcuts open their chosen dialog directly.
 
 ### Commands
 
 - **Open or close -** Use `/mos`, `/mukla`, `/mos show`, or `/mos open`.
 - **Hide -** Use `/mos hide` to close the main window.
-- **Manual item roll -** Use `/mos roll [linked item]` to start Loot Master rolling for an item from chat or a bag.
+- **Manual item roll -** Use `/mos roll [linked item]` for Tmog, OS, MS and RC. Append player names to restrict participants; append types to replace the defaults, for example `/mos roll [linked item] Player1 Player2 SR`.
 - **Roster shortcut -** Use `/mos scan` to open Roster and access its scan controls.
 - **Saved roster status -** Use `/mos status` to print the number of saved guild members.
 - **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
@@ -103,6 +103,8 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 
 - **Compact workspace -** Keep raid members and loot tools visible in a smaller, resizable window.
 - **Loot detection -** Open the roll window from corpse loot or start it manually with `/mos roll [linked item]`.
+- **New Roll -** Use Loot Master Tools > New Roll or the dice icon in the Loot Master window. Focus the item field and Shift-click an item in your bags, choose Tmog/OS/MS/RC/SR and optionally select raid members; no selected members means the whole raid.
+- **Tied rolls -** Reroll tied results in the same roll type. The warning names the tied players and item; only those players and that type enter the new round.
 - **Supported rolls -** Handle SR (102), Reycoin (101), MS (100), OS (99), and Transmog (98).
 - **Late rolls -** Accept valid rolls until the item is assigned.
 - **Manual winner -** Select any valid roll row before assigning the item.

@@ -515,9 +515,19 @@ function Dashboard.BindWindow(view, options)
     view.minimizeButton:SetScript("OnClick", view.ToggleMinimize)
 end
 
+function Dashboard.ResolveMinimapPosition(x, y, width, height)
+    x, y = tonumber(x), tonumber(y)
+    if not x or not y or x ~= x or y ~= y or math.abs(x) > 1e300 or math.abs(y) > 1e300 then return nil end
+    return math.max(16, math.min(math.max(16, width - 16), x)), math.max(16, math.min(math.max(16, height - 16), y))
+end
+
 function Dashboard.CreateMinimapButton(options)
-    local button = CreateFrame("Button", "MuklaOfficerSuiteMinimapButton", Minimap)
+    local UI = MOS.UI.Components
+    local button = CreateFrame("Button", "MuklaOfficerSuiteMinimapButton", UIParent)
     button:SetWidth(32); button:SetHeight(32); button:SetFrameStrata("MEDIUM"); button:SetFrameLevel(8)
+    button:SetMovable(true)
+    if button.SetClampedToScreen then button:SetClampedToScreen(true) end
+    if button.SetUserPlaced then button:SetUserPlaced(false) end
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp"); button:RegisterForDrag("LeftButton")
     local icon = button:CreateTexture(nil, "BACKGROUND")
     icon:SetWidth(20); icon:SetHeight(20); icon:SetPoint("CENTER", button, "CENTER", 0, 0)
@@ -530,17 +540,27 @@ function Dashboard.CreateMinimapButton(options)
 
     button.Position = function()
         options.ensureDatabase()
-        local angle = options.getAngle()
-        local radians = math.rad(angle)
+        if button.SetUserPlaced then button:SetUserPlaced(false) end
+        local x, y
+        if options.getPosition then x, y = options.getPosition() end
+        local width, height = UI.GetFrameSpan(UIParent)
+        x, y = Dashboard.ResolveMinimapPosition(x, y, width, height)
         button:ClearAllPoints()
-        button:SetPoint("CENTER", Minimap, "CENTER", 80 * math.cos(radians), 80 * math.sin(radians))
+        if x then button:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+        else
+            local radians = math.rad(options.getAngle and options.getAngle() or 220)
+            button:SetPoint("CENTER", Minimap, "CENTER", 80 * math.cos(radians), 80 * math.sin(radians))
+        end
     end
-    button.UpdateDragPosition = function()
-        local x, y = GetCursorPosition()
-        local scale = UIParent:GetEffectiveScale()
-        local minimapX, minimapY = Minimap:GetCenter()
-        options.setAngle(math.deg(math.atan2((y / scale) - minimapY, (x / scale) - minimapX)))
-        button.Position()
+    local function FinishDrag()
+        if not button.dragging then return end
+        button.dragging = false; button:StopMovingOrSizing()
+        if button.SetUserPlaced then button:SetUserPlaced(false) end
+        local x, y
+        if button.GetCenter then x, y = button:GetCenter() end
+        local width, height = UI.GetFrameSpan(UIParent)
+        x, y = Dashboard.ResolveMinimapPosition(x, y, width, height)
+        if x and options.setPosition then options.setPosition(x, y); button.Position() end
     end
     button:SetScript("OnClick", function()
         if arg1 == "RightButton" then
@@ -549,18 +569,24 @@ function Dashboard.CreateMinimapButton(options)
         elseif options.onOpen then options.onOpen(button)
         elseif options.onClick then options.onClick() end
     end)
+    local orange = UI.TextColors.orange
+    local prefix = string.format("|cff%02x%02x%02x", math.floor(orange[1] * 255), math.floor(orange[2] * 255), math.floor(orange[3] * 255))
+    local leftHint = prefix .. "Left click:|r |cffffffffopen or close the dashboard|r"
+    local rightHint = prefix .. "Right click:|r |cffffffffquick menu|r"
+    local dragHint = prefix .. "Drag:|r |cffffffffmove anywhere on screen|r"
     button:SetScript("OnEnter", function()
         MOS.UI.Components.AnchorTooltipRightOfCursor(this)
-        GameTooltip:AddLine("Mukla Officer Suite")
-        GameTooltip:AddLine("Left click: open or close the dashboard", 1, 1, 1)
-        GameTooltip:AddLine("Right click: quick menu", 1, 1, 1)
+        GameTooltip:AddLine("Mukla Officer Suite", unpack(UI.Theme.colors.goldText))
+        GameTooltip:AddLine(leftHint, 1, 1, 1)
+        GameTooltip:AddLine(rightHint, 1, 1, 1)
+        GameTooltip:AddLine(dragHint, 1, 1, 1)
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     button:SetScript("OnDragStart", function()
-        this:SetScript("OnUpdate", this.UpdateDragPosition)
+        button.dragging = true; button:StartMoving()
     end)
-    button:SetScript("OnDragStop", function() this:SetScript("OnUpdate", nil) end)
-    button:SetScript("OnHide", function() button:SetScript("OnUpdate", nil) end)
+    button:SetScript("OnDragStop", FinishDrag)
+    button:SetScript("OnHide", FinishDrag)
     return button
 end

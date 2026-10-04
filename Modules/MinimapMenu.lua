@@ -14,11 +14,11 @@ function MinimapMenu.Create(options)
     local invite = Entry("Add Member", "roster", "OpenAddMember", nil, "roster")
     local roster = {
         Entry("Set GMOTD", "roster", "OpenGMOTD", nil, "rules"),
-        Entry("Guild Information", "roster", "OpenGuildInformation", nil, "info"),
+        Entry("Guild info", "roster", "OpenGuildInformation", nil, "info"),
     }
     local leader, loot, snapshots = {}, {}, {}
     local raid = {
-        Entry("Start new raid", "raid", "primary", nil, "start"),
+        Entry("New raid", "raid", "primary", nil, "start"),
         Entry("RL Tools", nil, nil, leader, "raid_tools"),
         Entry("ML Tools", nil, nil, loot, "loot_tools"),
         Entry("Test Raid", "raid", "test", nil, "groups"),
@@ -42,10 +42,10 @@ function MinimapMenu.Create(options)
     local entries = {
         Entry("Roster", nil, nil, roster, "roster"),
         Entry("Raid", nil, nil, raid, "raids"),
-        Entry("Guild Statistics", "page", "statistics", nil, "guild_stats"),
-        Entry("Raid Statistics", "page", "raidStatistics", nil, "raid_stats"),
+        Entry("Guild Stats", "page", "statistics", nil, "guild_stats"),
+        Entry("Raid Stats", "page", "raidStatistics", nil, "raid_stats"),
         Entry("CSR", "page", "csr", nil, "csr"),
-        Entry("Performance", nil, nil, performance, "performance"),
+        Entry("Profiler", nil, nil, performance, "performance"),
         Entry("About", "page", "about", nil, "about"),
     }
     local function FillTools(target, source, fallbackIcon)
@@ -75,7 +75,7 @@ function MinimapMenu.Create(options)
         -- Permission-only actions disappear; keep the pooled entry for later.
         roster[3] = guild.addMember == true and invite or nil
         local session = options.raid:GetState()
-        raid[1].text, raid[1].enabled = session.primaryLabel, session.active or session.canStart
+        raid[1].text, raid[1].enabled = session.primaryLabel == "Start new raid" and "New raid" or session.primaryLabel, session.active or session.canStart
         raid[1].icon = session.active and "raids" or "start"
         raid[2].enabled, raid[3].enabled = session.canTools, session.canTools
         raid[4].enabled, raid[6].enabled, raid[7].enabled = session.canTest, session.canSave, session.canQuit

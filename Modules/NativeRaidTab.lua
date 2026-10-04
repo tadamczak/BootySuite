@@ -1,6 +1,15 @@
 local MOS = MuklaOfficerSuite
 MOS.Modules.NativeRaidTab = {}
 local NativeRaidTab = MOS.Modules.NativeRaidTab
+local contentLeft, contentTop, contentRight, contentBottom = 20, 70, 44, 84
+
+-- Vanilla's 384x512 FriendsFrame includes transparent artwork padding: its
+-- native hit area excludes right30/bottom45 and the tabs sit at bottom47.
+-- Keep the MOS body inside that visible panel rather than filling the canvas.
+function NativeRaidTab.GetContentRect(owner)
+    local width, height = MOS.UI.Components.GetFrameSpan(owner)
+    return math.max(1, width - contentLeft - contentRight), math.max(1, height - contentTop - contentBottom), contentLeft, contentTop, contentRight, contentBottom
+end
 
 -- The original 1.12 function hides every native subframe for an unmatched
 -- name. Keep its tab/header selection, replacing only the Raid body.
@@ -31,8 +40,7 @@ function NativeRaidTab.Create(options)
     local function Refresh()
         if rendering or not panel or not panel:IsVisible() then return end
         rendering = true
-        local width = math.max(1, (FriendsFrame:GetWidth() or 384) - 28)
-        local height = math.max(1, (FriendsFrame:GetHeight() or 512) - 98)
+        local width, height = NativeRaidTab.GetContentRect(FriendsFrame)
         panel:SetWidth(width); panel:SetHeight(height)
         local convert = service.CanConvert()
         panel.invite:SetText(convert and "Convert to Raid" or "Add Member")
@@ -71,8 +79,9 @@ function NativeRaidTab.Create(options)
     local function CreatePanel()
         if panel then return end
         panel = UI.CreateContainer("MuklaOfficerSuiteNativeRaidTab", FriendsFrame)
-        panel:Hide(); panel:SetPoint("TOPLEFT", FriendsFrame, "TOPLEFT", 14, -64)
-        panel:SetPoint("BOTTOMRIGHT", FriendsFrame, "BOTTOMRIGHT", -14, 34)
+        local _, _, left, top, right, bottom = NativeRaidTab.GetContentRect(FriendsFrame)
+        panel:Hide(); panel:SetPoint("TOPLEFT", FriendsFrame, "TOPLEFT", left, -top)
+        panel:SetPoint("BOTTOMRIGHT", FriendsFrame, "BOTTOMRIGHT", -right, bottom)
         panel:SetFrameLevel(FriendsFrame:GetFrameLevel() + 3)
         UI.Window.ApplyProjectSurface(panel)
         local toolbar = UI.CreateToolbarSurface(panel, false, true)

@@ -28,7 +28,9 @@ function Settings.CreateAccordion(parent, text, y)
     button.baseText = text
     button.label:SetText("+  " .. text)
     button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    button.rule = parent:CreateTexture(nil, "ARTWORK")
+    -- Section decoration belongs to the heading, so collapsed feature groups
+    -- cannot leave their rules visible in the shared scroll child.
+    button.rule = button:CreateTexture(nil, "ARTWORK")
     button.rule:SetTexture(0, 0, 0, 0)
     button.rule:Hide()
     return button
@@ -48,23 +50,32 @@ function Settings.CreateSectionAccordion(parent, text, y, inset)
     button.sectionFade:SetTexture("Interface\\Buttons\\WHITE8X8")
     button.sectionFade:SetGradientAlpha("HORIZONTAL", 0.82, 0.70, 0.43, 0.24, 0.82, 0.70, 0.43, 0)
     button.sectionFade:SetPoint("TOPLEFT", button.sectionFill, "TOPRIGHT", 0, 0); button.sectionFade:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
+    button.RefreshRule = function(self)
+        -- A FontString's anchored bounds may still describe its previous text.
+        -- Measure the caption instead of anchoring a rule to that stale edge.
+        self.label:SetWidth(0)
+        self.rule:ClearAllPoints()
+        self.rule:SetPoint("LEFT", self, "LEFT", self.label:GetStringWidth() + 10, 0)
+        self.rule:SetPoint("RIGHT", self, "RIGHT", 0, 0)
+        self.rule:SetHeight(1)
+    end
     button.SetExpanded = function(self, expanded)
         self.sectionExpanded = expanded
+        self:RefreshRule()
         if self.sectionHovered then self.sectionFill:Show(); self.sectionFade:Show()
         else self.sectionFill:Hide(); self.sectionFade:Hide() end
     end
     button:SetScript("OnEnter", function() this.sectionHovered = true; this:SetExpanded(this.sectionExpanded) end)
     button:SetScript("OnLeave", function() this.sectionHovered = false; this:SetExpanded(this.sectionExpanded) end)
-    button:SetScript("OnSizeChanged", function() this.sectionFill:SetWidth(math.min(30, math.max(1, this:GetWidth() - 1))) end)
+    button:SetScript("OnSizeChanged", function() this.sectionFill:SetWidth(math.min(30, math.max(1, this:GetWidth() - 1))); this:RefreshRule() end)
+    button:SetScript("OnShow", function() this:RefreshRule() end)
     button.sectionFill:SetWidth(30); button:SetExpanded(false)
     local font, _, flags = button.label:GetFont()
     button.label:SetFont(font, MOS.UI.Components.HeadingSizes[2] + MOS.UI.Components.GetTextSizeDelta(parent), flags)
     button.mosSectionInset = inset or 0
     button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", button.mosSectionInset, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
-    button.rule:ClearAllPoints()
-    button.rule:SetPoint("LEFT", button.label, "RIGHT", 10, 0)
-    button.rule:SetPoint("RIGHT", parent, "RIGHT", 0, 0)
-    button.rule:SetHeight(1); button.rule:SetTexture(unpack(MOS.UI.Components.TextColors.gold)); button.rule:Show()
+    button:RefreshRule()
+    button.rule:SetTexture(unpack(MOS.UI.Components.TextColors.gold)); button.rule:Show()
     return button
 end
 
