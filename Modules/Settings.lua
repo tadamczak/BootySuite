@@ -77,6 +77,7 @@ function Settings.LayoutFollowingSections(page, y)
         if uiVisible then y = y - 28 end
     end
     if Settings.LayoutGameUI then y = Settings.LayoutGameUI(page, y) end
+    if Settings.LayoutAddonMessages then y = Settings.LayoutAddonMessages(page, y) end
     local keys, state = page.keybindings, page.topSectionState
     if keys and state then
         PlaceSection(keys.heading, page, y)
@@ -141,6 +142,7 @@ function Settings.LayoutGeneral(page)
 end
 
 function Settings.LayoutGroupControls(page, group, heading, y, width)
+    Settings.RefreshGroupAdjustControls(group)
     local C = MOS.UI.Components.Settings
     local function At(control, x, y)
         control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
@@ -211,7 +213,7 @@ function Settings.EnsureGameRaidControls(page)
     local shell = Settings.CreateRaidViewShell(page, true)
     local factory = Settings.CreateRaidControlFactory(page, {refreshGroup = game.onLayoutChanged}, {
         keyPrefix = "nativeRaidGroup", namePrefix = "MuklaOfficerSuiteNativeRaidGroup",
-        defaults = {TileWidth = 160, TileHeight = 13, HeaderHeight = 14, Margin = 4},
+        defaults = {TileWidth = 160, TileHeight = 15, HeaderHeight = 12, Margin = 0, HeaderTextSize = 9},
         minimums = {TileHeight = 13},
     })
     local group = Settings.CreateRaidGroupViewControls(page, shell, factory, game.onLayoutChanged)
@@ -245,6 +247,7 @@ function Settings.RefreshGameRaidControls(page)
         MOS.UI.Components.Settings.SynchronizeSlider(slider, MOS.Database.GetSetting(slider.settingKey))
     end
     MOS.UI.Components.Settings.SetSliderEnabled(group.width, not MOS.Database.GetSetting(group.autoWidth.settingKey))
+    Settings.RefreshGroupAdjustControls(group)
     group.columnsButton:SetText(tostring(MOS.Database.GetSetting(group.columnsButton.settingKey) or 2))
     for _, colors in ipairs({group.colors, group.tileColors}) do
         for index = 1, table.getn(colors) do
@@ -389,6 +392,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         if page.RefreshAllSettings then page.RefreshAllSettings() else page.RefreshGeneralSettings() end
         if options.profileLoaded then options.profileLoaded() end
     end
+    Settings.CreateMessageSections(page)
     Settings.BindTopSections(page, page.ApplySavedSettings)
     page.ReflowSettings = function() Settings.ApplyTopSections(page) end
     page:SetScript("OnShow", function() page:RegisterEvent("GUILD_ROSTER_UPDATE") end)
@@ -580,14 +584,20 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local showBorder = factory.Checkbox(40, -460, "Show group border", "raidGroupShowBorder")
     local showLootMaster = factory.Checkbox(300, -434, "Show LM icon", "raidGroupShowLootMaster")
     local showRole = factory.Checkbox(40, -458, "Show role icon", "raidGroupShowRoleIcon")
+    local hideEmpty = factory.Checkbox(40, -484, "Hide empty groups", "raidGroupHideEmptyGroups")
+    local autoVertical = factory.Checkbox(40, -510, "Auto adjust groups vertically", "raidGroupAutoAdjustVertically")
+    local autoHorizontal = factory.Checkbox(300, -510, "Auto adjust groups horizontally", "raidGroupAutoAdjustHorizontally")
+    local adjustment = {hideEmpty=hideEmpty, autoVertical=autoVertical, autoHorizontal=autoHorizontal}
+    local saveHide = hideEmpty.SaveSetting
+    hideEmpty.SaveSetting = function(self) saveHide(self); Settings.RefreshGroupAdjustControls(adjustment) end
     local sizeHeading = Heading("Size", -492, "resize")
     local autoWidth = factory.Checkbox(40, -514, "Adjust tile width to window", "raidGroupAutoTileWidth")
     local width = factory.Slider("MuklaOfficerSuiteGroupTileWidth", 40, -566, "Member tile width (default: 280)", "raidGroupTileWidth", 160, 340)
-    local height = factory.Slider("MuklaOfficerSuiteGroupTileHeight", 300, -566, "Member tile height (default: 20)", "raidGroupTileHeight", 14, 28)
-    local headerHeight = factory.Slider("MuklaOfficerSuiteGroupHeaderHeight", 40, -622, "Group header height (default: 22)", "raidGroupHeaderHeight", 14, 40)
-    local margin = factory.Slider("MuklaOfficerSuiteGroupMargin", 300, -622, "Margin between groups (default: 8)", "raidGroupMargin", 0, 32)
+    local height = factory.Slider("MuklaOfficerSuiteGroupTileHeight", 300, -566, "Member tile height (default: 22)", "raidGroupTileHeight", 14, 28)
+    local headerHeight = factory.Slider("MuklaOfficerSuiteGroupHeaderHeight", 40, -622, "Group header height (default: 18)", "raidGroupHeaderHeight", 12, 40)
+    local margin = factory.Slider("MuklaOfficerSuiteGroupMargin", 300, -622, "Margin between groups (default: 0)", "raidGroupMargin", 0, 32)
     local tileTextSize = factory.Slider("MuklaOfficerSuiteGroupTileTextSize", 40, -678, "Tile text size (default: 10)", "raidGroupTileTextSize", 8, 16)
-    local headerTextSize = factory.Slider("MuklaOfficerSuiteGroupHeaderTextSize", 300, -678, "Tile header text size (default: 10)", "raidGroupHeaderTextSize", 8, 16)
+    local headerTextSize = factory.Slider("MuklaOfficerSuiteGroupHeaderTextSize", 300, -678, "Tile header text size (default: 9)", "raidGroupHeaderTextSize", 8, 16)
     AlignSliderLabel(Name("MuklaOfficerSuiteGroupTileWidth"), width)
     AlignSliderLabel(Name("MuklaOfficerSuiteGroupTileHeight"), height)
     AlignSliderLabel(Name("MuklaOfficerSuiteGroupHeaderHeight"), headerHeight)
@@ -612,14 +622,65 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     return {
         lightnessLabel = lightnessLabel, lightnessField = lightnessField,
         displayHeading = displayHeading, sizeHeading = sizeHeading, colorHeading = colorHeading,
-        displayChecks = { showClass, showLevel, showHeader, showLootMaster, showRole, showBorder },
+        displayChecks = { showClass, showLevel, showHeader, showLootMaster, showRole, showBorder, hideEmpty, autoVertical, autoHorizontal },
+        hideEmpty=hideEmpty, autoVertical=autoVertical, autoHorizontal=autoHorizontal,
         memberDisplayChecks = {showClass, showLevel, showLootMaster, showRole}, showHeader = showHeader, showBorder = showBorder,
         autoChecks = {autoWidth}, colorChecks = {classColors}, sliders = {width, height, headerHeight, margin, tileTextSize, headerTextSize},
-        checks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, autoWidth, classColors },
+        checks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, autoWidth, classColors, hideEmpty, autoVertical, autoHorizontal },
         width = width, height = height, headerHeight = headerHeight, margin = margin, tileTextSize = tileTextSize, headerTextSize = headerTextSize, autoWidth = autoWidth, colors = { background, text, hover },
         tileColorHeading = tileColorHeading, tileColors = {headerText, headerBackground, border},
-        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, lightnessLabel, lightnessField, tileColorHeading, headerText, headerBackground, border },
+        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, showClass, showLevel, showHeader, showLootMaster, showBorder, showRole, hideEmpty, autoVertical, autoHorizontal, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, colorHeading, classColors, background, text, hover, lightnessLabel, lightnessField, tileColorHeading, headerText, headerBackground, border },
     }
+end
+
+function Settings.RefreshGroupAdjustControls(group)
+    if not group or not group.hideEmpty then return end
+    local enabled = MOS.Database.GetSetting(group.hideEmpty.settingKey) and true or false
+    MOS.UI.Components.Settings.SetCheckboxEnabled(group.autoVertical, enabled)
+    MOS.UI.Components.Settings.SetCheckboxEnabled(group.autoHorizontal, enabled)
+end
+
+function Settings.CreateMessageSections(page)
+    local C = MOS.UI.Components
+    local section = {heading=C.Settings.CreateSectionAccordion(page, "Addon Messages", 0, nil, nil, "export"),
+        loot=C.Settings.CreateAccordion(page, "Loot Master", 0, "lootmaster"), expanded=false, lootExpanded=false, rows={}}
+    page.addonMessages = section
+    section.heading:SetScript("OnClick", function() section.expanded=not section.expanded; Settings.ApplyTopSections(page) end)
+    section.loot:SetScript("OnClick", function() section.lootExpanded=not section.lootExpanded; Settings.ApplyTopSections(page) end)
+end
+
+function Settings.LayoutAddonMessages(page, y)
+    local section = page.addonMessages
+    if not section then return y end
+    local C = MOS.UI.Components
+    PlaceSection(section.heading, page, y)
+    section.heading.label:SetText((section.expanded and "-  " or "+  ") .. "Addon Messages")
+    section.heading:SetExpanded(section.expanded); section.heading:Show(); y=y-28
+    if section.expanded then
+        PlaceSection(section.loot, page, y, 12); section.loot:Show()
+        section.loot.label:SetText((section.lootExpanded and "-  " or "+  ") .. "Loot Master"); y=y-28
+    else section.loot:Hide() end
+    local shown = section.expanded and section.lootExpanded
+    if shown and table.getn(section.rows)==0 then
+        for index, definition in ipairs(MOS.Services.LootMessages.Definitions) do
+            local check = controls.CreateSavedCheckbox(page, nil, 24, 0, definition[2], definition.enabledKey,
+                definition[2], "Uncheck to stop sending this message. Prefix only controls the prefix.")
+            local field = controls.CreateSavedTextField(page, definition.textKey)
+            C.AttachTooltip(field, definition[2], definition[4] ~= "" and ("Optional variables: " .. definition[4] .. ". Enter or leave the field to save; Escape restores it.")
+                or "Edit the text. Enter or leave the field to save; Escape restores it.")
+            section.rows[index] = {check=check, field=field}
+        end
+    end
+    for index = 1, table.getn(section.rows) do
+        local row = section.rows[index]
+        if shown then
+            row.check:SetChecked(MOS.Database.GetSetting(row.check.settingKey))
+            row.check:ClearAllPoints(); row.check:SetPoint("TOPLEFT", page, "TOPLEFT", 24, y); row.check:Show()
+            row.field:ClearAllPoints(); row.field:SetPoint("TOPLEFT", page, "TOPLEFT", 28, y-25)
+            row.field:SetWidth(math.max(1, page:GetWidth()-40)); row.field:Show(); row.field:RefreshValue(); y=y-59
+        else row.check:Hide(); row.field:Hide() end
+    end
+    return y
 end
 
 function Settings.CreateRaidListViewControls(page, shell, factory)

@@ -1050,7 +1050,7 @@ function Performance.Create(parent,options)
         page.art=UI.CreatePerformanceBackground(page.backgroundHost,1)
         -- One shared content layer; row fills retain the project's own palette.
         page.contentDim=MOS.UI.Components.CreateTexture(page.backgroundHost,nil,"ARTWORK")
-        page.contentDim:SetTexture(0,0,0,1);page.contentDim:SetAlpha(0.76);page.contentDim:SetAllPoints(page.backgroundHost)
+        page.contentDim:SetTexture(0,0,0,1);page.contentDim:SetAlpha(0.86);page.contentDim:SetAllPoints(page.backgroundHost)
         page.status=UI.CreateLabel(page.header,nil,"OVERLAY","GameFontHighlightSmall");page.status:SetJustifyH("LEFT");if page.status.SetWordWrap then page.status:SetWordWrap(true) end
         page.sectionToggles={}
         page.advancedButton:SetScript("OnClick",function() if page.advancedMenu:IsShown() then page.advancedMenu:Hide() else page.advancedMenu:Show() end end)

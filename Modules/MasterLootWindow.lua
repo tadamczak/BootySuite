@@ -439,13 +439,14 @@ local FinishRoll
 local CancelRoll
 local OpenRestoreMenu
 local Announce
+local AnnounceMessage
 local RefreshTracker
 local function ExtendRoll()
     if not activeRoll then return end
     local seconds = activeRoll.duration or DEFAULT_ROLL_SECONDS
     activeRoll.endsAt = activeRoll.endsAt + seconds
     activeRoll.lastRemaining = math.max(0, math.ceil(activeRoll.endsAt - GetTime()))
-    Announce("Rolling for " .. activeRoll.link .. " has been extended by " .. seconds .. " seconds.")
+    AnnounceMessage("Extended", {item=activeRoll.link, seconds=seconds})
     if panel:IsShown() and RefreshResults then RefreshResults() end
     if RefreshTracker then RefreshTracker() end
 end
@@ -1208,19 +1209,20 @@ RestoreSession = function(source)
     Refresh()
 end
 
-Announce = function(message)
-    local ok = RaidService.SendRaidWarning(message)
+Announce = function(message, prefix)
+    local ok = RaidService.SendRaidWarning(message, prefix)
     if not ok and RaidService.IsInRaid() and type(SendChatMessage)=="function" then
         -- A master looter is not necessarily a leader or assistant.
-        ok=pcall(SendChatMessage,RaidService.PrefixLootMasterMessage(message),"RAID")
+        ok=pcall(SendChatMessage,prefix == false and message or RaidService.PrefixLootMasterMessage(message),"RAID")
     end
     return ok and true or false
 end
+AnnounceMessage = function(key, values) return MOS.Services.LootMessages.Send(key, values, Announce) end
 
 local timer = MOS.UI.Components.CreateContainer(nil, UIParent)
 timer:Hide()
 events = MOS.UI.Components.CreateContainer(nil, UIParent)
-reyCoinEvents = MOS.Modules.MasterLootEvents.Create(RaidService, function(message) Announce(message) end)
+reyCoinEvents = MOS.Modules.MasterLootEvents.Create(RaidService, function(key, values) AnnounceMessage(key, values) end)
 local previousPendingChanged = RaidService.onReyCoinPendingChanged
 RaidService.onReyCoinPendingChanged = function()
     if previousPendingChanged then previousPendingChanged() end
@@ -1430,15 +1432,15 @@ FinishRoll = function()
     -- item has no Master Loot award event, so its listener ends with the timer.
     if roll.manual then events:UnregisterEvent("CHAT_MSG_SYSTEM") end
     if MOS.Services.LootRollRequest.HasBlockingTie(roll,roll.tieGroups) then
-        Announce("Tie for "..roll.link..". Use Reroll to resolve the tied roll type.")
+        AnnounceMessage("Tie", {item=roll.link})
     elseif roll.tradeWinner then
-        Announce(roll.winner .. " receives " .. roll.link .. " with " .. roll.highest .. " Transmog and must trade it to " .. roll.tradeWinner .. ".")
+        AnnounceMessage("TradeWinner", {player=roll.winner, item=roll.link, value=roll.highest, recipient=roll.tradeWinner})
     elseif roll.winnerResult and roll.winnerResult.automatic then
-        Announce(roll.winner .. " wins " .. roll.link .. " as the only eligible SR.")
+        AnnounceMessage("SRWinner", {player=roll.winner, item=roll.link})
     elseif roll.winner then
-        Announce(roll.winner .. " wins " .. roll.link .. " with " .. roll.highest .. " " .. (roll.winnerResult and rollTypeNames[roll.winnerResult.range] or "roll") .. ".")
+        AnnounceMessage("Winner", {player=roll.winner, item=roll.link, value=roll.highest, roll=roll.winnerResult and rollTypeNames[roll.winnerResult.range] or "roll"})
     else
-        Announce((table.getn(roll.results) > 0 and "No valid rolls for " or "No rolls for ") .. roll.link .. ".")
+        AnnounceMessage(table.getn(roll.results) > 0 and "NoValidRolls" or "NoRolls", {item=roll.link})
     end
     if currentLootSession == roll.source then status:SetText("") end
     retention.Prune()
@@ -1453,7 +1455,7 @@ CancelRoll = function()
     lastRollBySource[roll.source] = nil
     timer:SetScript("OnUpdate", nil); timer:Hide()
     events:UnregisterEvent("CHAT_MSG_SYSTEM")
-    Announce("Rolling stopped for " .. roll.link .. ". All rolls are invalidated.")
+    AnnounceMessage("Stopped", {item=roll.link})
     if currentLootSession == roll.source then status:SetText("Roll stopped; all rolls are invalidated") end
     retention.Prune()
     if panel:IsShown() then Refresh() end
@@ -1479,7 +1481,7 @@ local function OnTimerUpdate()
         roll.lastRemaining = remaining
         if currentLootSession == roll.source then status:SetText("Rolling for " .. roll.link .. " - " .. remaining .. "s") end
         if panel:IsShown() and currentLootSession == roll.source then RefreshResults() end
-        if remaining <= 3 then Announce(tostring(remaining)) end
+        if remaining <= 3 then AnnounceMessage("Countdown", {seconds=remaining}) end
         RefreshTracker()
     end
 end
@@ -1533,23 +1535,18 @@ local function StartRoll(slot, link, request)
     elseif request then
         local choices={}
         for _,range in ipairs({102,101,100,99,98}) do if request.types[range] then table.insert(choices,MOS.Services.LootRollRequest.CategoryNames[range].." ("..range..")") end end
-        local announcement="ROLL FOR: "..link..". Available rolls: "..table.concat(choices,", ")..". ("..seconds.." seconds)."
-        if request.names then
-            local players=" Players: "..table.concat(request.names,", ")
-            if string.len(announcement..players)>240 then players=" Players: "..table.getn(request.names).." selected." end
-            announcement=announcement..players
-        end
-        local sent=Announce(announcement)
+        local sent=AnnounceMessage(request.names and "PlayerRoll" or "ItemRoll", {item=link, rolls=table.concat(choices,", "), seconds=seconds,
+            players=request.names and table.concat(request.names,", ") or "", playerNames=request.names})
         if not sent then
             activeRoll=nil;timer:SetScript("OnUpdate",nil);timer:Hide();events:UnregisterEvent("CHAT_MSG_SYSTEM")
             status:SetText("The roll announcement could not be sent.")
             Refresh();return false,"The roll announcement could not be sent."
         end
     elseif srRestricted then
-        Announce("SR for " .. link .. ": " .. table.concat(srNames, ", "))
-        Announce("ROLL FOR: " .. link .. ". Available rolls: SR (102). (" .. seconds .. " seconds).")
+        AnnounceMessage("SRPlayers", {item=link, players=table.concat(srNames, ", "), playerNames=srNames})
+        AnnounceMessage("ItemRoll", {item=link, rolls="SR (102)", seconds=seconds})
     else
-        Announce("ROLL FOR: " .. link .. ". Available rolls: RC (101), MS (100), OS (99), Mog (98). (" .. seconds .. " seconds).")
+        AnnounceMessage("ItemRoll", {item=link, rolls="RC (101), MS (100), OS (99), Tmog (98)", seconds=seconds})
     end
     events:RegisterEvent("CHAT_MSG_SYSTEM")
     timer:SetScript("OnUpdate", OnTimerUpdate)
@@ -1584,8 +1581,7 @@ local function ResolveRaidRoll(value)
     local name = pending.players[value]
     if not name then status:SetText("Raid roll returned an invalid roster position"); Refresh(); return end
     local candidate, _, unavailableReason = CanGive(pending, name)
-    if candidate then Announce("Raid roll " .. value .. "/" .. pending.count .. ": " .. name .. " wins " .. pending.link .. ".")
-    else Announce("Raid roll " .. value .. "/" .. pending.count .. ": " .. name .. " cannot receive " .. pending.link .. ".") end
+    AnnounceMessage(candidate and "RaidWinner" or "RaidUnavailable", {value=value, count=pending.count, player=name, item=pending.link})
     local history, historyKey = retention.GetHistory(pending.source, pending.historyKey, pending.link, pending.icon)
     pending.historyKey = historyKey
     history.rounds = history.rounds + 1
@@ -2081,7 +2077,12 @@ function MasterLootWindow.OpenLinkedItemRoll(itemReference)
 end
 
 function MasterLootWindow.OpenNewRollDialog()
-    if not MasterLootWindow.CanStartManualRoll() then return false end
+    if not MasterLootWindow.CanStartManualRoll() then
+        local message = MOS.Services.LootRollRequest.CanOrganize() and "Another roll is already in progress."
+            or "Only the Loot Master, raid leader or an assistant can start a roll."
+        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: " .. message) end
+        return false, message
+    end
     if not MasterLootWindow.newRollDialog then MasterLootWindow.newRollDialog=MOS.Modules.LootRollDialog.Create({start=MasterLootWindow.StartManualRoll}) end
     MasterLootWindow.newRollDialog:Open()
     return true
@@ -2176,8 +2177,8 @@ events:SetScript("OnEvent", function()
             local result, invalidReason = RaidService.ProcessLootRoll(roll, name, value, range, reyCoinUsed, reyCoinItem)
             if invalidReason then
                 if string.find(invalidReason, "^wrong roll") then
-                    Announce(name .. " wrong roll for " .. roll.link .. ": " .. string.gsub(invalidReason, "^wrong roll, ", "") .. ".")
-                else Announce(name .. " cannot roll for " .. roll.link .. ": " .. invalidReason .. ".") end
+                    AnnounceMessage("WrongRoll", {player=name, item=roll.link, reason=string.gsub(invalidReason, "^wrong roll, ", "")})
+                else AnnounceMessage("CannotRoll", {player=name, item=roll.link, reason=invalidReason}) end
             end
             if result then
                 if not activeRoll then

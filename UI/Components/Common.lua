@@ -151,7 +151,7 @@ function UI.ApplySelectionListStyle(buttons, items, selectedId, loadButton)
 end
 
 function UI.CreateDropdownButton(parent, name, text, width)
-    local button = CreateFrame("Button", name, parent)
+    local button = UI.CreateControl(name, parent)
     button:SetWidth(width or 84); button:SetHeight(24)
     button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 8, edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
     button:SetBackdropColor(0.08, 0.07, 0.05, 0.95)
@@ -362,7 +362,7 @@ function UI.CreateDeleteButton(parent, name, size, iconInset)
 end
 
 function UI.CreateIconButton(parent, name, texturePath, size, iconInset, tint)
-    local button = CreateFrame("Button", name, parent)
+    local button = UI.CreateControl(name, parent)
     button:SetWidth(size or 20); button:SetHeight(size or 20)
     local normal = button:CreateTexture(nil, "ARTWORK")
     local inset = tonumber(iconInset) or 0
@@ -475,7 +475,7 @@ function UI.CreateItemListDialog(name)
     frame.rows = {}; frame.items = {}
     local index
     for index = 1, 28 do
-        local row = CreateFrame("Button", nil, frame); row:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -48 - ((index - 1) * 24)); row:SetPoint("RIGHT", frame, "RIGHT", -34, 0); row:SetHeight(22)
+        local row = UI.CreateControl(nil, frame); row:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -48 - ((index - 1) * 24)); row:SetPoint("RIGHT", frame, "RIGHT", -34, 0); row:SetHeight(22)
         row.context = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); row.context:SetPoint("LEFT", row, "LEFT", 1, 0); row.context:SetWidth(150); row.context:SetJustifyH("LEFT"); row.context:Hide()
         row.iconRegion = row:CreateTexture(nil, "ARTWORK"); row.iconRegion:SetPoint("LEFT", row, "LEFT", 1, 0); row.iconRegion:SetWidth(20); row.iconRegion:SetHeight(20)
         row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); row.label:SetPoint("LEFT", row.iconRegion, "RIGHT", 7, 0); row.label:SetPoint("RIGHT", row, "RIGHT", -2, 0); row.label:SetJustifyH("LEFT")
@@ -514,7 +514,7 @@ function UI.CreateItemListDialog(name)
     frame.scroll.refreshCallback = function() frame:Refresh() end
     frame.scroll:SetScript("OnVerticalScroll", function() FauxScrollFrame_OnVerticalScroll(24, this.refreshCallback) end)
     frame:SetScript("OnSizeChanged", function() this:Refresh() end)
-    frame.grip = CreateFrame("Button", nil, frame); frame.grip:SetWidth(12); frame.grip:SetHeight(12); frame.grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    frame.grip = UI.CreateControl(nil, frame); frame.grip:SetWidth(12); frame.grip:SetHeight(12); frame.grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
 
     frame.grip:SetScript("OnMouseDown", function() frame:StartSizing("BOTTOMRIGHT") end); frame.grip:SetScript("OnMouseUp", function() frame:StopMovingOrSizing(); frame:Refresh() end)
     frame.close:SetScript("OnClick", function() frame:Hide() end); frame.ok:SetScript("OnClick", function() frame:Hide() end)
@@ -802,8 +802,8 @@ function UI.ApplyButtonCaptionBaseline(button)
         or (button.mosClassicIconKey and ((button.mosClassicIconInset or 7) + (button.mosClassicIconSize or 13) + 4) or 0)
     local right = button.mosLabelInsets and button.mosLabelInsets[2] or 4
     label:ClearAllPoints(); label:SetPoint("TOPLEFT", button, "TOPLEFT", left, 0)
-    label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -right, bottom)
-    label:SetHeight(math.max(1, button:GetHeight() - bottom)); label:SetJustifyV("BOTTOM")
+    label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -right, 0)
+    label:SetHeight(button:GetHeight()); label:SetJustifyV("MIDDLE")
     label:SetJustifyH(button.mosLabelJustify or (button.mosClassicIconKey and "LEFT" or "CENTER"))
 end
 

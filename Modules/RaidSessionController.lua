@@ -58,6 +58,7 @@ function RaidSessionController.Create(dependencies)
         state.raidSessionTransitionPending = false; state.raidSessionMismatchContext = nil
         state.raidPhysicalRosterReady = nil; state.raidSessionAwaitingPhysicalAcceptance = nil
         if session.ResetPhysicalRaid then session:ResetPhysicalRaid() end
+        if dependencies.applyRaidPreset then dependencies.applyRaidPreset(raidName) end
         return true
     end
 

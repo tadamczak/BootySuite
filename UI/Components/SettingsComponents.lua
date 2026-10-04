@@ -16,7 +16,7 @@ function Settings.CreateSection(parent, title, y)
 end
 
 function Settings.CreateAccordion(parent, text, y, iconKey)
-    local button = CreateFrame("Button", nil, parent)
+    local button = MOS.UI.Components.CreateControl(nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", 24, y)
     button:SetWidth(180)
     button:SetHeight(16)
@@ -54,6 +54,14 @@ function Settings.CreateAccordion(parent, text, y, iconKey)
 end
 
 function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel, iconKey)
+    if (inset or 0) > 0 then
+        local child = Settings.CreateAccordion(parent, text, y, iconKey or "list")
+        child.mosSectionInset = inset
+        child.SetExpanded = function(self, expanded) self.sectionExpanded = expanded end
+        child:ClearAllPoints(); child:SetPoint("TOPLEFT", parent, "TOPLEFT", inset, y); child:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
+        child:SetExpanded(false)
+        return child
+    end
     local button = Settings.CreateAccordion(parent, text, y, false)
     button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button:SetHeight(20)
@@ -106,7 +114,7 @@ function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel, i
 end
 
 function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
-    local button = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+    local button = MOS.UI.Components.CreateCheckButton(nil, parent, "UICheckButtonTemplate")
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
     local size = math.max(16, 22 + 2 * MOS.UI.Components.GetTextSizeDelta(parent))
     button:SetWidth(size)
@@ -130,17 +138,23 @@ function Settings.CreateCheckbox(parent, x, y, text, key, onChanged, binding)
         this:SetChecked(value and 1 or nil)
     end)
     button:SetScript("OnClick", function() this:SaveSetting() end)
-    button.labelHit = CreateFrame("Button", nil, button)
+    button.labelHit = MOS.UI.Components.CreateControl(nil, button)
     button.labelHit:SetPoint("LEFT", button, "RIGHT", 1, 0)
     button.labelHit:SetWidth(math.max(18, button.label:GetStringWidth() + 5))
     button.labelHit:SetHeight(size)
     button.labelHit.owner = button
     button.labelHit:SetScript("OnClick", function()
         local owner = this.owner
+        if not owner:IsEnabled() or owner:IsEnabled() == 0 then return end
         owner:SetChecked(not owner:GetChecked())
         owner:SaveSetting()
     end)
     return button
+end
+
+function Settings.SetCheckboxEnabled(check, enabled)
+    if enabled then check:Enable(); check.labelHit:Enable() else check:Disable(); check.labelHit:Disable() end
+    check.label:SetTextColor(unpack(enabled and MOS.UI.Components.TextColors.white or MOS.UI.Components.TextColors.gray))
 end
 
 function Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum, onChanged, binding)
@@ -206,7 +220,7 @@ function Settings.SetSliderEnabled(slider, enabled)
 end
 
 function Settings.CreateColor(parent, x, y, label, key, onChanged, binding)
-    local button = CreateFrame("Button", nil, parent)
+    local button = MOS.UI.Components.CreateControl(nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
     button:SetWidth(176)
     button:SetHeight(20)
@@ -372,6 +386,26 @@ function Settings.CreatePercentageField(parent, name, labelText, x, y, settingKe
     return label, field
 end
 
+function Settings.CreateSavedTextField(parent, settingKey, binding)
+    local field = MOS.UI.Components.CreateFramedEditBox(parent, nil, 300)
+    field.settingKey = settingKey; field:SetMaxLetters(512)
+    field.CommitValue = function(self)
+        if not self.mosEditing then return end
+        binding.set(self.settingKey, string.gsub(self:GetText() or "", "[%c]", " "))
+        self.mosEditing = nil
+    end
+    field.RefreshValue = function(self)
+        if not self.mosEditing then self:SetText(binding.get(self.settingKey) or "") end
+    end
+    field:SetScript("OnShow", function() this:RefreshValue() end)
+    field:SetScript("OnEditFocusGained", function() this.mosEditing = true end)
+    field:SetScript("OnEditFocusLost", function() this:CommitValue() end)
+    field:SetScript("OnEnterPressed", function() this:CommitValue(); this:ClearFocus() end)
+    field:SetScript("OnEscapePressed", function() this.mosEditing = nil; this:RefreshValue(); this:ClearFocus() end)
+    field:SetScript("OnHide", function() this:CommitValue(); this:ClearFocus() end)
+    return field
+end
+
 function Settings.OnViewportSizeChanged()
     local page = this.settingsPage
     if page then Settings.UpdateScroll(this, page, page.settingsContentHeight or 960) end
@@ -429,6 +463,7 @@ function Settings.CreateFactory(binding)
     factory.CreatePercentageField = function(parent, name, labelText, x, y, settingKey, fallback)
         return Settings.CreatePercentageField(parent, name, labelText, x, y, settingKey, fallback, binding)
     end
+    factory.CreateSavedTextField = function(parent, settingKey) return Settings.CreateSavedTextField(parent, settingKey, binding) end
     return factory
 end
 

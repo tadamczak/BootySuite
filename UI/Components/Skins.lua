@@ -256,7 +256,7 @@ local function ApplyControl(entry)
     if button.label and button.mosTextColor then button.label:SetTextColor(unpack(button.mosClassicSelected and button.mosSelectedTextColor or button.mosTextColor)) end
     if solid then
         ApplySolidButton(entry)
-    elseif Skins.current == "classic" and not button.mosClassicCompactControl then
+    elseif Skins.current == "classic" and not button.mosClassicCompactControl and button.mosClassicVariant ~= "red" and not button.mosClassicSelected then
         UI.ApplyDropdownChoiceSurface(button)
         SetNineSliceShown(entry.classicSkin, false)
         if entry.classicSkin then

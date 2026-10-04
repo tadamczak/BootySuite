@@ -32,6 +32,7 @@ UI.Theme = {
 }
 
 function UI.StyleButton(button, text)
+    UI.InstallControlInput(button)
     local colors = UI.Theme.colors
     local backdrop = {
         bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -225,7 +226,17 @@ end
 
 function UI.SetButtonEnabled(button, enabled)
     if enabled then button:Enable() else button:Disable() end
-    UI.SetButtonTextColor(button, enabled and UI.TextColors.white or UI.TextColors.gray)
+    if button.mosClassicVariant == "red" then
+        button.mosTextColor = nil
+        if UI.SetClassicButtonDisabled then UI.SetClassicButtonDisabled(button, not enabled) end
+        if button.label then
+            local hovered = button.mosSkinEntry and button.mosSkinEntry.hovered
+            if not enabled then button.label:SetTextColor(unpack(UI.TextColors.gray))
+            elseif hovered then button.label:SetTextColor(0.82, 0.82, 0.78)
+            elseif button.mosClassicGold then button.label:SetTextColor(1, 0.82, 0.28)
+            else button.label:SetTextColor(1, 1, 1) end
+        end
+    else UI.SetButtonTextColor(button, enabled and UI.TextColors.white or UI.TextColors.gray) end
     if button.mosActionIcon then button.mosActionIcon:SetAlpha(enabled and 1 or 0.35) end
 end
 
@@ -253,7 +264,9 @@ function UI.StyleWarmListRow(button, selected)
     local entry = button.mosSkinEntry
     if entry and entry.classicSkin then entry.classicSkin.textures[5]:Hide() end
     UI.SetRowColor(button, warmListNormal, 0.96)
-    button:SetNormalTexture(""); button:SetPushedTexture(""); button:SetHighlightTexture("")
+    if button.SetNormalTexture then button:SetNormalTexture("") end
+    if button.SetPushedTexture then button:SetPushedTexture("") end
+    if button.SetHighlightTexture then button:SetHighlightTexture("") end
     if button.mosHighlight then button.mosHighlight:Hide() end
     if not button.warmListSelection then
         button.warmListSelection = button:CreateTexture(nil, "ARTWORK")
@@ -279,7 +292,9 @@ function UI.StyleSelectableTableRow(button, even, selected)
     button.mosSelectableTableRow=true;button.mosTableRowEven=even and true or false;button.mosTableRowSelected=selected and true or false
     UI.SetRowColor(button,selectableTableColor,even and 0.14 or 0.025)
     button:SetBackdropBorderColor(0,0,0,0)
-    button:SetNormalTexture("");button:SetPushedTexture("");button:SetHighlightTexture("")
+    if button.SetNormalTexture then button:SetNormalTexture("") end
+    if button.SetPushedTexture then button:SetPushedTexture("") end
+    if button.SetHighlightTexture then button:SetHighlightTexture("") end
     if button.mosHighlight then button.mosHighlight:Hide() end
     if not button.mosTableRowSelection then
         button.mosTableRowSelection=button:CreateTexture(nil,"ARTWORK");button.mosTableRowSelection:SetAllPoints(button);UI.ApplyGoldRadialHighlight(button.mosTableRowSelection)

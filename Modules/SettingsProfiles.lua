@@ -45,6 +45,9 @@ function Settings.CreateProfiles(page, onLoaded)
         view.saveStatus:SetText(""); view.loadStatus:SetText(""); view.addStatus:SetText("")
     end
     local function CommitPending()
+        if page.addonMessages then
+            for _, row in ipairs(page.addonMessages.rows) do row.field:CommitValue(); row.field:ClearFocus() end
+        end
         local controls = page.raidAccordionControls
         if not controls then return end
         if controls.opacityField and controls.opacityField.mosEditing then controls.opacityField:CommitValue(); controls.opacityField:ClearFocus() end

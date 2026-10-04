@@ -63,6 +63,7 @@ function UI.CreateCascadingMenu(onChoose, options)
         panel.dismiss:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         panel.dismiss:SetScript("OnClick", function() menu:Close() end)
         table.insert(menu.panels, panel)
+        panel.mosDropdownRoot = menu.panels[1]
         return panel
     end
     local function EnsureRow(panel, depth, index)
@@ -277,6 +278,7 @@ function UI.CreateCascadingMenu(onChoose, options)
         local scale = UIParent:GetEffectiveScale() or 1
         self:ShowPanel(1, entries, x / scale + 8, y / scale)
         local root = self.panels[1]
+        root.toggle = anchor
         UI.openDropdownPanel = root; root.dismiss:Show()
     end
     return menu
