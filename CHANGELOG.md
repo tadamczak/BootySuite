@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.125 - 2026-10-04
+
+- Add minimap quick menus for guild, raid and profiler actions, with a new supplied icon; left click opens or restores the dashboard.
+- Compact the minimized dashboard and remove stale raid details when no session is active.
+- Rename the Performance heading to BootyProfiler, clarify Disable's reload warning and restyle Add Member.
+
 ## 0.5.0-dev.124 - 2026-10-04
 
 - Resize and minimize Live Monitor; minimize pauses its measurements and its default size matches the background.

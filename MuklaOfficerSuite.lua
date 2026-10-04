@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.124"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.125"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -612,7 +612,7 @@ raidSessionController = MOS.Modules.RaidSessionController.Create({
 
 MOS.CompleteRaidSession = function(saveOptions) return raidSessionController:Complete(saveOptions) end
 
-MOS.Modules.RaidManagement.AttachActionHandlers({
+local raidQuickActions = MOS.Modules.RaidManagement.AttachActionHandlers({
     page = raidPage,
     isTestRaid = IsTestRaid,
     importData = function(value, srUrl) return MOS.Services.RaidRes.Import(value, GetRaidAttendance(), srUrl) end,
@@ -643,6 +643,7 @@ MOS.Modules.RaidManagement.AttachActionHandlers({
         return MOS.Database.SaveHighlyContestedItems(items)
     end,
     isInRaid = IsActiveRaid,
+    isSessionActive = function() return MOS.raidSessionDraft or MOS.raidScanReady or IsTestRaid() end,
     requestRosterScan = RequestRosterScan,
     saveRaidRoster = SaveActiveRaidRoster,
     beginRaidSession = function() raidSessionController:Begin() end,
@@ -652,7 +653,7 @@ MOS.Modules.RaidManagement.AttachActionHandlers({
     continueRaidSession = function(contextKey) raidSessionController:Continue(contextKey) end,
     dismissRaidStartReminder = function(contextKey) MOS.raidStartReminderContext = contextKey end,
     openRaidManagement = function()
-        if not dashboard:IsVisible() then dashboard:Show() end
+        MOS.UI.Components.Dashboard.OpenWindow(dashboardView)
         ShowPage("raid")
     end,
     startTestRaid = function() raidSessionController:StartTest() end,
@@ -696,11 +697,21 @@ local function ToggleDashboard()
     end
 end
 
+local minimapMenu = MOS.Modules.MinimapMenu.Create({
+    openMain = function(page)
+        MOS.UI.Components.Dashboard.OpenWindow(dashboardView)
+        if page then ShowPage(page) end
+    end,
+    roster = rosterGuildControls,
+    raid = raidQuickActions,
+    performance = performanceModule,
+})
 MOS.minimapButton = MOS.UI.Components.Dashboard.CreateMinimapButton({
     ensureDatabase = EnsureDatabase,
     getAngle = function() return MuklaOfficerSuiteDB.minimap.angle or 220 end,
     setAngle = function(value) MuklaOfficerSuiteDB.minimap.angle = value end,
-    onClick = ToggleDashboard,
+    onOpen = function() minimapMenu:OpenMain() end,
+    onContextMenu = function(button) minimapMenu:Toggle(button) end,
 })
 MOS.PositionMinimapButton = MOS.minimapButton.Position
 
