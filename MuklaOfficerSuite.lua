@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.126"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.127"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -712,6 +712,13 @@ local function ToggleDashboard()
 end
 
 local minimapMenu = MOS.Modules.MinimapMenu.Create({
+    menuOptions = {
+        backgroundTexture = "Interface\\AddOns\\MuklaOfficerSuite\\Textures\\QuickMenuBackground",
+        backgroundAspect = 252 / 512,
+        backgroundUVRight = 252 / 256,
+        backgroundUVBottom = 1,
+        backgroundAlpha = 0.16,
+    },
     openMain = function(page)
         MOS.UI.Components.Dashboard.OpenWindow(dashboardView)
         if page then ShowPage(page) end
@@ -724,7 +731,7 @@ MOS.minimapButton = MOS.UI.Components.Dashboard.CreateMinimapButton({
     ensureDatabase = EnsureDatabase,
     getAngle = function() return MuklaOfficerSuiteDB.minimap.angle or 220 end,
     setAngle = function(value) MuklaOfficerSuiteDB.minimap.angle = value end,
-    onOpen = function() minimapMenu:OpenMain() end,
+    onOpen = function() minimapMenu:Close(); MOS.UI.Components.Dashboard.ToggleWindow(dashboardView) end,
     onContextMenu = function(button) minimapMenu:Toggle(button) end,
 })
 MOS.PositionMinimapButton = MOS.minimapButton.Position

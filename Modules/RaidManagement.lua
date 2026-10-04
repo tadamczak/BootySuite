@@ -2402,16 +2402,16 @@ end
 local function ToolSpecs(page, kind)
     local controls = page.refreshControls
     page.toolActionSpecs = page.toolActionSpecs or {
-        leader = {{key = "rl-mode", source = controls.leaderMode, caption = "RL Mode"},
-            {key = "ready-check", source = controls.readyCheck, caption = "Ready Check"}},
+        leader = {{key = "rl-mode", source = controls.leaderMode, caption = "RL Mode", icon = "raid_tools", openRaid = true},
+            {key = "ready-check", source = controls.readyCheck, caption = "Ready Check", icon = "check"}},
         loot = {
-            {key = "loot-mode", source = controls.mode, caption = "Loot Master Mode"},
-            {key = "reset-loot", source = controls.resetLoot, caption = "Reset Loot"},
-            {key = "import-sr", source = controls.import, caption = "Import SR"},
-            {key = "share-sr", source = controls.shareSr, caption = "Share SR"},
-            {key = "loot-rules", source = controls.lootRules, caption = "Loot Rules"},
-            {key = "send-loot-rules", source = controls.sendLootRules, caption = "Send Loot Rules"},
-            {key = "reycoin", source = controls.reycoin, caption = "Reycoin list"},
+            {key = "loot-mode", source = controls.mode, caption = "Loot Master Mode", icon = "loot_tools"},
+            {key = "reset-loot", source = controls.resetLoot, caption = "Reset Loot", icon = "reset"},
+            {key = "import-sr", source = controls.import, caption = "Import SR", icon = "import"},
+            {key = "share-sr", source = controls.shareSr, caption = "Share SR", icon = "link"},
+            {key = "loot-rules", source = controls.lootRules, caption = "Loot Rules", icon = "rules"},
+            {key = "send-loot-rules", source = controls.sendLootRules, caption = "Send Loot Rules", icon = "rules"},
+            {key = "reycoin", source = controls.reycoin, caption = "Reycoin list", icon = "lootmaster"},
         },
     }
     return page.toolActionSpecs[kind]
@@ -2441,8 +2441,8 @@ function RaidManagement.CreateQuickActions(options, loadSelectedRaid)
     local page, controls = options.page, options.page.refreshControls
     local actions = {}
     local function ActiveSession()
-        if options.isSessionActive then return options.isSessionActive() and true or false end
         if options.isTestRaid and options.isTestRaid() then return true end
+        if options.isSessionActive then return options.isSessionActive() and true or false end
         local attendance = options.getAttendance()
         return attendance and (attendance._sessionDraft or attendance.sessionStartedAt) and true or false
     end
@@ -2453,7 +2453,7 @@ function RaidManagement.CreateQuickActions(options, loadSelectedRaid)
         return {
             active = active, test = test, primaryLabel = active and "Open Raid" or "Start new raid",
             canStart = not active and options.isInRaid() and true or false,
-            canTest = not active, canLoad = true,
+            canTest = not active, canLoad = not active,
             canSave = active and not test and attendance ~= nil, canQuit = active,
             canTools = active and attendance ~= nil,
         }
@@ -2464,12 +2464,14 @@ function RaidManagement.CreateQuickActions(options, loadSelectedRaid)
         RaidManagement.UpdateActionAvailability(page, state.test)
         for index = 1, table.getn(specs or {}) do
             local spec = specs[index]
-            entries[index] = {id = spec.key, text = ToolCaption(spec), enabled = state.canTools and SourceEnabled(spec.source)}
+            entries[index] = {id = spec.key, text = ToolCaption(spec), icon = spec.source and spec.source.mosClassicIconKey or spec.icon,
+                enabled = state.canTools and SourceEnabled(spec.source)}
         end
         return entries
     end
     function actions:GetRecentSnapshots(limit)
         local history, entries = options.getRaidHistory() or {}, {}
+        local canLoad = self:GetState().canLoad
         limit = math.max(0, math.min(5, math.floor(tonumber(limit) or 5)))
         for index = 1, math.min(limit, table.getn(history)) do
             local snapshot = history[index]
@@ -2477,7 +2479,7 @@ function RaidManagement.CreateQuickActions(options, loadSelectedRaid)
             local stamp = savedAt and date("%Y-%m-%d", savedAt) or ""
             entries[index] = {id = snapshot.id, date = stamp,
                 text = tostring(snapshot.id or "Unknown") .. (stamp ~= "" and " | " .. stamp or ""),
-                enabled = true}
+                enabled = canLoad}
         end
         return entries
     end
@@ -2507,7 +2509,14 @@ function RaidManagement.CreateQuickActions(options, loadSelectedRaid)
                 if history[index].id == snapshotId then found = true; break end
             end
             if not found then return false end
-            OpenRaid(); page.selectedRaidHistoryId = snapshotId
+            OpenRaid()
+            if not self:GetState().canLoad then return false end
+            history, found = options.getRaidHistory() or {}, false
+            for index = 1, table.getn(history) do
+                if history[index].id == snapshotId then found = true; break end
+            end
+            if not found then return false end
+            page.selectedRaidHistoryId = snapshotId
             return loadSelectedRaid() and true or false
         end
         if not state.canTools then return false end
@@ -2516,7 +2525,7 @@ function RaidManagement.CreateQuickActions(options, loadSelectedRaid)
             for index = 1, table.getn(specs) do
                 local spec = specs[index]
                 if spec.key == key then
-                    OpenRaid()
+                    if spec.openRaid then OpenRaid() end
                     local current = self:GetState()
                     RaidManagement.UpdateActionAvailability(page, current.test)
                     if not current.canTools or not SourceEnabled(spec.source) then return false end
