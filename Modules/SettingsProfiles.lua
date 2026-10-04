@@ -173,11 +173,13 @@ function Settings.ApplyTopSections(page)
     page.settingsTopOffset = -profileHeight - 28 - 56 - extra
     if page.primarySections and page.raidAccordionControls then
         Settings.ApplyRosterAccordions(page, page.primarySections, page.raidAccordionControls)
+    elseif Settings.LayoutFollowingSections then
+        Settings.LayoutFollowingSections(page, uiY - 28)
     end
 end
 
 function Settings.BindTopSections(page, onLoaded)
-    page.topSectionState = { profile = false, profileGeneral = false, ui = false, debug = false }
+    page.topSectionState = { profile = false, profileGeneral = false, ui = false, keybindings = false, keybindingsGeneral = false, debug = false }
     Settings.CreateProfiles(page, onLoaded)
     page.profiles.general:SetScript("OnClick", function()
         page.topSectionState.profileGeneral = not page.topSectionState.profileGeneral; Settings.ApplyTopSections(page)
@@ -188,5 +190,13 @@ function Settings.BindTopSections(page, onLoaded)
     page.uiHeading:SetScript("OnClick", function()
         page.topSectionState.ui = not page.topSectionState.ui; Settings.ApplyTopSections(page)
     end)
+    if page.keybindings then
+        page.keybindings.heading:SetScript("OnClick", function()
+            page.topSectionState.keybindings = not page.topSectionState.keybindings; Settings.ApplyTopSections(page)
+        end)
+        page.keybindings.general:SetScript("OnClick", function()
+            page.topSectionState.keybindingsGeneral = not page.topSectionState.keybindingsGeneral; Settings.ApplyTopSections(page)
+        end)
+    end
     Settings.ApplyTopSections(page)
 end

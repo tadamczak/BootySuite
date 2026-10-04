@@ -42,6 +42,15 @@ function RaidManagement.AttachReyCoinAdd(view, refresh)
     if view.reyCoinItem then view.reyCoinItem:SetScript("OnEnterPressed", Submit) end
 end
 
+local function RestoreHeaderFont(control)
+    local label = control.label or control
+    if not label.GetFont then return end
+    local font, size, flags = label:GetFont()
+    control.mosFitFontSize = control.mosFitFontSize or size
+    label:SetFont(font, control.mosFitFontSize, flags)
+    label:SetWidth(0)
+end
+
 function RaidManagement.CreateChrome(page, callbacks)
     local view = {}
     view.classicToolbar = MOS.UI.Components.CreateContainer(nil, page)
@@ -315,6 +324,19 @@ end
 
 function RaidManagement.CreateActionControls(page)
     local controls = {}
+    controls.readyCheck = MOS.UI.Components.CreateButton(page, nil, "Ready Check", 118, 22)
+    MOS.UI.Components.SetClassicButtonIcon(controls.readyCheck, "check", 13, 7, 2)
+    controls.readyCheck:SetScript("OnClick", function()
+        if page.isTestRaid and page.isTestRaid() then return end
+        if MOS.Services.Raid.ReadyCheck then MOS.Services.Raid.ReadyCheck() end
+    end)
+    controls.readyCheck:Hide()
+    controls.raidInfo = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Icons\\info.tga", 26, 6, MOS.UI.Components.Theme.colors.goldIcon)
+    MOS.UI.Components.ApplyDropdownChoiceSurface(controls.raidInfo)
+    MOS.UI.Components.AttachGoldHoverBorder(controls.raidInfo, 0.35, 0.35, 0.35, 1)
+    MOS.UI.Components.AttachTooltip(controls.raidInfo, "Raid Info", "Your saved instances, raid IDs and time until reset.")
+    controls.raidInfo:SetScript("OnClick", function() if MOS.Modules.RaidInfo then MOS.Modules.RaidInfo.Open() end end)
+    controls.raidInfo:Hide(); page.raidInfoButton = controls.raidInfo
     controls.scan = MOS.UI.Components.CreateButton(page, nil, "Scan Raid", 140, 24)
     controls.scan:SetPoint("CENTER", page, "CENTER", 0, 12); controls.scan:Hide()
     controls.loadRaid = MOS.UI.Components.CreateButton(page, nil, "Load", 78, 24); controls.loadRaid:Hide(); MOS.UI.Components.SetButtonEnabled(controls.loadRaid, false)
@@ -471,6 +493,7 @@ local function OnListViewportScroll()
 end
 
 local function PageSpan(page)
+    if page.mosCompactGroupWidth then return page.mosCompactGroupWidth, page.mosCompactGroupHeight end
     if page.detachedLootMaster then return math.max(1, page:GetParent():GetWidth() - 8), math.max(1, page:GetParent():GetHeight() - 28) end
     local left, right = page:GetLeft(), page:GetRight()
     local bottom, top = page:GetBottom(), page:GetTop()
@@ -688,6 +711,21 @@ function RaidManagement.CreateListHeaders(page, onSort)
     return ui
 end
 
+local function CreateGroupCanvas(page, scrollName)
+    page.groupFrame = MOS.UI.Components.CreateScrollFrame(scrollName, page, "UIPanelScrollFrameTemplate")
+    page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -72)
+    page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
+    page.groupCanvas = MOS.UI.Components.CreateContainer(nil, page.groupFrame)
+    page.groupCanvas:SetWidth(1); page.groupCanvas:SetHeight(1)
+    page.groupFrame:SetScrollChild(page.groupCanvas)
+    page.groupScrollBar = getglobal(scrollName .. "ScrollBar")
+    MOS.UI.Components.RegisterSkinnedScrollBar(page.groupScrollBar)
+    page.groupFrame.groupPage = page
+    page.groupFrame:EnableMouseWheel(true); page.groupFrame:SetScript("OnMouseWheel", OnGroupViewportMouseWheel)
+    page.groupFrame:Hide()
+    return page.groupFrame
+end
+
 function RaidManagement.CreateGroupViewport(page)
     page.raidView = "list"
     page.viewButton = MOS.UI.Components.CreateButton(page, nil, "Group View", 92, 22)
@@ -701,18 +739,7 @@ function RaidManagement.CreateGroupViewport(page)
     MOS.UI.Components.SetClassicButtonLabelOffset(page.classicListButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicGroupButton, 2)
     MOS.UI.Components.SetClassicButtonLabelOffset(page.classicTwoButton, 2); MOS.UI.Components.SetClassicButtonLabelOffset(page.classicFourButton, 2)
     for _, button in ipairs({page.classicListButton, page.classicGroupButton, page.classicTwoButton, page.classicFourButton}) do button.mosSelectedTextColor = {1,0.82,0.28}; MOS.UI.Components.SetButtonTextColor(button, {1,1,1}) end
-    page.groupFrame = MOS.UI.Components.CreateScrollFrame("MuklaOfficerSuiteRaidGroupScroll", page, "UIPanelScrollFrameTemplate")
-    page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -72)
-    page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 5)
-    page.groupCanvas = MOS.UI.Components.CreateContainer(nil, page.groupFrame)
-    page.groupCanvas:SetWidth(1); page.groupCanvas:SetHeight(1)
-    page.groupFrame:SetScrollChild(page.groupCanvas)
-    page.groupScrollBar = getglobal("MuklaOfficerSuiteRaidGroupScrollScrollBar")
-    MOS.UI.Components.RegisterSkinnedScrollBar(page.groupScrollBar)
-    page.groupFrame.groupPage = page
-    page.groupFrame:EnableMouseWheel(true); page.groupFrame:SetScript("OnMouseWheel", OnGroupViewportMouseWheel)
-    page.groupFrame:Hide()
-    return page.groupFrame
+    return CreateGroupCanvas(page, "MuklaOfficerSuiteRaidGroupScroll")
 end
 
 function RaidManagement.CreateListController(options)
@@ -801,6 +828,7 @@ end
 function RaidManagement.BeginRefresh(page, rows)
     page.groupFrame:Hide(); MOS.UI.Components.SetScrollBarVisible(page.groupScrollBar, false); page.viewButton:Hide()
     page.classicToolbar:Hide()
+    if page.filterToolbar then page.filterToolbar:Hide() end
     page.classicSummary:Hide()
     page.lmConfigToggle:Hide()
     page.classicListButton:Hide(); page.classicGroupButton:Hide(); page.classicTwoButton:Hide(); page.classicFourButton:Hide()
@@ -816,6 +844,7 @@ function RaidManagement.BeginRefresh(page, rows)
 end
 
 function RaidManagement.HideListChrome(page)
+    if page.filterToolbar then page.filterToolbar:Hide() end
     local headers = page.listHeaderUI
     headers.name:Hide(); headers.group:Hide(); headers.class:Hide(); headers.rank:Hide(); headers.sr:Hide()
     headers.level:Hide(); headers.online:Hide(); headers.onlineButton:Hide()
@@ -923,6 +952,7 @@ function RaidManagement.MountChrome(page, chrome, actions)
     })
     RaidManagement.SetRefreshControls(page, {
         leaderMode = page.leaderModeButton,
+        readyCheck = actions.readyCheck, raidInfo = actions.raidInfo,
         title = chrome.title,
         resetFilters = page.resetFiltersButton,
         unavailable = chrome.unavailable,
@@ -983,6 +1013,56 @@ function RaidManagement.MountGroupView(page, options)
     RaidManagement.AttachViewToggle(page, options.onViewChanged)
 end
 
+local compactGroupSerial = 0
+function RaidManagement.CreateCompactGroupView(parent, dependencies)
+    dependencies = dependencies or {}
+    local page = MOS.UI.Components.CreateContainer(nil, parent)
+    page:SetAllPoints(parent); page:Hide()
+    page.mosGroupLayout = true; page.mosGroupLeft = 0; page.mosGroupTop = 0; page.mosGroupBottom = 0
+    page.isTestRaid = function() return false end
+    page.moveMemberToSlot = dependencies.moveMemberToSlot or function() return false end
+    compactGroupSerial = compactGroupSerial + 1
+    CreateGroupCanvas(page, "MuklaOfficerSuiteCompactRaidGroupScroll" .. compactGroupSerial)
+    RaidManagement.CreateDragGhost(page)
+    local controller, members = {}, {}
+    local function Changed() if dependencies.onChanged then dependencies.onChanged() end end
+    RaidManagement.CreateMemberMenu(page, function(member, action)
+        if dependencies.runMemberAction and dependencies.runMemberAction(member, action) then Changed() end
+    end, dependencies.isPlayerIgnored or function() return false end)
+    MOS.UI.Components.Window.ApplyProjectSurface(page.memberMenu)
+    RaidManagement.CreateGroupGrid(page)
+    RaidManagement.SetGroupRenderer(page, {
+        ensureDatabase = dependencies.ensureDatabase or function() end,
+        getLootMasterInfo = dependencies.getLootMasterInfo or function() return nil end,
+        getRaidMemberCount = function() return math.min(40, table.getn(members)) end,
+        getRaidMemberIndex = function(index) return members[index] and members[index].raidIndex or index end,
+        getRaidMemberInfo = function(index)
+            local member = members[index]
+            if member then return member.name, member.raidRank, member.subgroup, member.level, member.class, member.classFile, member.zone, member.online end
+        end,
+    })
+    page.refreshGroupView = function()
+        if dependencies.onChanged then Changed()
+        elseif page:IsVisible() then RaidManagement.RefreshGroupView(page) end
+    end
+    function controller:Render(currentMembers, width, height)
+        members = currentMembers or {}
+        page.mosCompactGroupWidth = math.max(1, tonumber(width) or 1)
+        page.mosCompactGroupHeight = math.max(1, tonumber(height) or 1)
+        page:Show(); page.groupFrame:Show()
+        RaidManagement.RefreshGroupView(page)
+    end
+    function controller:Hide()
+        if page.dragGhost:IsShown() then MOS.dragRaidIndex = nil; MOS.raidDropSlot = nil; MOS.raidDragStarted = nil end
+        page.dragGhost:SetScript("OnUpdate", nil); page.dragGhost:Hide()
+        page.memberMenu:Hide(); page.memberMenuDismiss:Hide(); page.contextSlot = nil
+        page:Hide(); members = {}
+    end
+    function controller:IsVisible() return page:IsVisible() end
+    page:SetScript("OnHide", function() controller:Hide() end)
+    return controller
+end
+
 function RaidManagement.CreateRenderer(options)
     return options
 end
@@ -1013,6 +1093,11 @@ function RaidManagement.RefreshPage(renderer)
     page.classicSectionOffset = MOS.UI.Components.IsClassicSkin() and not MuklaOfficerSuiteDB.raidHideSectionHeader and 24 or 0
     page.classicToolbarOffset = MOS.UI.Components.IsClassicSkin() and RaidManagement.GetToolToolbarOffset(pageWidth, page.raidView) or 0
     local lootMasterMode = renderer.isLootMasterMode()
+    if page.raidInfoButton then
+        if lootMasterMode then page.raidInfoButton:Hide() else
+            page.raidInfoButton:ClearAllPoints(); page.raidInfoButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -9 - page.classicSectionOffset); page.raidInfoButton:Show()
+        end
+    end
     local attendance = renderer.getData()
     local issues
     local importInfo = attendance and attendance.softReserveImport
@@ -1030,8 +1115,9 @@ function RaidManagement.RefreshPage(renderer)
             page.classicSaved:SetText(savedText); page.classicSaved:Show()
             RaidManagement.UpdateIssueAttention(page.classicIssues, issues)
             if issueCount > 0 then page.classicIssues:SetText(issueCount .. " issues"); page.classicIssues:Show() else page.classicIssues:Hide() end
-            local titleWidth = math.min(120, page.classicRaidName:GetStringWidth())
-            local metaWidth = math.min(82, page.classicMeta:GetStringWidth())
+            RestoreHeaderFont(page.classicRaidName); RestoreHeaderFont(page.classicMeta)
+            local titleWidth = math.max(48, page.classicRaidName:GetStringWidth() + 4)
+            local metaWidth = math.max(42, page.classicMeta:GetStringWidth() + 4)
             page.classicRaidName:SetWidth(titleWidth); page.classicMeta:SetWidth(metaWidth)
             page.classicActionOffset = 0
         else
@@ -1128,6 +1214,9 @@ function RaidManagement.UpdateActionAvailability(page, testRaid)
     MOS.UI.Components.SetButtonEnabled(controls.export, not testRaid)
     MOS.UI.Components.SetClassicButtonDisabled(controls.export, testRaid and true or false)
     controls.shareSr:Enable(); controls.import:Enable()
+    if controls.readyCheck then
+        MOS.UI.Components.SetButtonEnabled(controls.readyCheck, not testRaid and MOS.Services.Raid.CanReadyCheck and MOS.Services.Raid.CanReadyCheck() or false)
+    end
 end
 
 function RaidManagement.ShowReadyState(page, lootMasterMode)
@@ -1915,7 +2004,10 @@ local function OnGroupSlotMouseUp()
 end
 
 local function OnGroupSlotClick()
-    if arg1 == "RightButton" and this.hasMember and MOS.ShowRaidMemberMenu then MOS.ShowRaidMemberMenu(this) end
+    if arg1 == "RightButton" and this.hasMember then
+        if this.groupPage.showMemberMenu then this.groupPage.showMemberMenu(this)
+        elseif MOS.ShowRaidMemberMenu then MOS.ShowRaidMemberMenu(this) end
+    end
 end
 
 local function OnGroupSlotDragStart()
@@ -1984,19 +2076,26 @@ function RaidManagement.SetGroupRenderer(page, dependencies)
     page.groupRenderer = dependencies
 end
 
-function RaidManagement.MeasureGroupHeight(width, page)
+local function GroupGeometry(page, width, height)
     local db = MuklaOfficerSuiteDB
-    local geometry = RaidManagement.CalculateGroupGeometry(width, page.mosGroupHeight, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder)
+    if page.mosCompactGroupWidth then
+        return RaidManagement.CalculateGroupGeometry(width, height, width < 260 and 1 or 2, width, 20, true, true, 22, 6, db.raidGroupShowBorder)
+    end
+    return RaidManagement.CalculateGroupGeometry(width, height, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder)
+end
+
+function RaidManagement.MeasureGroupHeight(width, page)
+    local geometry = GroupGeometry(page, width, page.mosGroupHeight)
     return geometry.contentHeight
 end
 
 function RaidManagement.ResolveGroupViewport(page)
-    local width, height = PageSpan(page.groupFrame)
+    local width, height
     if page.mosGroupLayout then
         local pageWidth, pageHeight = PageSpan(page)
         width = pageWidth - page.mosGroupLeft - 4
         height = pageHeight + page.mosGroupTop - page.mosGroupBottom
-    else width = width + (page.mosGroupScrollGutter or 0) end
+    else width, height = PageSpan(page.groupFrame); width = width + (page.mosGroupScrollGutter or 0) end
     width, height = math.max(1, width), math.max(1, height)
     page.mosGroupHeight = height
     local overflow, maximum, measuredHeight
@@ -2015,14 +2114,14 @@ function RaidManagement.RefreshGroupView(page)
     local renderer = page.groupRenderer
     renderer.ensureDatabase()
     local width, height, maximum = RaidManagement.ResolveGroupViewport(page)
-    local configuredWidth = tonumber(MuklaOfficerSuiteDB.raidGroupTileWidth) or 280
     local backgroundColor = MuklaOfficerSuiteDB.raidGroupBackgroundColor
     local textColor = MuklaOfficerSuiteDB.raidGroupTextColor
     local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
-    local slotHeight = tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20
-    local tileTextSize = tonumber(MuklaOfficerSuiteDB.raidGroupTileTextSize) or 10
-    local headerTextSize = tonumber(MuklaOfficerSuiteDB.raidGroupHeaderTextSize) or 10
-    local geometry = RaidManagement.CalculateGroupGeometry(width, height, MuklaOfficerSuiteDB.raidGroupColumns, configuredWidth, slotHeight, MuklaOfficerSuiteDB.raidGroupShowHeader, MuklaOfficerSuiteDB.raidGroupAutoTileWidth, MuklaOfficerSuiteDB.raidGroupHeaderHeight, MuklaOfficerSuiteDB.raidGroupMargin, MuklaOfficerSuiteDB.raidGroupShowBorder)
+    local compact = page.mosCompactGroupWidth ~= nil
+    local slotHeight = compact and 20 or tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20
+    local tileTextSize = compact and 10 or tonumber(MuklaOfficerSuiteDB.raidGroupTileTextSize) or 10
+    local headerTextSize = compact and 10 or tonumber(MuklaOfficerSuiteDB.raidGroupHeaderTextSize) or 10
+    local geometry = GroupGeometry(page, width, height)
     local columns, groupRows = geometry.columns, geometry.rows
     local layoutWidth, xOffset, columnWidth = geometry.layoutWidth, geometry.xOffset, geometry.columnWidth
     local headerHeight, groupHeight = geometry.headerHeight, geometry.groupHeight
@@ -2043,7 +2142,7 @@ function RaidManagement.RefreshGroupView(page)
         RaidManagement.ApplyGroupTileAppearance(panel, header, headerHeight)
         SetFontSize(header, headerTextSize)
         header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -4, -4)
-        if MuklaOfficerSuiteDB.raidGroupShowHeader then header:Show() else header:Hide() end
+        if compact or MuklaOfficerSuiteDB.raidGroupShowHeader then header:Show(); panel.headerBackground:Show() else header:Hide() end
         for slotIndex = 1, 5 do
             local slot = page.groupSlots[groupIndex][slotIndex]
             SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
@@ -2096,11 +2195,12 @@ function RaidManagement.RefreshGroupView(page)
             end
         end
         if slot then
-            slot.raidIndex = raidIndex
+            local memberIndex = renderer.getRaidMemberIndex and renderer.getRaidMemberIndex(raidIndex) or raidIndex
+            slot.raidIndex = memberIndex
             slot.hasMember = true; slot.displayedMember.name = name or "Unknown"; slot.displayedMember.raidRank = raidRank or 0
-            slot.displayedMember.raidIndex = raidIndex; slot.displayedMember.subgroup = subgroup
+            slot.displayedMember.raidIndex = memberIndex; slot.displayedMember.subgroup = subgroup
             slot.name:SetText(name or "Unknown"); slot.level:SetText(level or ""); slot.class:SetText(class or "")
-            local showLootMasterIcon = MuklaOfficerSuiteDB.raidGroupShowLootMaster and lootMethod == "master" and tonumber(raidLootMasterIndex) == raidIndex
+            local showLootMasterIcon = MuklaOfficerSuiteDB.raidGroupShowLootMaster and lootMethod == "master" and tonumber(raidLootMasterIndex) == memberIndex
             local showRoleIcon = MuklaOfficerSuiteDB.raidGroupShowRoleIcon and (tonumber(raidRank) or 0) > 0
             if MuklaOfficerSuiteDB.raidGroupShowRoleIcon and (tonumber(raidRank) or 0) == 2 then
                 slot.crown:SetTexture("Interface\\GroupFrame\\UI-Group-LeaderIcon"); slot.crown:Show()
@@ -2112,8 +2212,8 @@ function RaidManagement.RefreshGroupView(page)
             slot.crown:ClearAllPoints(); slot.crown:SetPoint("LEFT", slot, "LEFT", 5, 0)
             slot.lootMasterIcon:ClearAllPoints(); slot.lootMasterIcon:SetPoint("LEFT", slot, "LEFT", showRoleIcon and 23 or 5, 0)
             if showLootMasterIcon then slot.lootMasterIcon:Show() else slot.lootMasterIcon:Hide() end
-            local showLevel = online and MuklaOfficerSuiteDB.raidGroupShowLevel
-            local showClass = MuklaOfficerSuiteDB.raidGroupShowClass
+            local showLevel = not compact and online and MuklaOfficerSuiteDB.raidGroupShowLevel
+            local showClass = not compact and MuklaOfficerSuiteDB.raidGroupShowClass
             local slotWidth = columnWidth - groupInset * 2
             local columns = RaidManagement.CalculateGroupSlotColumns(slotWidth, showRoleIcon, showLootMasterIcon, showLevel, showClass, not online)
             local nameInset, nameWidth = columns.nameInset, columns.nameWidth
@@ -2302,7 +2402,8 @@ end
 local function ToolSpecs(page, kind)
     local controls = page.refreshControls
     page.toolActionSpecs = page.toolActionSpecs or {
-        leader = {{key = "rl-mode", source = controls.leaderMode, caption = "RL Mode"}},
+        leader = {{key = "rl-mode", source = controls.leaderMode, caption = "RL Mode"},
+            {key = "ready-check", source = controls.readyCheck, caption = "Ready Check"}},
         loot = {
             {key = "loot-mode", source = controls.mode, caption = "Loot Master Mode"},
             {key = "reset-loot", source = controls.resetLoot, caption = "Reset Loot"},
@@ -2474,7 +2575,8 @@ function RaidManagement.UpdateToolSubmenu(page)
     local choiceWidth = 1
     for index = 1, table.getn(panel.options) do
         local option = panel.options[index]
-        local caption = option.toolSource.label:GetText()
+        local sourceLabel = option.toolSource and (option.toolSource.label or option.toolSource)
+        local caption = sourceLabel and sourceLabel.GetText and sourceLabel:GetText()
         option:SetText(caption and caption ~= "" and caption or option.toolCaption)
         option.label:ClearAllPoints(); option.label:SetPoint("LEFT", option, "LEFT", 4, 0); option.label:SetWidth(0)
         choiceWidth = math.max(choiceWidth, option.label:GetStringWidth() + 16)
@@ -2495,21 +2597,26 @@ function RaidManagement.LayoutActions(page)
         local toolbarOffset = page.classicToolbarOffset or 0
         local sectionOffset = page.classicSectionOffset or 0
         local scale = page.classicActionScale or 1
-        local available=math.max(1,PageSpan(page)-12)
+        local available=math.max(1,PageSpan(page)-12-(page.raidInfoButton and 36 or 0))
         local showIssues=page.classicIssues:IsShown()
+        RestoreHeaderFont(page.classicRaidName); RestoreHeaderFont(page.classicMeta)
         local nameLabel=page.classicRaidName.label or page.classicRaidName
         local metaLabel=page.classicMeta.label or page.classicMeta
         local nameWidth=nameLabel.GetStringWidth and nameLabel:GetStringWidth() or 48
         local metaWidth=metaLabel.GetStringWidth and metaLabel:GetStringWidth() or 42
-        local natural={math.min(120,math.max(48,nameWidth+2)),math.min(100,math.max(42,metaWidth+2)),108,showIssues and 96 or 0,108,66}
+        local natural={math.max(48,nameWidth+4),math.max(42,metaWidth+4),108,showIssues and 96 or 0,108,66}
         local gapCount=showIssues and 5 or 4
-        local naturalTotal=gapCount*8
+        local naturalTotal=0
         local index
         for index=1,6 do naturalTotal=naturalTotal+natural[index] end
-        scale=math.min(1,available/math.max(1,naturalTotal));page.classicActionScale=scale
+        -- Gaps retain their eight-pixel width when captions shrink. Reserve
+        -- them before scaling controls so Quit cannot overlap Raid Info.
+        local controlSpace=math.max(1,available-gapCount*8)
+        scale=math.min(1,controlSpace/math.max(1,naturalTotal));page.classicActionScale=scale
         local widths={}
         for index=1,6 do widths[index]=natural[index]>0 and math.max(1,math.floor(natural[index]*scale)) or 0 end
         local left=6;local top=-9-sectionOffset
+        if page.raidInfoButton then page.raidInfoButton:ClearAllPoints(); page.raidInfoButton:SetPoint("TOPRIGHT",page,"TOPRIGHT",-8,top); page.raidInfoButton:Show() end
         page.classicRaidName:ClearAllPoints();page.classicRaidName:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);page.classicRaidName:SetWidth(widths[1]);page.classicRaidName:SetHeight(26);if nameLabel.SetJustifyV then nameLabel:SetJustifyV("MIDDLE") end;MOS.UI.Components.FitButtonLabel(page.classicRaidName,widths[1]);left=left+widths[1]+8
         page.classicMeta:ClearAllPoints();page.classicMeta:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);page.classicMeta:SetWidth(widths[2]);page.classicMeta:SetHeight(26);if metaLabel.SetJustifyV then metaLabel:SetJustifyV("MIDDLE") end;MOS.UI.Components.FitButtonLabel(page.classicMeta,widths[2]);left=left+widths[2]+8
         MOS.UI.Components.SizeClassicButton(page.classicSaved,widths[3],26,scale);MOS.UI.Components.SetButtonLabelInsets(page.classicSaved,8,4);page.classicSaved:ClearAllPoints();page.classicSaved:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);left=left+widths[3]+8

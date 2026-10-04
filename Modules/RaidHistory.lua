@@ -68,15 +68,19 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
         if MuklaOfficerSuiteDB.raidHideSectionHeader then controls.title:Hide() else controls.title:Show() end
     end
     local textY = MuklaOfficerSuiteDB.raidHideSectionHeader and -8 or -48
+    if controls.raidInfo then
+        controls.raidInfo:ClearAllPoints(); controls.raidInfo:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, textY + 2); controls.raidInfo:Show()
+    end
     local actionY = textY - 38
     if controls.unavailable then
         local label = controls.unavailable
         label:ClearAllPoints(); label:SetPoint("TOPLEFT", page, "TOPLEFT", 8, textY)
-        label:SetWidth(width); label:SetJustifyH("LEFT")
+        local helpWidth = controls.raidInfo and math.min(width, math.max(1, fullWidth - 34)) or width
+        label:SetWidth(helpWidth); label:SetJustifyH("LEFT")
         if label.SetWordWrap then label:SetWordWrap(true) end
         label:SetText(canStartRaid and "Start a new raid snapshot, or load a saved raid." or "Join a raid to start a new snapshot, or load a saved raid.")
         label:SetHeight(0)
-        local textHeight = math.max(16, MOS.UI.Components.MeasureTextHeight(label, width))
+        local textHeight = math.max(16, MOS.UI.Components.MeasureTextHeight(label, helpWidth))
         label:SetHeight(textHeight); label:Show()
         actionY = textY - textHeight - 16
     end
@@ -90,6 +94,8 @@ function RaidManagement.ShowRaidHistoryControls(page, controls, canStartRaid)
     local snapshots = page.getRaidHistory and page.getRaidHistory() or {}; page.raidHistorySnapshots = snapshots
     if not MOS.UI.Components.ApplySelectionListStyle(controls.historyButtons, snapshots, page.selectedRaidHistoryId, controls.loadRaid) then page.selectedRaidHistoryId = nil end
     controls.historyPage = page; controls.historyActionY = actionY
+    page.raidHistoryHeaderY = actionY - 62
+    page.raidHistoryRowsY = actionY - 82
     local _, pageHeight = MOS.UI.Components.GetFrameSpan(page)
     local viewportHeight = math.max(1, pageHeight + actionY - 82 - 8)
     local contentWidth, contentHeight, overflow, maximum = MOS.UI.Components.ResolveScrollLayout(width, viewportHeight, 20, MeasureHistory, controls)

@@ -9,10 +9,20 @@ local function Pair(current,threshold) return Memory(current).." / "..Memory(thr
 local healthColors={{0.72,0.72,0.72},{0.45,0.85,0.45},{1,0.78,0.25},{1,0.35,0.25}}
 local function HealthHint() return this.monitorFrame.healthHint or "Checking recent FPS, latency and memory readings." end
 
-function MOS.Modules.Performance.CreateLiveMonitor(backend)
+function MOS.Modules.Performance.CreateLiveMonitor(backend,options)
+    options=options or {}
     local frame=UI.CreateContainer(nil,UIParent)
     local defaultWidth,defaultHeight=360,360*572/1024
-    frame:SetPoint("CENTER",UIParent,"CENTER",280,100);frame:SetWidth(defaultWidth);frame:SetHeight(defaultHeight)
+    local width,height=defaultWidth,defaultHeight
+    if options.loadMonitorSize then
+        local storedWidth,storedHeight=options.loadMonitorSize()
+        if type(storedWidth)=="number" and storedWidth==storedWidth and storedWidth>0 and storedWidth<1e300
+            and type(storedHeight)=="number" and storedHeight==storedHeight and storedHeight>0 and storedHeight<1e300 then
+            width=math.max(300,math.min(720,storedWidth));height=math.max(148,math.min(460,storedHeight))
+        end
+    end
+    frame.chosenWidth,frame.chosenHeight=width,height
+    frame:SetPoint("CENTER",UIParent,"CENTER",280,100);frame:SetWidth(width);frame:SetHeight(height)
     frame:SetFrameStrata("FULLSCREEN_DIALOG");frame:SetMovable(true);frame:SetResizable(true);frame:EnableMouse(true);frame:RegisterForDrag("LeftButton")
     if frame.SetClampedToScreen then frame:SetClampedToScreen(true) end
     frame.title=UI.CreateHeading(frame,"Live Monitor",3,"gold");frame.title:SetPoint("TOPLEFT",frame,"TOPLEFT",6,-5)
@@ -34,9 +44,9 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend)
     for index,key in ipairs(keys) do
         local label=UI.CreateLabel(frame.content,nil,"OVERLAY","GameFontHighlightSmall")
         label:SetText(names[index]);label:SetTextColor(unpack(UI.Theme.colors.goldText))
-        local labelFont,_,labelFlags=label:GetFont();label:SetFont(labelFont,13,labelFlags);label:SetJustifyV("MIDDLE")
+        local labelFont,_,labelFlags=label:GetFont();label:SetFont(labelFont,12,labelFlags);label:SetJustifyV("MIDDLE")
         local value=UI.CreateLabel(frame.content,nil,"OVERLAY","GameFontHighlightSmall")
-        local valueFont,_,valueFlags=value:GetFont();value:SetFont(valueFont,14,valueFlags);value:SetJustifyH("LEFT");value:SetJustifyV("MIDDLE")
+        local valueFont,_,valueFlags=value:GetFont();value:SetFont(valueFont,13,valueFlags);value:SetJustifyH("LEFT");value:SetJustifyV("MIDDLE")
         frame.labels[key]=label;frame.values[key]=value;frame[key]=value
         local hit=UI.CreateControl(nil,frame.content);hit.monitorFrame=frame;frame.rowHits[key]=hit
         UI.AttachTooltip(hit,names[index],hints[index])
@@ -157,7 +167,13 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend)
     frame.resizeGrip:SetFrameStrata("FULLSCREEN_DIALOG");frame.resizeGrip:SetFrameLevel(frame:GetFrameLevel()+250)
     UI.AttachTooltip(frame.resizeGrip,"Resize Live Monitor","Drag to change the window size.")
     frame.resizeGrip:SetScript("OnMouseDown",function() if not frame.minimized then frame:StartSizing("BOTTOMRIGHT") end end)
-    frame.resizeGrip:SetScript("OnMouseUp",function() frame:StopMovingOrSizing();frame:Layout() end)
+    frame.resizeGrip:SetScript("OnMouseUp",function()
+        frame:StopMovingOrSizing();frame:Layout()
+        if not frame.minimized and frame:IsVisible() then
+            frame.chosenWidth,frame.chosenHeight=frame:GetWidth(),frame:GetHeight()
+            if options.saveMonitorSize then options.saveMonitorSize(frame.chosenWidth,frame.chosenHeight) end
+        end
+    end)
     frame.resizeGrip:SetScript("OnHide",function() frame:StopMovingOrSizing() end)
     frame:SetScript("OnSizeChanged",function() frame:Layout() end)
     frame:Layout()

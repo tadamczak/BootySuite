@@ -34,7 +34,7 @@ function Settings.CreateAccordion(parent, text, y)
     return button
 end
 
-function Settings.CreateSectionAccordion(parent, text, y)
+function Settings.CreateSectionAccordion(parent, text, y, inset)
     local button = Settings.CreateAccordion(parent, text, y)
     button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button:SetHeight(20)
@@ -59,7 +59,8 @@ function Settings.CreateSectionAccordion(parent, text, y)
     button.sectionFill:SetWidth(30); button:SetExpanded(false)
     local font, _, flags = button.label:GetFont()
     button.label:SetFont(font, MOS.UI.Components.HeadingSizes[2] + MOS.UI.Components.GetTextSizeDelta(parent), flags)
-    button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
+    button.mosSectionInset = inset or 0
+    button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", button.mosSectionInset, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button.rule:ClearAllPoints()
     button.rule:SetPoint("LEFT", button.label, "RIGHT", 10, 0)
     button.rule:SetPoint("RIGHT", parent, "RIGHT", 0, 0)
