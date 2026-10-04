@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.124 - 2026-10-04
+
+- Resize and minimize Live Monitor; minimize pauses its measurements and its default size matches the background.
+- Fill Performance's content background, darken result surfaces, add summary hover and fix caption fitting.
+- Add clear Health Check reasons and practical steps; simplify login/cleanup labels, technical rows and profile summaries.
+- Rename Refresh tables to Update ranking to distinguish it from live counters.
+
 ## 0.5.0-dev.123 - 2026-10-04
 
 - Separate Analyze Login and add a Health Check view with findings and next steps from the last completed scan.

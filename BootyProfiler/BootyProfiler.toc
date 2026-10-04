@@ -2,7 +2,7 @@
 ## Title: BootyProfiler
 ## Notes: Optional, on-demand profiling backend for Mukla Officer Suite.
 ## Author: Bootybaker
-## Version: 0.1.0-dev.11
+## Version: 0.1.0-dev.12
 ## SavedVariables: BootyProfilerDB
 ## LoadWith: AddOnOrganizer, AnimationGroup, Atlas-CFM, Auctioneer, AuctionLink, BetterCharacterStats, BigWigs
 ## LoadWith: Blizzard_AuctionUI, Blizzard_BattlefieldMinimap, Blizzard_BindingUI, Blizzard_CombatText, Blizzard_CraftUI, Blizzard_GMSurveyUI, Blizzard_InspectUI
