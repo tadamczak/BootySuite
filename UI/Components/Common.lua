@@ -792,14 +792,19 @@ function UI.FitButtonLabel(button, available)
     label:SetFont(font, button.mosFitFontSize, flags); label:SetWidth(0)
     label:SetHeight(button.mosFitFontSize + 3)
     if button.mosActionIcon then available=math.max(1,available-18-(button.mosActionTrailing or 0)) end
-    local width = math.max(1, label:GetStringWidth())
-    local fitted = math.max(1, button.mosFitFontSize * math.min(1, math.max(1, available) / width))
+    -- Native metrics can differ from the rendered line by a pixel. Reserve a
+    -- small allowance and keep the caption's remaining space, not a tight box
+    -- around its measured ink: a one-line box otherwise renders an ellipsis.
+    local width = math.max(1, math.ceil(label:GetStringWidth()))
+    local fitted = math.max(1, button.mosFitFontSize * math.min(1, math.max(1, available-2) / width))
     label:SetFont(font, fitted, flags); label:SetWidth(math.max(1, available)); label:SetHeight(fitted + 3); label:SetJustifyH(button.mosLabelJustify or (button.label and "CENTER" or "LEFT"))
     if button.mosActionIcon then
-        local textWidth=math.min(math.max(1,available),math.max(1,label:GetStringWidth()))
+        local textWidth=math.min(math.max(1,available),width*fitted/button.mosFitFontSize+2)
         local start=button.mosActionAlign=="LEFT" and 8 or math.max(8,(button:GetWidth()-(button.mosActionTrailing or 0)-18-textWidth)/2)
         button.mosActionIcon:ClearAllPoints();button.mosActionIcon:SetPoint("LEFT",button,"LEFT",start,0)
-        label:ClearAllPoints();label:SetPoint("LEFT",button,"LEFT",start+18,0);label:SetWidth(textWidth);label:SetJustifyH("LEFT");label:SetJustifyV("MIDDLE")
+        label:ClearAllPoints();label:SetPoint("LEFT",button,"LEFT",start+18,0)
+        label:SetWidth(math.max(1,button:GetWidth()-start-26-(button.mosActionTrailing or 0)))
+        label:SetHeight(math.max(fitted+3,button:GetHeight()-4));label:SetJustifyH("LEFT");label:SetJustifyV("MIDDLE")
     end
 end
 
@@ -835,7 +840,13 @@ function UI.CreatePerformanceBackground(parent,alpha)
 end
 
 function UI.LayoutPerformanceBackground(image,parent,width,height)
-    UI.LayoutAspectImage(image,parent,math.max(1,width-12),math.max(1,height-12))
+    width,height=math.max(1,width),math.max(1,height)
+    local aspect=image.mosImageAspect
+    local shownWidth,shownHeight=math.min(1,width/(height*aspect)),math.min(1,height*aspect/width)
+    local bottom=0.55859375
+    image:ClearAllPoints();image:SetPoint("CENTER",parent,"CENTER",0,0)
+    image:SetWidth(width);image:SetHeight(height)
+    image:SetTexCoord((1-shownWidth)/2,(1+shownWidth)/2,(1-shownHeight)*bottom/2,(1+shownHeight)*bottom/2)
 end
 
 function UI.ApplyGoldRadialHighlight(texture)

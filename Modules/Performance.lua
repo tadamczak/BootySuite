@@ -39,7 +39,8 @@ local function CompareHeapRise(a,b)
     if (a.heapRise or 0)==(b.heapRise or 0) then return a.name<b.name end
     return (a.heapRise or 0)>(b.heapRise or 0)
 end
-local rowColor = {1,1,1}
+local rowColor = {0.025,0.025,0.025}
+local alternateRowColor = {0.075,0.075,0.075}
 local healthColors={{0.72,0.72,0.72},{0.45,0.85,0.45},{1,0.78,0.25},{1,0.35,0.25}}
 local emptyEntries = {}
 local FAMILY_PAGE_SIZE=50
@@ -51,50 +52,50 @@ local tables = {
     callbackMemory = { first = "Frame family / script", columns = {"Calls","Heap growth","Net heap delta","Peak growth","Errors"}, minimum = 760, nameFraction = 0.34 },
     loginMemory = { first = "Stage / addon", columns = {"At","Lua heap","Net heap delta","Window"}, minimum = 680, nameFraction = 0.34,
         hints={At="Seconds since the profiler began observing this login.",
-            ["Net heap delta"]="Shared Lua memory in this row minus the previous reading. This change belongs to the current window; GC can reduce it. It is not the addon's retained size.",
-            Window="Time from the previous reading to this row. Loaded-addon rows end when that addon reports loaded; includes loader, dependencies and event handlers."} },
+            ["Net heap delta"]="Shared Lua memory in this row minus the previous reading. Cleanup can reduce it; it is not memory owned by this addon.",
+            Window="Time from the previous reading to this row. Includes loading, dependencies and event handling; it is not this addon's loading time alone."} },
     callbacks = { first = "Source addon", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
     callbackDetails = { first = "Frame family / script", columns = {"Calls","Self","Inclusive","Peak","Errors"}, minimum = 760, nameFraction = 0.34 },
     callbackSlow = { first = "Frame / script", columns = {"At","Duration","Self","Event","Errors"}, minimum = 760, nameFraction = 0.34 },
     diagnostic = { first = "Detail", columns = {"Value"}, minimum = 440, nameFraction = 0.60 },
-    heapDrops = { first = "At", columns = {"Net decrease","Window","Frame pause in window","Slow frames"}, minimum = 680, nameFraction = 0.18 },
+    heapDrops = { first = "At", columns = {"Net decrease","Reading interval","Longest frame pause","Slow frames"}, minimum = 680, nameFraction = 0.18 },
     frameGaps = { first = "At", columns = {"Frame gap"}, minimum = 360, nameFraction = 0.35 },
 }
 local columnHints={
-    Calls="Number of recorded calls. High frequency means more repeated processing.",
-    Total="Total measured duration of this operation, including profiler overhead.",
-    Average="Measured duration divided by recorded calls. Compare repeated operations with this value.",
-    Self="Callback time minus other intercepted callbacks invoked inside it. Ordinary helper functions remain included. Equals Inclusive when no intercepted callback is nested.",
-    Inclusive="Callback time including intercepted callbacks invoked inside it. Equals Self when none are nested; nested totals overlap.",
+    Calls="Number of recorded calls. More calls mean more repeated work.",
+    Total="Time recorded for this operation, including the cost of profiling.",
+    Average="Average time per recorded call. Compare the cost of repeated work.",
+    Self="Time in this script, excluding other recorded scripts it calls. Ordinary helpers stay included. Equals Inclusive when it calls no other recorded script.",
+    Inclusive="Time in this script, including other recorded scripts it calls. Equals Self when it calls none; do not add overlapping totals.",
     Peak="Longest measured call. A large value can interrupt a frame.",
-    Errors="Original callbacks that raised a caught Lua error.",
-    ["Heap delta"]="Net shared Lua memory change during measured calls. Collection can make this negative.",
+    Errors="Recorded script calls that raised a Lua error.",
+    ["Heap delta"]="Shared Lua memory change during recorded calls. Cleanup can make it negative.",
     At="Seconds since recording started. Compare timestamps across tables.",
-    Duration="Measured call duration, including profiler overhead.",
+    Duration="Time for this call, including the cost of profiling.",
     Event="Client event handled by this call. A dash means no event.",
     FPS="FPS sampled once per second; brief stalls can be missed.",
-    ["Lua heap"]="Lua memory shared by the UI and addons. This excludes total game process memory.",
+    ["Lua heap"]="Lua memory used by addons and the UI. It does not include all game memory.",
     Latency="Network response delay in milliseconds; it is separate from rendering speed.",
-    Memory="Last manual native memory measurement attributed by the client to this addon.",
-    ["Heap growth"]="Sum of positive shared Lua changes in supported callbacks. * means some calls were not measured. Not owned RAM; nested calls can overlap.",
-    ["Net heap delta"]="Signed shared Lua change. * means partial coverage; negative values include cleanup. Not addon-owned memory.",
-    ["Peak growth"]="Largest positive shared Lua change in one measured call. * means partial coverage; not retained memory.",
+    Memory="The client's last memory reading for this addon, updated manually.",
+    ["Heap growth"]="Total shared Lua memory rises during measured calls. * means some calls were not measured. This is not memory owned by the addon; nested calls can overlap.",
+    ["Net heap delta"]="Shared Lua memory change during calls; cleanup can make it negative. * means some calls were not measured. This is not addon-owned memory.",
+    ["Peak growth"]="Largest shared Lua memory rise during one call. * means some calls were not measured. This is not memory kept by the addon.",
     ["Net decrease"]="Net Lua memory fall between samples. GC can contribute; this is not a confirmed collection event.",
-    Window="Elapsed time between the two valid memory readings.",
-    ["Frame pause in window"]="Longest observed interval between frames in this memory-decreasing window. It includes all causes and is not the duration of GC.",
-    ["Slow frames"]="Observed frame gaps of at least 50 ms in this memory window.",
-    ["Frame gap"]="OnUpdate elapsed time between frames. At least 50 ms is retained here; this is not addon CPU time.",
+    ["Reading interval"]="Time between the two memory checks; it does not measure how long cleanup took.",
+    ["Longest frame pause"]="Longest pause between frames during this reading interval. It includes every cause, not just memory cleanup.",
+    ["Slow frames"]="Number of pauses of at least 50 ms between frames during this reading interval.",
+    ["Frame gap"]="Time between frames. This list shows pauses of at least 50 ms from any cause, not just addon work.",
     Detail="Diagnostic being checked. Hover its label for its purpose and effect.",
     Value="Observed diagnostic result for this recording.",
 }
 local firstHints={
     operations="Selected MOS operation being measured.",slow="Selected MOS operation that reached the slow-call threshold.",
-    callbacks="Addon folder recovered from a function source. Missing file metadata is grouped as Unknown owner.",
-    callbackDetails="Observed frame family, not an addon owner. Expand to inspect its scripts; family totals include all captured members.",
+    callbacks="Addon identified by the script's file. Unknown owner means the file could not be identified.",
+    callbackDetails="Related frame scripts grouped together. Expand to see them; a family is not an addon.",
     callbackSlow="Frame script that reached the slow-call threshold.",memory="Addon named by the native memory API.",
-    memoryActivity="Source addon of measured callbacks. Growth is observed during calls, rather than current owned RAM.",
-    callbackMemory="Frame family grouped by observed context. Expand to locate memory growth in individual scripts.",
-    loginMemory="Observed loading stage or addon-loaded event. A window includes loader and event-handler work; it is not exclusive addon memory.",
+    memoryActivity="Addon identified by the recorded script's file. Memory changes during its calls do not measure memory it owns.",
+    callbackMemory="Related frame scripts grouped together. Expand to find which calls showed memory growth.",
+    loginMemory="Loading stage or addon that reported loaded. Changes since the previous row include other addons and cleanup.",
 }
 local hints = {
     calls = "Calls to selected MOS operations; nested calls count once. More calls mean more work, not every addon action.",
@@ -102,31 +103,30 @@ local hints = {
     peak = "Longest measured call. Large peaks can interrupt a frame; timing includes profiler overhead.",
     average = "Measured time per call. Useful for comparing repeated operations.",
     heap = "Shared Lua memory change, including garbage collection. It cannot identify addon ownership or prove a leak.",
-    heapPeak = "Largest shared-memory rise during one call. It is not retained MOS memory.",
     fps = "FPS sampled once per second. A low value shows reduced smoothness; it does not identify the cause.",
     lua = "Lua memory shared by all addons. Drops commonly include garbage collection; no per-addon ownership.",
     latency = "Network response delay. High latency affects responses, separately from FPS.",
-    callbacks = "Self: time excluding intercepted children; high totals mean more Lua work.\nInclusive: includes children; do not add to parent time.\nPeak: longest call; large peaks may stall frames.\nCalls: frequency; OnUpdate can run every frame.\nFrame scripts only; not total addon CPU.",
-    source = "Source files identify addons when available. XML labels and missing metadata can prevent attribution; frame families remain inspectable.",
+    callbacks = "Recorded frame scripts only. More time means more Lua work; a long call can delay a frame.",
+    source = "Addon files identify where recorded scripts came from. Scripts without a readable file still appear in frame families.",
     slow = "Calls above the slow threshold. Peaks may interrupt a frame; matching FPS samples does not prove causation.",
 }
 local sections = {
     operations={title="MOS operations",hint=hints.total,intro="Selected MOS work, ranked by measured time. High Total means repeated Lua work; a large Peak can delay a frame."},
     slow={title="Slow MOS calls",hint=hints.slow,intro="Recent MOS calls lasting at least 5 ms. Large peaks can delay a frame; use the time and event to locate expensive work."},
-    callbacks={title="Addon source ranking",hint=hints.source,intro="Groups callbacks by verified source addon. High Self time means more measured Lua work. Unknown owner means its source file could not be identified."},
-    callbackDetails={title="Frame callbacks",hint="Grouped by observed frame naming or parent context. Families are not addon owners.",intro="Groups measured scripts into families. Expand to locate repeated Lua work or peaks that can delay a frame; a frame name does not prove addon ownership."},
-    callbackSlow={title="Slow callbacks",hint=hints.slow,intro="Recent frame callbacks lasting at least 5 ms. Check Duration and Event for spikes; matching a frame pause does not prove the callback caused it."},
+    callbacks={title="Addon source ranking",hint=hints.source,intro="Recorded work grouped by the addon file it came from. More time means more Lua processing, which can reduce FPS. Some sources cannot be identified."},
+    callbackDetails={title="Frame callbacks",hint="Frame scripts grouped by name or parent. A family is not an addon.",intro="Recorded frame scripts grouped into families. Expand to find frequent work or slow calls that may reduce FPS; the frame name does not identify its addon."},
+    callbackSlow={title="Slow callbacks",hint=hints.slow,intro="Recent frame-script calls lasting at least 5 ms. Longer calls can delay a frame. Check their time and event; a nearby FPS drop does not prove the cause."},
     memory={title="Memory by addon",hint="Callback memory growth works without native addon counters. Native snapshots are shown separately when available."},
-    loginMemory={title="Login results",hint="Loading windows and the first five seconds in the world.",intro="Each row ends a loading window. Memory change and Window belong to the interval after the previous row; neither is exclusive addon memory or loading time."},
+    loginMemory={title="Login results",hint="Loading readings and the first five seconds in the world.",intro="Each row compares memory with the previous reading. Its time includes loading and event handling; its memory change includes other addons and cleanup."},
     technical={title="Technical details",hint="Capture coverage, timing reliability and client support."},
     technicalTiming={title="Timing",nested=true,hint="Clocks, measurement precision and invalid readings."},
-    technicalCoverage={title="Coverage",nested=true,hint="What was intercepted and how much discovery work ran."},
-    technicalSources={title="Source identification",nested=true,hint="Why some callback sources cannot be attributed to addons."},
+    technicalCoverage={title="Coverage",nested=true,hint="Which scripts were measured and how much work finding them took."},
+    technicalSources={title="Source identification",nested=true,hint="How the profiler identifies the addon behind each script."},
     technicalHealth={title="Capture health",nested=true,hint="Inspection, inventory and wrapper cleanup failures."},
     technicalSupport={title="Client support",nested=true,hint="Available APIs and extension markers; markers alone do not prove support."},
     memoryGC={title="Memory and garbage collection",hint="Shared Lua memory, observed decreases and frame gaps. Decreases do not establish exact GC count or duration."},
-    heapDrops={title="Heap drop windows",nested=true,hint="Memory-decreasing windows and the slow frames observed in each. This does not prove GC caused a stall."},
-    frameGaps={title="Other slow frame gaps",nested=true,hint="Frames of at least 50 ms outside the retained heap-drop windows. Includes game and profiler work; does not identify the cause."},
+    heapDrops={title="Heap drop windows",nested=true,hint="Memory decreases between readings and frame pauses in those intervals. This does not prove cleanup caused a pause."},
+    frameGaps={title="Other slow frame gaps",nested=true,hint="Pauses of at least 50 ms not already shown with memory drops. The cause can be game, addon or profiler work."},
 }
 local liveValues={"calls","count","time","selfTime","timedCalls","peak","failures","memory","maxTime","maxMemory","heapSamples","heapRise","heapDelta","heapPeak","heapUnsupportedCalls"}
 local function ShortSource(value)
@@ -222,7 +222,7 @@ function Performance.Create(parent)
         if not AddSection(section,available or table.getn(entries)) then return end
         local rows=module:SnapshotRows(section,entries,session,history)
         if table.getn(rows)==0 then
-            AddItem("message",empty or "No measurements. Refresh tables after recording activity.")
+            AddItem("message",empty or "No measurements. Use Update ranking after recording activity.")
             return
         end
         AddTable(section)
@@ -382,7 +382,7 @@ function Performance.Create(parent)
             AddMetric("Memory / GC",Memory(session.heap).." / "..Memory(session.gcThreshold),"Current shared Lua memory / current collection threshold. Includes addons and UI; not total game RAM.")
             AddMetric("Change since Start",session.heap and session.startHeap and SignedMemory(session.heap-session.startHeap) or "Unavailable","Current shared Lua memory minus the first sample. A negative value includes memory reclaimed between samples.")
             AddMetric("Observed heap drops",gc.heapDropCount or 0,"Memory samples with a net decrease. This can miss or combine collections; it is not an exact GC counter.")
-            AddMetric("Last heap drop",gc.lastHeapDrop and Memory(gc.lastHeapDrop) or "-","Net decrease during the last observed window. Open Heap drop windows to compare frame pauses in that window.")
+            AddMetric("Last heap drop",gc.lastHeapDrop and Memory(gc.lastHeapDrop) or "-","Last memory decrease between readings. Open Heap drop windows to compare pauses in that interval.")
             AddMetric("Longest frame pause",gaps.maximum and Duration(gaps.maximum) or "-","Largest observed interval between frames, from any cause. This is not the time spent in garbage collection.")
             if gc.history then AddMemoryHistory("heapDrops","heapDrop",gc.history,session,"No net memory decreases observed.") end
             if gaps.history then
@@ -433,7 +433,7 @@ function Performance.Create(parent)
             if table.getn(rows)>0 then
                 AddTable("memoryActivity")
                 for _,entry in ipairs(rows) do AddItem("memoryActivity",entry.name,entry) end
-            else AddItem("message","No callback memory samples yet. Use Refresh tables after activity.") end
+            else AddItem("message","No callback memory samples yet. Use Update ranking after activity.") end
         else
             AddItem("message",callbacks and callbacks.memoryRequested and "This capture could not read callback memory." or "Memory: ON, then Start in All Addons to measure callback memory growth.")
         end
@@ -457,15 +457,15 @@ function Performance.Create(parent)
         AddMetric("Login capture",status,"Success means the requested capture finished, including five seconds after entering the world.")
         AddMetric("Login date",ScanDate(report.capturedDate),"Local date and time when this requested login capture began.")
         AddMetric("Login time",Seconds(report.firstWorldAt),"Observed time from profiler startup to first entering the world. Excludes the five-second follow-up; earlier loading is not measured.")
-        AddMetric("At profiler load",Memory(report.startHeap),columnHints["Lua heap"])
-        AddMetric("Latest login memory",Memory(report.heap),columnHints["Lua heap"])
+        AddMetric("Memory usage before capture",Memory(report.startHeap),"Shared Lua memory when this capture began.")
+        AddMetric("Memory usage on login",Memory(report.heap),"Shared Lua memory at the final login reading, including the five-second follow-up.")
         AddMetric("Change during login",SignedMemory(report.heapDelta),"Latest login sample minus the profiler-load baseline. Includes startup work and collection.")
         AddMetric("Observed login heap drops",report.heapDropCount or 0,"Loading windows with a net memory decrease. Collection may contribute; this is not an exact GC event count.")
         if report.baselineInventoryAvailable then
             local incomplete=report.baselineInventoryTruncated or (report.baselineInventoryFailures or 0)>0
-            AddMetric("Loaded at capture start",(incomplete and "At least " or "")..tostring(report.baselineLoadedAddonCount or 0),"Addons already reporting loaded when observation began. Their earlier loading belongs to the baseline.")
+            AddMetric("Addons loaded before capture",(incomplete and "At least " or "")..tostring(report.baselineLoadedAddonCount or 0),"Addons loaded before the profiler began measuring. Their loading is not recorded.")
         elseif report.baselineInventoryAvailable==false then
-            AddMetric("Loaded at capture start","Unavailable","The starting addon inventory was unavailable; later loads are still recorded.")
+            AddMetric("Addons loaded before capture","Unavailable","The starting addon list was unavailable; later loads are still recorded.")
         end
         AddMetric("Later addon loads",report.addonEvents or 0,"Addon-loaded events after the baseline, including omitted rows.")
         if report.kind~="completed" and report.reason then AddItem("message","Capture stopped: "..(loginReasons[report.reason] or report.reason)) end
@@ -486,81 +486,76 @@ function Performance.Create(parent)
     function module:BuildTechnicalItems(session)
         local callbacks=session.callbacks
         if AddSection("technicalTiming") then
-            AddTable("diagnostic")
-            AddDiagnostic("MOS clock",session.clock,"MOS durations use this clock. Small durations can be rounded by its resolution.")
-            AddDiagnostic("Clock precision","Not verified","Observed clock gaps do not prove timer resolution. Times include profiling overhead.")
+            AddDiagnostic("MOS clock",session.clock,"Timer used for MOS calls. Very short calls may round to zero.")
+            AddDiagnostic("Clock precision","Not verified","The timer's smallest reliable unit has not been verified in this client.")
             AddDiagnostic("Scope","Selected MOS operations",hints.total)
             if self.tab=="All Addons" then
                 AddDiagnostic("FPS sampling","1 per second",hints.fps)
                 AddDiagnostic("Memory API",session.capabilities and session.capabilities.addonMemory and "Per-addon available" or "Shared Lua only",hints.lua)
             end
             if callbacks and self.tab=="All Addons" then
-                AddDiagnostic("Callback clock",ClockName(callbacks.clock),"Durations are differences between clock reads; no overhead compensation.")
-                AddDiagnostic("Smallest observed clock gap",ClockGap(callbacks.clockMinPositiveDelta),"Observed read gap, not verified timer resolution.")
-                AddDiagnostic("Zero-duration calls",callbacks.zeroDurations or 0,"Timer granularity may round small calls to zero. Zero does not mean no work.")
-                AddDiagnostic("Invalid timings",callbacks.timingFailures or 0,"Calls counted but excluded from duration totals.")
-                AddDiagnostic("Clock read failures",callbacks.clockReadFailures or 0,"Failed timing reads reduce measured coverage.")
-                AddDiagnostic("Callback memory",callbacks.memoryRequested and (callbacks.memoryAvailable and "Measured" or "Unavailable") or "Off","Optional before/after heap readings identify growth during callbacks. Nested readings overlap; these are not owned RAM.")
-                AddDiagnostic("Memory read failures",callbacks.heapReadFailures or 0,"Invalid heap readings are omitted from memory totals; callback execution and time measurement continue.")
-                AddDiagnostic("Metric failures",callbacks.metricFailures or 0,"Metrics that could not be recorded.")
-                AddDiagnostic("Clock baseline",ClockGap(callbacks.overhead),"Clock read baseline only; not full hook overhead.")
+                AddDiagnostic("Callback clock",ClockName(callbacks.clock),"Timer used for script calls. Recorded time includes the cost of profiling.")
+                AddDiagnostic("Smallest observed clock gap",ClockGap(callbacks.clockMinPositiveDelta),"Shortest gap seen between timer reads. It does not prove timer precision.")
+                AddDiagnostic("Zero-duration calls",callbacks.zeroDurations or 0,"Calls with a zero timer reading. Very short calls can round to zero; zero does not mean no work.")
+                AddDiagnostic("Invalid timings",callbacks.timingFailures or 0,"Calls counted but omitted from time totals because their timer readings were invalid.")
+                AddDiagnostic("Clock read failures",callbacks.clockReadFailures or 0,"Failed timer reads. These calls cannot contribute a measured duration.")
+                AddDiagnostic("Callback memory",callbacks.memoryRequested and (callbacks.memoryAvailable and "Measured" or "Unavailable") or "Off","Memory checks before and after script calls. They show shared memory change, not memory owned by the script.")
+                AddDiagnostic("Memory read failures",callbacks.heapReadFailures or 0,"Failed memory checks. Script calls and valid time readings are still recorded.")
+                AddDiagnostic("Metric failures",callbacks.metricFailures or 0,"Measurement results that could not be recorded.")
+                AddDiagnostic("Clock baseline",ClockGap(callbacks.overhead),"Cost of reading the timer alone; it does not measure the full cost of profiling.")
             end
         end
         if callbacks and self.tab=="All Addons" then
             if AddSection("technicalCoverage") then
-                AddTable("diagnostic")
-                AddDiagnostic("Callback frames",callbacks.discovered or 0,"Retained frames with OnEvent or OnUpdate callbacks; not all addon functions.")
-                AddDiagnostic(session.stopped and "Hooks at Stop" or "Active hooks",callbacks.activeHookedAtStop or callbacks.hooked or 0,"Only intercepted callbacks contribute to the ranking.")
-                AddDiagnostic("Unknown-source hooks",callbacks.unknownAtStop or callbacks.unknown or 0,hints.source)
-                AddDiagnostic("Callbacks wrapped",callbacks.everHooked or 0,"Cumulative wrapped callbacks; replacements can increase this count.")
+                AddDiagnostic("Callback frames",callbacks.discovered or 0,"Frames found with event or per-frame scripts. The profiler does not measure every addon function.")
+                AddDiagnostic(session.stopped and "Hooks at Stop" or "Active hooks",callbacks.activeHookedAtStop or callbacks.hooked or 0,"Script callbacks set up for measurement. Only recorded calls appear in the ranking.")
+                AddDiagnostic("Unknown-source hooks",callbacks.unknownAtStop or callbacks.unknown or 0,"Measured scripts whose addon file could not be identified. Their calls still appear in frame families.")
+                AddDiagnostic("Callbacks wrapped",callbacks.everHooked or 0,"Total script callbacks set up for measurement. Replacing a script can increase this count.")
                 if callbacks.fastCalls~=nil then
-                    AddDiagnostic("Optimized / compatibility calls",tostring(callbacks.fastCalls).." / "..tostring(callbacks.genericCalls or 0),"Optimized calls avoid temporary argument tables. Compatibility calls preserve uncertain arguments and results, with allocation overhead.")
-                    AddDiagnostic("Unmeasured memory calls",callbacks.heapUnsupportedCalls or 0,"Compatibility calls and their enclosing heap windows are excluded because temporary argument tables would contaminate memory readings.")
+                    AddDiagnostic("Optimized / compatibility calls",tostring(callbacks.fastCalls).." / "..tostring(callbacks.genericCalls or 0),"First: measurements without temporary argument storage. Second: a compatibility method that preserves the script's inputs and results but adds memory work.")
+                    AddDiagnostic("Unmeasured memory calls",callbacks.heapUnsupportedCalls or 0,"Calls whose memory checks were skipped because temporary profiling storage would distort the result.")
                 end
                 local discovery=callbacks.available==false and "Unavailable" or callbacks.pending and not session.stopped and "In progress" or callbacks.truncated and "Limit reached" or callbacks.firstScanComplete and "Initial scan complete" or session.stopped and "Stopped before first scan" or "Incomplete"
-                AddDiagnostic("Discovery",discovery,"Discovery runs gradually. Work before interception is not measured; coverage remains partial.")
-                AddDiagnostic("Completed sweeps",callbacks.scans or 0,"Later sweeps discover new or replaced scripts.")
-                AddDiagnostic("Discovery time",Duration(callbacks.discoveryTime),"Profiler work spent discovering scripts. This is separate from callback work.")
-                AddDiagnostic("Frame visits",callbacks.scanned or 0,"Repeated sweeps revisit frames; this is not a unique-frame count.")
-                AddDiagnostic("Visits without callbacks",callbacks.inertSkipped or 0,"Skipped frames consume inspection time, not callback retention capacity.")
-                AddDiagnostic("Script replacements",callbacks.replacements or 0,"Replacements are reconciled on subsequent discovery sweeps.")
-                AddDiagnostic("Known scripts skipped",callbacks.skippedKnown or 0,"Known client and profiler sources are excluded from addon rankings.")
+                AddDiagnostic("Discovery",discovery,"Progress finding scripts to measure. Calls before a script is found are not recorded.")
+                AddDiagnostic("Completed sweeps",callbacks.scans or 0,"Full checks for new or replaced frame scripts.")
+                AddDiagnostic("Discovery time",Duration(callbacks.discoveryTime),"Time the profiler spent finding scripts, separate from the scripts' own work.")
+                AddDiagnostic("Frame visits",callbacks.scanned or 0,"Frame checks performed. The same frame can be checked more than once.")
+                AddDiagnostic("Visits without callbacks",callbacks.inertSkipped or 0,"Frames checked that had no scripts to measure. They use no script-record slots.")
+                AddDiagnostic("Script replacements",callbacks.replacements or 0,"Scripts changed by addons and found again by the profiler.")
+                AddDiagnostic("Known scripts skipped",callbacks.skippedKnown or 0,"Client and profiler scripts deliberately left out of addon rankings.")
             end
             if AddSection("technicalSources") then
-                AddTable("diagnostic")
                 local debugReads,dumpReads=callbacks.sourceDebug or 0,callbacks.sourceDump or 0
                 local lookup=debugReads>0 and (dumpReads>0 and "Debug + bytecode" or "Debug metadata") or dumpReads>0 and "Lua 5.0 bytecode" or "None succeeded"
-                AddDiagnostic("Source lookup",lookup,"Methods that recovered function labels. A recovered addon filename allows work to be assigned to its source addon.")
-                AddDiagnostic("Debug metadata reads",debugReads,"Functions whose source label was read through a debug API. File labels improve addon attribution.")
-                AddDiagnostic("Bytecode source reads",dumpReads,"Functions whose source label was recovered from Lua bytecode. Only labels with an addon filename identify a source addon.")
-                AddDiagnostic("Source unavailable",callbacks.sourceUnavailable or 0,"Functions without readable source metadata. Their execution still appears in frame families.")
-                AddDiagnostic("Dump rejected",callbacks.sourceDumpRejected or 0,SourceHint(callbacks,"The client refused this function dump. Its source cannot be read this way; frame timing remains available.","dump-rejected"))
-                AddDiagnostic("Unsupported dump",callbacks.sourceUnsupportedDump or 0,SourceHint(callbacks,"Bytecode format or size was unsupported; no source guess is made.","unsupported-dump"))
-                AddDiagnostic("Missing source API",callbacks.sourceApiUnavailable or 0,SourceHint(callbacks,"No usable function-source API was exposed.","no-source-api"))
-                AddDiagnostic("XML-shaped script labels",callbacks.sourceFrameScripts or 0,SourceHint(callbacks,"Frame:script labels contain no addon file. This cannot establish XML ownership.","frame-script"))
-                AddDiagnostic("Other non-file sources",math.max(0,(callbacks.sourceNonFile or 0)-(callbacks.sourceFrameScripts or 0)),SourceHint(callbacks,"Code labels lack a verified addon path. These functions contribute to frame families but cannot be assigned to a source addon.","code-chunk"))
-                AddDiagnostic("Folder not in inventory",callbacks.sourceUnmatchedFolder or 0,SourceHint(callbacks,"Source folder did not match the installed addon inventory.","folder-unmatched"))
-                AddDiagnostic("Installed addon folders",callbacks.inventoryCount or 0,"Bounded inventory used to match actual source folders.")
+                AddDiagnostic("Source lookup",lookup,"Method used to read script file names and identify their addons.")
+                AddDiagnostic("Debug metadata reads",debugReads,"Script file names read through a client debug API.")
+                AddDiagnostic("Bytecode source reads",dumpReads,"Script file names read from Lua function data. An addon file name is needed to identify the addon.")
+                AddDiagnostic("Source unavailable",callbacks.sourceUnavailable or 0,"Scripts with no readable file name. Their time still appears in frame families.")
+                AddDiagnostic("Dump rejected",callbacks.sourceDumpRejected or 0,SourceHint(callbacks,"The client refused access to this function's data. Its file name could not be read this way.","dump-rejected"))
+                AddDiagnostic("Unsupported dump",callbacks.sourceUnsupportedDump or 0,SourceHint(callbacks,"Function data had a format or size the profiler could not read.","unsupported-dump"))
+                AddDiagnostic("Missing source API",callbacks.sourceApiUnavailable or 0,SourceHint(callbacks,"The client offered no working way to read this script's file name.","no-source-api"))
+                AddDiagnostic("XML-shaped script labels",callbacks.sourceFrameScripts or 0,SourceHint(callbacks,"Labels identify a frame and script but give no addon file name.","frame-script"))
+                AddDiagnostic("Other non-file sources",math.max(0,(callbacks.sourceNonFile or 0)-(callbacks.sourceFrameScripts or 0)),SourceHint(callbacks,"Script labels give no verified addon file. Their calls still appear in frame families.","code-chunk"))
+                AddDiagnostic("Folder not in inventory",callbacks.sourceUnmatchedFolder or 0,SourceHint(callbacks,"The script's folder was not found in the installed addon list.","folder-unmatched"))
+                AddDiagnostic("Installed addon folders",callbacks.inventoryCount or 0,"Addon folders checked against script file names to identify their source.")
             end
             if AddSection("technicalHealth") then
-                AddTable("diagnostic")
-                AddDiagnostic("Inventory read failures",callbacks.inventoryReadFailures or 0,"Failed inventory reads can leave source folders unmatched.")
-                AddDiagnostic("Inspection failures",callbacks.inspectionFailures or 0,"Frame scripts that could not be inspected.")
-                AddDiagnostic("Source failures",callbacks.sourceFailures or 0,"Source reads that failed during discovery.")
-                AddDiagnostic("Restore failures",callbacks.restoreFailures or 0,"Wrappers could not be removed. Reload before another external capture.")
-                AddDiagnostic("Depth-limit skips",callbacks.depthSkipped or 0,"Deep nested calls beyond the measurement limit were not timed.")
+                AddDiagnostic("Inventory read failures",callbacks.inventoryReadFailures or 0,"Failed addon-list reads that can prevent a script's addon from being identified.")
+                AddDiagnostic("Inspection failures",callbacks.inspectionFailures or 0,"Frames whose script settings could not be read.")
+                AddDiagnostic("Source failures",callbacks.sourceFailures or 0,"Errors reading script file names while finding callbacks.")
+                AddDiagnostic("Restore failures",callbacks.restoreFailures or 0,"Script measurements could not be fully detached. Reload before profiling other addons again.")
+                AddDiagnostic("Depth-limit skips",callbacks.depthSkipped or 0,"Calls nested beyond the profiler's safety limit. They still run but their work is not measured.")
             end
         end
         if AddSection("technicalSupport") then
-            AddTable("diagnostic")
             AddDiagnostic("BootyProfiler",self.provider.version)
             local capabilities=session.capabilities or {}
-            AddDiagnostic("Runtime",capabilities.lua or "Not identified","A version marker is not proof that a measurement API is available.")
+            AddDiagnostic("Runtime",capabilities.lua or "Not identified","Lua version reported by the client. Measurement features are checked separately.")
             AddDiagnostic("Lua heap",capabilities.heap and "Available" or "Unavailable",hints.lua)
-            AddDiagnostic("ClassicAPI",capabilities.classicAPIVersion or capabilities.classicAPI and "Present" or "Absent","Extension marker only; features are probed independently.")
-            AddDiagnostic("SuperAPI",capabilities.superAPI and "Present" or "Absent","Extension marker only; features are probed independently.")
-            AddDiagnostic("SuperWoW",capabilities.superwow or "Absent","Extension marker only; features are probed independently.")
-            AddDiagnostic("Nampower",capabilities.nampower or "Absent","Extension marker only; features are probed independently.")
+            AddDiagnostic("ClassicAPI",capabilities.classicAPIVersion or capabilities.classicAPI and "Present" or "Absent","Client extension detected. Its measurement features are checked separately.")
+            AddDiagnostic("SuperAPI",capabilities.superAPI and "Present" or "Absent","Client extension detected. Its measurement features are checked separately.")
+            AddDiagnostic("SuperWoW",capabilities.superwow or "Absent","Client extension detected. Its measurement features are checked separately.")
+            AddDiagnostic("Nampower",capabilities.nampower or "Absent","Client extension detected. Its measurement features are checked separately.")
         end
     end
 
@@ -573,19 +568,19 @@ function Performance.Create(parent)
         end
         if state.recording then AddItem("message","A scan is recording. This report shows the previous completed scan.") end
         AddMetric("Health",report.status,report.summary,report.severity or 0)
-        AddMetric("Profile",report.scope or "Unavailable")
-        AddMetric("Last scan",ScanDate(report.date))
-        AddMetric("Duration",ScanSeconds(report.elapsed))
+        AddMetric("Profile",report.scope or "Unavailable","The profile used for this completed scan.")
+        AddMetric("Last scan",ScanDate(report.date),"Local date and time when the scan began.")
+        AddMetric("Duration",ScanSeconds(report.elapsed),"Time recorded in this completed scan.")
         if report.summary then AddItem("message",report.summary) end
         for _,finding in ipairs(report.findings or emptyEntries) do
             AddItem("heading",finding.title)
             self.items[self.itemCount].severity=finding.severity
             self.contentIndent=1
             if finding.evidence then AddItem("message",finding.evidence) end
+            if finding.reason then AddDiagnostic("Reason",finding.reason) end
             if finding.action then AddItem("message","Tip: "..finding.action) end
             self.contentIndent=0
         end
-        if report.coverage then AddItem("message",report.coverage) end
     end
 
     function module:BuildItems()
@@ -618,22 +613,21 @@ function Performance.Create(parent)
             for index=table.getn(self.historyEntries or emptyEntries),1,-1 do table.remove(self.historyEntries,index) end
             AddItem("message","Press Start, use the addon, then Stop to inspect results.")
         elseif self.tab=="MOS" then
-            local calls,total,heap,largest,_,entries,peak=self:GetSessionOperations()
+            local calls,total,heap,_,_,entries,peak=self:GetSessionOperations()
             AddMetric("Measured calls",calls,hints.calls);AddMetric("Measured time",Duration(total),hints.total)
             AddMetric("Peak call time",calls>0 and Duration(peak) or "-",hints.peak);AddMetric("Average call time",calls>0 and Duration(total/calls) or "-",hints.average)
-            AddMetric("Heap delta during MOS calls",SignedMemory(heap),hints.heap);AddMetric("Peak heap rise during a call",Memory(largest),hints.heapPeak)
+            AddMetric("Heap delta during MOS calls",SignedMemory(heap),hints.heap)
             self:BuildMemoryItems(session)
-            AddRows("operations","operation",entries,session,hints.total.."\n"..hints.heap,"No displayed MOS calls. Use Refresh tables after activity.")
+            AddRows("operations","operation",entries,session,hints.total.."\n"..hints.heap,"No displayed MOS calls. Use Update ranking after activity.")
             AddRows("slow","slow",self:HistoryRows(session.history,64),session,hints.slow.."\n"..hints.heap,"No MOS calls reached 5 ms.",true)
         elseif not session.callbacksRequested then
             AddItem("message",state.recording and "Another profile is recording. Stop it before starting this profile." or "No scan for this profile. Press Start to record it.")
         else
             AddMetric("FPS min / max",FPS(session.minFps).." / "..FPS(session.maxFps),"Lowest and highest valid once-per-second FPS readings in the whole session. Brief stalls can fall between readings.")
-            AddMetric("Average FPS",FPS(session.averageFps),"Mean of valid FPS readings over the whole session, including samples older than the retained history.")
-            AddMetric("Current FPS",FPS(session.fps),hints.fps)
+            AddMetric("Average FPS",FPS(session.averageFps),"Average of all valid FPS readings in this scan.")
             AddMetric("Latency min / max",Latency(session.minLatency).." / "..Latency(session.maxLatency),"Lowest and highest valid network-delay readings over the whole session.")
             AddMetric("Average latency",Latency(session.averageLatency),"Mean of valid network-delay readings over the whole session. This is separate from rendering speed.")
-            AddMetric("Current latency",Latency(session.latency),hints.latency)
+            AddMetric("Last latency",Latency(session.latency),"Last recorded network response delay. High delay can slow server responses, separately from FPS.")
             self:BuildMemoryItems(session)
             if session.callbacks then
                 local callbacks=session.callbacks
@@ -678,7 +672,7 @@ function Performance.Create(parent)
         row.reportTitle,row.reportHint,row.reportSchema=item.text,item.hint,nil
         if row.label.SetNonSpaceWrap then row.label:SetNonSpaceWrap(true) end
         row:EnableMouse(item.hint~=nil)
-        UI.SetRowColor(row,rowColor,0);row.mosTableRowSelection:Hide();row.mosTableRowHover:Hide();UI.SetProjectButtonOutline(row,false)
+        UI.SetRowColor(row,rowColor,1);row.mosTableRowSelection:Hide();row.mosTableRowHover:Hide();UI.SetProjectButtonOutline(row,false)
         row.mosTableRowEven=false;row.mosTableRowSelected=false
     end
     local function SetValue(row,index,value) row.values[index]=tostring(value) end
@@ -762,13 +756,25 @@ function Performance.Create(parent)
             SetValue(row,4,data.event or "-");SetValue(row,5,data.failed and 1 or 0)
         else SetValue(row,1,Memory(item.operation.memory)) end
         if item.kind~="tableHeader" then
-            UI.SetRowColor(row,rowColor,math.mod(stripe,2)==0 and 0.14 or 0.025);row:EnableMouse(true)
+            UI.SetRowColor(row,math.mod(stripe,2)==0 and alternateRowColor or rowColor,1);row:EnableMouse(true)
             row.reportHint=item.hint
             if item.kind=="family" then
-                UI.SetRowColor(row,rowColor,0.16);UI.SetProjectButtonOutline(row,true)
+                UI.SetRowColor(row,rowColor,1);UI.SetProjectButtonOutline(row,true)
                 row.familyName=item.value;row.reportModule=module;row:SetScript("OnClick",FamilyClick)
                 row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
             end
+        end
+        if item.kind=="diagnostic" and width>=tables.diagnostic.minimum then
+            local captionWidth=math.min(280,math.floor((width-24)*0.60))
+            local height=math.max(24,UI.MeasureTextHeight(row.label,captionWidth)+8)
+            row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,0)
+            row.label:SetWidth(captionWidth);row.label:SetHeight(height);row.label:SetJustifyV("MIDDLE")
+            FontSize(row.columns[1],11)
+            UI.Table.Cell(row.columns[1],row,captionWidth+16,width-captionWidth-24,height,values[1])
+            if row.columns[1].SetWordWrap then row.columns[1]:SetWordWrap(true) end
+            height=math.max(height,UI.MeasureTextHeight(row.columns[1],width-captionWidth-24)+8)
+            row.label:SetHeight(height);row.columns[1]:SetHeight(height);row.columns[1]:Show()
+            return height
         end
         if width>=schema.minimum then
             local nameWidth=math.floor((width-16)*schema.nameFraction)
@@ -833,7 +839,7 @@ function Performance.Create(parent)
                     row.detail:Show()
                     UI.FitButtonLabel(row.detail,math.max(1,cardWidth-16));row.detail:SetHeight(18);row.detail:SetJustifyV("MIDDLE")
                     height=math.max(height,labelHeight+18+16)
-                    UI.SetRowColor(row,rowColor,0.045);row.mosFlowWidth=cardWidth;row:Show()
+                    UI.SetRowColor(row,rowColor,1);row.mosFlowWidth=cardWidth;row:Show()
                     count=count+1
                     if count<=table.getn(flow) then flow[count]=row else table.insert(flow,row) end
                     index=index+1
@@ -866,7 +872,7 @@ function Performance.Create(parent)
                     end
                     if toggle:GetParent()~=row then toggle:SetParent(row) end
                     -- Reused rows must not carry a preceding table's stripe or hover.
-                    UI.SetRowColor(row,rowColor,0.045);row.mosTableRowHovered=nil
+                    UI.SetRowColor(row,rowColor,1);row.mosTableRowHovered=nil
                     toggle.sectionHovered=nil;UI.SetProjectButtonOutline(toggle,true)
                     local nested=sections[name].nested
                     local sectionHeight=nested and 24 or 28
@@ -895,7 +901,7 @@ function Performance.Create(parent)
         page.resetButton=UI.CreateButton(page.controls,nil,"Reset",94,26);page.exportButton=UI.CreateButton(page.controls,nil,"Export",94,26)
         page.monitorButton=UI.CreateButton(page.tabs,nil,"Live Monitor",140,26)
         page.healthButton=UI.CreateButton(page.tabs,nil,"Health Check",140,26)
-        page.refreshButton=UI.CreateButton(page.controls,nil,"Refresh tables",142,26)
+        page.refreshButton=UI.CreateButton(page.controls,nil,"Update ranking",154,26)
         page.memoryButton=UI.CreateButton(page.controls,nil,"Refresh memory",154,26)
         page.memoryModeButton=UI.CreateButton(page.controls,nil,"Memory: OFF",132,26)
         page.callbackViewButton=UI.CreateButton(page.controls,nil,"View: Time",136,26)
@@ -917,7 +923,12 @@ function Performance.Create(parent)
             option.mosActionAlign="LEFT";option.mosLabelJustify="LEFT";if option.label.SetWordWrap then option.label:SetWordWrap(false) end
             UI.SetActionButtonIcon(option,index==1 and "guild_stats" or index==2 and "groups" or "analyze");table.insert(page.advancedMenu.options,option)
         end
-        page.art=UI.CreatePerformanceBackground(page.bodyHost)
+        local menuShown=page.advancedMenu:GetScript("OnShow")
+        page.advancedMenu:SetScript("OnShow",function()
+            if menuShown then menuShown() end
+            for _,option in ipairs(page.advancedMenu.options) do UI.FitButtonLabel(option,option:GetWidth()-16) end
+        end)
+        page.art=UI.CreatePerformanceBackground(page)
         page.status=UI.CreateLabel(page.header,nil,"OVERLAY","GameFontHighlightSmall");page.status:SetJustifyH("LEFT");if page.status.SetWordWrap then page.status:SetWordWrap(true) end
         page.sectionToggles={}
         page.advancedButton:SetScript("OnClick",function() if page.advancedMenu:IsShown() then page.advancedMenu:Hide() else page.advancedMenu:Show() end end)
@@ -940,7 +951,7 @@ function Performance.Create(parent)
         UI.AttachTooltip(page.advancedButton,"Advanced Profiler","Choose a callback profile or login analysis. Selecting a view does not start recording.")
         UI.AttachTooltip(page.monitorButton,"Live Monitor","Lightweight current readings, once per second while its window is visible. Independent of advanced captures; no report is saved.")
         UI.AttachTooltip(page.healthButton,"Health Check","Diagnosis and tips from the last completed scan. This view starts no measurement.")
-        UI.AttachTooltip(page.refreshButton,"Refresh tables","Update displayed rows and ranking. While recording, row order stays fixed; counters keep updating. Histories update on refresh.")
+        UI.AttachTooltip(page.refreshButton,"Update ranking","Show newly recorded rows, update recent-call lists and sort by current totals. During recording, rows stay in place until you click this button.")
         UI.AttachTooltip(page.memoryButton,"Native memory snapshot","Refresh the client's per-addon memory counters when available. Callback growth is measured separately.")
         UI.AttachTooltip(page.memoryModeButton,"Measure callback memory","Enable before Start in All Addons. Measures heap growth around callbacks, including profiling overhead; adds two reads per call.")
         UI.AttachTooltip(page.callbackViewButton,"Callback view","Switch family columns and ranking between time and memory growth. This does not change a running capture.")
@@ -971,10 +982,10 @@ function Performance.Create(parent)
         if not module.provider or not module.tab then page.header:SetHeight(38+tabHeight);return 38+tabHeight end
         local controlHeight=page.controls:IsShown() and UI.LayoutFlow(page.controls,page.flow,8,8,width-16,8)+8 or 0
         page.controls:ClearAllPoints();page.controls:SetPoint("TOPLEFT",page.header,"TOPLEFT",0,-38-tabHeight);page.controls:SetWidth(width);page.controls:SetHeight(controlHeight)
-        local top=38+tabHeight+controlHeight+8
+        local top=38+tabHeight+controlHeight+4
         page.status:ClearAllPoints();page.status:SetPoint("TOPLEFT",page.header,"TOPLEFT",8,-top);page.status:SetWidth(math.max(1,width-16));page.status:SetHeight(0)
         FontSize(page.status,11)
-        top=top+math.max(24,UI.MeasureTextHeight(page.status,width-16))+8;page.header:SetHeight(top);return top
+        top=top+math.max(22,UI.MeasureTextHeight(page.status,width-16))+2;page.header:SetHeight(top);return top
     end
     local function MeasurePage(width)
         local top=8
@@ -990,6 +1001,7 @@ function Performance.Create(parent)
         local width,height=UI.GetFrameSpan(parent)
         width,height=math.max(80,width-3),math.max(80,height-4.5)
         page:SetWidth(width);page:SetHeight(height)
+        if page.art then UI.LayoutPerformanceBackground(page.art,page,width,height);page.art:Show() end
         local headerHeight=MeasureHeader(width)
         self.headerPinned=self.provider==nil or self.tab==nil or height>=headerHeight+120
         local headerParent=self.headerPinned and page or page.canvas
@@ -1000,9 +1012,6 @@ function Performance.Create(parent)
         height=math.max(1,height-inset)
         page.bodyHost:SetWidth(width);page.bodyHost:SetHeight(height)
         UI.LayoutResponsiveCanvas(page.canvas,MeasurePage,self,width,height)
-        if page.art then
-            UI.LayoutPerformanceBackground(page.art,page.bodyHost,width,height);page.art:Show()
-        end
     end
     function module:Refresh()
         if not page:IsVisible() then return end
