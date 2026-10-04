@@ -93,8 +93,8 @@ function NativeRaidTab.Create(options)
         -- Owner bounds are authoritative; native anchored button widths can
         -- still report their previous size. Budget all three actions first.
         local gap = math.min(4, math.max(0, (width - 3) / 2))
-        local available = math.min(260, math.max(3, math.floor(width - gap * 2)))
-        local first = math.max(1, math.floor(available * 90 / 260))
+        local available = math.max(3, width - gap * 2)
+        local first = math.max(1, math.floor(available / 3))
         panel.invite.mosFlowWidth, panel.ready.mosFlowWidth = first, first
         panel.info.mosFlowWidth = available - first * 2
         panel.toolbar:SetHeight(UI.LayoutFlow(panel.toolbar, panel.toolbarControls, 0, 0, width, gap))
@@ -162,11 +162,15 @@ function NativeRaidTab.Create(options)
         UI.SetClassicButtonVariant(panel.invite, "red")
         UI.SetClassicButtonVariant(panel.ready, "red")
         UI.SetClassicButtonVariant(panel.info, "red")
+        UI.SetButtonBorderless(panel.invite, true)
+        UI.SetButtonBorderless(panel.ready, true)
+        UI.SetButtonBorderless(panel.info, true)
         UI.SetClassicButtonGold(panel.invite, true)
         UI.SetClassicButtonGold(panel.ready, true)
         UI.SetClassicButtonGold(panel.info, true)
         panel.toolbar = toolbar; panel.toolbarControls = { panel.invite, panel.ready, panel.info }
         for index = 1, table.getn(panel.toolbarControls) do
+            panel.toolbarControls[index].mosFlowLabelPadding = 6
             local label = panel.toolbarControls[index].label
             if label.SetWordWrap then label:SetWordWrap(false) end
         end

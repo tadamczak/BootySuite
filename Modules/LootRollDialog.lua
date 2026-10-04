@@ -9,7 +9,7 @@ function Dialog.Create(options)
     local projectOpen = frame.Open
     frame.label:SetJustifyH("LEFT")
     frame.item = UI.CreateFramedEditBox(frame, nil, 304, 22)
-    frame.item:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -60)
+    frame.item:SetPoint("TOPLEFT", frame.label, "BOTTOMLEFT", 0, -8)
     frame.item:SetWidth(304); frame.item:SetHeight(22); frame.item:SetAutoFocus(false)
     frame.item:SetScript("OnEditFocusGained",function() frame.itemFocused=true end)
     frame.item:SetScript("OnEditFocusLost",function() frame.itemFocused=nil end)
@@ -55,7 +55,7 @@ function Dialog.Create(options)
     local binding = {ensure=function() end, get=function(key) return frame.types[key] end,
         set=function(key,value) frame.types[key]=value end}
     for index,range in ipairs({98,99,100,101,102}) do
-        local check = UI.Settings.CreateCheckbox(frame, 8+(index-1)*61, -90,
+        local check = UI.Settings.CreateCheckbox(frame, 8+(index-1)*61, -92,
             MOS.Services.LootRollRequest.CategoryNames[range], range, nil, binding)
         check:SetWidth(18); check:SetHeight(18)
         local font, _, flags = check.label:GetFont(); check.label:SetFont(font, 10, flags)
@@ -64,7 +64,7 @@ function Dialog.Create(options)
         frame.typeChecks[range]=check
     end
     frame.membersButton = UI.CreateButton(frame, nil, "Add rollers", 140, 22)
-    frame.membersButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -122)
+    frame.membersButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -118)
     UI.SetClassicButtonIcon(frame.membersButton,"roster")
     UI.AttachTooltip(frame.membersButton,"Add rollers","Select players who may roll when Open roll is off.")
     local function UpdateMembersState() UI.SetButtonEnabled(frame.membersButton,not frame.openRoll) end
@@ -80,7 +80,7 @@ function Dialog.Create(options)
     end)
     local openBinding = {ensure=function() end, get=function() return frame.openRoll end,
         set=function(_,value) frame.openRoll=value end}
-    frame.openCheck = UI.Settings.CreateCheckbox(frame,172,-124,"Open roll","open",function()
+    frame.openCheck = UI.Settings.CreateCheckbox(frame,172,-120,"Open roll","open",function()
         frame.memberMenu:Close(); UpdateMembersState()
     end,openBinding)
     frame.openCheck:SetWidth(18); frame.openCheck:SetHeight(18); frame.openCheck.labelHit:SetHeight(18)
@@ -128,7 +128,9 @@ function Dialog.Create(options)
         end
         for index=table.getn(self.memberEntries),used+1,-1 do table.remove(self.memberEntries,index) end
         projectOpen(self,"Link an item, then choose roll types and players.")
-        self:SetWidth(320); self:SetHeight(192)
+        self:SetWidth(320); self:SetHeight(184)
+        self.label:ClearAllPoints(); self.label:SetPoint("TOPLEFT",self.projectDivider,"BOTTOMLEFT",4,-8)
+        self.label:SetPoint("TOPRIGHT",self.projectDivider,"BOTTOMRIGHT",-4,-8)
         self.label:SetHeight(18); self.label:SetJustifyH("LEFT")
         self:Raise(); self.item:SetFocus()
     end

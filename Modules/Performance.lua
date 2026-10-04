@@ -737,6 +737,7 @@ function Performance.Create(parent,options)
         table.insert(module.rows,row);return row
     end
     local function ResetRow(row,item,width)
+        row.mosTableRowHover:SetAlpha(0.07)
         row:SetWidth(width);row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",8,-6)
         row.label:SetWidth(math.max(1,width-16));row.label:SetHeight(0);FontSize(row.label,11);row.label:SetJustifyV("TOP")
         row.label:SetText(item.text);row.label:SetTextColor(1,1,1);row.label:Show()
@@ -944,7 +945,7 @@ function Performance.Create(parent,options)
                     row.detail:Show()
                     UI.FitButtonLabel(row.detail,math.max(1,cardWidth-16));row.detail:SetHeight(18);row.detail:SetJustifyV("MIDDLE")
                     height=math.max(height,labelHeight+18+16)
-                    UI.SetRowColor(row,rowColor,0.045);row.mosFlowWidth=cardWidth;row:Show()
+                    UI.SetRowColor(row,rowColor,0.11);row.mosTableRowHover:SetAlpha(0.08);row.mosFlowWidth=cardWidth;row:Show()
                     count=count+1
                     if count<=table.getn(flow) then flow[count]=row else table.insert(flow,row) end
                     index=index+1
@@ -996,7 +997,9 @@ function Performance.Create(parent,options)
                     toggle.mosFitFontSize=FontSize(toggle.label,nested and 12 or 13)
                     toggle.label:SetText((module:IsSectionExpanded(name) and "- " or "+ ")..item.text..(item.value~=nil and " ("..item.value..")" or ""))
                     UI.FitButtonLabel(toggle,math.max(1,rowWidth-32));toggle.label:SetJustifyH("LEFT")
-                    toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT",toggle,"LEFT",8,0)
+                    toggle.indicator:ClearAllPoints();toggle.indicator:SetPoint("LEFT",toggle,"LEFT",8,0)
+                    toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT",toggle,"LEFT",20,0)
+                    toggle.label.mosAccordionPrefixInset=20
                     toggle.rule:Hide();toggle:SetExpanded(module:IsSectionExpanded(name));toggle:Show();height=sectionHeight
                     UI.SetRowColor(toggle,sectionColor,1)
                 else row.label:SetTextColor(0.78,0.78,0.78) end

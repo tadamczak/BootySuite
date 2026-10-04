@@ -581,6 +581,11 @@ local function OnRaidRowClick()
 end
 
 local function OnRaidRowEnter()
+    local settings = MuklaOfficerSuiteDB
+    this.mosRaidHovered = true
+    if settings.raidListShowHoverBorder or this.mosProjectOutline then
+        MOS.UI.Components.SetProjectButtonOutline(this, settings.raidListShowHoverBorder, settings.raidListHoverBorderSize, settings.raidListHoverBorderColor)
+    end
     if this.displayedMember and this.controller and not this.controller.isSelected(this.displayedMember) then
         local color = MuklaOfficerSuiteDB.raidListHoverColor
         MOS.UI.Components.SetRowColor(this, color, 0.98)
@@ -588,10 +593,17 @@ local function OnRaidRowEnter()
 end
 
 local function OnRaidRowLeave()
+    this.mosRaidHovered = nil
+    if this.mosProjectOutline then this.mosProjectOutline:Hide() end
     if this.displayedMember and this.controller and not this.controller.isSelected(this.displayedMember) then
         local color = MuklaOfficerSuiteDB.raidListBackgroundColor
         MOS.UI.Components.SetAlternatingRowColor(this, color, this.visibleIndex, MuklaOfficerSuiteDB.raidListOddLightness)
     end
+end
+
+local function OnRaidMemberHide()
+    this.mosRaidHovered=nil
+    if this.mosProjectOutline then this.mosProjectOutline:Hide() end
 end
 
 local function OnLootScroll()
@@ -609,6 +621,7 @@ end
 function RaidManagement.CreateListRow(parent, index, controller)
     local row = MOS.UI.Components.CreateControl(nil, parent)
     row.controller = controller
+    row:SetScript("OnHide",OnRaidMemberHide)
     row.initialY = -132 - ((index - 1) * 21)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, row.initialY)
     row:SetWidth(543); row:SetHeight(20)
@@ -1581,9 +1594,12 @@ function RaidManagement.ApplyGroupTileAppearance(panel, header, height, settings
     settings = settings or MuklaOfficerSuiteDB
     local text, background, border = settings.raidGroupHeaderTextColor, settings.raidGroupHeaderBackgroundColor, settings.raidGroupBorderColor
     header:SetTextColor(text[1], text[2], text[3], 1)
-    panel:SetBackdropBorderColor(border[1], border[2], border[3], settings.raidGroupShowBorder and 1 or 0)
+    panel:SetBackdropBorderColor(0, 0, 0, 0)
+    if settings.raidGroupShowBorder or panel.mosProjectOutline then
+        MOS.UI.Components.SetProjectButtonOutline(panel, settings.raidGroupShowBorder, settings.raidGroupBorderSize, border)
+    end
     panel.headerBackground:SetTexture(background[1], background[2], background[3], 1)
-    local inset = settings.raidGroupShowBorder and 3 or 0
+    local inset = 0
     panel.headerBackground:ClearAllPoints()
     panel.headerBackground:SetPoint("TOPLEFT", panel, "TOPLEFT", inset, -inset)
     panel.headerBackground:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -inset, -inset)
@@ -1591,7 +1607,7 @@ function RaidManagement.ApplyGroupTileAppearance(panel, header, height, settings
     if settings.raidGroupShowHeader then panel.headerBackground:Show() else panel.headerBackground:Hide() end
 end
 
-function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin, showBorder, fitWidth, visibleCount, autoVertical, autoHorizontal)
+function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin, showBorder, fitWidth, visibleCount, autoVertical, autoHorizontal, fillHeight)
     local columnCount = math.floor(math.max(1, math.min(4, tonumber(columns) or 2)))
     local availableWidth = math.max(1, tonumber(width) or 1)
     local margin = math.max(0, tonumber(groupMargin) or 0)
@@ -1607,7 +1623,7 @@ function RaidManagement.CalculateGroupGeometry(width, height, columns, preferred
     local headerHeight = showHeader and math.max(12, tonumber(configuredHeaderHeight) or 18) or 0
     local rowHeight = tonumber(tileHeight) or 22
     local groupHeight = headerHeight + rowHeight * 5
-    if autoVertical and visibleCount > 0 and visibleCount < 8 and math.mod(visibleCount, columnCount) == 0 then
+    if (autoVertical and visibleCount < 8 or fillHeight and visibleCount == 8) and visibleCount > 0 and math.mod(visibleCount, columnCount) == 0 then
         groupHeight = math.max(groupHeight, ((tonumber(height) or 1) - (groupRows - 1) * margin) / groupRows)
         rowHeight = (groupHeight - headerHeight) / 5
     end
@@ -1894,6 +1910,10 @@ local function SetListTextColor(row, color, shade)
 end
 
 function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMasterIndex, lootMasterMode, tableLeft, shorten)
+    if row.mosProjectOutline then
+        local settings = MuklaOfficerSuiteDB
+        MOS.UI.Components.SetProjectButtonOutline(row, row.mosRaidHovered and settings.raidListShowHoverBorder, settings.raidListHoverBorderSize, settings.raidListHoverBorderColor)
+    end
     row.name:SetText(shorten(member.name, 22))
     local memberRank = tonumber(member.raidRank) or 0
     local showRole = not lootMasterMode and MuklaOfficerSuiteDB.raidListShowRoleIcon and memberRank > 0
@@ -2002,6 +2022,8 @@ function RaidManagement.CollapseListRow(row, visibleIndex, lootMasterMode, rowSt
 end
 
 function RaidManagement.HideListRow(row)
+    row.mosRaidHovered=nil
+    if row.mosProjectOutline then row.mosProjectOutline:Hide() end
     row.displayedMember = nil
     row.crown:Hide(); row.lootMasterIcon:Hide(); row.groupHit:Hide(); row.srHit:Hide(); row.srDelete:Hide(); row.srIcon:Hide(); row.srHit.itemId = nil; row:Hide()
     row.name:Hide(); row.level:Hide(); row.status:Hide(); row.group:Hide()
@@ -2170,11 +2192,18 @@ end
 
 local function OnGroupSlotEnter()
     if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, true) end
-    local color = GroupSettings(this.groupPage).raidGroupHoverColor; MOS.UI.Components.SetRowColor(this, color, 0.98)
+    local settings = GroupSettings(this.groupPage)
+    this.mosRaidHovered = true
+    if settings.raidGroupShowHoverBorder or this.mosProjectOutline then
+        MOS.UI.Components.SetProjectButtonOutline(this, settings.raidGroupShowHoverBorder, settings.raidGroupHoverBorderSize, settings.raidGroupHoverBorderColor)
+    end
+    local color = settings.raidGroupHoverColor; MOS.UI.Components.SetRowColor(this, color, 0.98)
     if MOS.dragRaidIndex then MOS.raidDropSlot = this end
 end
 
 local function OnGroupSlotLeave()
+    this.mosRaidHovered = nil
+    if this.mosProjectOutline then this.mosProjectOutline:Hide() end
     if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, false) end
     local settings = GroupSettings(this.groupPage)
     MOS.UI.Components.SetAlternatingRowColor(this, settings.raidGroupBackgroundColor, this.slotIndex, settings.raidGroupOddLightness)
@@ -2182,6 +2211,7 @@ local function OnGroupSlotLeave()
 end
 
 function RaidManagement.AttachGroupSlotHandlers(slot, page)
+    slot:SetScript("OnHide",OnRaidMemberHide)
     slot.groupPage = page
     slot:SetScript("OnMouseDown", OnGroupSlotMouseDown); slot:SetScript("OnMouseUp", OnGroupSlotMouseUp)
     slot:SetScript("OnClick", OnGroupSlotClick); slot:SetScript("OnDragStart", OnGroupSlotDragStart); slot:SetScript("OnDragStop", OnGroupSlotDragStop)
@@ -2199,7 +2229,7 @@ local function GroupGeometry(page, width, height)
     end
     local hidden = db.raidGroupHideEmptyGroups
     return RaidManagement.CalculateGroupGeometry(width, height, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder, true,
-        hidden and page.visibleGroupCount or 8, hidden and db.raidGroupAutoAdjustVertically, hidden and db.raidGroupAutoAdjustHorizontally)
+        hidden and page.visibleGroupCount or 8, hidden and db.raidGroupAutoAdjustVertically, hidden and db.raidGroupAutoAdjustHorizontally, page.getGroupSettings ~= nil and not hidden)
 end
 
 function RaidManagement.MeasureGroupHeight(width, page)
@@ -2282,14 +2312,20 @@ function RaidManagement.RefreshGroupView(page)
         local rowCount = row == groupRows - 1 and geometry.visibleCount - row * columns or columns
         local panelWidth = geometry.autoHorizontal and rowCount > 0 and rowCount < columns
             and (layoutWidth - (rowCount - 1) * geometry.margin) / rowCount or columnWidth
-        local x, y = xOffset + (column * (panelWidth + geometry.margin)), -yOffset - (row * (groupHeight + geometry.margin))
+        local x = math.floor(xOffset + column * (panelWidth + geometry.margin) + 0.5)
+        local right = math.floor(xOffset + (column + 1) * (panelWidth + geometry.margin) - geometry.margin + 0.5)
+        if column == (geometry.autoHorizontal and rowCount < columns and rowCount or columns) - 1 then right = math.floor(xOffset + layoutWidth) end
+        panelWidth = math.max(1, right - x)
+        local top = math.floor(yOffset + row * (groupHeight + geometry.margin) + 0.5)
+        local bottom = math.floor(yOffset + row * (groupHeight + geometry.margin) + groupHeight + 0.5)
+        local y = -top
         local panel = page.groupPanels[groupIndex]
-        panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(panelWidth); panel:SetHeight(groupHeight)
+        panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(panelWidth); panel:SetHeight(bottom - top)
         if visible then panel:Show(); visibleIndex = visibleIndex + 1 else panel:Hide() end
         local header = page.groupHeaders[groupIndex]
         RaidManagement.ApplyGroupTileAppearance(panel, header, headerHeight, settings)
         SetFontSize(header, headerTextSize)
-        local headerInset = math.min(4, math.floor((panelWidth - 1) / 2))
+        local headerInset = 0
         header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", headerInset, 0); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -headerInset, 0)
         header.mosFitFontSize = headerTextSize
         MOS.UI.Components.FitButtonLabel(header, math.max(1, panelWidth - headerInset * 2)); header:SetJustifyH("CENTER")
@@ -2299,7 +2335,12 @@ function RaidManagement.RefreshGroupView(page)
         for slotIndex = 1, 5 do
             local slot = page.groupSlots[groupIndex][slotIndex]
             SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
-            slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(panelWidth); slot:SetHeight(slotHeight)
+            local slotTop = math.floor(top + headerHeight + (slotIndex - 1) * slotHeight + 0.5)
+            local slotBottom = slotIndex == 5 and bottom or math.floor(top + headerHeight + slotIndex * slotHeight + 0.5)
+            slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, -slotTop); slot:SetWidth(panelWidth); slot:SetHeight(math.max(1, slotBottom - slotTop))
+            if slot.mosProjectOutline then
+                MOS.UI.Components.SetProjectButtonOutline(slot, slot.mosRaidHovered and settings.raidGroupShowHoverBorder, settings.raidGroupHoverBorderSize, settings.raidGroupHoverBorderColor)
+            end
             slot.mosGroupWidth = panelWidth
             if visible then slot:Show() else slot:Hide() end
             if page.getGroupSettings then

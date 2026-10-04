@@ -17,10 +17,10 @@ function Settings.CreateProfiles(page, onLoaded)
     view.currentLabel = Label("Current profile", -4, "white")
     view.current = C.CreateComponentLabel(view.content, "", "gold")
     view.current:SetWidth(180); view.current:SetHeight(20); view.current:SetJustifyH("LEFT"); view.current:SetPoint("TOPLEFT", view.content, "TOPLEFT", 126, 0)
-    Label("Load profile", -32)
+    view.loadLabel = Label("Load profile", -32)
     view.select = C.CreateDropdownButton(view.content, nil, "Select profile", 180)
     view.select:SetPoint("TOPLEFT", view.content, "TOPLEFT", 126, -28)
-    Label("New profile", -60)
+    view.newLabel = Label("New profile", -60)
     view.name = C.CreateFramedEditBox(view.content, nil, 180)
     view.name:SetHeight(20); view.name:SetMaxLetters(64); view.name:SetPoint("TOPLEFT", view.content, "TOPLEFT", 126, -56)
     local function Action(action, previous)
@@ -154,6 +154,8 @@ function Settings.CreateProfiles(page, onLoaded)
 end
 
 function Settings.ApplyTopSections(page)
+    if page.searchRestoring then return end
+    if Settings.IsSearchActive and Settings.IsSearchActive(page) then Settings.LayoutSearch(page); return end
     local state = page.topSectionState
     if not state then return end
     local profileHeight = state.profile and (state.profileGeneral and 136 or 56) or 28
