@@ -5,7 +5,7 @@ local Profiles = MOS.Core.SettingsProfiles
 -- Explicit allowlist excludes roster, raid history, loot and derived UI state.
 local keys = {
     "rosterHideSectionHeader", "raidHideSectionHeader",
-    "useMOSRaidTab", "performanceMonitorWidth", "performanceMonitorHeight",
+    "useMOSRaidTab", "useMOSRaidLogo", "nativeRaidButtonStyle", "performanceMonitorWidth", "performanceMonitorHeight",
     "rosterShowClass", "rosterShowLevel", "rosterShowZone", "rosterShowRank", "rosterShowPublicNote", "rosterShowOfficerNote", "rosterShowLastOnline", "rosterShowClassFilter", "rosterShowRankFilter", "rosterShowSearch", "rosterShowOffline", "rosterShowColumnHeaders",
     "hideHeaderBar", "hideMinimapIcon", "hideStatusVersionBar", "hideHeaderLogo", "hideHeaderName", "suppressLoginMessage", "lootMasterOpacity", "lmAutoLoot", "lmAutoLootMode", "lmAutoLootRarities", "lmAutoLootExceptions", "lmAutoLootInclusions", "lmAutoLootPresets", "outOfFocusOpacity", "chatActionLogs",
     "raidGroupOddLightness", "raidListOddLightness",
@@ -22,7 +22,7 @@ local nativeIndex
 for nativeIndex = 1, table.getn(MOS.Services and MOS.Services.LootMessages and MOS.Services.LootMessages.SettingKeys or {}) do
     table.insert(keys, MOS.Services.LootMessages.SettingKeys[nativeIndex])
 end
-for _, suffix in ipairs({"HideEmptyGroups", "AutoAdjustVertically", "AutoAdjustHorizontally"}) do table.insert(keys, "raidGroup" .. suffix) end
+for _, suffix in ipairs({"HideEmptyGroups", "AutoAdjustVertically", "AutoAdjustHorizontally", "MemberTexture", "BorderTexture", "ViewBackgroundTexture", "ViewBackgroundColor", "HeaderTransparency", "HeaderHoverTextColor"}) do table.insert(keys, "raidGroup" .. suffix) end
 for nativeIndex = 1, table.getn(MOS.Database.NativeRaidGroupKeys or {}) do
     table.insert(keys, MOS.Database.NativeRaidGroupKeys[nativeIndex])
 end

@@ -6,7 +6,9 @@ function RaidInfo.Create(parent, service)
     local UI = MOS.UI.Components
     service = service or MOS.Services.RaidInfo
     local frame = UI.CreateContainer(nil, parent or UIParent)
-    frame:SetWidth(440); frame:SetHeight(130); frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    local dialogWidth, idWidth, resetWidth = 360, 70, 80
+    local innerWidth, rightColumns = dialogWidth - 20, idWidth + resetWidth
+    frame:SetWidth(dialogWidth); frame:SetHeight(130); frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     frame:SetFrameStrata("FULLSCREEN_DIALOG"); frame:SetFrameLevel(220)
     frame.title = UI.CreateHeading(frame, "", 3, "gold", "info"); frame.title:SetText("Raid Info")
     frame.close = UI.CreateWindowButton(frame, nil, "close")
@@ -26,10 +28,10 @@ function RaidInfo.Create(parent, service)
         headings[index]:SetText(names[index]); headings[index]:SetJustifyH("LEFT")
     end
     local empty = UI.CreateLabel(frame, nil, "OVERLAY", "GameFontHighlightSmall")
-    empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -58); empty:SetWidth(420); empty:SetJustifyH("LEFT")
+    empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -58); empty:SetWidth(innerWidth); empty:SetJustifyH("LEFT")
     local active, controller = false, {}
     local function Measure(width)
-        local nameWidth, idWidth = math.max(1, width - 184), 84
+        local nameWidth = math.max(1, width - rightColumns)
         local y, index = 0, 1
         for index = 1, table.getn(entries) do
             local row = rows[index]
@@ -40,7 +42,7 @@ function RaidInfo.Create(parent, service)
                 UI.StyleWarmListRow(row, false)
             end
             local values = {entries[index].name, tostring(entries[index].id or "-"), service.FormatReset(entries[index].resetSeconds)}
-            local widths, left, height = {nameWidth, idWidth, 100}, 4, 26
+            local widths, left, height = {nameWidth, idWidth, resetWidth}, 4, 26
             for cell = 1, 3 do
                 local label = row.cells[cell]
                 label:ClearAllPoints(); label:SetPoint("TOPLEFT", row, "TOPLEFT", left, -6)
@@ -60,13 +62,13 @@ function RaidInfo.Create(parent, service)
         entries, available = service.Read(entries)
         local height = math.min(360, math.max(118, 70 + table.getn(entries) * 28))
         frame:SetHeight(height)
-        local width, contentHeight, overflow, maximum = UI.ResolveScrollLayout(420, height - 68, 20, Measure)
-        local positions = {10, 10 + width - 184, 10 + width - 100}
+        local width, contentHeight, overflow, maximum = UI.ResolveScrollLayout(innerWidth, height - 68, 20, Measure)
+        local positions = {10, 10 + width - rightColumns, 10 + width - resetWidth}
         for index = 1, 3 do
             headings[index]:ClearAllPoints()
             if frame.projectDivider then headings[index]:SetPoint("TOPLEFT", frame.projectDivider, "BOTTOMLEFT", positions[index] - 4, -10)
             else headings[index]:SetPoint("TOPLEFT", frame, "TOPLEFT", positions[index], -38) end
-            headings[index]:SetWidth(index == 1 and width - 184 or (index == 2 and 84 or 100)); headings[index]:Show()
+            headings[index]:SetWidth(index == 1 and width - rightColumns or (index == 2 and idWidth or resetWidth)); headings[index]:Show()
         end
         scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -58); scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10 - (overflow and 20 or 0), 10)
         canvas:SetWidth(width); canvas:SetHeight(contentHeight)
@@ -96,6 +98,12 @@ function RaidInfo.Create(parent, service)
     end)
     function controller:Open(owner)
         self.owner = owner
+        frame:ClearAllPoints()
+        if owner and owner == FriendsFrame then
+            -- FriendsFrame's artwork ends 33px before its canvas right edge
+            -- and starts 28px below its top. Anchor to those visible edges.
+            frame:SetPoint("TOPLEFT", owner, "TOPRIGHT", -33, -28)
+        else frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
         if active then service.Request(); Render() else frame:Show(); Activate() end
     end
     function controller:Close() frame:Hide(); Deactivate() end

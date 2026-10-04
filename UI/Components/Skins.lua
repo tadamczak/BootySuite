@@ -25,8 +25,8 @@ local function ClassicPath(path)
     return CLASSIC_ROOT .. path
 end
 
-local function CreateNineSlice(parent, path, width, height, inset, layer)
-    local set = { textures = {} }
+local function CreateNineSlice(parent, path, width, height, inset, layer, region)
+    local set = { textures = {}, inset = inset }
     local x, y = inset / width, inset / height
     local coords = {
         { 0, x, 0, y }, { x, 1 - x, 0, y }, { 1 - x, 1, 0, y },
@@ -36,7 +36,11 @@ local function CreateNineSlice(parent, path, width, height, inset, layer)
     local index
     for index = 1, 9 do
         local texture = parent:CreateTexture(nil, layer or "BACKGROUND")
-        texture:SetTexture(path); texture:SetTexCoord(unpack(coords[index]))
+        texture:SetTexture(path)
+        local uv = coords[index]
+        if region then
+            texture:SetTexCoord(region[1] + uv[1] * (region[2] - region[1]), region[1] + uv[2] * (region[2] - region[1]), region[3] + uv[3] * (region[4] - region[3]), region[3] + uv[4] * (region[4] - region[3]))
+        else texture:SetTexCoord(unpack(uv)) end
         set.textures[index] = texture
     end
     local tl, top, tr = set.textures[1], set.textures[2], set.textures[3]
@@ -52,6 +56,33 @@ local function CreateNineSlice(parent, path, width, height, inset, layer)
     right:SetWidth(inset); right:SetPoint("TOPRIGHT", tr, "BOTTOMRIGHT", 0, 0); right:SetPoint("BOTTOMRIGHT", br, "TOPRIGHT", 0, 0)
     middle:SetPoint("TOPLEFT", tl, "BOTTOMRIGHT", 0, 0); middle:SetPoint("BOTTOMRIGHT", br, "TOPLEFT", 0, 0)
     return set
+end
+
+local function SizeNineSlice(set, inset)
+    if set.inset == inset then return end
+    set.inset = inset
+    local t = set.textures
+    local index
+    for index = 1, 9 do
+        if index == 1 or index == 3 or index == 7 or index == 9 then t[index]:SetWidth(inset); t[index]:SetHeight(inset) end
+    end
+    t[2]:SetHeight(inset); t[8]:SetHeight(inset); t[4]:SetWidth(inset); t[6]:SetWidth(inset)
+end
+
+local function SetAtlasArtwork(set, style)
+    if set.style == style then return end
+    local x, y = style.inset / style.width, style.inset / style.height
+    local region = style.coords
+    local index
+    for index = 1, 9 do
+        local column, row = math.mod(index - 1, 3), math.floor((index - 1) / 3)
+        local left, right = column == 0 and 0 or column == 1 and x or 1 - x, column == 0 and x or column == 1 and 1 - x or 1
+        local top, bottom = row == 0 and 0 or row == 1 and y or 1 - y, row == 0 and y or row == 1 and 1 - y or 1
+        local texture = set.textures[index]
+        texture:SetTexture(style.path)
+        texture:SetTexCoord(region[1] + left * (region[2] - region[1]), region[1] + right * (region[2] - region[1]), region[3] + top * (region[4] - region[3]), region[3] + bottom * (region[4] - region[3]))
+    end
+    SizeNineSlice(set, style.inset); set.style = style
 end
 
 local function SetNineSliceShown(set, shown)
@@ -79,7 +110,7 @@ local function CreateClassicHoverOutline(frame, path, fullEdges)
 end
 
 local projectOutlineGold = {1, 0.78, 0.2}
-function UI.SetProjectButtonOutline(button, visible, size, color)
+function UI.SetProjectButtonOutline(button, visible, size, color, topInset, minimumLevel)
     if not button.mosProjectOutline then
         local border = UI.CreateContainer(nil, button)
         border:SetAllPoints(button); border:EnableMouse(false)
@@ -90,6 +121,10 @@ function UI.SetProjectButtonOutline(button, visible, size, color)
         button.mosProjectOutline = border
     end
     local border = button.mosProjectOutline
+    border:ClearAllPoints()
+    border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, -(topInset or 0))
+    border:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
+    border:SetFrameLevel(math.max(button:GetFrameLevel() + 1, minimumLevel or 0))
     local edgeSize = math.max(1, math.min(6, tonumber(size) or 2)) * 4
     if border.mosEdgeSize ~= edgeSize then
         local backdrop = border:GetBackdrop(); backdrop.edgeSize = edgeSize
@@ -98,6 +133,81 @@ function UI.SetProjectButtonOutline(button, visible, size, color)
     color = color or projectOutlineGold
     border:SetBackdropBorderColor(color[1], color[2], color[3], 1)
     if visible then button.mosProjectOutline:Show() else button.mosProjectOutline:Hide() end
+end
+
+-- Asset metadata belongs to the caller. These pooled primitives also support
+-- atlas regions, preserving authored corners when the owner is resized.
+local function ApplyAtlasSurface(frame)
+    if not frame.mosAtlasStyle then
+        SetNineSliceShown(frame.mosAtlasSurface, false)
+        SetNineSliceShown(frame.mosAtlasHighlight, false)
+        return false
+    end
+    local style = frame.mosAtlasStyle
+    if not frame.mosAtlasSurface then
+        frame.mosAtlasSurface = CreateNineSlice(frame, style.path, style.width, style.height, style.inset, "BACKGROUND", style.coords)
+        frame.mosAtlasSurface.style = style
+    end
+    SetAtlasArtwork(frame.mosAtlasSurface, style)
+    frame:SetBackdropColor(0,0,0,0); frame:SetBackdropBorderColor(0,0,0,0)
+    if frame.mosColorFill then frame.mosColorFill:Hide() end
+    if frame.mosClassicRowShade then frame.mosClassicRowShade:Hide() end
+    SetNineSliceShown(frame.mosAtlasSurface, true)
+    return true
+end
+
+function UI.SetAtlasHighlight(frame, visible, style, size, color)
+    if not visible then SetNineSliceShown(frame.mosAtlasHighlight, false); return end
+    if visible and not frame.mosAtlasHighlight then
+        frame.mosAtlasHighlight = CreateNineSlice(frame, style.path, style.width, style.height, style.inset, "BORDER", style.coords)
+        frame.mosAtlasHighlight.style = style
+    end
+    if not frame.mosAtlasHighlight then return end
+    SetAtlasArtwork(frame.mosAtlasHighlight, style)
+    SizeNineSlice(frame.mosAtlasHighlight, math.min(style.height / 2, frame:GetHeight() / 2, frame:GetWidth() / 2, style.inset * (size or 1)))
+    local index
+    for index = 1, 9 do
+        local texture = frame.mosAtlasHighlight.textures[index]
+        texture:SetBlendMode("ADD")
+        texture:SetVertexColor(color[1], color[2], color[3], 1)
+    end
+    SetNineSliceShown(frame.mosAtlasHighlight, visible and frame.mosAtlasStyle ~= nil)
+    frame.mosAtlasHighlight.textures[5]:Hide()
+end
+
+function UI.SetAtlasOutline(frame, visible, style, size, color, topInset, minimumLevel)
+    if not frame.mosAtlasOutline and not visible then return end
+    if not frame.mosAtlasOutline then
+        local border = UI.CreateContainer(nil, frame)
+        border:EnableMouse(false)
+        border.art = CreateNineSlice(border, style.path, style.width, style.height, style.inset, "OVERLAY", style.coords)
+        border.art.style = style
+        border.art.textures[5]:Hide()
+        frame.mosAtlasOutline = border
+    end
+    local border = frame.mosAtlasOutline
+    border:ClearAllPoints(); border:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -(topInset or 0)); border:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    border:SetFrameLevel(math.max(frame:GetFrameLevel() + 1, minimumLevel or 0))
+    SetAtlasArtwork(border.art, style)
+    SizeNineSlice(border.art, math.min(frame:GetWidth() / 2, math.max(1, frame:GetHeight() - (topInset or 0)) / 2, style.inset * (size or 1)))
+    for index = 1, 9 do border.art.textures[index]:SetVertexColor(color[1], color[2], color[3], 1) end
+    if visible then border:Show() else border:Hide() end
+end
+
+local function ApplyButtonArtwork(button, entry)
+    local art = button.mosButtonArtwork
+    if not art then return end
+    SetNineSliceShown(entry.classicSkin, false); SetNineSliceShown(entry.classicHoverBorder, false); SetNineSliceShown(entry.classicSelectedBorder, false)
+    if entry.classicRedFill then entry.classicRedFill:Hide() end
+    if entry.redHover then entry.redHover:Hide() end
+    if button.mosHighlight then button.mosHighlight:Hide() end
+    button:SetBackdropColor(0,0,0,0); button:SetBackdropBorderColor(0,0,0,0)
+    button:SetNormalTexture(art.normal); button:SetPushedTexture(art.pushed)
+    button:SetDisabledTexture(art.disabled); button:SetHighlightTexture(art.highlight, "ADD")
+    for _, getter in ipairs({"GetNormalTexture", "GetPushedTexture", "GetDisabledTexture", "GetHighlightTexture"}) do
+        local region = button[getter] and button[getter](button)
+        if region and region.SetTexCoord then region:SetTexCoord(unpack(art.coords)) end
+    end
 end
 
 function UI.ApplyDropdownChoiceSurface(button)
@@ -313,6 +423,7 @@ local function ApplyControl(entry)
     end
     if button.mosWarmListRow then UI.StyleWarmListRow(button, button.mosWarmListSelected) end
     if button.mosSelectableTableRow and UI.StyleSelectableTableRow then UI.StyleSelectableTableRow(button,button.mosTableRowEven,button.mosTableRowSelected) end
+    ApplyButtonArtwork(button, entry)
 end
 
 function UI.SetButtonTextColor(button, color)
@@ -353,6 +464,11 @@ local SURFACE_STYLES = {
 
 local function ApplySurface(entry)
     local frame = entry.frame
+    if ApplyAtlasSurface(frame) then
+        SetNineSliceShown(entry.classicSkin, false)
+        if entry.classicFill then entry.classicFill:Hide() end
+        return
+    end
     if frame.mosTransparentSurface then
         SetNineSliceShown(entry.classicSkin, false)
         if entry.classicFill then entry.classicFill:Hide() end
@@ -484,7 +600,7 @@ function UI.RegisterSkinnedControl(frame, backdrop, background, border, highligh
     if not frame.mosBorderSetterInstalled then
         local setBorder = frame.SetBackdropBorderColor
         frame.SetBackdropBorderColor = function(self, red, green, blue, alpha)
-            if self.mosBorderless or (Skins.current == "classic" and self.mosClassicVariant == "red" and not self.mosClassicCompactControl and not self.mosClassicKeepNormalSurface) then
+            if self.mosButtonArtwork or self.mosBorderless or (Skins.current == "classic" and self.mosClassicVariant == "red" and not self.mosClassicCompactControl and not self.mosClassicKeepNormalSurface) then
                 return setBorder(self, 0, 0, 0, 0)
             end
             return setBorder(self, red, green, blue, alpha)
@@ -618,6 +734,37 @@ function UI.SetButtonBorderless(button, borderless)
     button.mosBorderless = wanted; ApplyButtonState(button)
 end
 
+function UI.SetButtonArtwork(button, artwork)
+    if button.mosButtonArtwork == artwork then return end
+    button.mosButtonArtwork = artwork
+    if not artwork then button:SetNormalTexture(nil) end
+    ApplyButtonState(button)
+end
+
+function UI.SetAtlasSurface(frame, style)
+    if frame.mosAtlasStyle == style then return end
+    frame.mosAtlasStyle = style
+    if frame.mosSurfaceEntry then ApplySurface(frame.mosSurfaceEntry)
+    else ApplyAtlasSurface(frame) end
+end
+
+function UI.SetTextureBackground(frame, path, color, alpha)
+    if not path then
+        if frame.mosTextureBackground then frame.mosTextureBackground:Hide() end
+        frame.mosBackgroundPath = nil
+        return
+    end
+    if not frame.mosTextureBackground then
+        frame.mosTextureBackground = frame:CreateTexture(nil, "BACKGROUND")
+        frame.mosTextureBackground:SetAllPoints(frame)
+    end
+    local texture = frame.mosTextureBackground
+    if frame.mosBackgroundPath ~= path then texture:SetTexture(path); frame.mosBackgroundPath = path end
+    if color then texture:SetVertexColor(color[1], color[2], color[3], alpha or 1)
+    else texture:SetVertexColor(1,1,1,alpha or 1) end
+    texture:Show()
+end
+
 function UI.SetClassicButtonSelected(button, selected)
     if not button then return end
     local wanted = selected and true or false
@@ -689,6 +836,10 @@ end
 
 function UI.SetRowColor(row, color, alpha)
     row.mosRowColor = color; row.mosRowAlpha = alpha
+    if row.mosAtlasStyle then
+        if row.mosColorFill then row.mosColorFill:Hide() end
+        return
+    end
     row:SetBackdropColor(0, 0, 0, 0)
     if not row.mosColorFill then
         row.mosColorFill = row:CreateTexture(nil, "BORDER")
@@ -705,6 +856,7 @@ end
 
 function UI.SetClassicRowShade(row, even, hovered, selected)
     if not row then return end
+    if row.mosAtlasStyle then return end
     if row.mosRowColor then UI.SetRowColor(row, row.mosRowColor, row.mosRowAlpha); return end
     if not row.mosClassicRowShade then
         row.mosClassicRowShade = row:CreateTexture(nil, "BORDER")

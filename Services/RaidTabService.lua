@@ -17,6 +17,10 @@ end
 
 local function Allowed(value) return value ~= nil and value ~= false and value ~= 0 end
 
+function RaidTab.IsInRaid()
+    return type(GetNumRaidMembers) == "function" and (tonumber(GetNumRaidMembers()) or 0) > 0
+end
+
 function RaidTab.CanManage()
     return (type(IsRaidLeader) == "function" and Allowed(IsRaidLeader()))
         or (type(IsRaidOfficer) == "function" and Allowed(IsRaidOfficer())) or false

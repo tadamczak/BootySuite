@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.135 - 2026-10-05
+
+- Match the stock Raid solo/party view and wait for actual conversion before showing groups.
+- Use configurable client textures for rounded raid tiles, group outlines, view backgrounds and native action buttons; add header transparency and hover colors.
+- Fix group-border layering, add an independent MOS Raid logo switch and dock the narrower Raid Info window beside the native Raid tab.
+
 ## 0.5.0-dev.134 - 2026-10-04
 
 - Add compact Settings search that filters the section tree and keeps matching ancestors.

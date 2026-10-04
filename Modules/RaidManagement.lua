@@ -604,6 +604,7 @@ end
 local function OnRaidMemberHide()
     this.mosRaidHovered=nil
     if this.mosProjectOutline then this.mosProjectOutline:Hide() end
+    MOS.UI.Components.SetAtlasHighlight(this, false)
 end
 
 local function OnLootScroll()
@@ -1590,21 +1591,70 @@ function RaidManagement.PrintListLayoutDiagnostics(page, members, selectedName)
     DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS raid edges: page right=%.0f bottom=%.0f; row right=%.0f last bottom=%.0f; scroll right=%.0f bottom=%.0f", number(page:GetRight()), number(page:GetBottom()), first and number(first:GetRight()) or 0, last and number(last:GetBottom()) or 0, page.listScrollBar and number(page.listScrollBar:GetRight()) or 0, page.listScrollBar and number(page.listScrollBar:GetBottom()) or 0))
 end
 
+local groupMemberArtwork = {path="Interface\\RaidFrame\\UI-RaidFrame-GroupButton", width=164, height=14, inset=3, coords={0,0.640625,0,0.4375}}
+local groupHoverArtwork = {path="Interface\\RaidFrame\\UI-RaidFrame-GroupButton", width=164, height=14, inset=3, coords={0,0.640625,0.46875,0.90625}}
+local groupOutlineArtwork = {path="Interface\\RaidFrame\\UI-RaidFrame-GroupOutline", width=170, height=80, inset=4, coords={0,0.6640625,0,0.625}}
+
+function RaidManagement.ApplyGroupViewBackground(host, settings, nativeBackground)
+    local UI = MOS.UI.Components
+    local color = settings.raidGroupViewBackgroundColor or settings.raidGroupBackgroundColor
+    if settings.raidGroupViewBackgroundTexture == "game" then
+        -- The stock Friends artwork already owns the native stone background.
+        -- Keep it visible; painting a stretched dialog image would replace it.
+        if nativeBackground then UI.SetTextureBackground(host, nil)
+        else UI.SetTextureBackground(host, "Interface\\DialogFrame\\UI-DialogBox-Background", nil, 1) end
+    else UI.SetTextureBackground(host, "Interface\\Buttons\\WHITE8X8", color, 1) end
+end
+
 function RaidManagement.ApplyGroupTileAppearance(panel, header, height, settings)
     settings = settings or MuklaOfficerSuiteDB
     local text, background, border = settings.raidGroupHeaderTextColor, settings.raidGroupHeaderBackgroundColor, settings.raidGroupBorderColor
-    header:SetTextColor(text[1], text[2], text[3], 1)
+    local hoverText = settings.raidGroupHeaderHoverTextColor or text
+    header:SetTextColor(unpack(panel.headerHovered and hoverText or text))
     panel:SetBackdropBorderColor(0, 0, 0, 0)
-    if settings.raidGroupShowBorder or panel.mosProjectOutline then
-        MOS.UI.Components.SetProjectButtonOutline(panel, settings.raidGroupShowBorder, settings.raidGroupBorderSize, border)
+    local UI = MOS.UI.Components
+    if settings.raidGroupBorderTexture == "game" then
+        if panel.mosProjectOutline then panel.mosProjectOutline:Hide() end
+        UI.SetAtlasOutline(panel, settings.raidGroupShowBorder, groupOutlineArtwork, settings.raidGroupBorderSize, border, height, panel.outlineLevel)
+    else
+        if panel.mosAtlasOutline then panel.mosAtlasOutline:Hide() end
+        if settings.raidGroupShowBorder or panel.mosProjectOutline then
+            UI.SetProjectButtonOutline(panel, settings.raidGroupShowBorder, settings.raidGroupBorderSize, border, height, panel.outlineLevel)
+        end
     end
     panel.headerBackground:SetTexture(background[1], background[2], background[3], 1)
+    panel.headerBackground:SetAlpha(1 - (settings.raidGroupHeaderTransparency or 0) / 100)
     local inset = 0
     panel.headerBackground:ClearAllPoints()
     panel.headerBackground:SetPoint("TOPLEFT", panel, "TOPLEFT", inset, -inset)
     panel.headerBackground:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -inset, -inset)
     panel.headerBackground:SetHeight(math.max(1, height - inset))
     if settings.raidGroupShowHeader then panel.headerBackground:Show() else panel.headerBackground:Hide() end
+end
+
+local function SetGroupSlotHover(slot, settings, hovered)
+    local UI = MOS.UI.Components
+    if settings.raidGroupMemberTexture == "game" then
+        if slot.mosProjectOutline then slot.mosProjectOutline:Hide() end
+        UI.SetAtlasHighlight(slot, hovered and settings.raidGroupShowHoverBorder, groupHoverArtwork, settings.raidGroupHoverBorderSize, settings.raidGroupHoverBorderColor)
+    else
+        if slot.mosAtlasHighlight then UI.SetAtlasHighlight(slot, false, groupHoverArtwork, 1, settings.raidGroupHoverBorderColor) end
+        if settings.raidGroupShowHoverBorder or slot.mosProjectOutline then
+            UI.SetProjectButtonOutline(slot, hovered and settings.raidGroupShowHoverBorder, settings.raidGroupHoverBorderSize, settings.raidGroupHoverBorderColor)
+        end
+    end
+end
+
+local function OnGroupHeaderEnter()
+    local settings = GroupSettings(this.groupPage)
+    this.groupPanel.headerHovered = true
+    this.groupLabel:SetTextColor(unpack(settings.raidGroupHeaderHoverTextColor or settings.raidGroupHeaderTextColor))
+end
+
+local function OnGroupHeaderLeave()
+    this.groupPanel.headerHovered = nil
+    local settings = GroupSettings(this.groupPage)
+    this.groupLabel:SetTextColor(unpack(settings.raidGroupHeaderTextColor))
 end
 
 function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin, showBorder, fitWidth, visibleCount, autoVertical, autoHorizontal, fillHeight)
@@ -2194,16 +2244,14 @@ local function OnGroupSlotEnter()
     if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, true) end
     local settings = GroupSettings(this.groupPage)
     this.mosRaidHovered = true
-    if settings.raidGroupShowHoverBorder or this.mosProjectOutline then
-        MOS.UI.Components.SetProjectButtonOutline(this, settings.raidGroupShowHoverBorder, settings.raidGroupHoverBorderSize, settings.raidGroupHoverBorderColor)
-    end
+    SetGroupSlotHover(this, settings, true)
     local color = settings.raidGroupHoverColor; MOS.UI.Components.SetRowColor(this, color, 0.98)
     if MOS.dragRaidIndex then MOS.raidDropSlot = this end
 end
 
 local function OnGroupSlotLeave()
     this.mosRaidHovered = nil
-    if this.mosProjectOutline then this.mosProjectOutline:Hide() end
+    SetGroupSlotHover(this, GroupSettings(this.groupPage), false)
     if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, false) end
     local settings = GroupSettings(this.groupPage)
     MOS.UI.Components.SetAlternatingRowColor(this, settings.raidGroupBackgroundColor, this.slotIndex, settings.raidGroupOddLightness)
@@ -2268,6 +2316,7 @@ function RaidManagement.RefreshGroupView(page)
     renderer.ensureDatabase()
     if page.getGroupSettings then page.groupSettings = page.getGroupSettings() end
     local settings = GroupSettings(page)
+    RaidManagement.ApplyGroupViewBackground(page.groupCanvas, settings, page.getGroupSettings ~= nil)
     local roster = page.groupRoster or {}; page.groupRoster = roster
     local memberCount = math.floor(math.max(0, math.min(40, tonumber(renderer.getRaidMemberCount()) or 0)))
     local index
@@ -2331,22 +2380,30 @@ function RaidManagement.RefreshGroupView(page)
         MOS.UI.Components.FitButtonLabel(header, math.max(1, panelWidth - headerInset * 2)); header:SetJustifyH("CENTER")
         if header.SetWordWrap then header:SetWordWrap(false) end
         header:SetHeight(math.max(1, headerHeight)); header:SetJustifyV("MIDDLE")
-        if visible and (legacyCompact or settings.raidGroupShowHeader) then header:Show(); panel.headerBackground:Show() else header:Hide() end
+        panel.headerHit:ClearAllPoints(); panel.headerHit:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0); panel.headerHit:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0); panel.headerHit:SetHeight(math.max(1, headerHeight))
+        if visible and (legacyCompact or settings.raidGroupShowHeader) then header:Show(); panel.headerHit:Show(); panel.headerBackground:Show()
+        else header:Hide(); panel.headerHit:Hide(); panel.headerBackground:Hide() end
         for slotIndex = 1, 5 do
             local slot = page.groupSlots[groupIndex][slotIndex]
             SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
             local slotTop = math.floor(top + headerHeight + (slotIndex - 1) * slotHeight + 0.5)
             local slotBottom = slotIndex == 5 and bottom or math.floor(top + headerHeight + slotIndex * slotHeight + 0.5)
             slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, -slotTop); slot:SetWidth(panelWidth); slot:SetHeight(math.max(1, slotBottom - slotTop))
-            if slot.mosProjectOutline then
-                MOS.UI.Components.SetProjectButtonOutline(slot, slot.mosRaidHovered and settings.raidGroupShowHoverBorder, settings.raidGroupHoverBorderSize, settings.raidGroupHoverBorderColor)
-            end
+            MOS.UI.Components.SetAtlasSurface(slot, settings.raidGroupMemberTexture == "game" and groupMemberArtwork or nil)
+            SetGroupSlotHover(slot, settings, slot.mosRaidHovered)
+            if settings.raidGroupMemberTexture == "game" then slot.topEdge:Hide(); slot.bottomEdge:Hide()
+            else slot.topEdge:Show(); slot.bottomEdge:Show() end
             slot.mosGroupWidth = panelWidth
             if visible then slot:Show() else slot:Hide() end
             if page.getGroupSettings then
                 slot.empty.mosFitFontSize = tileTextSize; MOS.UI.Components.FitButtonLabel(slot.empty, math.max(1, panelWidth - groupInset * 2 - 4)); slot.empty:SetJustifyH("CENTER")
             end
-            MOS.UI.Components.SetAlternatingRowColor(slot, backgroundColor, slotIndex, settings.raidGroupOddLightness); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
+            MOS.UI.Components.SetAlternatingRowColor(slot, backgroundColor, slotIndex, settings.raidGroupOddLightness)
+            if settings.raidGroupMemberTexture == "game" then slot:SetBackdropBorderColor(0,0,0,0)
+            else
+                slot:SetBackdropBorderColor(0.42,0.42,0.42,1)
+                if slot.mosRaidHovered then MOS.UI.Components.SetRowColor(slot, settings.raidGroupHoverColor, 0.98) end
+            end
             MOS.UI.Components.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
             slot.empty:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55); slot.offline:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55)
             slot.raidIndex = nil; slot.hasMember = nil; slot.displayedMember.name = nil; slot.displayedMember.raidRank = nil
@@ -2491,6 +2548,9 @@ function RaidManagement.CreateGroupGrid(page)
         local header = MOS.UI.Components.CreateLabel(panel, nil, "OVERLAY", "GameFontNormalSmall")
         header:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, -4)
         header:SetText("Group " .. groupIndex); header:SetJustifyH("CENTER"); page.groupHeaders[groupIndex] = header
+        panel.headerHit = MOS.UI.Components.CreateControl(nil, panel)
+        panel.headerHit.groupPage, panel.headerHit.groupPanel, panel.headerHit.groupLabel = page, panel, header
+        panel.headerHit:SetScript("OnEnter", OnGroupHeaderEnter); panel.headerHit:SetScript("OnLeave", OnGroupHeaderLeave); panel.headerHit:SetScript("OnHide", OnGroupHeaderLeave)
         page.groupSlots[groupIndex] = {}
         local slotIndex
         for slotIndex = 1, 5 do
@@ -2511,6 +2571,7 @@ function RaidManagement.CreateGroupGrid(page)
             slot.targetGroup = groupIndex; slot.slotIndex = slotIndex; slot.displayedMember = {}; slot:RegisterForClicks("LeftButtonUp", "RightButtonUp"); slot:RegisterForDrag("LeftButton")
             RaidManagement.AttachGroupSlotHandlers(slot, page)
             page.groupSlots[groupIndex][slotIndex] = slot
+            panel.outlineLevel = math.max(panel.outlineLevel or 0, slot:GetFrameLevel() + 2)
         end
     end
 end
