@@ -30,7 +30,7 @@ function RosterManagement.CreateShell(page, contentPanel)
     page.detailsOwner = contentPanel:GetParent()
     local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10)
-    title:SetText("Roster"); page.sectionTitle = title
+    title:SetText("Guild"); page.sectionTitle = title
 
     local searchLabel = MOS.UI.Components.CreateLabel(page.tablePanel or page, nil, "OVERLAY", "GameFontNormalSmall")
     searchLabel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -192, -87)
@@ -67,7 +67,7 @@ function RosterManagement.CreateGuildControls(page)
     refreshButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -48)
     MOS.UI.Components.AttachTooltip(refreshButton, "Refresh guild data", "Refresh the saved guild roster. Hidden while Live tracking is active.")
     refreshButton:Hide()
-    local exportButton = MOS.UI.Components.CreateButton(page, nil, "Export Roster", 120, 22)
+    local exportButton = MOS.UI.Components.CreateButton(page, nil, "Export Guild", 120, 22)
     exportButton:SetPoint("CENTER", page, "CENTER", 96, 12)
 
     page.guildInfoEditor = MOS.UI.Components.CreateTextEditor("MuklaOfficerSuiteGuildInfoEditor", "Guild Information", 500, function(value)

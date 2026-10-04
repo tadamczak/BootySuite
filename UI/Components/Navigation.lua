@@ -14,7 +14,7 @@ end
 function Navigation.SetActive(buttons, activeName)
     local name, button
     for name, button in pairs(buttons) do
-        local selected = name == activeName
+        local selected = name == activeName and button.navigationEnabled ~= false
         button.navigationSelected = selected
         button.selectedFill:Hide(); button.hoverFill:Show()
         if button.navigationMode == "tabs" then
@@ -41,7 +41,7 @@ function Navigation.SetActive(buttons, activeName)
             button:SetBackdropColor(1, 1, 1, 1)
             button.label:SetTextColor(selected and 1 or 0.82, selected and 0.82 or 0.70, selected and 0.28 or 0.43)
             if button.icon then button.icon:SetVertexColor(unpack(selected and MOS.UI.Components.Theme.colors.activeGoldIcon or MOS.UI.Components.Theme.colors.goldIcon)) end
-        elseif name == activeName then
+        elseif selected then
             button:SetBackdropColor(0.32, 0.19, 0.02, 0.96)
             button:SetBackdropBorderColor(1, 0.72, 0.08, 1)
             button.label:SetTextColor(1, 0.82, 0.18)
@@ -51,6 +51,11 @@ function Navigation.SetActive(buttons, activeName)
             button:SetBackdropBorderColor(0.52, 0.31, 0.07, 1)
             button.label:SetTextColor(0.95, 0.72, 0.18)
             if button.icon and MOS.UI.Components.IsClassicSkin() then button.icon:SetVertexColor(unpack(MOS.UI.Components.Theme.colors.goldIcon)) end
+        end
+        if button.navigationEnabled == false then
+            button.label:SetTextColor(0.5, 0.5, 0.5)
+            if button.icon then button.icon:SetVertexColor(0.5, 0.5, 0.5) end
+            button.hoverFill:Hide()
         end
     end
 end
@@ -76,7 +81,10 @@ function Navigation.Create(options)
         button.label:SetPoint("LEFT", button, "LEFT", 44, 0); button.label:SetWidth(108); button.label:SetHeight(14); button.label:SetJustifyH("LEFT"); button.label:SetText(text)
         local font, size, flags = button.label:GetFont()
         if font then button.label:SetFont(font, math.min(10, size or 10), flags) end
-        button:SetScript("OnClick", function() options.showPage(name) end)
+        button:SetScript("OnClick", function()
+            if options.isAvailable and not options.isAvailable(name) then controller.RefreshAvailability(); return end
+            options.showPage(name)
+        end)
         button.tabBorderLeft = MOS.UI.Components.CreateTexture(button, nil, "OVERLAY"); button.tabBorderLeft:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderLeft:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderLeft:SetWidth(1); button.tabBorderLeft:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.tabBorderLeft:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
         button.tabBorderRight = MOS.UI.Components.CreateTexture(button, nil, "OVERLAY"); button.tabBorderRight:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderRight:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderRight:SetWidth(1); button.tabBorderRight:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0); button.tabBorderRight:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
         button.tabBorderTop = MOS.UI.Components.CreateTexture(button, nil, "OVERLAY"); button.tabBorderTop:SetTexture("Interface\\Buttons\\WHITE8X8"); button.tabBorderTop:SetVertexColor(1, 0.72, 0.08, 1); button.tabBorderTop:SetHeight(1); button.tabBorderTop:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0); button.tabBorderTop:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
@@ -88,7 +96,7 @@ function Navigation.Create(options)
         button.selectedFill:SetAllPoints(button); button.selectedFill:SetTexture("Interface\\Buttons\\WHITE8X8"); button.selectedFill:SetVertexColor(0.82, 0.70, 0.43, 0.14); button.selectedFill:Hide()
         button.hoverFill = MOS.UI.Components.CreateTexture(button, nil, "HIGHLIGHT")
         button.hoverFill:SetAllPoints(button); button.hoverFill:SetTexture("Interface\\Buttons\\WHITE8X8"); button.hoverFill:SetVertexColor(0.82, 0.70, 0.43, 0.14)
-        button:SetScript("OnEnter", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
+        button:SetScript("OnEnter", function() if this.navigationEnabled ~= false and this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
         button:SetScript("OnLeave", function() if this.navigationMode == "tabs" then this.SetTabBorderVisible(true) end end)
         MOS.UI.Components.RegisterSkinnedNavigation(button, name, iconPath)
         controller.buttons[name] = button
@@ -99,6 +107,25 @@ function Navigation.Create(options)
         local item = options.items[itemIndex]
         CreateButton(item.key, item.text, ys[itemIndex], item.icon)
         controller.buttons[item.key].navigationShortText = item.shortText
+    end
+
+    function controller.RefreshAvailability()
+        local changed = false
+        for name, button in pairs(controller.buttons) do
+            local enabled = not options.isAvailable or options.isAvailable(name) and true or false
+            if button.navigationEnabled ~= enabled then
+                button.navigationEnabled = enabled
+                if enabled then button:Enable(); button:SetAlpha(1)
+                else button:Disable(); button:SetAlpha(0.45) end
+                changed = true
+            end
+        end
+        if changed then Navigation.SetActive(controller.buttons, controller.activeName) end
+        local activeButton = controller.activeName and controller.buttons[controller.activeName]
+        if activeButton and activeButton.navigationEnabled == false and options.fallbackPage then
+            options.showPage(options.fallbackPage)
+        end
+        return changed
     end
 
     function controller.Toggle(forceState)
@@ -117,6 +144,7 @@ function Navigation.Create(options)
             return
         end
         options.ensure()
+        controller.RefreshAvailability()
         local bottomTabs = options.get("menuStyle") == "bottomTabs"
         local tabs = options.get("menuStyle") == "tabs" or bottomTabs
         local _, sectionTop, sectionBottom, tabTop = MOS.UI.Components.Dashboard.GetChromeLayout(options.get, MOS.UI.Components.IsClassicSkin(), options.dashboard:GetWidth())
@@ -194,8 +222,10 @@ function Navigation.Create(options)
     end
 
     function controller.SetActive(name)
+        if options.isAvailable and not options.isAvailable(name) then return false end
         controller.activeName = name
         Navigation.SetActive(controller.buttons, name)
+        return true
     end
 
     MOS.UI.Components.RegisterSkinCallback(function()
@@ -203,5 +233,6 @@ function Navigation.Create(options)
         Navigation.SetActive(controller.buttons, controller.activeName or options.order[1])
     end)
 
+    controller.RefreshAvailability()
     return controller
 end

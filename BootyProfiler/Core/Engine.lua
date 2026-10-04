@@ -345,7 +345,7 @@ function P.ReadAddonMemory()
             count=count+1
             local entry=entries[count]
             if not entry then entry={};table.insert(entries,entry) end
-            entry.name,entry.memory=title or name or ("Addon "..index),amount
+            entry.name,entry.owner,entry.memory=title or name or ("Addon "..index),name,amount
         end
     end
     for index=table.getn(entries),count+1,-1 do table.remove(entries,index) end

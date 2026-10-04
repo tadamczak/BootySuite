@@ -304,9 +304,9 @@ end
 function Settings.CreatePrimarySections(page)
     local C = MOS.UI.Components
     page.uiFeatureState = { roster = false, raid = false }
-    local rosterHeading = C.Settings.CreateSectionAccordion(page, "Roster", -150, 12)
+    local rosterHeading = C.Settings.CreateSectionAccordion(page, "Guild", -150, 12)
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
-    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster is open. This may have a small performance impact only while the Roster window is open, not while it is closed.", RosterTrackingChanged)
+    page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Guild live tracking", "Keeps the guild roster current while Guild is open. Work stops when this screen is closed.", RosterTrackingChanged)
     page.rosterLayoutChecks = {}
     local index
     for index = 1, table.getn(rosterLayoutOptions) do
@@ -325,7 +325,7 @@ function Settings.CreatePrimarySections(page)
     rosterHeading:SetScript("OnClick", function() ToggleFeature("roster") end)
     raidHeading:SetScript("OnClick", function() ToggleFeature("raid") end)
     page.uiEmptySections = {}
-    for _, title in ipairs({ "Guild Statistics", "Raid Statistics", "CSR", "Performance" }) do
+    for _, title in ipairs({ "Guild Statistics", "Raid Statistics", "CSR", "Profiler" }) do
         local section = {
             heading = C.Settings.CreateSectionAccordion(page, title, -234, 12),
             general = C.Settings.CreateAccordion(page, "General", -262),
@@ -925,7 +925,7 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local topOffset = page.settingsTopOffset or 0
     PlaceSection(sections.rosterHeading, page, -150 + topOffset, 12)
     if sections.rosterHeading.label then
-        sections.rosterHeading.label:SetText((uiVisible and "-  " or "+  ") .. "Roster")
+        sections.rosterHeading.label:SetText((uiVisible and "-  " or "+  ") .. "Guild")
         sections.rosterHeading:SetExpanded(uiVisible)
     end
     sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -178 + topOffset)

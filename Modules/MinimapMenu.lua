@@ -11,9 +11,9 @@ end
 -- No timers, retained results or SavedVariables belong to this controller.
 function MinimapMenu.Create(options)
     local controller = {}
-    local invite = Entry("Add Member", "roster", "OpenAddMember", nil, "roster")
     local roster = {
         Entry("Set GMOTD", "roster", "OpenGMOTD", nil, "rules"),
+        Entry("Guild Stats", "page", "statistics", nil, "guild_stats"),
         Entry("Guild info", "roster", "OpenGuildInformation", nil, "info"),
     }
     local leader, loot, snapshots = {}, {}, {}
@@ -23,8 +23,9 @@ function MinimapMenu.Create(options)
         Entry("ML Tools", nil, nil, loot, "loot_tools"),
         Entry("Test Raid", "raid", "test", nil, "groups"),
         Entry("Load Raid", nil, nil, snapshots, "archive"),
-        Entry("Save Session", "raid", "save", nil, "save"),
-        Entry("Quit", "raid", "quit", nil, "quit"),
+        Entry("Save Raid", "raid", "save", nil, "save"),
+        Entry("End Raid", "raid", "quit", nil, "quit"),
+        Entry("Raid Stats", "page", "raidStatistics", nil, "raid_stats"),
     }
     local profiler = {
         Entry("Start", "performance", "startStop", nil, "start"),
@@ -34,18 +35,17 @@ function MinimapMenu.Create(options)
     }
     profiler[4].keepOpen = true
     local performance = {
-        Entry("Enable", "performance", "addon", nil, "enable"),
         Entry("Live Monitor", "performance", "live", nil, "monitor"),
         Entry("Advanced Profiler", nil, nil, profiler, "performance"),
         Entry("Health Check", "health", nil, nil, "health"),
+        Entry("Enable", "performance", "addon", nil, "enable"),
     }
     local entries = {
-        Entry("Roster", nil, nil, roster, "roster"),
-        Entry("Raid", nil, nil, raid, "raids"),
-        Entry("Guild Stats", "page", "statistics", nil, "guild_stats"),
-        Entry("Raid Stats", "page", "raidStatistics", nil, "raid_stats"),
+        Entry("Guild", "page", "roster", roster, "roster"),
+        Entry("Raid", "page", "raid", raid, "raids"),
         Entry("CSR", "page", "csr", nil, "csr"),
-        Entry("Profiler", nil, nil, performance, "performance"),
+        Entry("Profiler", "page", "performance", performance, "performance"),
+        Entry("Settings", "settings", nil, nil, "settings"),
         Entry("About", "page", "about", nil, "about"),
     }
     local function FillTools(target, source, fallbackIcon)
@@ -59,10 +59,10 @@ function MinimapMenu.Create(options)
     end
     local function RefreshProfiler()
         local state = options.performance:GetQuickState()
-        entries[6].enabled = state.installed and true or false
-        performance[1].text, performance[1].enabled = state.toggleLabel, state.toggleEnabled and true or false
-        performance[1].icon = state.toggleLabel == "Reload UI" and "reload" or state.toggleLabel == "Disable" and "disable" or "enable"
-        performance[2].enabled, performance[3].enabled, performance[4].enabled = state.liveEnabled and true or false, state.ready and true or false, state.healthEnabled and true or false
+        entries[4].enabled = state.installed and true or false
+        performance[4].text, performance[4].enabled = state.toggleLabel, state.toggleEnabled and true or false
+        performance[4].icon = state.toggleLabel == "Reload UI" and "reload" or state.toggleLabel == "Disable" and "disable" or "enable"
+        performance[1].enabled, performance[2].enabled, performance[3].enabled = state.liveEnabled and true or false, state.ready and true or false, state.healthEnabled and true or false
         profiler[1].text, profiler[1].enabled = state.startStopLabel, state.startStopEnabled and true or false
         profiler[1].icon = state.startStopLabel == "Stop" and "stop" or "start"
         profiler[2].enabled, profiler[3].enabled = state.resetEnabled and true or false, state.exportEnabled and true or false
@@ -71,9 +71,8 @@ function MinimapMenu.Create(options)
     end
     function controller:RefreshEntries()
         local guild = options.roster.GetQuickState()
-        roster[1].enabled, roster[2].enabled = guild.gmotd, guild.guildInformation
-        -- Permission-only actions disappear; keep the pooled entry for later.
-        roster[3] = guild.addMember == true and invite or nil
+        entries[1].enabled = options.isInGuild and options.isInGuild() == true or false
+        roster[1].enabled, roster[3].enabled = guild.gmotd, guild.guildInformation
         local session = options.raid:GetState()
         raid[1].text, raid[1].enabled = session.primaryLabel == "Start new raid" and "New raid" or session.primaryLabel, session.active or session.canStart
         raid[1].icon = session.active and "raids" or "start"
@@ -97,10 +96,13 @@ function MinimapMenu.Create(options)
     function controller:Close() if self.menu then self.menu:Close() end end
     function controller:OpenMain(page)
         self:Close()
+        if page == "roster" and (not options.isInGuild or not options.isInGuild()) then return false end
         options.openMain(page)
+        return true
     end
     local function Choose(action, data)
         if action == "page" then controller:OpenMain(data)
+        elseif action == "settings" then controller:Close(); if options.openSettings then options.openSettings() end
         elseif action == "roster" then options.roster[data]()
         elseif action == "raid" then options.raid:Run(data)
         elseif action == "load" then options.raid:Run("load", data)

@@ -14,7 +14,7 @@ function Dialogs.RegisterPersistencePrompts(printMessage)
         mosProjectTitle = "Export guild roster",
         text = "The guild roster scan is complete. Reload the UI now to write it to disk?",
         button1 = "Reload now", button2 = "Later", OnAccept = ReloadInterface,
-        OnCancel = function() printMessage("Roster remains in memory. Use /reload before closing the game to save it.") end,
+        OnCancel = function() printMessage("Guild data remains in memory. Use /reload before closing the game to save it.") end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_CSR_RELOAD"] = {

@@ -22,8 +22,11 @@ function Commands.Attach(options)
             if options.printCapabilities then options.printCapabilities() end
         elseif command == "scan" then
             if not options.dashboard:IsVisible() then options.dashboard:Show() end
-            options.showPage("roster")
-            options.printMessage("Use Scan Guild Data or Export Roster in Roster.")
+            if options.showPage("roster") == false then
+                options.printMessage("Join a guild to open Guild.")
+            else
+                options.printMessage("Open Guild, then use Scan Guild Data or Export Guild.")
+            end
         elseif command == "show" or command == "open" or command == "" then
             options.toggleDashboard()
         elseif command == "hide" then

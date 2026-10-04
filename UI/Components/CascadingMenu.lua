@@ -1,6 +1,7 @@
 local UI = MuklaOfficerSuite.UI.Components
 local serial = 0
 local DEPTH_LIMIT, ROW_HEIGHT, GAP = 4, 20, 2
+local BRANCH_GAP = 1
 local ICON_PATH = "Interface\\AddOns\\MuklaOfficerSuite\\Assets\\Skins\\Classic\\Icons\\"
 
 local function SetRowText(row, text) row.label:SetText(text) end
@@ -32,7 +33,7 @@ function UI.CreateCascadingMenu(onChoose, options)
     local function Click()
         local row = this.menuRow or this
         if not row.entry or row.entry.enabled == false then return end
-        if row.entry.children then menu:OpenBranch(row); return end
+        if row.entry.children and not row.entry.action then menu:OpenBranch(row); return end
         local action, data, keepOpen = row.entry.action, row.entry.data, row.entry.keepOpen
         if not keepOpen then menu:Close() end
         if action then menu.onChoose(action, data) end
@@ -160,12 +161,12 @@ function UI.CreateCascadingMenu(onChoose, options)
         width = math.max(1, math.min(options.maximumWidth or screenWidth - 16, panel.menuWidthLimit or screenWidth - 16,
             screenWidth - 16, width + gutter))
         if depth > 1 then
-            local total = width + GAP * (depth - 1)
+            local total = width + BRANCH_GAP * (depth - 1)
             for index = 1, depth - 1 do total = total + menu.panels[index].menuWidth end
             if total > screenWidth - 16 then
                 -- Only screen-constrained trees reduce fonts. Keep every
                 -- visible ancestor distinct instead of covering its controls.
-                local limit = math.max(1, math.floor((screenWidth - 16 - GAP * (depth - 1)) / depth))
+                local limit = math.max(1, math.floor((screenWidth - 16 - BRANCH_GAP * (depth - 1)) / depth))
                 for index = 1, depth - 1 do
                     local ancestor = menu.panels[index]
                     LayoutPanel(ancestor, index, ancestor.menuLeft, ancestor.menuTop, math.min(ancestor.menuWidth, limit))
@@ -178,7 +179,7 @@ function UI.CreateCascadingMenu(onChoose, options)
                 minimum = math.min(minimum, ancestor.menuLeft)
                 maximum = math.max(maximum, ancestor.menuLeft + ancestor.menuWidth)
             end
-            local right, leftSide = maximum + GAP, minimum - width - GAP
+            local right, leftSide = maximum + BRANCH_GAP, minimum - width - BRANCH_GAP
             local direction = menu.panels[depth - 1].menuDirection or 1
             if direction < 0 and leftSide >= 8 then left = leftSide
             elseif right + width <= screenWidth - 8 then direction, left = 1, right
@@ -245,7 +246,7 @@ function UI.CreateCascadingMenu(onChoose, options)
         local parent = self.panels[row.menuDepth]
         local scroll = parent.canvas.layoutViewport:GetVerticalScroll()
         local opened = self:ShowPanel(row.menuDepth + 1, row.entry.children,
-            parent.menuLeft + parent.menuWidth + GAP, parent.menuTop - 4 - row.menuOffset + scroll)
+            parent.menuLeft + parent.menuWidth + BRANCH_GAP, parent.menuTop - 4 - row.menuOffset + scroll)
         if opened then self.panels[row.menuDepth + 1].parentRow = row end
         return opened
     end

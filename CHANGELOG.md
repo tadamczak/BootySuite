@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.129 - 2026-10-04
+
+- Rename Roster to Guild, Performance to Profiler and Save Session to Save Raid; disable Guild outside a guild.
+- Organize quick menus under Guild and Raid, add Settings and clickable parent shortcuts; require Shift for minimap dragging.
+- Restore the native Raid action row and use the minimap logo while the MOS Raid tab is selected.
+- Add sortable profiler tables and Hide game UI, clearer Health findings and a recording conflict lock; dim only populated content.
+
 ## 0.5.0-dev.128 - 2026-10-04
 
 - Add custom New Roll with item, roll types and selected raiders, extended `/mos roll` commands and rerolls for tied results.

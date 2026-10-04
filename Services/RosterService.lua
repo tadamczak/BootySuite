@@ -3,6 +3,18 @@ local MOS = MuklaOfficerSuite
 MOS.Services.Roster = MOS.Services.Roster or {}
 local RosterService = MOS.Services.Roster
 
+function RosterService.IsInGuild()
+    if type(IsInGuild) == "function" then
+        local value = IsInGuild()
+        return value ~= nil and value ~= false and value ~= 0
+    end
+    if type(GetGuildInfo) == "function" then
+        local name = GetGuildInfo("player")
+        return type(name) == "string" and name ~= ""
+    end
+    return false
+end
+
 local function SortByName(a, b)
     return string.lower(a.name or "") < string.lower(b.name or "")
 end
