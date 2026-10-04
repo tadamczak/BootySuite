@@ -98,7 +98,7 @@ function RosterManagement.CreateGuildControls(page)
         return true
     end
     function controls.OpenAddMember()
-        if not MOS.Services.Roster.CanManage("invite") or type(GuildInvite) ~= "function" then return false end
+        if not MOS.Services.Roster.CanInviteMember() then return false end
         if not page.guildInviteDialog then
             local C = MOS.UI.Components
             local dialog = C.Window.CreateProjectConfirmation("MuklaOfficerSuiteGuildInvite", "Add Member", "Invite")
@@ -113,15 +113,14 @@ function RosterManagement.CreateGuildControls(page)
         end
         local dialog = page.guildInviteDialog
         dialog:Open("Character name", function()
-            local name = string.gsub(string.gsub(dialog.memberName:GetText() or "", "^%s+", ""), "%s+$", "")
-            if MOS.Services.Roster.CanManage("invite") and type(GuildInvite) == "function" and name ~= "" then GuildInvite(name) end
+            MOS.Services.Roster.InviteMember(dialog.memberName:GetText())
         end)
         dialog.label:SetHeight(18); dialog:SetHeight(128)
         dialog.memberName:SetText(""); dialog.memberName:SetFocus()
         return true
     end
     function controls.GetQuickState()
-        return { gmotd = true, guildInformation = true, addMember = MOS.Services.Roster.CanManage("invite") and type(GuildInvite) == "function" }
+        return { gmotd = true, guildInformation = true, addMember = MOS.Services.Roster.CanInviteMember() }
     end
     page.guildInfoButton:SetScript("OnClick", controls.OpenGuildInformation)
     page.guildAddButton:SetScript("OnClick", controls.OpenAddMember)
@@ -817,7 +816,8 @@ function RosterManagement.SetDataVisible(controller, visible)
     controller.infoButton[method](controller.infoButton)
     controller.addButton[method](controller.addButton)
     controller.controlButton[method](controller.controlButton)
-    if not MOS.Services.Roster.CanManage("invite") then controller.addButton:Hide() end
+    if not MOS.Services.Roster.CanManage("invite") then controller.addButton:Hide()
+    else MOS.UI.Components.SetButtonEnabled(controller.addButton, true) end
     if not MOS.Services.Roster.CanManage("control") then controller.controlButton:Hide() end
     controls.footer[method](controls.footer)
     local i
@@ -1317,6 +1317,7 @@ function RosterManagement.LayoutChrome(page, controls, motdText)
     for actionIndex = 1, actionCount do
         local action = controls.actions[actionIndex]
         if action.available then
+            if action.permission then MOS.UI.Components.SetButtonEnabled(action.button, true) end
             action.button:Show()
             action.button:ClearAllPoints()
             action.button:SetScale(1)
@@ -1465,7 +1466,7 @@ function RosterManagement.BindPermissionEvents(page)
             watcher.managementFlags, watcher.managementRank = flags, rank
             watcher.managementRankCount, watcher.managementPlayer = rankCount, playerName
         end
-        if service.CanManage("invite") then page.guildAddButton:Show() else page.guildAddButton:Hide() end
+        if service.CanManage("invite") then C.SetButtonEnabled(page.guildAddButton, true); page.guildAddButton:Show() else page.guildAddButton:Hide() end
         if service.CanManage("control") then page.guildControlButton:Show() else page.guildControlButton:Hide() end
         if page.layoutControls then RosterManagement.LayoutChrome(page, page.layoutControls, page.footer.motd:GetText()) end
         if page.noteTarget and not service.CanManage(page.noteTarget.key) and page.noteEditor then page.noteEditor:Hide(); page.noteTarget = nil end

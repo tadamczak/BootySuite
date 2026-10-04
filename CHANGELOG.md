@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.127 - 2026-10-04
+
+- Compact the minimap quick menu with small gold captions, icons, transparent rows and supplied dim artwork; avoid repeated hover layouts.
+- Fix native guild invitations, restore left-click dashboard toggling, open Loot Master dialogs directly and block quick Load Raid during an active session.
+- Keep the quick menu open when switching profiler Memory.
+
 ## 0.5.0-dev.126 - 2026-10-04
 
 - Restore Performance's earlier component palette, add a milky results underlay below the toolbars, compact its text and remember Live Monitor's size.

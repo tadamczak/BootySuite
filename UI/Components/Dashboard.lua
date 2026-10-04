@@ -403,6 +403,14 @@ function Dashboard.OpenWindow(view)
     if view.minimized and view.ToggleMinimize then view.ToggleMinimize(true) end
 end
 
+function Dashboard.ToggleWindow(view)
+    if view.frame:IsVisible() and not view.minimized then
+        view.frame:Hide()
+    else
+        Dashboard.OpenWindow(view)
+    end
+end
+
 function Dashboard.BindWindow(view, options)
     local frame, grip = view.frame, view.resizeGrip
     -- Anchored child bounds can still describe the 250x30 shell during Show.
@@ -544,7 +552,7 @@ function Dashboard.CreateMinimapButton(options)
     button:SetScript("OnEnter", function()
         MOS.UI.Components.AnchorTooltipRightOfCursor(this)
         GameTooltip:AddLine("Mukla Officer Suite")
-        GameTooltip:AddLine("Left click: open the dashboard", 1, 1, 1)
+        GameTooltip:AddLine("Left click: open or close the dashboard", 1, 1, 1)
         GameTooltip:AddLine("Right click: quick menu", 1, 1, 1)
         GameTooltip:Show()
     end)

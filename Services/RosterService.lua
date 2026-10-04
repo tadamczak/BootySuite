@@ -296,6 +296,26 @@ function RosterService.CanManage(action, member)
     return false
 end
 
+local function GuildInviteAPI()
+    -- The original 1.12 guild popup uses GuildInviteByName.
+    if type(GuildInviteByName) == "function" then return GuildInviteByName end
+    if type(GuildInvite) == "function" then return GuildInvite end
+end
+
+function RosterService.CanInviteMember()
+    return RosterService.CanManage("invite") and GuildInviteAPI() ~= nil
+end
+
+function RosterService.InviteMember(name)
+    if type(name) ~= "string" then return false end
+    name = string.gsub(string.gsub(name, "^%s+", ""), "%s+$", "")
+    if name == "" or not RosterService.CanManage("invite") then return false end
+    local invite = GuildInviteAPI()
+    if not invite then return false end
+    invite(name)
+    return true
+end
+
 function RosterService.FindLiveMember(name)
     if type(GetNumGuildMembers) ~= "function" then return nil end
     local index
