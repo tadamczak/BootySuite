@@ -4,6 +4,10 @@ local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Mat
 MOS.Modules.RaidManagement = MOS.Modules.RaidManagement or {}
 local RaidManagement = MOS.Modules.RaidManagement
 
+local function GroupSettings(page)
+    return page and page.groupSettings or MuklaOfficerSuiteDB
+end
+
 function RaidManagement.ResetIssueAttention(page)
     local button = page.classicIssues
     if not button then return end
@@ -65,7 +69,7 @@ function RaidManagement.CreateChrome(page, callbacks)
     page.classicSummary = view.classicSummary
     view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "raids")
     view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); view.title:SetText("Raid")
-    view.classicRaidName = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "raids")
+    view.classicRaidName = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     view.classicRaidName:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); view.classicRaidName:SetWidth(120); view.classicRaidName:SetJustifyH("LEFT"); view.classicRaidName:Hide()
     view.classicMeta = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     view.classicMeta:SetPoint("LEFT", view.classicRaidName, "RIGHT", 10, 0); view.classicMeta:SetWidth(82); view.classicMeta:SetJustifyH("LEFT"); view.classicMeta:Hide()
@@ -1028,6 +1032,8 @@ function RaidManagement.CreateCompactGroupView(parent, dependencies)
     page:SetAllPoints(parent); page:Hide()
     page.mosGroupLayout = true; page.mosGroupLeft = 0; page.mosGroupTop = 0; page.mosGroupBottom = 0
     page.isTestRaid = function() return false end
+    page.getGroupSettings = dependencies.getGroupSettings
+    page.canManageGroups = dependencies.canManageGroups
     page.moveMemberToSlot = dependencies.moveMemberToSlot or function() return false end
     compactGroupSerial = compactGroupSerial + 1
     CreateGroupCanvas(page, "MuklaOfficerSuiteCompactRaidGroupScroll" .. compactGroupSerial)
@@ -1039,6 +1045,17 @@ function RaidManagement.CreateCompactGroupView(parent, dependencies)
     end, dependencies.isPlayerIgnored or function() return false end)
     MOS.UI.Components.Window.ApplyProjectSurface(page.memberMenu)
     RaidManagement.CreateGroupGrid(page)
+    if page.getGroupSettings then
+        local group, index
+        for group = 1, 8 do
+            for index = 1, 5 do
+                local slot = page.groupSlots[group][index]
+                if slot.name.SetWordWrap then
+                    slot.name:SetWordWrap(false); slot.class:SetWordWrap(false); slot.level:SetWordWrap(false); slot.offline:SetWordWrap(false); slot.empty:SetWordWrap(false)
+                end
+            end
+        end
+    end
     RaidManagement.SetGroupRenderer(page, {
         ensureDatabase = dependencies.ensureDatabase or function() end,
         getLootMasterInfo = dependencies.getLootMasterInfo or function() return nil end,
@@ -1554,8 +1571,8 @@ function RaidManagement.PrintListLayoutDiagnostics(page, members, selectedName)
     DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS raid edges: page right=%.0f bottom=%.0f; row right=%.0f last bottom=%.0f; scroll right=%.0f bottom=%.0f", number(page:GetRight()), number(page:GetBottom()), first and number(first:GetRight()) or 0, last and number(last:GetBottom()) or 0, page.listScrollBar and number(page.listScrollBar:GetRight()) or 0, page.listScrollBar and number(page.listScrollBar:GetBottom()) or 0))
 end
 
-function RaidManagement.ApplyGroupTileAppearance(panel, header, height)
-    local settings = MuklaOfficerSuiteDB
+function RaidManagement.ApplyGroupTileAppearance(panel, header, height, settings)
+    settings = settings or MuklaOfficerSuiteDB
     local text, background, border = settings.raidGroupHeaderTextColor, settings.raidGroupHeaderBackgroundColor, settings.raidGroupBorderColor
     header:SetTextColor(text[1], text[2], text[3], 1)
     panel:SetBackdropBorderColor(border[1], border[2], border[3], settings.raidGroupShowBorder and 1 or 0)
@@ -1568,13 +1585,18 @@ function RaidManagement.ApplyGroupTileAppearance(panel, header, height)
     if settings.raidGroupShowHeader then panel.headerBackground:Show() else panel.headerBackground:Hide() end
 end
 
-function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin, showBorder)
+function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin, showBorder, fitWidth)
     local columnCount = math.max(1, math.min(4, tonumber(columns) or 2))
-    local groupRows = math.ceil(8 / columnCount)
     local availableWidth = math.max(1, tonumber(width) or 1)
     local margin = math.max(0, tonumber(groupMargin) or 8)
+    if fitWidth then
+        columnCount = math.min(columnCount, math.max(1, math.floor(availableWidth)))
+        if columnCount > 1 then margin = math.min(margin, math.max(0, math.floor((availableWidth - columnCount) / (columnCount - 1)))) end
+    end
+    local groupRows = math.ceil(8 / columnCount)
     local preferredWidth = (columnCount * (tonumber(preferredTileWidth) or 280)) + ((columnCount - 1) * margin)
     local layoutWidth = autoTileWidth and availableWidth or math.min(availableWidth, preferredWidth)
+    local columnWidth = math.max(1, math.floor((layoutWidth - ((columnCount - 1) * margin)) / columnCount))
     local headerHeight = showHeader and math.max(14, tonumber(configuredHeaderHeight) or 22) or 0
     local groupHeight = headerHeight + ((tonumber(tileHeight) or 20) * 5) + (showBorder == false and 0 or 4)
     local contentHeight = (groupRows * groupHeight) + ((groupRows - 1) * margin)
@@ -1583,18 +1605,39 @@ function RaidManagement.CalculateGroupGeometry(width, height, columns, preferred
         rows = groupRows,
         layoutWidth = layoutWidth,
         xOffset = math.max(0, math.floor((availableWidth - layoutWidth) / 2)),
-        columnWidth = math.max(1, math.floor((layoutWidth - ((columnCount - 1) * margin)) / columnCount)),
+        columnWidth = columnWidth,
         headerHeight = headerHeight,
         groupHeight = groupHeight,
         contentHeight = contentHeight,
         canvasHeight = math.max(tonumber(height) or 1, contentHeight),
         maximumScroll = math.max(0, contentHeight - (tonumber(height) or 1)),
         margin = margin,
-        tileInset = showBorder == false and 0 or 4,
+        tileInset = showBorder == false and 0 or (fitWidth and math.min(4, math.floor((columnWidth - 1) / 2)) or 4),
     }
 end
 
-function RaidManagement.CalculateGroupSlotColumns(slotWidth, reserveRoleIcon, reserveLootIcon, showLevel, showClass, offline)
+function RaidManagement.CalculateGroupSlotColumns(slotWidth, reserveRoleIcon, reserveLootIcon, showLevel, showClass, offline, fitWidth)
+    if fitWidth then
+        local width = math.max(1, tonumber(slotWidth) or 1)
+        local padding = math.min(5, (width - 1) / 10)
+        local right = math.min(6, (width - 1) / 10)
+        local available = math.max(1, width - padding - right)
+        local nameMinimum = math.min(16, available)
+        local role = reserveRoleIcon and available >= nameMinimum + 18
+        if role then available = available - 18 end
+        local loot = reserveLootIcon and available >= nameMinimum + 18
+        if loot then available = available - 18 end
+        local offlineWidth = offline and available >= nameMinimum + 46 and 42 or 0
+        if offlineWidth > 0 then available = available - offlineWidth - 4 end
+        local levelWidth = showLevel and available >= nameMinimum + 29 and 24 or 0
+        if levelWidth > 0 then available = available - levelWidth - 5 end
+        local preferredClass = math.max(36, math.min(64, math.floor(width * 0.25)))
+        local classWidth = showClass and available >= nameMinimum + preferredClass + 5 and preferredClass or 0
+        if classWidth > 0 then available = available - classWidth - 5 end
+        return { nameInset = padding + (role and 18 or 0) + (loot and 18 or 0), nameWidth = available,
+            classWidth = classWidth, levelWidth = levelWidth, offlineWidth = offlineWidth,
+            showRoleIcon = role, showLootIcon = loot, rightInset = right, iconInset = padding }
+    end
     local width = math.max(80, tonumber(slotWidth) or 80)
     local nameInset = 5 + (reserveRoleIcon and 18 or 0) + (reserveLootIcon and 18 or 0)
     local offlineWidth = offline and 42 or 0
@@ -1979,19 +2022,31 @@ function RaidManagement.UpdateDragGhost(page)
     page.dragGhost:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cursorX - (page.dragOffsetX or 0), cursorY - (page.dragOffsetY or 0))
 end
 
+local function PositionGroupGhostText(source, target, slot, ghost)
+    local point, relative, relativePoint, x, y = source:GetPoint(1)
+    if not point then return end
+    if relative == slot then relative = ghost
+    elseif relative == slot.class then relative = ghost.class
+    elseif relative == slot.offline then relative = ghost.offline end
+    target:ClearAllPoints(); target:SetPoint(point, relative, relativePoint, x, y); target:SetWidth(source:GetWidth())
+end
+
 local function OnGroupSlotMouseDown()
     if arg1 ~= "LeftButton" or not this.raidIndex then return end
     if type(IsRaidLeader) == "function" and type(IsRaidOfficer) == "function" and not IsRaidLeader() and not IsRaidOfficer() then return end
     local page = this.groupPage
-    local pressed = MuklaOfficerSuiteDB.raidGroupPressedColor; MOS.UI.Components.SetRowColor(this, pressed, 0.98)
+    if page.canManageGroups and not page.canManageGroups() then return end
+    local settings = GroupSettings(page)
+    local pressed = settings.raidGroupPressedColor; MOS.UI.Components.SetRowColor(this, pressed, 0.98)
     MOS.dragRaidIndex = this.raidIndex; MOS.raidDropSlot = this; MOS.raidDragStarted = nil
     local cursorX, cursorY = GetCursorPosition(); local uiScale = UIParent:GetEffectiveScale() or 1
     cursorX = cursorX / uiScale; cursorY = cursorY / uiScale
     page.dragOffsetX = cursorX - (this:GetLeft() or cursorX); page.dragOffsetY = cursorY - (this:GetBottom() or cursorY)
     local ghost = page.dragGhost
     ghost:SetWidth(this:GetWidth()); ghost:SetHeight(this:GetHeight())
-    local background = MuklaOfficerSuiteDB.raidGroupBackgroundColor; MOS.UI.Components.SetRowColor(ghost, background, 0.98)
+    local background = settings.raidGroupBackgroundColor; MOS.UI.Components.SetRowColor(ghost, background, 0.98)
     ghost.name:SetText(this.name:GetText()); ghost.level:SetText(this.level:GetText()); ghost.class:SetText(this.class:GetText())
+    ghost.name:SetFont(this.name:GetFont()); ghost.level:SetFont(this.level:GetFont()); ghost.class:SetFont(this.class:GetFont()); ghost.offline:SetFont(this.offline:GetFont())
     local r, g, b = this.name:GetTextColor(); ghost.name:SetTextColor(r, g, b)
     r, g, b = this.level:GetTextColor(); ghost.level:SetTextColor(r, g, b)
     r, g, b = this.class:GetTextColor(); ghost.class:SetTextColor(r, g, b)
@@ -2001,16 +2056,23 @@ local function OnGroupSlotMouseDown()
     ghost.lootMasterIcon:ClearAllPoints(); ghost.lootMasterIcon:SetPoint("LEFT", ghost, "LEFT", hasRole and 23 or 5, 0)
     if hasLootMaster then ghost.lootMasterIcon:Show() else ghost.lootMasterIcon:Hide() end
     ghost.name:ClearAllPoints(); ghost.name:SetPoint("LEFT", ghost, "LEFT", 5 + (hasRole and 18 or 0) + (hasLootMaster and 18 or 0), 0); ghost.name:SetWidth(this.name:GetWidth())
-    ghost.level:SetWidth(this.level:GetWidth()); ghost.level:ClearAllPoints(); ghost.level:SetPoint("RIGHT", ghost, "RIGHT", MuklaOfficerSuiteDB.raidGroupShowClass and -76 or -6, 0)
+    ghost.level:SetWidth(this.level:GetWidth()); ghost.level:ClearAllPoints(); ghost.level:SetPoint("RIGHT", ghost, "RIGHT", -6, 0)
+    ghost.level:SetJustifyH("RIGHT")
+    ghost.class:ClearAllPoints(); ghost.class:SetPoint("RIGHT", ghost, "RIGHT", -6 - (this.offline:IsVisible() and this.offline:GetWidth() + 4 or 0), 0); ghost.class:SetWidth(this.class:GetWidth())
+    if this.class:IsVisible() then ghost.level:SetPoint("RIGHT", ghost.class, "LEFT", -5, 0) end
     if this.level:IsVisible() then ghost.level:Show() else ghost.level:Hide() end
     if this.class:IsVisible() then ghost.class:Show() else ghost.class:Hide() end
     if this.offline:IsVisible() then ghost.offline:Show() else ghost.offline:Hide() end
+    PositionGroupGhostText(this.name, ghost.name, this, ghost)
+    if this.class:IsVisible() then PositionGroupGhostText(this.class, ghost.class, this, ghost) end
+    if this.level:IsVisible() then PositionGroupGhostText(this.level, ghost.level, this, ghost) end
+    if this.offline:IsVisible() then PositionGroupGhostText(this.offline, ghost.offline, this, ghost) end
     ghost:SetScript("OnUpdate", page.updateDragGhost); ghost:Show(); page.updateDragGhost()
 end
 
 local function OnGroupSlotMouseUp()
     local page = this.groupPage
-    local hover = MuklaOfficerSuiteDB.raidGroupHoverColor; MOS.UI.Components.SetRowColor(this, hover, 0.98)
+    local hover = GroupSettings(page).raidGroupHoverColor; MOS.UI.Components.SetRowColor(this, hover, 0.98)
     if arg1 == "LeftButton" and MOS.dragRaidIndex and not MOS.raidDragStarted then
         MOS.dragRaidIndex = nil; MOS.raidDropSlot = nil; page.dragGhost:SetScript("OnUpdate", nil); page.dragGhost:Hide()
     end
@@ -2025,6 +2087,11 @@ end
 
 local function OnGroupSlotDragStart()
     if not MOS.dragRaidIndex then return end
+    if this.groupPage.canManageGroups and not this.groupPage.canManageGroups() then
+        MOS.dragRaidIndex = nil; MOS.raidDropSlot = nil
+        this.groupPage.dragGhost:SetScript("OnUpdate", nil); this.groupPage.dragGhost:Hide()
+        return
+    end
     MOS.raidDragStarted = true
     this.groupPage.groupMovePending = true
     if not this.groupPage.isTestRaid() and type(SetRaidRosterSelection) == "function" then SetRaidRosterSelection(this.raidIndex) end
@@ -2037,7 +2104,8 @@ local function OnGroupSlotDragStop()
     page.groupMovePending = true
     MOS.dragRaidIndex = nil; MOS.raidDropSlot = nil; MOS.raidDragStarted = nil
     page.dragGhost:SetScript("OnUpdate", nil); page.dragGhost:Hide()
-    local background = MuklaOfficerSuiteDB.raidGroupBackgroundColor; MOS.UI.Components.SetAlternatingRowColor(this, background, this.slotIndex, MuklaOfficerSuiteDB.raidGroupOddLightness)
+    local settings = GroupSettings(page)
+    MOS.UI.Components.SetAlternatingRowColor(this, settings.raidGroupBackgroundColor, this.slotIndex, settings.raidGroupOddLightness)
     if not target and type(MouseIsOver) == "function" then
         for group = 1, 8 do
             if MouseIsOver(page.groupPanels[group]) then
@@ -2068,13 +2136,14 @@ end
 
 local function OnGroupSlotEnter()
     if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, true) end
-    local color = MuklaOfficerSuiteDB.raidGroupHoverColor; MOS.UI.Components.SetRowColor(this, color, 0.98)
+    local color = GroupSettings(this.groupPage).raidGroupHoverColor; MOS.UI.Components.SetRowColor(this, color, 0.98)
     if MOS.dragRaidIndex then MOS.raidDropSlot = this end
 end
 
 local function OnGroupSlotLeave()
     if MOS.UI.Components.IsClassicSkin() then MOS.UI.Components.SetClassicRowShade(this, math.mod(this.slotIndex or 1, 2) == 0, false) end
-    local color = MuklaOfficerSuiteDB.raidGroupBackgroundColor; MOS.UI.Components.SetAlternatingRowColor(this, color, this.slotIndex, MuklaOfficerSuiteDB.raidGroupOddLightness)
+    local settings = GroupSettings(this.groupPage)
+    MOS.UI.Components.SetAlternatingRowColor(this, settings.raidGroupBackgroundColor, this.slotIndex, settings.raidGroupOddLightness)
     if MOS.raidDropSlot == this then MOS.raidDropSlot = nil end
 end
 
@@ -2090,11 +2159,11 @@ function RaidManagement.SetGroupRenderer(page, dependencies)
 end
 
 local function GroupGeometry(page, width, height)
-    local db = MuklaOfficerSuiteDB
-    if page.mosCompactGroupWidth then
+    local db = GroupSettings(page)
+    if page.mosCompactGroupWidth and not page.getGroupSettings then
         return RaidManagement.CalculateGroupGeometry(width, height, width < 260 and 1 or 2, width, 20, true, true, 22, 6, db.raidGroupShowBorder)
     end
-    return RaidManagement.CalculateGroupGeometry(width, height, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder)
+    return RaidManagement.CalculateGroupGeometry(width, height, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder, page.getGroupSettings ~= nil)
 end
 
 function RaidManagement.MeasureGroupHeight(width, page)
@@ -2131,14 +2200,17 @@ function RaidManagement.RefreshGroupView(page)
     if not page.groupFrame:IsVisible() then return end
     local renderer = page.groupRenderer
     renderer.ensureDatabase()
+    if page.getGroupSettings then page.groupSettings = page.getGroupSettings() end
+    local settings = GroupSettings(page)
     local width, height, maximum = RaidManagement.ResolveGroupViewport(page)
-    local backgroundColor = MuklaOfficerSuiteDB.raidGroupBackgroundColor
-    local textColor = MuklaOfficerSuiteDB.raidGroupTextColor
+    local backgroundColor = settings.raidGroupBackgroundColor
+    local textColor = settings.raidGroupTextColor
     local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
     local compact = page.mosCompactGroupWidth ~= nil
-    local slotHeight = compact and 20 or tonumber(MuklaOfficerSuiteDB.raidGroupTileHeight) or 20
-    local tileTextSize = compact and 10 or tonumber(MuklaOfficerSuiteDB.raidGroupTileTextSize) or 10
-    local headerTextSize = compact and 10 or tonumber(MuklaOfficerSuiteDB.raidGroupHeaderTextSize) or 10
+    local legacyCompact = compact and not page.getGroupSettings
+    local slotHeight = legacyCompact and 20 or tonumber(settings.raidGroupTileHeight) or 20
+    local tileTextSize = legacyCompact and 10 or tonumber(settings.raidGroupTileTextSize) or 10
+    local headerTextSize = legacyCompact and 10 or tonumber(settings.raidGroupHeaderTextSize) or 10
     local geometry = GroupGeometry(page, width, height)
     local columns, groupRows = geometry.columns, geometry.rows
     local layoutWidth, xOffset, columnWidth = geometry.layoutWidth, geometry.xOffset, geometry.columnWidth
@@ -2158,15 +2230,26 @@ function RaidManagement.RefreshGroupView(page)
         local panel = page.groupPanels[groupIndex]
         panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(columnWidth); panel:SetHeight(groupHeight)
         local header = page.groupHeaders[groupIndex]
-        RaidManagement.ApplyGroupTileAppearance(panel, header, headerHeight)
+        RaidManagement.ApplyGroupTileAppearance(panel, header, headerHeight, settings)
         SetFontSize(header, headerTextSize)
         header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -4, -4)
-        if compact or MuklaOfficerSuiteDB.raidGroupShowHeader then header:Show(); panel.headerBackground:Show() else header:Hide() end
+        if page.getGroupSettings then
+            local headerInset = math.min(4, math.floor((columnWidth - 1) / 2))
+            header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", headerInset, 0); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -headerInset, 0)
+            header.mosFitFontSize = headerTextSize
+            MOS.UI.Components.FitButtonLabel(header, math.max(1, columnWidth - headerInset * 2)); header:SetJustifyH("CENTER")
+            if header.SetWordWrap then header:SetWordWrap(false) end
+            header:SetHeight(math.max(1, headerHeight)); header:SetJustifyV("MIDDLE")
+        end
+        if legacyCompact or settings.raidGroupShowHeader then header:Show(); panel.headerBackground:Show() else header:Hide() end
         for slotIndex = 1, 5 do
             local slot = page.groupSlots[groupIndex][slotIndex]
             SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
             slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x + groupInset, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(columnWidth - groupInset * 2); slot:SetHeight(slotHeight)
-            MOS.UI.Components.SetAlternatingRowColor(slot, backgroundColor, slotIndex, MuklaOfficerSuiteDB.raidGroupOddLightness); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
+            if page.getGroupSettings then
+                slot.empty.mosFitFontSize = tileTextSize; MOS.UI.Components.FitButtonLabel(slot.empty, math.max(1, columnWidth - groupInset * 2 - 4)); slot.empty:SetJustifyH("CENTER")
+            end
+            MOS.UI.Components.SetAlternatingRowColor(slot, backgroundColor, slotIndex, settings.raidGroupOddLightness); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
             MOS.UI.Components.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
             slot.empty:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55); slot.offline:SetTextColor(textColor[1] * 0.55, textColor[2] * 0.55, textColor[3] * 0.55)
             slot.raidIndex = nil; slot.hasMember = nil; slot.displayedMember.name = nil; slot.displayedMember.raidRank = nil
@@ -2219,37 +2302,44 @@ function RaidManagement.RefreshGroupView(page)
             slot.hasMember = true; slot.displayedMember.name = name or "Unknown"; slot.displayedMember.raidRank = raidRank or 0
             slot.displayedMember.raidIndex = memberIndex; slot.displayedMember.subgroup = subgroup
             slot.name:SetText(name or "Unknown"); slot.level:SetText(level or ""); slot.class:SetText(class or "")
-            local showLootMasterIcon = MuklaOfficerSuiteDB.raidGroupShowLootMaster and lootMethod == "master" and tonumber(raidLootMasterIndex) == memberIndex
-            local showRoleIcon = MuklaOfficerSuiteDB.raidGroupShowRoleIcon and (tonumber(raidRank) or 0) > 0
-            if MuklaOfficerSuiteDB.raidGroupShowRoleIcon and (tonumber(raidRank) or 0) == 2 then
+            local showLootMasterIcon = settings.raidGroupShowLootMaster and lootMethod == "master" and tonumber(raidLootMasterIndex) == memberIndex
+            local showRoleIcon = settings.raidGroupShowRoleIcon and (tonumber(raidRank) or 0) > 0
+            local showLevel = not legacyCompact and online and settings.raidGroupShowLevel
+            local showClass = not legacyCompact and settings.raidGroupShowClass
+            local slotWidth = columnWidth - groupInset * 2
+            local showOffline = not online and (not page.getGroupSettings or not settings.raidGroupShowClass)
+            local columns = RaidManagement.CalculateGroupSlotColumns(slotWidth, showRoleIcon, showLootMasterIcon, showLevel, showClass, showOffline, page.getGroupSettings ~= nil)
+            if page.getGroupSettings then
+                showRoleIcon, showLootMasterIcon = columns.showRoleIcon, columns.showLootIcon
+                showLevel, showClass = columns.levelWidth > 0, columns.classWidth > 0
+            end
+            if showRoleIcon and (tonumber(raidRank) or 0) == 2 then
                 slot.crown:SetTexture("Interface\\GroupFrame\\UI-Group-LeaderIcon"); slot.crown:Show()
-            elseif MuklaOfficerSuiteDB.raidGroupShowRoleIcon and (tonumber(raidRank) or 0) == 1 then
+            elseif showRoleIcon and (tonumber(raidRank) or 0) == 1 then
                 slot.crown:SetTexture("Interface\\GroupFrame\\UI-Group-AssistantIcon"); slot.crown:Show()
             else
                 slot.crown:Hide()
             end
-            slot.crown:ClearAllPoints(); slot.crown:SetPoint("LEFT", slot, "LEFT", 5, 0)
-            slot.lootMasterIcon:ClearAllPoints(); slot.lootMasterIcon:SetPoint("LEFT", slot, "LEFT", showRoleIcon and 23 or 5, 0)
+            local iconInset = columns.iconInset or 5
+            slot.crown:ClearAllPoints(); slot.crown:SetPoint("LEFT", slot, "LEFT", iconInset, 0)
+            slot.lootMasterIcon:ClearAllPoints(); slot.lootMasterIcon:SetPoint("LEFT", slot, "LEFT", iconInset + (showRoleIcon and 18 or 0), 0)
             if showLootMasterIcon then slot.lootMasterIcon:Show() else slot.lootMasterIcon:Hide() end
-            local showLevel = not compact and online and MuklaOfficerSuiteDB.raidGroupShowLevel
-            local showClass = not compact and MuklaOfficerSuiteDB.raidGroupShowClass
-            local slotWidth = columnWidth - groupInset * 2
-            local columns = RaidManagement.CalculateGroupSlotColumns(slotWidth, showRoleIcon, showLootMasterIcon, showLevel, showClass, not online)
             local nameInset, nameWidth = columns.nameInset, columns.nameWidth
             local classWidth, levelWidth, offlineWidth = columns.classWidth, columns.levelWidth, columns.offlineWidth
             slot.name:ClearAllPoints(); slot.name:SetPoint("LEFT", slot, "LEFT", nameInset, 0); slot.name:SetWidth(nameWidth); slot.name:Show(); slot.empty:Hide()
-            slot.offline:ClearAllPoints(); slot.offline:SetPoint("RIGHT", slot, "RIGHT", -6, 0); slot.offline:SetWidth(offlineWidth); slot.offline:SetJustifyH("RIGHT")
+            local rightInset = columns.rightInset or 6
+            slot.offline:ClearAllPoints(); slot.offline:SetPoint("RIGHT", slot, "RIGHT", -rightInset, 0); slot.offline:SetWidth(offlineWidth); slot.offline:SetJustifyH("RIGHT")
             slot.class:ClearAllPoints(); slot.class:SetWidth(classWidth); slot.class:SetJustifyH("LEFT")
-            if showClass then slot.class:SetPoint("RIGHT", slot, "RIGHT", -6 - offlineWidth - (offlineWidth > 0 and 4 or 0), 0) end
+            if showClass then slot.class:SetPoint("RIGHT", slot, "RIGHT", -rightInset - offlineWidth - (offlineWidth > 0 and 4 or 0), 0) end
             slot.level:ClearAllPoints(); slot.level:SetWidth(levelWidth)
             if showLevel then
                 if showClass then slot.level:SetPoint("RIGHT", slot.class, "LEFT", -5, 0)
                 elseif offlineWidth > 0 then slot.level:SetPoint("RIGHT", slot.offline, "LEFT", -5, 0)
-                else slot.level:SetPoint("RIGHT", slot, "RIGHT", -6, 0) end
+                else slot.level:SetPoint("RIGHT", slot, "RIGHT", -rightInset, 0) end
             end
             if showLevel then slot.level:Show() else slot.level:Hide() end
             if showClass then slot.class:Show() else slot.class:Hide() end
-            if online then slot.offline:Hide() else slot.offline:Show() end
+            if online or offlineWidth == 0 then slot.offline:Hide() else slot.offline:Show() end
             local shade = online and 1 or 0.55
             local baseR, baseG, baseB = online and textColor[1] or 1, online and textColor[2] or 1, online and textColor[3] or 1
             slot.name:SetTextColor(baseR * shade, baseG * shade, baseB * shade); slot.level:SetTextColor(baseR * shade, baseG * shade, baseB * shade); slot.class:SetTextColor(baseR * shade, baseG * shade, baseB * shade)
@@ -2257,7 +2347,7 @@ function RaidManagement.RefreshGroupView(page)
             slot.crown:SetAlpha(online and 1 or 0.55); slot.lootMasterIcon:SetAlpha(online and 1 or 0.55)
             local classKey = string.upper(classFile or class or "")
             local color = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classKey]) or MOS.UI.Components.Theme.classColors[classKey]
-            if online and MuklaOfficerSuiteDB.raidGroupClassColors and color then slot.name:SetTextColor(color.r, color.g, color.b); slot.class:SetTextColor(color.r, color.g, color.b) end
+            if online and settings.raidGroupClassColors and color then slot.name:SetTextColor(color.r, color.g, color.b); slot.class:SetTextColor(color.r, color.g, color.b) end
         end
     end
 end

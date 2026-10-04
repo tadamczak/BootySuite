@@ -532,6 +532,7 @@ function Dashboard.CreateMinimapButton(options)
     local icon = button:CreateTexture(nil, "BACKGROUND")
     icon:SetWidth(20); icon:SetHeight(20); icon:SetPoint("CENTER", button, "CENTER", 0, 0)
     icon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\MinimapIcon")
+    icon:SetTexCoord(0, 1, 0, 1)
     button.icon = icon
     local border = button:CreateTexture(nil, "OVERLAY")
     border:SetWidth(52); border:SetHeight(52); border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)

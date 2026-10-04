@@ -5,9 +5,9 @@ local C = MOS.UI.Components
 function Settings.CreateProfiles(page, onLoaded)
     local api = MOS.Core.SettingsProfiles
     local view = { rows = {}, first = 1 }
-    view.heading = C.Settings.CreateSectionAccordion(page, "Profile", -10)
+    view.heading = C.Settings.CreateSectionAccordion(page, "Profile", -10, nil, nil, "archive")
     view.content = C.CreateContainer(nil, page)
-    view.general = C.Settings.CreateAccordion(page, "General", -38)
+    view.general = C.Settings.CreateAccordion(page, "General", -38, "save")
     view.content:SetPoint("TOPLEFT", page, "TOPLEFT", 12, -64)
     view.content:SetPoint("TOPRIGHT", page, "TOPRIGHT", -12, -64); view.content:SetHeight(82)
     local function Label(text, y, color)
@@ -161,7 +161,7 @@ function Settings.ApplyTopSections(page)
     page.profiles.general.label:SetText((state.profileGeneral and "-  " or "+  ") .. "General")
     if state.profile then page.profiles.general:Show() else page.profiles.general:Hide() end
     if state.profile and state.profileGeneral then page.profiles.content:Show() else page.profiles.content:Hide() end
-    page.uiHeading.label:SetText((state.ui and "-  " or "+  ") .. "UI")
+    page.uiHeading.label:SetText((state.ui and "-  " or "+  ") .. "Addon UI")
     page.uiHeading:ClearAllPoints(); page.uiHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 0, uiY); page.uiHeading:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, uiY)
     page.uiContent:ClearAllPoints()
     page.uiContent:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -profileHeight)
@@ -170,7 +170,7 @@ function Settings.ApplyTopSections(page)
         page.uiContent:Hide(); page.skinControl.panel:Hide(); page.menuStyleControl.panel:Hide(); page.playerDetailsControl.panel:Hide()
     end
     local extra = Settings.LayoutGeneral and Settings.LayoutGeneral(page) or 0
-    page.settingsTopOffset = -profileHeight - 28 - 56 - extra
+    page.settingsTopOffset = -profileHeight - 18 - 56 - extra
     if page.primarySections and page.raidAccordionControls then
         Settings.ApplyRosterAccordions(page, page.primarySections, page.raidAccordionControls)
     elseif Settings.LayoutFollowingSections then
@@ -179,7 +179,7 @@ function Settings.ApplyTopSections(page)
 end
 
 function Settings.BindTopSections(page, onLoaded)
-    page.topSectionState = { profile = false, profileGeneral = false, ui = false, keybindings = false, keybindingsGeneral = false, debug = false }
+    page.topSectionState = { profile = false, profileGeneral = false, ui = false, gameUI = false, keybindings = false, keybindingsGeneral = false, debug = false }
     Settings.CreateProfiles(page, onLoaded)
     page.profiles.general:SetScript("OnClick", function()
         page.topSectionState.profileGeneral = not page.topSectionState.profileGeneral; Settings.ApplyTopSections(page)
@@ -190,6 +190,11 @@ function Settings.BindTopSections(page, onLoaded)
     page.uiHeading:SetScript("OnClick", function()
         page.topSectionState.ui = not page.topSectionState.ui; Settings.ApplyTopSections(page)
     end)
+    if page.gameUI then
+        page.gameUI.heading:SetScript("OnClick", function()
+            page.topSectionState.gameUI = not page.topSectionState.gameUI; Settings.ApplyTopSections(page)
+        end)
+    end
     if page.keybindings then
         page.keybindings.heading:SetScript("OnClick", function()
             page.topSectionState.keybindings = not page.topSectionState.keybindings; Settings.ApplyTopSections(page)

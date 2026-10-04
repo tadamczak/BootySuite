@@ -2,6 +2,19 @@ local MOS = MuklaOfficerSuite
 MOS.Services.RaidTab = {}
 local RaidTab = MOS.Services.RaidTab
 
+-- Reuse one adapter per native view. Shared group controls read their usual
+-- setting names while the values come exclusively from the native key family.
+function RaidTab.GetGroupSettings(target)
+    target = target or {}
+    local suffixes = MOS.Database.NativeRaidGroupSuffixes
+    local index
+    for index = 1, table.getn(suffixes) do
+        local suffix = suffixes[index]
+        target["raidGroup" .. suffix] = MuklaOfficerSuiteDB["nativeRaidGroup" .. suffix]
+    end
+    return target
+end
+
 local function Allowed(value) return value ~= nil and value ~= false and value ~= 0 end
 
 function RaidTab.CanManage()

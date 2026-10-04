@@ -29,7 +29,7 @@ function NativeRaidTab.Create(options)
     local controller = {}
     local panel, groupHost, groups, inviteDialog
     local previous, wrapper, selected, enabled, binding
-    local members = {}
+    local members, groupSettings = {}, {}
     local rendering = false
     local portrait, portraitOwner, savedTexture, savedCoords, appliedCoords, portraitOwned
 
@@ -162,6 +162,9 @@ function NativeRaidTab.Create(options)
         UI.SetClassicButtonVariant(panel.invite, "red")
         UI.SetClassicButtonVariant(panel.ready, "red")
         UI.SetClassicButtonVariant(panel.info, "red")
+        UI.SetClassicButtonGold(panel.invite, true)
+        UI.SetClassicButtonGold(panel.ready, true)
+        UI.SetClassicButtonGold(panel.info, true)
         panel.toolbar = toolbar; panel.toolbarControls = { panel.invite, panel.ready, panel.info }
         for index = 1, table.getn(panel.toolbarControls) do
             local label = panel.toolbarControls[index].label
@@ -177,6 +180,8 @@ function NativeRaidTab.Create(options)
         groups = MOS.Modules.RaidManagement.CreateCompactGroupView(groupHost, {
             ensureDatabase = options.ensureDatabase or MOS.Database.Ensure,
             getLootMasterInfo = MOS.Services.Raid.GetLootMasterInfo,
+            getGroupSettings = function() return service.GetGroupSettings(groupSettings) end,
+            canManageGroups = service.CanManage,
             moveMemberToSlot = service.MoveMemberToSlot,
             runMemberAction = service.RunMemberAction,
             isPlayerIgnored = MOS.Services.Raid.IsPlayerIgnored,

@@ -76,6 +76,7 @@ function Settings.LayoutFollowingSections(page, y)
         else section.general:Hide(); section.layout:Hide() end
         if uiVisible then y = y - 28 end
     end
+    if Settings.LayoutGameUI then y = Settings.LayoutGameUI(page, y) end
     local keys, state = page.keybindings, page.topSectionState
     if keys and state then
         PlaceSection(keys.heading, page, y)
@@ -94,12 +95,8 @@ end
 function Settings.LayoutGeneral(page)
     if not page.generalGrid then return 0 end
     local state = page.uiSectionState
-    local opened = state.interface
-    page.interfaceHeading.label:SetText((opened and "-  " or "+  ") .. "Interface")
-    page.interfaceHeading:SetExpanded(opened)
-    local generalOpen, layoutOpen = opened and state.general, opened and state.layout
-    local childMethod = opened and "Show" or "Hide"
-    page.uiGeneralHeading[childMethod](page.uiGeneralHeading); page.uiLayoutHeading[childMethod](page.uiLayoutHeading)
+    local generalOpen, layoutOpen = state.general, state.layout
+    page.uiGeneralHeading:Show(); page.uiLayoutHeading:Show()
     page.uiGeneralHeading.label:SetText((state.general and "-  " or "+  ") .. "General")
     page.uiLayoutHeading.label:SetText((state.layout and "-  " or "+  ") .. "Layout")
     local index
@@ -108,27 +105,26 @@ function Settings.LayoutGeneral(page)
     end
     if generalOpen then page.skinControl:Show(); page.skinControl.fieldLabel:Show()
     else page.skinControl:Hide(); page.skinControl.fieldLabel:Hide(); page.skinControl.panel:Hide() end
-    local height = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.generalGrid, 32, -122, page:GetWidth() - 80, 28)
-    local headingY = generalOpen and (-122 - height - 8) or -94
-    page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 24, headingY)
+    page.skinControl.fieldLabel:ClearAllPoints(); page.skinControl.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 20, -66)
+    local height = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.generalGrid, 20, -94, page:GetWidth() - 56, 28)
+    local headingY = generalOpen and (-94 - height - 8) or -66
+    page.uiLayoutHeading:ClearAllPoints(); page.uiLayoutHeading:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 12, headingY)
     local menu = page.menuStyleControl
     local method = layoutOpen and "Show" or "Hide"
     if page.uiLayoutDisplayHeading.resetButton then page.uiLayoutDisplayHeading.resetButton[method](page.uiLayoutDisplayHeading.resetButton) end
     page.uiLayoutGeneralHeading[method](page.uiLayoutGeneralHeading); page.uiLayoutDisplayHeading[method](page.uiLayoutDisplayHeading)
-    page.uiLayoutGeneralHeading:ClearAllPoints(); page.uiLayoutGeneralHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",36,headingY-28)
-    menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 40, headingY - 54)
+    page.uiLayoutGeneralHeading:ClearAllPoints(); page.uiLayoutGeneralHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",24,headingY-28)
+    menu.fieldLabel:ClearAllPoints(); menu.fieldLabel:SetPoint("TOPLEFT", page.uiContent, "TOPLEFT", 28, headingY - 54)
     local check = page.iconTabsCheck
     local iconVisible = layoutOpen and (MuklaOfficerSuiteDB.menuStyle == "tabs" or MuklaOfficerSuiteDB.menuStyle == "bottomTabs")
     check:ClearAllPoints(); check:SetPoint("LEFT",menu,"RIGHT",12,0)
     if iconVisible then check:Show() else check:Hide() end
     if layoutOpen then menu:Show(); menu.fieldLabel:Show()
     else menu:Hide(); menu.fieldLabel:Hide(); menu.panel:Hide() end
-    page.interfaceCheck[method](page.interfaceCheck)
-    local generalLayoutHeight = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.layoutGeneralChecks, 40, headingY - 82, page:GetWidth() - 80, 28)
-    local displayY = headingY - 82 - generalLayoutHeight - 8
-    page.uiLayoutDisplayHeading:ClearAllPoints();page.uiLayoutDisplayHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",36,displayY)
+    local displayY = headingY - 90
+    page.uiLayoutDisplayHeading:ClearAllPoints();page.uiLayoutDisplayHeading:SetPoint("TOPLEFT",page.uiContent,"TOPLEFT",24,displayY)
     for index = 1, table.getn(page.chromeChecks) do page.chromeChecks[index][method](page.chromeChecks[index]) end
-    local layoutHeight = MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.chromeChecks, 32, displayY - 26, page:GetWidth() - 80, 28)
+    MOS.UI.Components.Settings.LayoutGrid(page.uiContent, page.chromeChecks, 20, displayY - 26, page:GetWidth() - 56, 28)
     local extent = -headingY + page.uiLayoutHeading:GetHeight() + 12
     if layoutOpen then
         local bottom = 0
@@ -139,35 +135,45 @@ function Settings.LayoutGeneral(page)
         end
         extent = bottom + 12
     end
-    if not opened then extent = 38 + page.interfaceHeading:GetHeight() + 12 end
     page.uiContent:SetHeight(extent)
     AlignReset(page.uiLayoutDisplayHeading)
     return extent - 224
 end
 
-function Settings.LayoutRaidGrid(page, offset)
-    local data, C = page.responsiveRaid, MOS.UI.Components.Settings
-    local group, list, shell = data.group, data.list, data.shell
-    local width = math.max(1, page:GetWidth() - 52)
+function Settings.LayoutGroupControls(page, group, heading, y, width)
+    local C = MOS.UI.Components.Settings
     local function At(control, x, y)
         control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
         AlignReset(control)
     end
-    local y = -318 + offset
-    At(shell.groupHeading, 36, y); y = y - 38
+    At(heading, 36, y); y = y - 38
     At(group.displayHeading, 40, y); y = y - 26
     group.displayChecks.mosMaxColumns = 3
     y = y - C.LayoutGrid(page, group.displayChecks, 40, y, width, 26) - 8
     At(group.sizeHeading, 40, y); y = y - 24
+    if group.columnsButton then
+        At(group.columnsButton.fieldLabel, 40, y); y = y - 28
+    end
     y = y - C.LayoutGrid(page, group.autoChecks, 40, y, width, 26) - 22
     y = y - C.LayoutGrid(page, group.sliders, 40, y, width, 56, true)
     At(group.colorHeading, 40, y); y = y - 24
     y = y - C.LayoutGrid(page, group.colorChecks, 40, y, width, 26)
     y = y - C.LayoutGrid(page, group.colors, 40, y, width, 28) - 16
     At(group.lightnessLabel,40,y); y=y-34
-    if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting("raidGroupOddLightness") or 5) end
+    if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting(group.lightnessField.settingKey) or 5) end
     At(group.tileColorHeading, 40, y); y = y - 26
     y = y - C.LayoutGrid(page, group.tileColors, 40, y, width, 28) - 24
+    return y
+end
+
+function Settings.LayoutRaidGrid(page, offset)
+    local data, C = page.responsiveRaid, MOS.UI.Components.Settings
+    local group, list, shell = data.group, data.list, data.shell
+    local width = math.max(1, page:GetWidth() - 52)
+    local y = Settings.LayoutGroupControls(page, group, shell.groupHeading, -318 + offset, width)
+    local function At(control, x, y)
+        control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y); AlignReset(control)
+    end
     At(shell.listHeading, 36, y); At(shell.listDivider, 36, y - 20); shell.listDivider:SetWidth(math.max(1, page:GetWidth() - 48)); y = y - 44
     At(list.displayHeading,40,y);y=y-26
     y = y - C.LayoutGrid(page, list.checks, 40, y, width, 26) - 24
@@ -179,6 +185,116 @@ function Settings.LayoutRaidGrid(page, offset)
     if not list.lightnessField.mosEditing then list.lightnessField:SetText(MOS.Database.GetSetting("raidListOddLightness") or 5) end
     shell.panel:ClearAllPoints(); shell.panel:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -306 + offset); shell.panel:SetPoint("BOTTOMRIGHT", page, "TOPLEFT", page:GetWidth() - 12, y + 8)
     return y - (-1126 + offset)
+end
+
+function Settings.CreateGameUI(page, options)
+    local C = MOS.UI.Components.Settings
+    local game = {
+        heading = C.CreateSectionAccordion(page, "Game UI", -38, nil, nil, "monitor"),
+        interface = C.CreateAccordion(page, "Interface", -66, "link"),
+        layout = C.CreateAccordion(page, "Layout", -94, "resize"),
+        raid = C.CreateSectionAccordion(page, "Raid", -122, 24, 3, "raids"),
+        state = { interface = false, layout = false, raid = false },
+        onLayoutChanged = options.nativeRaidLayoutChanged,
+    }
+    page.gameUI = game
+    page.interfaceCheck = Settings.CreateSavedCheckbox(page, nil, 24, -94, "Use MOS as default Raid tab", "useMOSRaidTab", "Default Raid tab", "Opens MOS Raid Management from the Raid tab in the social window.", options.useMOSRaidTabChanged)
+    local function Bind(button, key)
+        button:SetScript("OnClick", function() game.state[key] = not game.state[key]; Settings.ApplyTopSections(page) end)
+    end
+    Bind(game.interface, "interface"); Bind(game.layout, "layout"); Bind(game.raid, "raid")
+end
+
+function Settings.EnsureGameRaidControls(page)
+    local game = page.gameUI
+    if game.group then return end
+    local shell = Settings.CreateRaidViewShell(page, true)
+    local factory = Settings.CreateRaidControlFactory(page, {refreshGroup = game.onLayoutChanged}, {
+        keyPrefix = "nativeRaidGroup", namePrefix = "MuklaOfficerSuiteNativeRaidGroup",
+        defaults = {TileWidth = 160, TileHeight = 13, HeaderHeight = 14, Margin = 4},
+        minimums = {TileHeight = 13},
+    })
+    local group = Settings.CreateRaidGroupViewControls(page, shell, factory, game.onLayoutChanged)
+    local _, columns = Settings.CreateRaidColumnControl(page, 40, 0, game.onLayoutChanged, page, "nativeRaidGroupColumns")
+    columns.settingKey = "nativeRaidGroupColumns"
+    columns:ClearAllPoints(); columns:SetPoint("LEFT", columns.fieldLabel, "RIGHT", 10, 0)
+    group.columnsButton = columns
+    table.insert(group.layoutControls, columns); table.insert(group.layoutControls, columns.fieldLabel)
+    game.shell, game.group = shell, group
+    local function Reset(heading, groups, button)
+        local reset = Settings.CreateSectionReset(page, heading, groups, game.onLayoutChanged, button)
+        table.insert(group.layoutControls, reset)
+    end
+    Reset(shell.groupHeading, {group.checks, group.sliders, group.colors, group.tileColors, {group.lightnessField, columns}}, shell.groupReset)
+    Reset(group.displayHeading, {group.displayChecks})
+    Reset(group.sizeHeading, {group.autoChecks, group.sliders, {columns}})
+    Reset(group.colorHeading, {group.colorChecks, group.colors, {group.lightnessField}})
+    Reset(group.tileColorHeading, {group.tileColors})
+    Settings.RefreshGameRaidControls(page)
+end
+
+function Settings.RefreshGameRaidControls(page)
+    local group = page.gameUI and page.gameUI.group
+    if not group then return end
+    local index
+    for index = 1, table.getn(group.checks) do
+        local check = group.checks[index]; check:SetChecked(MOS.Database.GetSetting(check.settingKey) and 1 or nil)
+    end
+    for index = 1, table.getn(group.sliders) do
+        local slider = group.sliders[index]
+        MOS.UI.Components.Settings.SynchronizeSlider(slider, MOS.Database.GetSetting(slider.settingKey))
+    end
+    MOS.UI.Components.Settings.SetSliderEnabled(group.width, not MOS.Database.GetSetting(group.autoWidth.settingKey))
+    group.columnsButton:SetText(tostring(MOS.Database.GetSetting(group.columnsButton.settingKey) or 2))
+    for _, colors in ipairs({group.colors, group.tileColors}) do
+        for index = 1, table.getn(colors) do
+            local control = colors[index]; local color = MOS.Database.GetSetting(control.settingKey)
+            control.swatch:SetTexture(color[1], color[2], color[3], 1)
+        end
+    end
+    if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting(group.lightnessField.settingKey) or 5) end
+end
+
+function Settings.LayoutGameUI(page, y)
+    local game = page.gameUI
+    if not game then return y end
+    local visible, index = page.topSectionState.gameUI, nil
+    PlaceSection(game.heading, page, y)
+    game.heading.label:SetText((visible and "-  " or "+  ") .. "Game UI"); game.heading:SetExpanded(visible); game.heading:Show()
+    y = y - 28
+    local function Accordion(button, key, inset, shown)
+        PlaceSection(button, page, y, inset)
+        button.label:SetText((game.state[key] and "-  " or "+  ") .. button.baseText)
+        if button.SetExpanded then button:SetExpanded(game.state[key]) end
+        if shown then button:Show() else button:Hide() end
+    end
+    Accordion(game.interface, "interface", 12, visible)
+    if visible then y = y - 28 end
+    local interfaceVisible = visible and game.state.interface
+    if interfaceVisible then
+        page.interfaceCheck:ClearAllPoints(); page.interfaceCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 24, y)
+        page.interfaceCheck:Show(); y = y - 40
+    else page.interfaceCheck:Hide() end
+    Accordion(game.layout, "layout", 12, visible)
+    if visible then y = y - 28 end
+    local raidVisible = visible and game.state.layout
+    Accordion(game.raid, "raid", 24, raidVisible)
+    if raidVisible then y = y - 28 end
+    local bodyVisible = raidVisible and game.state.raid
+    if bodyVisible then Settings.EnsureGameRaidControls(page) end
+    if game.group then
+        local method = bodyVisible and "Show" or "Hide"
+        for index = 1, table.getn(game.group.layoutControls) do game.group.layoutControls[index][method](game.group.layoutControls[index]) end
+        if not bodyVisible then game.group.columnsButton.panel:Hide() end
+        if bodyVisible then
+            local startY = y
+            y = Settings.LayoutGroupControls(page, game.group, game.shell.groupHeading, y, math.max(1, page:GetWidth() - 52))
+            game.shell.groupDivider:Hide()
+            game.shell.panel:ClearAllPoints(); game.shell.panel:SetPoint("TOPLEFT", page, "TOPLEFT", 24, startY + 12)
+            game.shell.panel:SetPoint("BOTTOMRIGHT", page, "TOPLEFT", page:GetWidth() - 12, y + 8)
+        end
+    end
+    return y
 end
 
 function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
@@ -204,17 +320,16 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         scrollBar:SetPoint("BOTTOMRIGHT", anchorPage, "BOTTOMRIGHT", -4, 20)
     end
     viewport:Hide()
-    page.uiHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "UI", -10)
+    page.uiHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Addon UI", -10, nil, nil, "list")
     page.keybindings = {
-        heading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Keybindings", -38),
-        general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -66),
+        heading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Keybindings", -38, nil, nil, "rules"),
+        general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -66, "rules"),
     }
     local uiContent = MOS.UI.Components.CreateContainer(nil, page)
     uiContent:SetHeight(224); page.uiContent = uiContent
-    page.interfaceHeading = MOS.UI.Components.Settings.CreateSectionAccordion(uiContent, "Interface", -38, 12, 3)
-    local generalHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "General", -66)
-    page.uiGeneralHeading = generalHeading; page.uiSectionState = { interface = false, general = false, layout = false }
-    page.interfaceHeading:SetScript("OnClick", function() page.uiSectionState.interface = not page.uiSectionState.interface; Settings.ApplyTopSections(page) end)
+    local generalHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "General", -38, "info")
+    generalHeading:ClearAllPoints(); generalHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -38)
+    page.uiGeneralHeading = generalHeading; page.uiSectionState = { general = false, layout = false }
     generalHeading:SetScript("OnClick", function() page.uiSectionState.general = not page.uiSectionState.general; Settings.ApplyTopSections(page) end)
     local skinControl = Settings.CreateSkinControl(uiContent, 40, -94)
     local loginMessageCheck = Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteDisableLoginMessage", 224, -94, "Turn off addon login message", "suppressLoginMessage")
@@ -225,8 +340,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderLogo", 20, -150, "Hide header logo", "hideHeaderLogo", nil, nil, onNavigationLayout),
         Settings.CreateSavedCheckbox(uiContent, "MuklaOfficerSuiteHideHeaderName", 224, -150, "Hide header name", "hideHeaderName", nil, nil, onNavigationLayout),
     }
-    local layoutHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "Layout", -178)
-    layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 24, -178)
+    local layoutHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "Layout", -66, "resize")
+    layoutHeading:SetPoint("TOPLEFT", uiContent, "TOPLEFT", 12, -66)
     layoutHeading:SetScript("OnClick", function() page.uiSectionState.layout = not page.uiSectionState.layout; Settings.ApplyTopSections(page) end)
     local menuStyleControl = Settings.CreateMenuStyleControl(uiContent, 24, -206, function()
         page.RefreshGeneralSettings()
@@ -242,12 +357,12 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     })
     page.playerDetailsControl = detailsControl
     detailsControl:Hide(); detailsControl.fieldLabel:Hide()
-    page.interfaceCheck = Settings.CreateSavedCheckbox(uiContent, nil, 40, -260, "Use MOS as default Raid tab", "useMOSRaidTab", "Default Raid tab", "Opens MOS Raid Management from the Raid tab in the social window.", options.useMOSRaidTabChanged)
+    Settings.CreateGameUI(page, options)
     page.generalGrid = { minimapCheck, loginMessageCheck }
-    page.layoutGeneralChecks = { page.interfaceCheck }
-    page.layoutGrid = { page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3], page.chromeChecks[4], iconTabsCheck, page.interfaceCheck }
+    page.layoutGeneralChecks = {}
+    page.layoutGrid = { page.chromeChecks[1], page.chromeChecks[2], page.chromeChecks[3], page.chromeChecks[4], iconTabsCheck }
     page.uiLayoutHeading = layoutHeading
-    page.uiLayoutGeneralHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange", "settings"); page.uiLayoutGeneralHeading:SetText("General")
+    page.uiLayoutGeneralHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange", "info"); page.uiLayoutGeneralHeading:SetText("General")
     page.uiLayoutDisplayHeading = MOS.UI.Components.CreateHeading(uiContent, "", 3, "orange", "list"); page.uiLayoutDisplayHeading:SetText("Display")
     page.iconTabsCheck = iconTabsCheck
     page.skinControl = skinControl
@@ -264,6 +379,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
         page.interfaceCheck:SetChecked(MOS.Database.GetSetting("useMOSRaidTab") and 1 or nil)
+        Settings.RefreshGameRaidControls(page)
         if page.topSectionState then Settings.ApplyTopSections(page) end
     end
     page.ApplySavedSettings = function()
@@ -298,7 +414,7 @@ end
 function Settings.CreateRosterAppearance(page)
     local C = MOS.UI.Components
     page.rosterDisplayHeading = C.CreateHeading(page, "", 3, "orange", "list"); page.rosterDisplayHeading:SetText("Display")
-    page.rosterColorHeading = C.CreateHeading(page, "", 3, "orange", "settings"); page.rosterColorHeading:SetText("Member tile color:")
+    page.rosterColorHeading = C.CreateHeading(page, "", 3, "orange", "roster"); page.rosterColorHeading:SetText("Member tile color:")
     page.rosterColors = {
         controls.CreateColor(page, 52, 0, "Background color", "rosterBackgroundColor", RefreshRosterLayout),
         controls.CreateColor(page, 52, 0, "Main text color", "rosterTextColor", RefreshRosterLayout),
@@ -313,7 +429,7 @@ function Settings.CreatePrimarySections(page)
     page.uiFeatureState = { roster = false, raid = false }
     local rosterHeading = C.Settings.CreateSectionAccordion(page, "Guild", -150, 12, 3)
     if C.SetHeadingIcon then C.SetHeadingIcon(rosterHeading.label, "roster") end
-    local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
+    local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178, "roster")
     page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Guild live tracking", "Keeps the guild roster current while Guild is open. Work stops when this screen is closed.", RosterTrackingChanged)
     page.rosterLayoutChecks = {}
     local index
@@ -322,7 +438,7 @@ function Settings.CreatePrimarySections(page)
         page.rosterLayoutChecks[index] = Settings.CreateSavedCheckbox(page, nil, 52, -234, option[1], option[2], nil, nil, RefreshRosterLayout)
         page.rosterLayoutChecks[index].invertSetting = option[2] == "rosterHideSectionHeader"
     end
-    local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
+    local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206, "resize")
     page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors", nil, nil, RefreshRosterLayout)
     Settings.CreateRosterAppearance(page)
     local raidHeading = C.Settings.CreateSectionAccordion(page, "Raid", -206, 12, 3)
@@ -338,8 +454,8 @@ function Settings.CreatePrimarySections(page)
     for featureIndex, title in ipairs({ "Guild Statistics", "Raid Statistics", "CSR", "Profiler" }) do
         local section = {
             heading = C.Settings.CreateSectionAccordion(page, title, -234, 12, 3),
-            general = C.Settings.CreateAccordion(page, "General", -262),
-            layout = C.Settings.CreateAccordion(page, "Layout", -290),
+            general = C.Settings.CreateAccordion(page, "General", -262, featureIcons[featureIndex]),
+            layout = C.Settings.CreateAccordion(page, "Layout", -290, "resize"),
             expanded = false, generalOpen = false, layoutOpen = false,
         }
         if C.SetHeadingIcon then C.SetHeadingIcon(section.heading.label, featureIcons[featureIndex]) end
@@ -348,7 +464,7 @@ function Settings.CreatePrimarySections(page)
         section.layout:SetScript("OnClick", function() section.layoutOpen = not section.layoutOpen; Settings.ApplyTopSections(page) end)
         table.insert(page.uiEmptySections, section)
     end
-    local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645)
+    local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645, nil, nil, "analyze")
     debugHeading:SetScript("OnClick", function()
         page.topSectionState.debug = not page.topSectionState.debug
         Settings.ApplyRaidAccordions(page.raidAccordionControls)
@@ -356,19 +472,20 @@ function Settings.CreatePrimarySections(page)
     return { rosterHeading = rosterHeading, rosterGeneral = rosterGeneral, rosterLayout = rosterLayout, raidHeading = raidHeading, debugHeading = debugHeading }
 end
 
-function Settings.CreateRaidColumnControl(page, x, y, onChanged, labelOwner)
+function Settings.CreateRaidColumnControl(page, x, y, onChanged, labelOwner, settingKey)
+    settingKey = settingKey or "raidGroupColumns"
     return MOS.UI.Components.CreateChoiceField({
         parent = page, labelOwner = labelOwner, x = x + 12, y = y, label = "Columns",
         font = "GameFontHighlightSmall", color = { 1, 1, 1 }, labelOffset = -6, buttonOffset = 52,
         width = 52, height = 86, initialText = "2", firstY = -5, step = 20, labelValue = true,
         choices = { { text = "1", value = 1 }, { text = "2", value = 2 }, { text = "3", value = 3 }, { text = "4", value = 4 } },
-        getValue = function() MOS.Database.Ensure(); return MOS.Database.GetSetting("raidGroupColumns") end,
-        onSelect = function(value) MOS.Database.Ensure(); MOS.Database.SetSetting("raidGroupColumns", value) end,
+        getValue = function() MOS.Database.Ensure(); return MOS.Database.GetSetting(settingKey) end,
+        onSelect = function(value) MOS.Database.Ensure(); MOS.Database.SetSetting(settingKey, value) end,
         onChanged = onChanged,
     })
 end
 
-function Settings.CreateRaidViewShell(page)
+function Settings.CreateRaidViewShell(page, groupOnly)
     local panel = MOS.UI.Components.CreateContainer(nil, page)
     panel:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -306)
     panel:SetPoint("BOTTOMRIGHT", page, "TOPRIGHT", -6, -1110)
@@ -388,6 +505,7 @@ function Settings.CreateRaidViewShell(page)
     groupDivider:SetPoint("TOPRIGHT", page, "TOPRIGHT", -36, -336)
     groupDivider:SetHeight(1)
     groupDivider:SetTexture(0.75, 0.75, 0.75, 0.55)
+    if groupOnly then return { panel = panel, groupHeading = groupHeading, groupReset = groupReset, groupDivider = groupDivider } end
 
     local listDivider = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
     listDivider:SetPoint("TOPLEFT", page, "TOPLEFT", 48, -866)
@@ -405,7 +523,10 @@ function Settings.CreateRaidViewShell(page)
     return { panel = panel, groupHeading = groupHeading, groupReset = groupReset, groupDivider = groupDivider, listDivider = listDivider, listHeading = listHeading, listReset = listReset }
 end
 
-function Settings.CreateRaidControlFactory(page, callbacks)
+function Settings.CreateRaidControlFactory(page, callbacks, options)
+    options = options or {}
+    local function Key(key) return options.keyPrefix and string.gsub(key, "^raidGroup", options.keyPrefix) or key end
+    local function Name(name) return options.namePrefix and string.gsub(name, "^MuklaOfficerSuiteGroup", options.namePrefix) or name end
     local function Refresh(settingKey)
         if string.find(settingKey, "raidList", 1, true) then
             if callbacks.refreshList then callbacks.refreshList() end
@@ -414,19 +535,23 @@ function Settings.CreateRaidControlFactory(page, callbacks)
         end
     end
     return {
+        Key = Key, Name = Name,
         Checkbox = function(x, y, text, key)
-            return controls.CreateCheckbox(page, x + 12, y, text, key, Refresh)
+            return controls.CreateCheckbox(page, x + 12, y, text, Key(key), Refresh)
         end,
         Slider = function(name, x, y, label, key, minimum, maximum)
-            return controls.CreateSlider(page, name, x + 12, y, label, key, minimum, maximum, Refresh)
+            local suffix = string.gsub(key, "^raidGroup", "")
+            if options.defaults and options.defaults[suffix] then label = string.gsub(label, "default: %d+", "default: " .. options.defaults[suffix]) end
+            if options.minimums and options.minimums[suffix] then minimum = options.minimums[suffix] end
+            return controls.CreateSlider(page, Name(name), x + 12, y, label, Key(key), minimum, maximum, Refresh)
         end,
         Percentage = function(name, key, parent)
-            local label, field = controls.CreatePercentageField(parent or page, name, "Odd record lightness (%)", 52, 0, key, 5)
+            local label, field = controls.CreatePercentageField(parent or page, Name(name), "Odd record lightness (%)", 52, 0, Key(key), 5)
             field.onChanged = Refresh
             return label, field
         end,
         Color = function(x, y, label, key)
-            return controls.CreateColor(page, x + 12, y, label, key, Refresh)
+            return controls.CreateColor(page, x + 12, y, label, Key(key), Refresh)
         end,
     }
 end
@@ -439,22 +564,23 @@ local function AlignSliderLabel(name, slider)
 end
 
 function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsChanged)
-    local function Heading(text, y)
-        local heading = MOS.UI.Components.CreateHeading(shell.panel, "", 3, "orange", "settings")
+    local function Name(name) return factory.Name and factory.Name(name) or name end
+    local function Heading(text, y, iconKey)
+        local heading = MOS.UI.Components.CreateHeading(shell.panel, "", 3, "orange", iconKey)
         heading:SetPoint("TOPLEFT", page, "TOPLEFT", 52, y)
         heading:SetText(text)
         heading:SetTextColor(1, 0.82, 0)
         heading:SetAlpha(1)
         return heading
     end
-    local displayHeading = Heading("Display", -356)
+    local displayHeading = Heading("Display", -356, "list")
     local showClass = factory.Checkbox(40, -410, "Show class", "raidGroupShowClass")
     local showLevel = factory.Checkbox(300, -410, "Show lvl", "raidGroupShowLevel")
     local showHeader = factory.Checkbox(40, -434, "Show group header", "raidGroupShowHeader")
     local showBorder = factory.Checkbox(40, -460, "Show group border", "raidGroupShowBorder")
     local showLootMaster = factory.Checkbox(300, -434, "Show LM icon", "raidGroupShowLootMaster")
     local showRole = factory.Checkbox(40, -458, "Show role icon", "raidGroupShowRoleIcon")
-    local sizeHeading = Heading("Size", -492)
+    local sizeHeading = Heading("Size", -492, "resize")
     local autoWidth = factory.Checkbox(40, -514, "Adjust tile width to window", "raidGroupAutoTileWidth")
     local width = factory.Slider("MuklaOfficerSuiteGroupTileWidth", 40, -566, "Member tile width (default: 280)", "raidGroupTileWidth", 160, 340)
     local height = factory.Slider("MuklaOfficerSuiteGroupTileHeight", 300, -566, "Member tile height (default: 20)", "raidGroupTileHeight", 14, 28)
@@ -462,23 +588,23 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local margin = factory.Slider("MuklaOfficerSuiteGroupMargin", 300, -622, "Margin between groups (default: 8)", "raidGroupMargin", 0, 32)
     local tileTextSize = factory.Slider("MuklaOfficerSuiteGroupTileTextSize", 40, -678, "Tile text size (default: 10)", "raidGroupTileTextSize", 8, 16)
     local headerTextSize = factory.Slider("MuklaOfficerSuiteGroupHeaderTextSize", 300, -678, "Tile header text size (default: 10)", "raidGroupHeaderTextSize", 8, 16)
-    AlignSliderLabel("MuklaOfficerSuiteGroupTileWidth", width)
-    AlignSliderLabel("MuklaOfficerSuiteGroupTileHeight", height)
-    AlignSliderLabel("MuklaOfficerSuiteGroupHeaderHeight", headerHeight)
-    AlignSliderLabel("MuklaOfficerSuiteGroupMargin", margin)
-    AlignSliderLabel("MuklaOfficerSuiteGroupTileTextSize", tileTextSize)
-    AlignSliderLabel("MuklaOfficerSuiteGroupHeaderTextSize", headerTextSize)
+    AlignSliderLabel(Name("MuklaOfficerSuiteGroupTileWidth"), width)
+    AlignSliderLabel(Name("MuklaOfficerSuiteGroupTileHeight"), height)
+    AlignSliderLabel(Name("MuklaOfficerSuiteGroupHeaderHeight"), headerHeight)
+    AlignSliderLabel(Name("MuklaOfficerSuiteGroupMargin"), margin)
+    AlignSliderLabel(Name("MuklaOfficerSuiteGroupTileTextSize"), tileTextSize)
+    AlignSliderLabel(Name("MuklaOfficerSuiteGroupHeaderTextSize"), headerTextSize)
     local originalAutoWidthSave = autoWidth.SaveSetting
     autoWidth.SaveSetting = function(owner)
         originalAutoWidthSave(owner)
         MOS.UI.Components.Settings.SetSliderEnabled(width, not owner:GetChecked())
     end
-    local colorHeading = Heading("Member tile color", -724)
+    local colorHeading = Heading("Member tile color", -724, "roster")
     local classColors = factory.Checkbox(40, -746, "Use class colors", "raidGroupClassColors")
     local background = factory.Color(40, -774, "Background color", "raidGroupBackgroundColor")
     local text = factory.Color(230, -774, "Main text color", "raidGroupTextColor")
     local hover = factory.Color(40, -802, "Hover color", "raidGroupHoverColor")
-    local tileColorHeading = Heading("Group tile color", -860)
+    local tileColorHeading = Heading("Group tile color", -860, "groups")
     local headerText = factory.Color(40, -886, "Header text color", "raidGroupHeaderTextColor")
     local headerBackground = factory.Color(230, -886, "Header background color", "raidGroupHeaderBackgroundColor")
     local border = factory.Color(40, -914, "Border color", "raidGroupBorderColor")
@@ -497,10 +623,10 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
 end
 
 function Settings.CreateRaidListViewControls(page, shell, factory)
-    local function Heading(text)
-        local heading = MOS.UI.Components.CreateHeading(shell.panel, "", 3, "orange", "settings"); heading:SetText(text); return heading
+    local function Heading(text, iconKey)
+        local heading = MOS.UI.Components.CreateHeading(shell.panel, "", 3, "orange", iconKey); heading:SetText(text); return heading
     end
-    local displayHeading, sizeHeading, colorHeading = Heading("Display"), Heading("Size"), Heading("Member tile color")
+    local displayHeading, sizeHeading, colorHeading = Heading("Display", "list"), Heading("Size", "resize"), Heading("Member tile color", "roster")
     local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteListLightness", "raidListOddLightness", shell.panel)
     local showName = factory.Checkbox(40, -890, "Show name", "raidListShowName")
     local showLevel = factory.Checkbox(300, -890, "Show lvl", "raidListShowLevel")
@@ -536,12 +662,12 @@ function Settings.MergeControls(target, source)
     return target
 end
 
-function Settings.CreateSectionReset(page, heading, groups, refresh)
+function Settings.CreateSectionReset(page, heading, groups, refresh, existingButton)
     local keys = {}
     for _, group in ipairs(groups) do
         for _, control in ipairs(group) do if control.settingKey then keys[control.settingKey] = true end end
     end
-    local button = MOS.UI.Components.CreateButton(heading:GetParent(), nil, "Reset to default", 100, 18)
+    local button = existingButton or MOS.UI.Components.CreateButton(heading:GetParent(), nil, "Reset to default", 100, 18)
     MOS.UI.Components.SizeClassicButton(button, 100, 18, 0.8)
     heading.resetButton = button; AlignReset(heading)
     button.ResetConfirmed = function()
@@ -599,18 +725,18 @@ end
 function Settings.CreateRaidSettings(page, callbacks)
     local primarySections = Settings.CreatePrimarySections(page)
     page.primarySections = primarySections
-    local general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -230)
+    local general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -230, "raids")
     local liveTracking = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRaidLiveTracking", 52, -252, "Live tracking", "raidLiveTrackingEnabled", "Raid live tracking", "Keeps raid membership and loot current while Raid is open. This may have a small performance impact only while the Raid window is open, not while it is closed.", callbacks.trackingChanged)
     page.raidLiveTrackingCheck = liveTracking
-    local layout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -280)
+    local layout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -280, "resize")
     local shell = Settings.CreateRaidViewShell(page)
     local factory = Settings.CreateRaidControlFactory(page, callbacks)
     local groupControls = Settings.CreateRaidGroupViewControls(page, shell, factory, callbacks.refreshGroup)
     page.raidHideHeaderCheck = Settings.CreateSavedCheckbox(page, nil, 52, -318, "Hide section header", "raidHideSectionHeader", nil, nil, callbacks.refreshList)
     table.insert(groupControls.checks, page.raidHideHeaderCheck)
     local listControls = Settings.CreateRaidListViewControls(page, shell, factory)
-    local leader = MOS.UI.Components.Settings.CreateAccordion(page, "Raid Leader Mode", -1126)
-    local loot = MOS.UI.Components.Settings.CreateAccordion(page, "Loot Master Mode", -1154)
+    local leader = MOS.UI.Components.Settings.CreateAccordion(page, "Raid Leader Mode", -1126, "leader")
+    local loot = MOS.UI.Components.Settings.CreateAccordion(page, "Loot Master Mode", -1154, "lootmaster")
     page.responsiveRaid = { shell = shell, group = groupControls, list = listControls }
     local layoutControls = Settings.MergeControls(groupControls.layoutControls, listControls.layoutControls)
     local viewControls = {
