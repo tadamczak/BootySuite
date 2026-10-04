@@ -26,7 +26,13 @@ end
 
 function UI.CreateChoiceField(options)
     local parent = options.parent
-    local label = UI.CreateComponentLabel(options.labelOwner or parent, "", "white")
+    local labelOwner = options.labelOwner or parent
+    if options.foregroundLabel then
+        local overlay = UI.CreateContainer(nil, labelOwner)
+        overlay:SetAllPoints(labelOwner); overlay:SetFrameLevel(parent:GetFrameLevel() + 3); overlay:EnableMouse(false)
+        labelOwner = overlay
+    end
+    local label = UI.CreateComponentLabel(labelOwner, "", "white")
     if options.font then label:SetFontObject(options.font); UI.ApplyTextSizeDelta(label, options.labelOwner or parent) end
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", options.x, options.y + (options.labelOffset or 0))
     label:SetText(options.label)

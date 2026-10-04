@@ -1063,7 +1063,7 @@ function UI.LayoutFlow(parent, controls, x, top, width, gap)
         if used > 0 and used + desired > width then y=y+rowHeight+gap; used=0; rowHeight=0 end
         control:ClearAllPoints(); control:SetPoint("TOPLEFT",parent,"TOPLEFT",x+used,-y)
         control:SetWidth(math.max(1,desired)); rowHeight=math.max(rowHeight,control:GetHeight())
-        if control.mosFlowFitLabel then UI.FitButtonLabel(control,math.max(1,desired-16));control.label:SetJustifyV("MIDDLE") end
+        if control.mosFlowFitLabel then UI.FitButtonLabel(control,math.max(1,desired-(control.mosFlowLabelPadding or 16)));control.label:SetJustifyV("MIDDLE") end
         used=used+desired+gap
     end
     return y+rowHeight

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.134 - 2026-10-04
+
+- Add compact Settings search that filters the section tree and keeps matching ancestors.
+- Fix Settings icons, ornament colors, the white Columns label and zero-value slider thumbs; keep icons on main sections only.
+- Fit native Raid headers and groups precisely; add borderless header buttons and optional group/hover borders with size and color controls.
+- Remove the extra initial red-button edge, brighten Profiler summary cards, pad accordion signs and reduce New Roll top spacing.
+
 ## 0.5.0-dev.133 - 2026-10-04
 
 - Add editable, individually switchable Loot Master messages and open New Roll with `/mos roll`.

@@ -30,7 +30,7 @@ function Settings.CreateAccordion(parent, text, y, iconKey)
     button.label:SetPoint("LEFT", button, "LEFT", 12, 0)
     button.label.mosAccordionPrefixInset = 12
     button.baseText = text
-    if MOS.UI.Components.SetHeadingIcon and iconKey ~= false then MOS.UI.Components.SetHeadingIcon(button.label, iconKey or "about") end
+    -- Nested Settings accordions intentionally have no icon gutter.
     local setText, setFont, setColor = button.label.SetText, button.label.SetFont, button.label.SetTextColor
     button.label.SetText = function(self, value)
         local sign = string.sub(value or "", 1, 1)
@@ -55,7 +55,7 @@ end
 
 function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel, iconKey)
     if (inset or 0) > 0 then
-        local child = Settings.CreateAccordion(parent, text, y, iconKey or "list")
+        local child = Settings.CreateAccordion(parent, text, y, false)
         child.mosSectionInset = inset
         child.SetExpanded = function(self, expanded) self.sectionExpanded = expanded end
         child:ClearAllPoints(); child:SetPoint("TOPLEFT", parent, "TOPLEFT", inset, y); child:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
@@ -79,6 +79,7 @@ function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel, i
     local ornament = MOS.UI.Components.ClassicAsset("Decor\\title-right.tga")
     button.rule:SetTexture(ornament); button.rule:SetTexCoord(5/128, 100/128, 0, 1)
     button.ruleCap:SetTexture(ornament); button.ruleCap:SetTexCoord(100/128, 1, 0, 1)
+    button.rule:SetVertexColor(1, 1, 1, 1); button.ruleCap:SetVertexColor(1, 1, 1, 1)
     button.ruleCap:SetPoint("RIGHT", button, "RIGHT", 0, 0); button.ruleCap:SetWidth(14); button.ruleCap:SetHeight(8)
     local ruleShow, ruleHide = button.rule.Show, button.rule.Hide
     button.rule.Show = function(self) ruleShow(self); button.ruleCap:Show() end
@@ -193,10 +194,11 @@ end
 
 function Settings.SynchronizeSlider(slider, value)
     getglobal(slider:GetName() .. "Text"):SetText(slider.settingLabel .. ": " .. math.floor(value + 0.5))
-    if slider:GetValue() == value then return end
     slider.mosSynchronizing = true
     slider:SetValue(value)
     slider.mosSynchronizing = nil
+    local thumb = slider.GetThumbTexture and slider:GetThumbTexture()
+    if thumb then thumb:SetAlpha(1); thumb:Show() end
 end
 
 function Settings.SetSliderEnabled(slider, enabled)
@@ -436,7 +438,7 @@ function Settings.UpdateScroll(viewport, page, pageHeight)
     page.mosRequestedHeight = pageHeight
     local width, contentHeight, overflow, maximum = UI.ResolveScrollLayout(fullWidth, height, 20, MeasureSettingsWidth, page)
     if anchor then
-        viewport:ClearAllPoints(); viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 4, -4)
+        viewport:ClearAllPoints(); viewport:SetPoint("TOPLEFT", anchor, "TOPLEFT", 4, -(viewport.mosScrollTop or 4))
         viewport:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", overflow and -24 or -4, 4)
     end
     page:SetHeight(contentHeight)
@@ -491,6 +493,7 @@ function Settings.LayoutGrid(parent, items, x, y, available, step, sliders)
         if total <= available or cols == 1 then break end
         cols = cols - 1
     end
+    for col=1,cols do widths[col]=math.min(available,widths[col]) end
     local offsetX, rowHeight, used = 0, step, 0
     for index = 1, count do
         col = math.mod(index - 1, cols) + 1

@@ -78,7 +78,8 @@ local function CreateClassicHoverOutline(frame, path, fullEdges)
     return outline
 end
 
-function UI.SetProjectButtonOutline(button, visible)
+local projectOutlineGold = {1, 0.78, 0.2}
+function UI.SetProjectButtonOutline(button, visible, size, color)
     if not button.mosProjectOutline then
         local border = UI.CreateContainer(nil, button)
         border:SetAllPoints(button); border:EnableMouse(false)
@@ -88,6 +89,14 @@ function UI.SetProjectButtonOutline(button, visible)
         border:SetBackdropBorderColor(1, 0.78, 0.2, 1)
         button.mosProjectOutline = border
     end
+    local border = button.mosProjectOutline
+    local edgeSize = math.max(1, math.min(6, tonumber(size) or 2)) * 4
+    if border.mosEdgeSize ~= edgeSize then
+        local backdrop = border:GetBackdrop(); backdrop.edgeSize = edgeSize
+        border:SetBackdrop(backdrop); border:SetBackdropColor(0, 0, 0, 0); border.mosEdgeSize = edgeSize
+    end
+    color = color or projectOutlineGold
+    border:SetBackdropBorderColor(color[1], color[2], color[3], 1)
     if visible then button.mosProjectOutline:Show() else button.mosProjectOutline:Hide() end
 end
 
@@ -146,6 +155,9 @@ local function ApplyControl(entry)
         if not button.mosClassicKeepNormalSurface then
             if not entry.classicSkin then entry.classicSkin = CreateNineSlice(button, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga"), 128, 32, 6, "BACKGROUND")
             else SetNineSliceTexture(entry.classicSkin, ClassicPath("Buttons\\" .. variant .. "-" .. state .. ".tga")) end
+            local center = entry.classicSkin.textures[5]
+            center:ClearAllPoints(); center:SetPoint("TOPLEFT", entry.classicSkin.textures[1], "BOTTOMRIGHT", 0, 0)
+            center:SetPoint("BOTTOMRIGHT", entry.classicSkin.textures[9], "TOPLEFT", 0, 0); center:SetVertexColor(1,1,1,1)
             button:SetBackdropColor(0, 0, 0, 0); button:SetBackdropBorderColor(0, 0, 0, 0); SetNineSliceShown(entry.classicSkin, true)
             button:SetHighlightTexture(nil)
             if button.mosHighlight then button.mosHighlight:Hide() end
@@ -179,7 +191,8 @@ local function ApplyControl(entry)
                 entry.redHover:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -5)
                 entry.redHover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 5)
             end
-            entry.redHover:Show()
+            entry.redHover:ClearAllPoints(); entry.redHover:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -5)
+            entry.redHover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 5); entry.redHover:Show()
         elseif entry.redHover then entry.redHover:Hide() end
         local disabled = button.mosClassicDisabled
         local gold = not disabled and (button.mosClassicGold or button.mosClassicSelected)
@@ -284,6 +297,20 @@ local function ApplyControl(entry)
         button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", button.mosClassicLabelXOffset or 0, button.mosClassicLabelYOffset)
     end
     ApplySizedButtonGeometry(button, entry)
+    if button.mosBorderless then
+        if Skins.current == "classic" and entry.classicSkin and not solid then
+            SetNineSliceShown(entry.classicSkin, false)
+            local center = entry.classicSkin.textures[5]
+            center:ClearAllPoints(); center:SetAllPoints(button)
+            local brightness = button.mosClassicDisabled and 0.45 or 1
+            center:SetVertexColor(brightness,brightness,brightness,1); center:Show()
+        end
+        SetNineSliceShown(entry.classicHoverBorder, false); SetNineSliceShown(entry.classicSelectedBorder, false)
+        if entry.redHover then entry.redHover:ClearAllPoints(); entry.redHover:SetAllPoints(button) end
+        if entry.classicRedFill then entry.classicRedFill:Hide() end
+        button:SetPushedTexture(nil); button:SetDisabledTexture(nil); button:SetBackdropBorderColor(0,0,0,0)
+        if button.mosProjectOutline then button.mosProjectOutline:Hide() end
+    end
     if button.mosWarmListRow then UI.StyleWarmListRow(button, button.mosWarmListSelected) end
     if button.mosSelectableTableRow and UI.StyleSelectableTableRow then UI.StyleSelectableTableRow(button,button.mosTableRowEven,button.mosTableRowSelected) end
 end
@@ -452,6 +479,18 @@ local function RedHoverLeave()
 end
 
 function UI.RegisterSkinnedControl(frame, backdrop, background, border, highlight)
+    -- Authored red artwork owns its outline. Later action/hover styling must
+    -- never add the native backdrop edge over it.
+    if not frame.mosBorderSetterInstalled then
+        local setBorder = frame.SetBackdropBorderColor
+        frame.SetBackdropBorderColor = function(self, red, green, blue, alpha)
+            if self.mosBorderless or (Skins.current == "classic" and self.mosClassicVariant == "red" and not self.mosClassicCompactControl and not self.mosClassicKeepNormalSurface) then
+                return setBorder(self, 0, 0, 0, 0)
+            end
+            return setBorder(self, red, green, blue, alpha)
+        end
+        frame.mosBorderSetterInstalled = true
+    end
     local labelColor = nil
     local labelPoints = nil
     if frame.label and frame.label.GetTextColor then
@@ -571,6 +610,12 @@ function UI.SetClassicButtonVariant(button, variant)
     button.mosClassicVariant = wanted
     if Skins.current ~= "classic" then return end
     ApplyButtonState(button)
+end
+
+function UI.SetButtonBorderless(button, borderless)
+    local wanted = borderless and true or false
+    if button.mosBorderless == wanted then return end
+    button.mosBorderless = wanted; ApplyButtonState(button)
 end
 
 function UI.SetClassicButtonSelected(button, selected)
