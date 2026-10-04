@@ -18,6 +18,7 @@ function RaidInfo.Create(parent, service)
     local canvas = UI.CreateContainer(nil, scroll); scroll:SetScrollChild(canvas)
     local bar = getglobal(scrollName .. "ScrollBar"); UI.RegisterSkinnedScrollBar(bar)
     local headings, rows, entries = {}, {}, {}
+    frame.headerLabels = headings
     local names = {"Instance", "Raid ID", "Resets in"}
     local index
     for index = 1, 3 do
@@ -62,7 +63,9 @@ function RaidInfo.Create(parent, service)
         local width, contentHeight, overflow, maximum = UI.ResolveScrollLayout(420, height - 68, 20, Measure)
         local positions = {10, 10 + width - 184, 10 + width - 100}
         for index = 1, 3 do
-            headings[index]:ClearAllPoints(); headings[index]:SetPoint("TOPLEFT", frame, "TOPLEFT", positions[index], -38)
+            headings[index]:ClearAllPoints()
+            if frame.projectDivider then headings[index]:SetPoint("TOPLEFT", frame.projectDivider, "BOTTOMLEFT", positions[index] - 4, -10)
+            else headings[index]:SetPoint("TOPLEFT", frame, "TOPLEFT", positions[index], -38) end
             headings[index]:SetWidth(index == 1 and width - 184 or (index == 2 and 84 or 100)); headings[index]:Show()
         end
         scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -58); scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10 - (overflow and 20 or 0), 10)
@@ -81,7 +84,7 @@ function RaidInfo.Create(parent, service)
         service.Request(); Render()
     end
     local function Deactivate() active = false; frame:UnregisterEvent("UPDATE_INSTANCE_INFO") end
-    frame:SetScript("OnShow", Activate); frame:SetScript("OnHide", Deactivate)
+    frame:SetScript("OnShow", Activate); frame:SetScript("OnHide", function() controller.owner = nil; Deactivate() end)
     frame:SetScript("OnEvent", function() if active and event == "UPDATE_INSTANCE_INFO" then Render() end end)
     frame.close:SetScript("OnClick", function() controller:Close() end)
     scroll:EnableMouseWheel(true)
@@ -91,10 +94,17 @@ function RaidInfo.Create(parent, service)
         local offset = math.max(0, math.min(maximum, scroll:GetVerticalScroll() - (tonumber(arg1) or 0) * 28))
         scroll:SetVerticalScroll(offset); if bar then bar:SetValue(offset) end
     end)
-    function controller:Open()
+    function controller:Open(owner)
+        self.owner = owner
         if active then service.Request(); Render() else frame:Show(); Activate() end
     end
     function controller:Close() frame:Hide(); Deactivate() end
+    function controller:Toggle(owner)
+        if self:IsVisible() and self.owner == owner then self:Close() else self:Open(owner) end
+    end
+    function controller:CloseOwned(owner)
+        if owner and self.owner == owner then self:Close() end
+    end
     function controller:IsVisible() return frame:IsVisible() end
     return controller
 end
@@ -104,4 +114,14 @@ function RaidInfo.Open()
     if not dialog then dialog = RaidInfo.Create(UIParent) end
     dialog:Open()
     return dialog
+end
+
+function RaidInfo.Toggle(owner)
+    if not dialog then dialog = RaidInfo.Create(UIParent) end
+    dialog:Toggle(owner)
+    return dialog
+end
+
+function RaidInfo.CloseOwned(owner)
+    if dialog then dialog:CloseOwned(owner) end
 end

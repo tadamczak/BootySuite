@@ -89,6 +89,20 @@ function UI.CreateCascadingMenu(onChoose, options)
         table.insert(panel.options, row)
         return row
     end
+    local function ApplyLayers(panel, depth)
+        local level = (menu.baseLevel or 201) + depth * 5
+        panel:SetFrameLevel(level); panel.host:SetFrameLevel(level + 1)
+        local viewport = panel.canvas.layoutViewport
+        if viewport then viewport:SetFrameLevel(level + 2) end
+        panel.canvas:SetFrameLevel(level + 3)
+        local bar = viewport and getglobal(viewport:GetName() .. "ScrollBar")
+        if bar then bar:SetFrameLevel(level + 4) end
+        panel.dismiss:SetFrameLevel(menu.dismissLevel or 200)
+        for index = 1, table.getn(panel.options) do
+            local row = panel.options[index]
+            row:SetFrameLevel(level + 4); row.check:SetFrameLevel(level + 5)
+        end
+    end
     local function Present(row)
         local entry = row.entry
         local text, icon = entry.text or "", entry.icon
@@ -234,6 +248,7 @@ function UI.CreateCascadingMenu(onChoose, options)
             row.entry = entries[index]; Present(row); row:Show()
         end
         for index = count + 1, table.getn(panel.options) do panel.options[index].entry = nil; panel.options[index]:Hide() end
+        ApplyLayers(panel, depth)
         LayoutPanel(panel, depth, left, top)
         panel:Show(); panel.dismiss:Hide()
         return true
@@ -255,6 +270,9 @@ function UI.CreateCascadingMenu(onChoose, options)
         self:Close()
         if UI.openDropdownPanel then UI.openDropdownPanel:Hide() end
         self.anchor = anchor
+        local anchorLevel = anchor and anchor.GetFrameLevel and tonumber(anchor:GetFrameLevel()) or 0
+        self.baseLevel = math.max(201, anchorLevel + 2)
+        self.dismissLevel = math.max(200, anchorLevel - 1)
         local x, y = GetCursorPosition()
         local scale = UIParent:GetEffectiveScale() or 1
         self:ShowPanel(1, entries, x / scale + 8, y / scale)

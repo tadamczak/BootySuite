@@ -392,7 +392,7 @@ local function UpdateClassColors()
         end
     end
     local index
-    for index = 1, (GetNumRaidMembers() or 0) do
+    for index = 1, math.min(40, math.max(0, tonumber(GetNumRaidMembers()) or 0)) do
         local name, _, _, _, _, classFile = GetRaidRosterInfo(index)
         local color = name and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
         if color then
@@ -423,7 +423,7 @@ local function ColoredHistoryLine(line)
 end
 local function ShowItemTooltip(owner, slot, link)
     if not link then return end
-    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    MOS.UI.Components.AnchorTooltip(owner)
     local shown = false
     if slot and GameTooltip.SetLootItem then
         shown = pcall(GameTooltip.SetLootItem, GameTooltip, slot)
@@ -795,7 +795,7 @@ for groupIndex = 1, 8 do
         button:SetScript("OnEnter", function()
             this:SetBackdropColor(0.25, 0.20, 0.09, 0.9)
             if this.unavailableReason then
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+                MOS.UI.Components.AnchorTooltip(this)
                 GameTooltip:SetText(this.unavailableReason)
                 GameTooltip:Show()
             end
@@ -1487,12 +1487,12 @@ end
 local function StartRoll(slot, link, request)
     if activeRoll then status:SetText("A roll is already in progress"); return false end
     if raidRollPending then status:SetText("Wait for the raid roll result"); return false end
-    if not link or not RaidService.IsPlayerLootMaster() then return false end
     local manual = not slot
+    if not link or (manual and not MOS.Services.LootRollRequest.CanOrganize()) or (not manual and not RaidService.IsPlayerLootMaster()) then return false end
     if not manual and (not LootSlotIsItem(slot) or GetLootSlotLink(slot) ~= link) then return false end
     retention.EnsureSource()
     local seconds = GetGlobalRollDuration()
-    local count = GetNumRaidMembers() or 0
+    local count = math.min(40, math.max(0, tonumber(GetNumRaidMembers()) or 0))
     local index
     for index in pairs(eligible) do eligible[index] = nil end
     for index = 1, count do
@@ -1560,7 +1560,8 @@ local function StartRoll(slot, link, request)
 end
 
 function MasterLootWindow.Reroll(roll,range)
-    if activeRoll or raidRollPending or not roll or roll.source~=currentLootSession or not RaidService.IsPlayerLootMaster()
+    if activeRoll or raidRollPending or not roll or roll.source~=currentLootSession
+        or (roll.manual and not MOS.Services.LootRollRequest.CanOrganize()) or (not roll.manual and not RaidService.IsPlayerLootMaster())
         or lastRollBySource[currentLootSession]~=roll or not RaidService.IsLootSessionCurrent(roll.lootSessionToken) then return false end
     local request,failure=MOS.Services.LootRollRequest.CreateRerollRequest(roll,range)
     if not request then status:SetText(failure);return false end
@@ -2050,8 +2051,8 @@ function MasterLootWindow.StartManualRoll(request)
     if not RaidService.IsInRaid() then
         return false,"You must be in a raid."
     end
-    if not RaidService.IsPlayerLootMaster() then
-        return false,"Only the Loot Master can start a roll."
+    if not MOS.Services.LootRollRequest.CanOrganize() then
+        return false,"Only the Loot Master, raid leader or an assistant can start a roll."
     end
     if activeRoll or raidRollPending then
         return false,"Another roll is already in progress."
@@ -2087,7 +2088,7 @@ function MasterLootWindow.OpenNewRollDialog()
 end
 
 function MasterLootWindow.CanStartManualRoll()
-    return RaidService.IsInRaid() and RaidService.IsPlayerLootMaster() and not activeRoll and not raidRollPending
+    return MOS.Services.LootRollRequest.CanOrganize() and not activeRoll and not raidRollPending
 end
 
 function MasterLootWindow.ApplyAutoLootSetting()

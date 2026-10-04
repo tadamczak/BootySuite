@@ -68,18 +68,20 @@ function RaidManagement.CreateChrome(page, callbacks)
     view.classicSummary:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -31); view.classicSummary:SetWidth(245); view.classicSummary:SetHeight(14); view.classicSummary:SetJustifyH("LEFT"); view.classicSummary:Hide()
     page.classicSummary = view.classicSummary
     view.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "raids")
-    view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); view.title:SetText("Raid")
+    view.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -8); view.title:SetHeight(18); view.title:SetText("Raid")
     view.classicRaidName = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
     view.classicRaidName:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); view.classicRaidName:SetWidth(120); view.classicRaidName:SetJustifyH("LEFT"); view.classicRaidName:Hide()
     view.classicMeta = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall")
     view.classicMeta:SetPoint("LEFT", view.classicRaidName, "RIGHT", 10, 0); view.classicMeta:SetWidth(82); view.classicMeta:SetJustifyH("LEFT"); view.classicMeta:Hide()
     view.classicSaved = MOS.UI.Components.CreateButton(page, nil, "Not saved yet", 108, 24)
-    view.classicSaved:SetPoint("LEFT", view.classicMeta, "RIGHT", 8, 0); view.classicSaved:EnableMouse(false); MOS.UI.Components.SetClassicButtonGold(view.classicSaved, true); view.classicSaved:Hide()
+    view.classicSaved:SetPoint("LEFT", view.classicMeta, "RIGHT", 8, 0); MOS.UI.Components.SetClassicButtonGold(view.classicSaved, true); view.classicSaved:Hide()
+    MOS.UI.Components.AttachTooltip(view.classicSaved, "Raid save status", function() return view.classicSaved.mosRaidSavedText or view.classicSaved:GetText() end)
     MOS.UI.Components.SetClassicButtonLabelOffset(view.classicSaved, 2)
     MOS.UI.Components.SetButtonLabelInsets(view.classicSaved, 8, 4)
     view.classicIssues = MOS.UI.Components.CreateButton(page, nil, "", 96, 24)
     view.classicIssues:SetPoint("LEFT", view.classicSaved, "RIGHT", 8, 0); MOS.UI.Components.SetClassicButtonIcon(view.classicIssues, "warning_triangle", 13, 7, 1); MOS.UI.Components.SetClassicButtonGold(view.classicIssues, true); view.classicIssues:Hide()
     MOS.UI.Components.SetClassicButtonLabelOffset(view.classicIssues, 2, 4)
+    MOS.UI.Components.AttachTooltip(view.classicIssues, "Raid issues", "Review missing, invalid or unmatched Soft Reserves.")
     view.classicIssues:SetScript("OnClick", function()
         MOS.UI.Components.SetAttentionPulse(view.classicIssues, false)
         if page.softReserveWarning then page.softReserveWarning.userDismissed = false; page.softReserveWarning.userMinimized = false; page.softReserveWarning.forceExpanded = true end
@@ -343,7 +345,7 @@ function RaidManagement.CreateActionControls(page)
     MOS.UI.Components.ApplyDropdownChoiceSurface(controls.raidInfo)
     MOS.UI.Components.AttachGoldHoverBorder(controls.raidInfo, 0.35, 0.35, 0.35, 1)
     MOS.UI.Components.AttachTooltip(controls.raidInfo, "Raid Info", "Your saved instances, raid IDs and time until reset.")
-    controls.raidInfo:SetScript("OnClick", function() if MOS.Modules.RaidInfo then MOS.Modules.RaidInfo.Open() end end)
+    controls.raidInfo:SetScript("OnClick", function() if MOS.Modules.RaidInfo then MOS.Modules.RaidInfo.Toggle() end end)
     controls.raidInfo:Hide(); page.raidInfoButton = controls.raidInfo
     controls.scan = MOS.UI.Components.CreateButton(page, nil, "Scan Raid", 140, 24)
     controls.scan:SetPoint("CENTER", page, "CENTER", 0, 12); controls.scan:Hide()
@@ -403,10 +405,12 @@ function RaidManagement.CreateActionControls(page)
     controls.export.mosClassicPersistentRed = true
     MOS.UI.Components.SetClassicButtonGold(controls.export, true)
     controls.export:SetPoint("TOPRIGHT", page, "TOPRIGHT", -110, -42); controls.export:Hide()
-    controls.quit = MOS.UI.Components.CreateButton(page, nil, "Quit", 72, 22); controls.quit:Hide()
+    MOS.UI.Components.AttachTooltip(controls.export, "Save Raid", "Save this raid snapshot.")
+    controls.quit = MOS.UI.Components.CreateButton(page, nil, "End Raid", 90, 22); controls.quit:Hide()
     MOS.UI.Components.SetClassicButtonVariant(controls.quit, "red")
     MOS.UI.Components.SetClassicButtonIcon(controls.quit, "quit")
     MOS.UI.Components.SetClassicButtonGold(controls.quit, true)
+    MOS.UI.Components.AttachTooltip(controls.quit, "End Raid", "End the active raid session.")
     controls.raidLeaderTools = MOS.UI.Components.CreateButton(page, nil, "Raid Leader Tools", 118, 22); controls.raidLeaderTools:Hide()
     controls.raidLeaderTools.mosClassicKeepNormalSurface = true
     controls.raidLeaderTools.mosHoverTextColor = {1, 0.82, 0.28}
@@ -533,7 +537,7 @@ local function OnLootMasterAlphaUpdate()
     local settings = controller.getSettings()
     local opacity
     if inside then opacity = tonumber(settings.lootMasterOpacity) or 100
-    else opacity = tonumber(settings.outOfFocusOpacity) or 30 end
+    else opacity = tonumber(settings.outOfFocusOpacity) or 100 end
     dashboard:SetAlpha(math.max(0, math.min(100, opacity)) / 100)
 end
 
@@ -1095,7 +1099,7 @@ end
 
 function RaidManagement.ClearSessionHeader(page)
     RaidManagement.ResetIssueAttention(page)
-    page.classicRaidName:Hide(); page.classicMeta:Hide(); page.classicSaved:Hide(); page.classicIssues:Hide(); page.classicSummary:Hide()
+    page.classicRaidName:Hide(); page.classicRaidName.mosRaidName = nil; page.classicMeta:Hide(); page.classicMeta.mosRaidId = nil; page.classicSaved:Hide(); page.classicIssues:Hide(); page.classicSummary:Hide()
     page.refreshControls.title:SetText("Raid"); if MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.raidHideSectionHeader then page.refreshControls.title:Hide() else page.refreshControls.title:Show() end
 end
 
@@ -1116,7 +1120,9 @@ function RaidManagement.RefreshPage(renderer)
     local pageWidth = PageSpan(page)
     page.classicActionOffset = 0
     page.classicActionScale = 1
-    page.classicSectionOffset = MOS.UI.Components.IsClassicSkin() and not MuklaOfficerSuiteDB.raidHideSectionHeader and 24 or 0
+    -- The normal metadata row already has nine pixels of top padding. The
+    -- added section consumes18px of text plus8px above and below it.
+    page.classicSectionOffset = MOS.UI.Components.IsClassicSkin() and not MuklaOfficerSuiteDB.raidHideSectionHeader and 25 or 0
     page.classicToolbarOffset = MOS.UI.Components.IsClassicSkin() and RaidManagement.GetToolToolbarOffset(pageWidth, page.raidView) or 0
     local lootMasterMode = renderer.isLootMasterMode()
     if page.raidInfoButton then
@@ -1136,11 +1142,11 @@ function RaidManagement.RefreshPage(renderer)
             if table.getn(issues.unmatchedNames) > 0 then issueCount = issueCount + 1 end
             if table.getn(issues.missingNames) > 0 then issueCount = issueCount + 1 end
             if table.getn(issues.invalidNames) > 0 then issueCount = issueCount + 1 end
-            page.classicRaidName:SetText(attendance.raidName or "Unknown zone"); page.classicRaidName:Show()
-            page.classicMeta:SetText("|  " .. tostring(raidId)); page.classicMeta:Show()
-            page.classicSaved:SetText(savedText); page.classicSaved:Show()
+            page.classicRaidName.mosRaidName = attendance.raidName or "Unknown zone"; page.classicRaidName:SetText(page.classicRaidName.mosRaidName); page.classicRaidName:Show()
+            page.classicMeta.mosRaidId = tostring(raidId); page.classicMeta:SetText("|  " .. page.classicMeta.mosRaidId); page.classicMeta:Show()
+            page.classicSaved.mosRaidSavedText = savedText; page.classicSaved:SetText(savedText); page.classicSaved:Show()
             RaidManagement.UpdateIssueAttention(page.classicIssues, issues)
-            if issueCount > 0 then page.classicIssues:SetText(issueCount .. " issues"); page.classicIssues:Show() else page.classicIssues:Hide() end
+            if issueCount > 0 then page.classicIssues.mosRaidIssuesText = issueCount .. " issues"; page.classicIssues:SetText(page.classicIssues.mosRaidIssuesText); page.classicIssues:Show() else page.classicIssues:Hide() end
             RestoreHeaderFont(page.classicRaidName); RestoreHeaderFont(page.classicMeta)
             local titleWidth = math.max(48, page.classicRaidName:GetStringWidth() + 4)
             local metaWidth = math.max(42, page.classicMeta:GetStringWidth() + 4)
@@ -1756,8 +1762,27 @@ function RaidManagement.LayoutListHeaders(page, headerButtons, sortKey, lootMast
     local availableWidth = math.max(1, tableRight - tableLeft)
     local tableWidth = availableWidth
     if lootMasterMode then
-        local srWidth = math.max(35, tableWidth - 238)
-        page.headerLabels[5]:SetWidth(srWidth); headerButtons[5]:SetWidth(srWidth)
+        local columns = page.mosLootColumns or {}; page.mosLootColumns = columns
+        local scale = math.min(1, math.max(1, tableWidth - 35) / 250)
+        local fontSize
+        if page.listRows and page.listRows[1] then local _, size = page.listRows[1].name:GetFont(); fontSize = size end
+        columns.nameInset = math.max(2, (20 - (fontSize or 12)) / 2)
+        columns.nameWidth = math.max(1, 105 * scale - 5)
+        columns.classX = tableLeft + 105 * scale
+        columns.rankX = tableLeft + 170 * scale
+        columns.srX = tableLeft + 250 * scale
+        columns.classWidth = math.max(1, columns.rankX - columns.classX - 5)
+        columns.rankWidth = math.max(1, columns.srX - columns.rankX - 5)
+        columns.srWidth = math.max(1, tableWidth - 250 * scale)
+        local labels, buttons = page.headerLabels, headerButtons
+        labels[1]:ClearAllPoints(); labels[1]:SetPoint("TOPLEFT", page, "TOPLEFT", tableLeft + columns.nameInset, headerY); labels[1]:SetWidth(math.max(1, columns.nameWidth - columns.nameInset))
+        buttons[1]:ClearAllPoints(); buttons[1]:SetPoint("TOPLEFT", page, "TOPLEFT", tableLeft + columns.nameInset, headerY + 4); buttons[1]:SetWidth(math.max(1, columns.nameWidth - columns.nameInset))
+        for headerIndex = 3, 5 do
+            local x = headerIndex == 3 and columns.classX or (headerIndex == 4 and columns.rankX or columns.srX)
+            local width = headerIndex == 3 and columns.classWidth or (headerIndex == 4 and columns.rankWidth or columns.srWidth)
+            labels[headerIndex]:ClearAllPoints(); labels[headerIndex]:SetPoint("TOPLEFT", page, "TOPLEFT", x, headerY); labels[headerIndex]:SetWidth(width)
+            buttons[headerIndex]:ClearAllPoints(); buttons[headerIndex]:SetPoint("TOPLEFT", page, "TOPLEFT", x, headerY + 4); buttons[headerIndex]:SetWidth(width)
+        end
     end
     local proportionalWidth = math.min(tableWidth, tonumber(configuredRowWidth) or tableWidth)
     if not lootMasterMode then
@@ -1797,15 +1822,17 @@ function RaidManagement.PositionListRow(page, row, rowY, lootMasterMode, tableLe
     row:ClearAllPoints()
     row:SetPoint("TOPLEFT", page, "TOPLEFT", tableLeft, rowY)
     if lootMasterMode then
-        local srWidth = math.max(35, tableWidth - 283)
-        row.name:ClearAllPoints(); row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0); row.name:SetWidth(90)
+        local columns = page.mosLootColumns
+        local srWidth = columns and columns.srWidth or math.max(35, tableWidth - 250)
+        local classX, rankX, srX = columns and columns.classX or 105, columns and columns.rankX or 170, columns and columns.srX or 250
+        row.name:ClearAllPoints(); row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0); row.name:SetWidth(columns and columns.nameWidth or 90)
         row.group:ClearAllPoints(); row.group:SetPoint("TOPLEFT", page, "TOPLEFT", 0, rowY); row.group:SetWidth(0)
         row.level:ClearAllPoints(); row.level:SetPoint("TOPLEFT", page, "TOPLEFT", 0, rowY); row.level:SetWidth(0)
         row.status:ClearAllPoints(); row.status:SetPoint("TOPLEFT", page, "TOPLEFT", 0, rowY); row.status:SetWidth(0)
-        row.class:ClearAllPoints(); row.class:SetPoint("TOPLEFT", page, "TOPLEFT", 105, rowY); row.class:SetWidth(55)
-        row.rank:ClearAllPoints(); row.rank:SetPoint("TOPLEFT", page, "TOPLEFT", 170, rowY); row.rank:SetWidth(72)
-        row.sr:ClearAllPoints(); row.sr:SetPoint("TOPLEFT", page, "TOPLEFT", 274, rowY); row.sr:SetWidth(math.max(1, srWidth - 16))
-        row.srHit:ClearAllPoints(); row.srHit:SetPoint("TOPLEFT", page, "TOPLEFT", 250, rowY); row.srHit:SetWidth(srWidth); row.srHit:SetHeight(20)
+        row.class:ClearAllPoints(); row.class:SetPoint("TOPLEFT", page, "TOPLEFT", classX, rowY); row.class:SetWidth(columns and columns.classWidth or 55)
+        row.rank:ClearAllPoints(); row.rank:SetPoint("TOPLEFT", page, "TOPLEFT", rankX, rowY); row.rank:SetWidth(columns and columns.rankWidth or 72)
+        row.sr:ClearAllPoints(); row.sr:SetPoint("TOPLEFT", page, "TOPLEFT", srX + 20, rowY); row.sr:SetWidth(math.max(1, srWidth - 20))
+        row.srHit:ClearAllPoints(); row.srHit:SetPoint("TOPLEFT", page, "TOPLEFT", srX, rowY); row.srHit:SetWidth(srWidth); row.srHit:SetHeight(20)
         row.srIcon:ClearAllPoints(); row.srIcon:SetPoint("LEFT", row.srHit, "LEFT", 2, 0)
         return
     end
@@ -1878,7 +1905,7 @@ function RaidManagement.BindListMember(page, row, member, lootMethod, raidLootMa
     local nameInset = leftPadding + (showRole and 17 or 0) + (showLootMaster and 14 or 0)
     row.name:ClearAllPoints()
     row.name:SetPoint("TOPLEFT", row, "TOPLEFT", (lootMasterMode and 0 or page.listPositions[1] - tableLeft) + nameInset, 0)
-    row.name:SetWidth(math.max(1, (lootMasterMode and 90 or page.listWidths[1]) - nameInset))
+    row.name:SetWidth(math.max(1, (lootMasterMode and (page.mosLootColumns and page.mosLootColumns.nameWidth or 90) or page.listWidths[1]) - nameInset))
     row.group:SetText(tostring(member.subgroup or ""))
     row.level:SetText(tostring(member.level or ""))
     row.status:SetText(member.online and "Online" or "Offline")
@@ -2710,40 +2737,104 @@ function RaidManagement.UpdateToolSubmenu(page)
     panel:Show(); UI.RefreshDropdownLayers(panel, toggle)
 end
 
+local function PlaceRaidHeaderButton(page, button, width, y, left, scale)
+    button.mosCaptionBottomInset = 4
+    MOS.UI.Components.SizeClassicButton(button, width, 26, scale)
+    local inset = button.mosClassicIconKey and ((button.mosClassicIconInset or 7) + (button.mosClassicIconSize or 13) + 3) or 0
+    button.mosLabelJustify = (button == page.classicSaved or inset > 0) and "LEFT" or "CENTER"
+    if width > 26 then MOS.UI.Components.FitButtonLabel(button, math.max(1, width - (inset > 0 and inset + 4 or 16))) end
+    MOS.UI.Components.ApplyButtonCaptionBaseline(button)
+    button:ClearAllPoints(); button:SetPoint("TOPLEFT", page, "TOPLEFT", left, y)
+    return left + width + 8
+end
+
+local function PlaceRaidHeaderLabel(page, control, width, y, left)
+    local label = control.label or control
+    control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", left, y)
+    control:SetWidth(width); control:SetHeight(26)
+    label:SetJustifyH("LEFT"); if label.SetJustifyV then label:SetJustifyV("MIDDLE") end
+    MOS.UI.Components.FitButtonLabel(control, width)
+    local font, size, flags = label:GetFont()
+    if size < 9 then label:SetFont(font, 9, flags) end
+    if label.SetWordWrap then label:SetWordWrap(false) end
+    if control.label then control.mosCaptionBottomInset = 4; MOS.UI.Components.ApplyButtonCaptionBaseline(control)
+    else label:SetHeight(22); label:SetJustifyV("BOTTOM") end
+    return left + width + 8
+end
+
 function RaidManagement.LayoutActions(page)
     if MOS.UI.Components.IsClassicSkin() then
-        local actionOffset = page.classicActionOffset or 0
         local toolbarOffset = page.classicToolbarOffset or 0
         local sectionOffset = page.classicSectionOffset or 0
-        local scale = page.classicActionScale or 1
-        local available=math.max(1,PageSpan(page)-12-(page.raidInfoButton and 36 or 0))
-        local showIssues=page.classicIssues:IsShown()
+        local UI = MOS.UI.Components
+        local pageWidth = PageSpan(page)
+        local available = math.max(1, pageWidth - 12 - (page.raidInfoButton and 36 or 0))
+        local showIssues = page.classicIssues:IsShown()
         RestoreHeaderFont(page.classicRaidName); RestoreHeaderFont(page.classicMeta)
-        local nameLabel=page.classicRaidName.label or page.classicRaidName
-        local metaLabel=page.classicMeta.label or page.classicMeta
-        local nameWidth=nameLabel.GetStringWidth and nameLabel:GetStringWidth() or 48
-        local metaWidth=metaLabel.GetStringWidth and metaLabel:GetStringWidth() or 42
-        local natural={math.max(48,nameWidth+4),math.max(42,metaWidth+4),108,showIssues and 96 or 0,108,66}
-        local gapCount=showIssues and 5 or 4
-        local naturalTotal=0
-        local index
-        for index=1,6 do naturalTotal=naturalTotal+natural[index] end
-        -- Gaps retain their eight-pixel width when captions shrink. Reserve
-        -- them before scaling controls so Quit cannot overlap Raid Info.
-        local controlSpace=math.max(1,available-gapCount*8)
-        scale=math.min(1,controlSpace/math.max(1,naturalTotal));page.classicActionScale=scale
-        local widths={}
-        for index=1,6 do widths[index]=natural[index]>0 and math.max(1,math.floor(natural[index]*scale)) or 0 end
-        local left=6;local top=-9-sectionOffset
-        if page.raidInfoButton then page.raidInfoButton:ClearAllPoints(); page.raidInfoButton:SetPoint("TOPRIGHT",page,"TOPRIGHT",-8,top); page.raidInfoButton:Show() end
-        page.classicRaidName:ClearAllPoints();page.classicRaidName:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);page.classicRaidName:SetWidth(widths[1]);page.classicRaidName:SetHeight(26);if nameLabel.SetJustifyV then nameLabel:SetJustifyV("MIDDLE") end;MOS.UI.Components.FitButtonLabel(page.classicRaidName,widths[1]);left=left+widths[1]+8
-        page.classicMeta:ClearAllPoints();page.classicMeta:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);page.classicMeta:SetWidth(widths[2]);page.classicMeta:SetHeight(26);if metaLabel.SetJustifyV then metaLabel:SetJustifyV("MIDDLE") end;MOS.UI.Components.FitButtonLabel(page.classicMeta,widths[2]);left=left+widths[2]+8
-        MOS.UI.Components.SizeClassicButton(page.classicSaved,widths[3],26,scale);MOS.UI.Components.SetButtonLabelInsets(page.classicSaved,8,4);page.classicSaved:ClearAllPoints();page.classicSaved:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);left=left+widths[3]+8
-        if showIssues then MOS.UI.Components.SizeClassicButton(page.classicIssues,widths[4],26,scale);page.classicIssues:ClearAllPoints();page.classicIssues:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);left=left+widths[4]+8 end
-        MOS.UI.Components.SizeClassicButton(page.exportButton,widths[5],26,scale);page.exportButton:ClearAllPoints();page.exportButton:SetPoint("TOPLEFT",page,"TOPLEFT",left,top);left=left+widths[5]+8
-        MOS.UI.Components.SizeClassicButton(page.quitButton,widths[6],26,scale);page.quitButton:ClearAllPoints();page.quitButton:SetPoint("TOPLEFT",page,"TOPLEFT",left,top)
+        local nameLabel = page.classicRaidName.label or page.classicRaidName
+        local metaLabel = page.classicMeta.label or page.classicMeta
+        local raidId = page.classicMeta.mosRaidId or string.gsub(metaLabel:GetText() or "", "^|%s*", "")
+        metaLabel:SetText(raidId)
+        local raidName = page.classicRaidName.mosRaidName or string.gsub(nameLabel:GetText() or "", "^|%s*", "")
+        nameLabel:SetText("|  " .. raidName)
+        local savedText = page.classicSaved.mosRaidSavedText or page.classicSaved:GetText()
+        page.classicSaved.mosRaidSavedText = savedText
+        page.classicSaved:SetText(savedText)
+        if showIssues then
+            page.classicIssues.mosRaidIssuesText = page.classicIssues.mosRaidIssuesText or page.classicIssues:GetText()
+            page.classicIssues:SetText(page.classicIssues.mosRaidIssuesText)
+        end
+        page.exportButton.label:Show(); page.quitButton.label:Show()
+        local nameWidth = math.max(48, nameLabel:GetStringWidth() + 4)
+        local metaWidth = math.max(42, metaLabel:GetStringWidth() + 4)
+        local total = nameWidth + metaWidth + 108 + (showIssues and 96 or 0) + 108 + 90 + (showIssues and 40 or 32)
+        local compact = total > available
+        page.classicActionOffset = compact and 30 or 0
+        local actionOffset = page.classicActionOffset
+        local top, left = -9 - sectionOffset, 6
+        local scale = 1
+        if compact then
+            page.classicRaidName:Hide()
+            metaLabel:SetText(raidId)
+            local iconOnly = pageWidth < 300
+            local savedWidth = iconOnly and 72 or 108
+            if iconOnly then page.classicSaved:SetText(savedText == "Not saved yet" and "Not saved" or "Saved") end
+            metaWidth = math.min(math.max(42, metaLabel:GetStringWidth() + 4), math.max(1, pageWidth - 20 - savedWidth))
+            left = PlaceRaidHeaderLabel(page, page.classicMeta, metaWidth, top, left)
+            left = PlaceRaidHeaderButton(page, page.classicSaved, savedWidth, top, left, scale)
+            left = 6
+            local actionsWidth = 108 + 90 + (showIssues and 96 or 0)
+            local gaps = showIssues and 16 or 8
+            if iconOnly then
+                if showIssues then
+                    page.classicIssues:SetText(string.gsub(page.classicIssues.mosRaidIssuesText, "[^%d].*$", ""))
+                    left = PlaceRaidHeaderButton(page, page.classicIssues, 40, top - actionOffset, left, 1)
+                end
+                left = PlaceRaidHeaderButton(page, page.exportButton, 26, top - actionOffset, left, 1)
+                left = PlaceRaidHeaderButton(page, page.quitButton, 26, top - actionOffset, left, 1)
+                page.exportButton.label:Hide(); page.quitButton.label:Hide()
+            else
+                scale = math.min(1, math.max(1, available - gaps) / actionsWidth)
+                if showIssues then left = PlaceRaidHeaderButton(page, page.classicIssues, math.floor(96 * scale), top - actionOffset, left, scale) end
+                left = PlaceRaidHeaderButton(page, page.exportButton, math.floor(108 * scale), top - actionOffset, left, scale)
+                left = PlaceRaidHeaderButton(page, page.quitButton, math.floor(90 * scale), top - actionOffset, left, scale)
+            end
+        else
+            page.classicRaidName:Show()
+            left = PlaceRaidHeaderLabel(page, page.classicMeta, metaWidth, top, left)
+            left = PlaceRaidHeaderLabel(page, page.classicRaidName, nameWidth, top, left)
+            left = PlaceRaidHeaderButton(page, page.classicSaved, 108, top, left, scale)
+            if showIssues then left = PlaceRaidHeaderButton(page, page.classicIssues, 96, top, left, scale) end
+            left = PlaceRaidHeaderButton(page, page.exportButton, 108, top, left, scale); left = PlaceRaidHeaderButton(page, page.quitButton, 90, top, left, scale)
+        end
+        page.classicActionScale = scale
+        UI.SetButtonLabelInsets(page.classicSaved, 8, 4)
+        if page.raidInfoButton then
+            page.raidInfoButton:ClearAllPoints(); page.raidInfoButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, top - actionOffset)
+            page.raidInfoButton:Show()
+        end
         page.classicToolbar:ClearAllPoints(); page.classicToolbar:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -48 - sectionOffset - actionOffset); page.classicToolbar:SetPoint("TOPRIGHT", page, "TOPRIGHT", -4, -48 - sectionOffset - actionOffset); page.classicToolbar:SetHeight(42 + toolbarOffset)
-        page.classicListButton:ClearAllPoints(); page.classicListButton:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -57 - sectionOffset - actionOffset)
+        page.classicListButton:ClearAllPoints(); page.classicListButton:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -56 - sectionOffset - actionOffset)
         page.classicGroupButton:ClearAllPoints(); page.classicGroupButton:SetPoint("LEFT", page.classicListButton, "RIGHT", 8, 0)
         page.classicTwoButton:ClearAllPoints(); page.classicTwoButton:SetPoint("LEFT", page.classicGroupButton, "RIGHT", 8, 0)
         page.classicFourButton:ClearAllPoints(); page.classicFourButton:SetPoint("LEFT", page.classicTwoButton, "RIGHT", 8, 0)
@@ -2759,13 +2850,13 @@ function RaidManagement.LayoutActions(page)
         end
         local pageWidth = PageSpan(page)
         local groupToolsScale = page.raidView == "groups" and toolbarOffset == 0 and math.max(0.75, math.min(1, (pageWidth - 394) / 296)) or 1
-        page.lootMasterToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(138 * groupToolsScale), 26, groupToolsScale); page.lootMasterToolsButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -57 - sectionOffset - actionOffset - toolbarOffset)
+        page.lootMasterToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(138 * groupToolsScale), 26, groupToolsScale); page.lootMasterToolsButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -56 - sectionOffset - actionOffset - toolbarOffset)
         page.raidLeaderToolsButton:ClearAllPoints(); MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(134 * groupToolsScale), 26, groupToolsScale); page.raidLeaderToolsButton:SetPoint("RIGHT", page.lootMasterToolsButton, "LEFT", -8, 0)
         if toolbarOffset > 0 then
             local toolScale = math.min(1, math.max(1, pageWidth - 16) / 296)
             MOS.UI.Components.SizeClassicButton(page.raidLeaderToolsButton, math.floor(134 * toolScale), 26, toolScale)
             MOS.UI.Components.SizeClassicButton(page.lootMasterToolsButton, math.floor(138 * toolScale), 26, toolScale)
-            page.raidLeaderToolsButton:ClearAllPoints(); page.raidLeaderToolsButton:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -57 - sectionOffset - actionOffset - toolbarOffset)
+            page.raidLeaderToolsButton:ClearAllPoints(); page.raidLeaderToolsButton:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -56 - sectionOffset - actionOffset - toolbarOffset)
             page.lootMasterToolsButton:ClearAllPoints(); page.lootMasterToolsButton:SetPoint("LEFT", page.raidLeaderToolsButton, "RIGHT", 8, 0)
         end
         page.classicSummary:Hide()
@@ -3230,14 +3321,16 @@ function RaidManagement.CreateLootMasterController(options)
     end
 
     local function LayoutToolbar()
-        local available = math.max(1, window:GetWidth() - 172)
+        local available = math.max(1, window:GetWidth() - 160)
         title.mosFitFontSize = 12
-        UI.FitButtonLabel(title, available); title:SetHeight(18)
+        title:ClearAllPoints(); title:SetPoint("TOPLEFT", window, "TOPLEFT", 6, window.minimized and -4 or -6)
+        UI.FitButtonLabel(title, available); title:SetHeight(window.minimized and 22 or 18)
     end
 
     controller.Refresh = function()
         if not window:IsVisible() or not compact then return end
         LayoutToolbar()
+        UI.SetButtonEnabled(newRoll, MOS.Modules.MasterLootWindow and MOS.Modules.MasterLootWindow.CanStartManualRoll and MOS.Modules.MasterLootWindow.CanStartManualRoll() or false)
         if window.minimized then return end
         local data = options.page.listRenderer.getData()
         local source = data and data.members or emptyFilters
@@ -3319,9 +3412,9 @@ function RaidManagement.CreateLootMasterController(options)
         })
         close = UI.CreateWindowButton(window, nil, "close"); close:SetPoint("TOPRIGHT", window, "TOPRIGHT", -6, -6)
         close:SetScript("OnClick", function() controller.Close() end)
-        minimize = UI.CreateWindowButton(window, nil, "minimize"); minimize:SetPoint("RIGHT", close, "LEFT", -4, 0)
+        minimize = UI.CreateWindowButton(window, nil, "minimize"); minimize:SetPoint("RIGHT", close, "LEFT", -2, 0)
         minimize:SetScript("OnClick", function() controller.toggleMinimize() end)
-        config = UI.CreateSettingsButton(window); config:SetPoint("RIGHT", minimize, "LEFT", -4, 0)
+        config = UI.CreateSettingsButton(window); config:SetPoint("RIGHT", minimize, "LEFT", -2, 0)
         UI.AttachTooltip(config, "LM Config", "Open Loot Master configuration.")
         config:SetScript("OnClick", function()
             controller.ReanchorPanels()
@@ -3331,7 +3424,7 @@ function RaidManagement.CreateLootMasterController(options)
         end)
         reycoin = UI.CreateGoldToolbarButton(window, "list")
         UI.AttachTooltip(reycoin, "Reycoin List", "View used Reycoins and pending item trades.")
-        reycoin:SetPoint("RIGHT", config, "LEFT", -4, 0)
+        reycoin:SetPoint("RIGHT", config, "LEFT", -2, 0)
         reycoin.toolSource = options.page.reyCoinToggle
         reycoin:SetScript("OnClick", function()
             if options.page.reyCoinSolo then options.page.reyCoinPanel:Hide(); options.page.reyCoinSolo = false end
@@ -3341,9 +3434,9 @@ function RaidManagement.CreateLootMasterController(options)
         end)
         sr = UI.CreateGoldToolbarButton(window, "import")
         rules = UI.CreateGoldToolbarButton(window, "rules")
-        rules:SetPoint("RIGHT", reycoin, "LEFT", -4, 0); sr:SetPoint("RIGHT", rules, "LEFT", -4, 0)
+        rules:SetPoint("RIGHT", reycoin, "LEFT", -2, 0); sr:SetPoint("RIGHT", rules, "LEFT", -2, 0)
         newRoll=UI.CreateGoldToolbarButton(window,"dice")
-        newRoll:SetPoint("RIGHT",sr,"LEFT",-4,0)
+        newRoll:SetPoint("RIGHT",sr,"LEFT",-2,0)
         UI.AttachTooltip(newRoll,"New Roll","Link an item and choose who may roll and which roll types are allowed.")
         newRoll:SetScript("OnClick",function() if MOS.Modules.MasterLootWindow then MOS.Modules.MasterLootWindow.OpenNewRollDialog() end end)
         UI.AttachTooltip(sr, "SR", "Import SR or share the SR link.")
@@ -3359,7 +3452,6 @@ function RaidManagement.CreateLootMasterController(options)
         controller.newRollButton = newRoll
         grip = UI.CreateResizeGrip(window)
         grip:ClearAllPoints(); grip:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -6, 6)
-        grip:SetFrameLevel(window:GetFrameLevel() + 250)
         controller.resizeGrip = grip
         grip:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
         grip:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); SaveGeometry(); controller.Refresh() end)
@@ -3387,9 +3479,9 @@ function RaidManagement.CreateLootMasterController(options)
         end
         local settings = options.getSettings()
         window.minimized = false
-        window:SetMinResize(380, 170); window:SetMaxResize(900, 760)
-        window:SetWidth(math.max(380, math.min(900, tonumber(settings.lootMasterWidth) or 400)))
-        window:SetHeight(math.max(170, math.min(760, tonumber(settings.lootMasterHeight) or 210)))
+        window:SetMinResize(300, 140); window:SetMaxResize(900, 760)
+        window:SetWidth(math.max(300, math.min(900, tonumber(settings.lootMasterWidth) or 400)))
+        window:SetHeight(math.max(140, math.min(760, tonumber(settings.lootMasterHeight) or 210)))
         window:ClearAllPoints()
         if tonumber(settings.lootMasterLeft) and tonumber(settings.lootMasterBottom) then
             window:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", settings.lootMasterLeft, settings.lootMasterBottom)
@@ -3403,12 +3495,12 @@ function RaidManagement.CreateLootMasterController(options)
         if not window:IsVisible() then return end
         HideMenus(); controller.closePanels()
         if window.minimized then
-            window.minimized = false; window:SetMinResize(380, 170)
+            window.minimized = false; window:SetMinResize(300, 140)
             window:SetHeight(window.expandedHeight or 210); compact:Show(); grip:Show()
             UI.SetWindowButtonAction(minimize, "minimize")
         else
             SaveGeometry(); window.expandedHeight = window:GetHeight(); window.minimized = true
-            window:SetMinResize(380, 32); compact:Hide(); grip:Hide(); window:SetHeight(32)
+            window:SetMinResize(300, UI.Window.MinimizedHeight); compact:Hide(); grip:Hide(); window:SetHeight(UI.Window.MinimizedHeight)
             UI.SetWindowButtonAction(minimize, "maximize")
         end
         controller.Refresh()

@@ -58,8 +58,8 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend,options)
         local maximumHeight=math.max(1,math.min(460,screenHeight-24))
         frame.minimumWidth,frame.minimumHeight=math.min(300,maximumWidth),math.min(148,maximumHeight)
         frame.maximumWidth,frame.maximumHeight=maximumWidth,maximumHeight
-        frame:SetMinResize(frame.minimumWidth,frame.minimized and 30 or frame.minimumHeight)
-        frame:SetMaxResize(maximumWidth,frame.minimized and 30 or maximumHeight)
+        frame:SetMinResize(frame.minimumWidth,frame.minimized and UI.Window.MinimizedHeight or frame.minimumHeight)
+        frame:SetMaxResize(maximumWidth,frame.minimized and UI.Window.MinimizedHeight or maximumHeight)
         return frame.minimumWidth,frame.minimumHeight,maximumWidth,maximumHeight
     end
     function frame:Layout()
@@ -67,13 +67,14 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend,options)
         self.layoutRunning=true
         local minWidth,minHeight,maxWidth,maxHeight=ResizeBounds()
         local width=math.max(minWidth,math.min(maxWidth,self:GetWidth()))
-        local height=self.minimized and 30 or math.max(minHeight,math.min(maxHeight,self:GetHeight()))
+        local height=self.minimized and UI.Window.MinimizedHeight or math.max(minHeight,math.min(maxHeight,self:GetHeight()))
         if self:GetWidth()~=width then self:SetWidth(width) end
         if self:GetHeight()~=height then self:SetHeight(height) end
         UI.LayoutPerformanceBackground(self.art,self,width,height)
-        self.title:ClearAllPoints();self.title:SetPoint("TOPLEFT",self,"TOPLEFT",8,-7)
+        self.title:ClearAllPoints();self.title:SetPoint("TOPLEFT",self,"TOPLEFT",8,self.minimized and -4 or -7)
         UI.FitButtonLabel(self.title,math.max(1,width-72));self.title:SetJustifyH("LEFT")
-        self.close:ClearAllPoints();self.close:SetPoint("TOPRIGHT",self,"TOPRIGHT",-6,-6)
+        if self.minimized then self.title:SetHeight(22) end
+        self.close:ClearAllPoints();self.close:SetPoint("TOPRIGHT",self,"TOPRIGHT",-6,self.minimized and -4 or -6)
         if self.minimized then
             self.content:Hide();self.resizeGrip:Hide();self.projectDivider:Hide()
         else
@@ -153,7 +154,7 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend,options)
             UI.SetWindowButtonAction(self.minimize,"minimize")
         else
             self.expandedHeight=oldHeight;self.minimized=true
-            backend.SetVisible(false);SetHeightKeepingTop(30)
+            backend.SetVisible(false);SetHeightKeepingTop(UI.Window.MinimizedHeight)
             UI.SetWindowButtonAction(self.minimize,"maximize")
         end
         if not self.minimized then Shown() end
@@ -164,7 +165,6 @@ function MOS.Modules.Performance.CreateLiveMonitor(backend,options)
     UI.Window.StyleProjectDialog(frame)
     frame:SetScript("OnDragStop",function() frame:StopMovingOrSizing();RememberPosition() end)
     frame.resizeGrip=UI.CreateResizeGrip(frame)
-    frame.resizeGrip:SetFrameStrata("FULLSCREEN_DIALOG");frame.resizeGrip:SetFrameLevel(frame:GetFrameLevel()+250)
     UI.AttachTooltip(frame.resizeGrip,"Resize Live Monitor","Drag to change the window size.")
     frame.resizeGrip:SetScript("OnMouseDown",function() if not frame.minimized then frame:StartSizing("BOTTOMRIGHT") end end)
     frame.resizeGrip:SetScript("OnMouseUp",function()

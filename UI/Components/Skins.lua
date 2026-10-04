@@ -111,7 +111,10 @@ local function ApplySolidButton(entry)
 end
 
 local function ApplySizedButtonGeometry(button, entry)
-    if not button.mosButtonScale then return end
+    if not button.mosButtonScale then
+        if UI.ApplyButtonCaptionBaseline then UI.ApplyButtonCaptionBaseline(button) end
+        return
+    end
     local scale = button.mosButtonScale
     local iconSize = (button.mosBaseIconSize or 13) * scale
     local inset = (button.mosBaseIconInset or 7) * scale
@@ -129,6 +132,7 @@ local function ApplySizedButtonGeometry(button, entry)
         button.label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 0)
         button.label:SetJustifyH(button.mosClassicIconKey and "LEFT" or "CENTER"); button.label:SetJustifyV("MIDDLE")
     end
+    if UI.ApplyButtonCaptionBaseline then UI.ApplyButtonCaptionBaseline(button) end
 end
 
 local function ApplyControl(entry)

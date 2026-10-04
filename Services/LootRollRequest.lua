@@ -5,6 +5,17 @@ local aliases = { tmog=98, mog=98, transmog=98, os=99, ms=100, rc=101, reycoin=1
 Request.CategoryNames = { [98]="Tmog", [99]="OS", [100]="MS", [101]="RC", [102]="SR" }
 local function Defaults() return { [98]=true, [99]=true, [100]=true, [101]=true } end
 
+local function HasPermission(value) return value ~= nil and value ~= false and value ~= 0 end
+
+-- Organizing a linked-item roll is separate from awarding corpse loot.
+function Request.CanOrganize()
+    local raid = MOS.Services.Raid
+    if not raid.IsInRaid() then return false end
+    return raid.IsPlayerLootMaster()
+        or (type(IsRaidLeader) == "function" and HasPermission(IsRaidLeader()))
+        or (type(IsRaidOfficer) == "function" and HasPermission(IsRaidOfficer())) or false
+end
+
 function Request.Normalize(request)
     if type(request) ~= "table" or type(request.link) ~= "string" then return nil, "Link an item first." end
     local link = request.link
@@ -23,8 +34,9 @@ function Request.Normalize(request)
         end
     end
     if count == 0 then return nil, "Choose at least one roll type." end
+    if request.open ~= nil and type(request.open) ~= "boolean" then return nil, "Choose an open or restricted roll." end
     local names
-    if request.names ~= nil then
+    if request.open ~= true and request.names ~= nil then
         if type(request.names) ~= "table" then return nil, "Choose raid members from the list." end
         if table.getn(request.names) > 40 then return nil, "A roll can include at most 40 raid members." end
         if table.getn(request.names) > 0 then
@@ -47,7 +59,8 @@ function Request.Normalize(request)
             end
         end
     end
-    return { link=link, types=types, names=names }
+    if request.open == false and not names then return nil, "Add at least one roller, or enable Open roll." end
+    return { link=link, types=types, names=names, open=names == nil }
 end
 
 function Request.ParseManualRollRequest(text)

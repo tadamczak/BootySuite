@@ -3,7 +3,7 @@
 local P = BootyProfiler
 local L = {}
 P.LoginMemory = L
-local RECORD_LIMIT, SETTLE_SECONDS, SAMPLE_SECONDS, INVENTORY_LIMIT = 256, 5, 1, 256
+local RECORD_LIMIT, SETTLE_SECONDS, SAMPLE_SECONDS, INVENTORY_LIMIT = 256, 10, 1, 256
 L.limits = { records = RECORD_LIMIT, settleSeconds = SETTLE_SECONDS, sampleSeconds = SAMPLE_SECONDS, inventory = INVENTORY_LIMIT }
 local driver, loaded, active, status = nil, false, nil, "waiting"
 local clock, heapReader, previousAt, previousHeap, deadline, sampleWait
@@ -79,6 +79,7 @@ local function Sample(eventName, addon)
     if not report.startHeap then report.startHeap, report.startedAt = heap, at end
     report.heap, report.heapDelta, report.gcThreshold = heap, heap - report.startHeap, threshold
     report.elapsed = at - report.startedAt
+    if report.firstWorldAt~=nil then report.settleRemaining=math.max(0,SETTLE_SECONDS-(report.elapsed-report.firstWorldAt)) end
     report.lastEvent, report.lastAddon = eventName, addon
     if delta < 0 then
         report.heapDropCount = report.heapDropCount + 1
@@ -149,7 +150,7 @@ local function Start()
     active = { schema = 1, profilerVersion = Text(P.version, 64), kind = "recording",
         coveragePartial = true, coverageStartsAt = "BootyProfiler ADDON_LOADED",
         events = {}, addonEvents = 0, omittedRecords = 0, heapDropCount = 0, observedHeapDrop = 0,
-        clockFailures = 0, heapFailures = 0, elapsed = 0 }
+        clockFailures = 0, heapFailures = 0, elapsed = 0, settleSeconds = SETTLE_SECONDS }
     status = "recording"
     local report = active
     if not clock or not heapReader then Finish("failed", "clock-or-heap-api-unavailable"); return end
@@ -191,6 +192,7 @@ local function OnEvent()
         local at = Sample(event)
         if not at or active ~= report then return end
         report.firstWorldAt = report.elapsed
+        report.settleRemaining = SETTLE_SECONDS
         deadline, sampleWait = at + SETTLE_SECONDS, 0
         driver:UnregisterEvent("PLAYER_ENTERING_WORLD")
         driver:SetScript("OnHide", Hidden); driver:SetScript("OnUpdate", Tick); driver:Show()

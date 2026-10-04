@@ -1066,16 +1066,34 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
         sections.rosterHeading:SetExpanded(uiVisible)
     end
     sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -178 + topOffset)
-    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, -238 + topOffset)
+    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("LEFT", page.playerDetailsControl, "RIGHT", 12, 0)
     sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
     if state.general and uiVisible then sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
     local details = page.playerDetailsControl
     details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 44, -206 + topOffset)
+    local live = page.rosterLiveTrackingCheck
+    if live.label then
+        live.label:SetText("Live tracking")
+        if page:GetWidth() < 440 then live.label:SetText("Live") end
+        if live.labelHit then live.labelHit:SetWidth(math.max(18, live.label:GetStringWidth() + 8)) end
+    end
+    local liveWidth = live:GetWidth() + (live.label and live.label:GetStringWidth() or 76) + 12
+    local detailsWidth = math.max(1, page:GetWidth() - 56 - liveWidth - 12)
+    local choiceWidth = math.min(110, math.max(70, detailsWidth / 2))
+    details:SetWidth(choiceWidth)
+    local labelWidth = math.max(1, detailsWidth - choiceWidth - 10)
+    local path, size, flags = details.fieldLabel:GetFont()
+    details.fieldLabel:SetFont(path, details.fieldLabel.mosFitFontSize or size, flags)
+    details.fieldLabel:SetWidth(0); details.fieldLabel:SetText("Player details style:")
+    if details.fieldLabel:GetStringWidth() > labelWidth then details.fieldLabel:SetText("Details style:") end
+    MOS.UI.Components.FitButtonLabel(details.fieldLabel, labelWidth)
+    details.fieldLabel:SetWidth(math.min(labelWidth, math.ceil(details.fieldLabel:GetStringWidth() + 2)))
+    MOS.UI.Components.FitButtonLabel(details, math.max(1, choiceWidth - 16))
     if state.general and uiVisible then details:Show(); details.fieldLabel:Show()
     else details:Hide(); details.fieldLabel:Hide(); details.panel:Hide() end
-    local layoutY = (state.general and -266 or -206) + topOffset
+    local layoutY = (state.general and -234 or -206) + topOffset
     sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 24, layoutY)
     if state.layout and uiVisible then sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
