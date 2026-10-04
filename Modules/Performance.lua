@@ -39,8 +39,7 @@ local function CompareHeapRise(a,b)
     if (a.heapRise or 0)==(b.heapRise or 0) then return a.name<b.name end
     return (a.heapRise or 0)>(b.heapRise or 0)
 end
-local rowColor = {0.025,0.025,0.025}
-local alternateRowColor = {0.075,0.075,0.075}
+local rowColor = {1,1,1}
 local healthColors={{0.72,0.72,0.72},{0.45,0.85,0.45},{1,0.78,0.25},{1,0.35,0.25}}
 local emptyEntries = {}
 local FAMILY_PAGE_SIZE=50
@@ -151,11 +150,12 @@ local function TooltipBody()
     return this.reportHint or ""
 end
 local function FontSize(label,size)
-    local applied=size+(UI.GetTextSizeDelta(label:GetParent()) or 0)
+    local applied=size-1+(UI.GetTextSizeDelta(label:GetParent()) or 0)
     local font,_,flags=label:GetFont();label:SetFont(font,applied,flags);return applied
 end
 
-function Performance.Create(parent)
+function Performance.Create(parent,options)
+    options=options or emptyEntries
     local page = UI.CreateContainer(nil, parent)
     page:SetPoint("TOPLEFT", parent, "TOPLEFT", 1.5, -3); page:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -1.5, 1.5); page:Hide()
     page.bodyHost=UI.CreateContainer(nil,page)
@@ -165,6 +165,11 @@ function Performance.Create(parent)
     page.message = UI.CreateLabel(page.bodyHost, nil, "OVERLAY", "GameFontHighlight")
     page.message:SetJustifyH("CENTER");page.message:SetJustifyV("MIDDLE");if page.message.SetWordWrap then page.message:SetWordWrap(true) end
     local module = { frame = page, items = {}, rows = {}, sessionEntries = {}, callbackEntries = {}, callbackDetails = {}, memoryEntries = {}, metricFlow = {}, detailsExpanded = {}, sectionState = {}, snapshots = {}, familyPages = {}, familyPage = 1, callbackView = "time", measureMemory = false, loginPage = 1, loginPaging = {} }
+    local scrolled=page.canvas.layoutViewport:GetScript("OnVerticalScroll")
+    page.canvas.layoutViewport:SetScript("OnVerticalScroll",function()
+        if scrolled then scrolled() end
+        if page:IsVisible() then module:LayoutBackground() end
+    end)
 
     local function AddItem(kind, text, data, value, hint)
         module.itemCount = module.itemCount + 1
@@ -570,7 +575,6 @@ function Performance.Create(parent)
         AddMetric("Health",report.status,report.summary,report.severity or 0)
         AddMetric("Profile",report.scope or "Unavailable","The profile used for this completed scan.")
         AddMetric("Last scan",ScanDate(report.date),"Local date and time when the scan began.")
-        AddMetric("Duration",ScanSeconds(report.elapsed),"Time recorded in this completed scan.")
         if report.summary then AddItem("message",report.summary) end
         for _,finding in ipairs(report.findings or emptyEntries) do
             AddItem("heading",finding.title)
@@ -672,7 +676,7 @@ function Performance.Create(parent)
         row.reportTitle,row.reportHint,row.reportSchema=item.text,item.hint,nil
         if row.label.SetNonSpaceWrap then row.label:SetNonSpaceWrap(true) end
         row:EnableMouse(item.hint~=nil)
-        UI.SetRowColor(row,rowColor,1);row.mosTableRowSelection:Hide();row.mosTableRowHover:Hide();UI.SetProjectButtonOutline(row,false)
+        UI.SetRowColor(row,rowColor,0);row.mosTableRowSelection:Hide();row.mosTableRowHover:Hide();UI.SetProjectButtonOutline(row,false)
         row.mosTableRowEven=false;row.mosTableRowSelected=false
     end
     local function SetValue(row,index,value) row.values[index]=tostring(value) end
@@ -756,10 +760,10 @@ function Performance.Create(parent)
             SetValue(row,4,data.event or "-");SetValue(row,5,data.failed and 1 or 0)
         else SetValue(row,1,Memory(item.operation.memory)) end
         if item.kind~="tableHeader" then
-            UI.SetRowColor(row,math.mod(stripe,2)==0 and alternateRowColor or rowColor,1);row:EnableMouse(true)
+            UI.SetRowColor(row,rowColor,math.mod(stripe,2)==0 and 0.14 or 0.025);row:EnableMouse(true)
             row.reportHint=item.hint
             if item.kind=="family" then
-                UI.SetRowColor(row,rowColor,1);UI.SetProjectButtonOutline(row,true)
+                UI.SetRowColor(row,rowColor,0.16);UI.SetProjectButtonOutline(row,true)
                 row.familyName=item.value;row.reportModule=module;row:SetScript("OnClick",FamilyClick)
                 row.label:SetTextColor(unpack(UI.Theme.colors.goldText))
             end
@@ -839,7 +843,7 @@ function Performance.Create(parent)
                     row.detail:Show()
                     UI.FitButtonLabel(row.detail,math.max(1,cardWidth-16));row.detail:SetHeight(18);row.detail:SetJustifyV("MIDDLE")
                     height=math.max(height,labelHeight+18+16)
-                    UI.SetRowColor(row,rowColor,1);row.mosFlowWidth=cardWidth;row:Show()
+                    UI.SetRowColor(row,rowColor,0.045);row.mosFlowWidth=cardWidth;row:Show()
                     count=count+1
                     if count<=table.getn(flow) then flow[count]=row else table.insert(flow,row) end
                     index=index+1
@@ -872,7 +876,7 @@ function Performance.Create(parent)
                     end
                     if toggle:GetParent()~=row then toggle:SetParent(row) end
                     -- Reused rows must not carry a preceding table's stripe or hover.
-                    UI.SetRowColor(row,rowColor,1);row.mosTableRowHovered=nil
+                    UI.SetRowColor(row,rowColor,0.045);row.mosTableRowHovered=nil
                     toggle.sectionHovered=nil;UI.SetProjectButtonOutline(toggle,true)
                     local nested=sections[name].nested
                     local sectionHeight=nested and 24 or 28
@@ -928,7 +932,11 @@ function Performance.Create(parent)
             if menuShown then menuShown() end
             for _,option in ipairs(page.advancedMenu.options) do UI.FitButtonLabel(option,option:GetWidth()-16) end
         end)
-        page.art=UI.CreatePerformanceBackground(page)
+        page.backgroundHost=UI.CreateContainer(nil,page);page.backgroundHost:EnableMouse(false)
+        page.backgroundHost:SetFrameLevel(page:GetFrameLevel())
+        page.art=UI.CreatePerformanceBackground(page.backgroundHost)
+        page.milk=MOS.UI.Components.CreateTexture(page.backgroundHost,nil,"BORDER")
+        page.milk:SetTexture(1,1,1,1);page.milk:SetAlpha(0.10);page.milk:SetAllPoints(page.backgroundHost)
         page.status=UI.CreateLabel(page.header,nil,"OVERLAY","GameFontHighlightSmall");page.status:SetJustifyH("LEFT");if page.status.SetWordWrap then page.status:SetWordWrap(true) end
         page.sectionToggles={}
         page.advancedButton:SetScript("OnClick",function() if page.advancedMenu:IsShown() then page.advancedMenu:Hide() else page.advancedMenu:Show() end end)
@@ -976,13 +984,14 @@ function Performance.Create(parent)
     local function MeasureHeader(width)
         page.header:SetWidth(width)
         page.title:ClearAllPoints();page.title:SetPoint("TOPLEFT",page.header,"TOPLEFT",8,-8);UI.FitButtonLabel(page.title,width-16)
-        if not page.tabs then page.header:SetHeight(38);return 38 end
+        if not page.tabs then page.toolbarHeight=38;page.header:SetHeight(38);return 38 end
         local tabHeight=LayoutTabs(width)
         page.tabs:ClearAllPoints();page.tabs:SetPoint("TOPLEFT",page.header,"TOPLEFT",0,-38);page.tabs:SetWidth(width);page.tabs:SetHeight(tabHeight)
-        if not module.provider or not module.tab then page.header:SetHeight(38+tabHeight);return 38+tabHeight end
+        if not module.provider or not module.tab then page.toolbarHeight=38+tabHeight;page.header:SetHeight(page.toolbarHeight);return page.toolbarHeight end
         local controlHeight=page.controls:IsShown() and UI.LayoutFlow(page.controls,page.flow,8,8,width-16,8)+8 or 0
         page.controls:ClearAllPoints();page.controls:SetPoint("TOPLEFT",page.header,"TOPLEFT",0,-38-tabHeight);page.controls:SetWidth(width);page.controls:SetHeight(controlHeight)
-        local top=38+tabHeight+controlHeight+4
+        page.toolbarHeight=38+tabHeight+controlHeight
+        local top=page.toolbarHeight+4
         page.status:ClearAllPoints();page.status:SetPoint("TOPLEFT",page.header,"TOPLEFT",8,-top);page.status:SetWidth(math.max(1,width-16));page.status:SetHeight(0)
         FontSize(page.status,11)
         top=top+math.max(22,UI.MeasureTextHeight(page.status,width-16))+2;page.header:SetHeight(top);return top
@@ -997,11 +1006,23 @@ function Performance.Create(parent)
         end
         return MeasureItems(math.max(1,width-16),top)
     end
+    function module:LayoutBackground()
+        if not page.backgroundHost then return end
+        local width,height=self.backgroundOwnerWidth,self.backgroundOwnerHeight
+        if not width then width,height=UI.GetFrameSpan(parent) end
+        local scroll=not self.headerPinned and page.canvas.layoutViewport:GetVerticalScroll() or 0
+        local top=math.max(0,math.min(height,3+(page.toolbarHeight or 0)-scroll))
+        page.backgroundTop=top
+        page.backgroundHost:ClearAllPoints();page.backgroundHost:SetPoint("TOPLEFT",parent,"TOPLEFT",0,-top)
+        page.backgroundHost:SetPoint("BOTTOMRIGHT",parent,"BOTTOMRIGHT",0,0)
+        page.backgroundHost:SetWidth(width);page.backgroundHost:SetHeight(math.max(1,height-top))
+        UI.LayoutPerformanceBackground(page.art,page.backgroundHost,width,math.max(1,height-top));page.art:Show()
+    end
     function module:Layout()
         local width,height=UI.GetFrameSpan(parent)
+        self.backgroundOwnerWidth,self.backgroundOwnerHeight=width,height
         width,height=math.max(80,width-3),math.max(80,height-4.5)
         page:SetWidth(width);page:SetHeight(height)
-        if page.art then UI.LayoutPerformanceBackground(page.art,page,width,height);page.art:Show() end
         local headerHeight=MeasureHeader(width)
         self.headerPinned=self.provider==nil or self.tab==nil or height>=headerHeight+120
         local headerParent=self.headerPinned and page or page.canvas
@@ -1012,6 +1033,7 @@ function Performance.Create(parent)
         height=math.max(1,height-inset)
         page.bodyHost:SetWidth(width);page.bodyHost:SetHeight(height)
         UI.LayoutResponsiveCanvas(page.canvas,MeasurePage,self,width,height)
+        self:LayoutBackground()
     end
     function module:Refresh()
         if not page:IsVisible() then return end
@@ -1220,7 +1242,7 @@ function Performance.Create(parent)
         if not backend or not Performance.CreateLiveMonitor then return false end
         if self.addonStatus and self.addonStatus.reloadRequired and self.addonStatus.pendingEnabled==false then return false end
         if not self.monitor then
-            self.monitor=Performance.CreateLiveMonitor(backend)
+            self.monitor=Performance.CreateLiveMonitor(backend,options)
         end
         if self.monitor:IsShown() then self.monitor:Close() else return self.monitor:Open() end
         return true

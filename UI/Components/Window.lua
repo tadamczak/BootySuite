@@ -57,7 +57,23 @@ function Window.Create(options)
 
     resize:SetScript("OnHide", function() window:StopMovingOrSizing() end)
 
-    local function ApplyResizeBounds()
+    local function RememberTop()
+        if options.minimizedWidth then
+            local left = window.GetLeft and window:GetLeft()
+            local top = window.GetTop and window:GetTop()
+            if left and top then window.mosCompactLeft, window.mosCompactTop = left, top end
+        end
+    end
+    local function ResizeKeepingTop(width, height)
+        RememberTop()
+        if options.minimizedWidth then
+            if window.mosCompactLeft and window.mosCompactTop then
+                window:ClearAllPoints(); window:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", window.mosCompactLeft, window.mosCompactTop)
+            end
+        end
+        window:SetWidth(width); window:SetHeight(height)
+    end
+    local function ApplyResizeBounds(desiredWidth, desiredHeight)
         local screenWidth = (UIParent.GetWidth and UIParent:GetWidth()) or 1100
         local screenHeight = (UIParent.GetHeight and UIParent:GetHeight()) or 760
         local maximumWidth = math.max(320, math.min(1100, screenWidth - 32))
@@ -65,26 +81,38 @@ function Window.Create(options)
         local minimumWidth = math.min(350, maximumWidth)
         local minimumHeight = math.min(420, maximumHeight)
         window:SetMinResize(minimumWidth, minimumHeight); window:SetMaxResize(maximumWidth, maximumHeight)
-        if window:GetWidth() > maximumWidth then window:SetWidth(maximumWidth) end
-        if window:GetHeight() > maximumHeight then window:SetHeight(maximumHeight) end
-        if window:GetWidth() < minimumWidth then window:SetWidth(minimumWidth) end
-        if window:GetHeight() < minimumHeight then window:SetHeight(minimumHeight) end
+        local width = math.max(minimumWidth, math.min(maximumWidth, desiredWidth or window:GetWidth()))
+        local height = math.max(minimumHeight, math.min(maximumHeight, desiredHeight or window:GetHeight()))
+        if width ~= window:GetWidth() or height ~= window:GetHeight() then ResizeKeepingTop(width, height) end
     end
-    window:SetScript("OnSizeChanged", function() if view then options.update(view) end end)
+    window:SetScript("OnSizeChanged", function() if view and not window.minimized and window:IsVisible() then options.update(view) end end)
 
-    local function CloseWindow() window:Hide() end
+    local function CloseWindow() RememberTop(); window:Hide() end
     close:SetScript("OnClick", CloseWindow)
     minimize:SetScript("OnClick", function()
         if not view then return end
         if window.minimized then
-            window.minimized = false; window:SetHeight(window.expandedHeight or 620); content:Show(); resize:Show(); view.viewport:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
+            window.minimized = false
+            if options.minimizedWidth then ApplyResizeBounds(window.expandedWidth, window.expandedHeight)
+            else window:SetHeight(window.expandedHeight or 620) end
+            content:Show(); resize:Show(); view.viewport:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
+            options.update(view)
         else
-            window.minimized = true; window.expandedHeight = window:GetHeight(); view.viewport:Hide(); content:Hide(); resize:Hide(); window:SetHeight(options.plainHeader and 34 or (options.compact and 44 or 50)); MOS.UI.Components.SetWindowButtonAction(minimize, "maximize")
+            window.minimized = true; window.expandedHeight = window:GetHeight(); window.expandedWidth = window:GetWidth()
+            window:SetScript("OnUpdate", nil)
+            view.viewport:Hide(); content:Hide(); resize:Hide()
+            local height = options.plainHeader and 34 or (options.compact and 44 or 50)
+            if options.minimizedWidth then
+                local width = math.min(options.minimizedWidth, UIParent:GetWidth() - 16)
+                window:SetMinResize(width, height); window:SetMaxResize(width, height)
+                ResizeKeepingTop(width, height)
+            else window:SetHeight(height) end
+            MOS.UI.Components.SetWindowButtonAction(minimize, "maximize")
         end
     end)
     local function FinishOpen()
         window:SetScript("OnUpdate", nil)
-        if not window:IsVisible() or not view then return end
+        if not window:IsVisible() or not view or window.minimized then return end
         view.viewport:SetScrollChild(view.page)
         view.page:Show()
         options.update(view)
@@ -93,8 +121,10 @@ function Window.Create(options)
     window:SetScript("OnHide", function() window:SetScript("OnUpdate", nil) end)
     window.Open = function()
         if window:IsVisible() or not view then return end
-        ApplyResizeBounds()
-        window.minimized = false; content:Show(); resize:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
+        local minimized = window.minimized
+        window.minimized = false
+        ApplyResizeBounds(options.minimizedWidth and minimized and window.expandedWidth or nil, options.minimizedWidth and minimized and window.expandedHeight or nil)
+        content:Show(); resize:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
         window:Show(); view.viewport:SetVerticalScroll(0); view.viewport:Show()
         if view.scrollBar then view.scrollBar:SetValue(0) end
         if options.refresh then options.refresh(view) end

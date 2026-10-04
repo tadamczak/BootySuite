@@ -1229,6 +1229,22 @@ function RaidService.IsInRaid()
     return RaidService.GetRaidMemberCount() > 0
 end
 
+local function HasRaidPermission(value)
+    return value ~= nil and value ~= false and value ~= 0
+end
+
+function RaidService.CanReadyCheck()
+    if type(DoReadyCheck) ~= "function" or not RaidService.IsInRaid() then return false end
+    return (type(IsRaidLeader) == "function" and HasRaidPermission(IsRaidLeader()))
+        or (type(IsRaidOfficer) == "function" and HasRaidPermission(IsRaidOfficer())) or false
+end
+
+function RaidService.ReadyCheck()
+    if not RaidService.CanReadyCheck() then return false end
+    DoReadyCheck()
+    return true
+end
+
 function RaidService.SendRaidWarning(message)
     if not RaidService.IsInRaid() or type(SendChatMessage) ~= "function" then return false, "You must be in a raid." end
     local playerName = UnitName("player")

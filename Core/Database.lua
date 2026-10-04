@@ -39,6 +39,13 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.rosterClassColors == nil then MuklaOfficerSuiteDB.rosterClassColors = true end
     if MuklaOfficerSuiteDB.rosterHideSectionHeader == nil then MuklaOfficerSuiteDB.rosterHideSectionHeader = false end
     if MuklaOfficerSuiteDB.raidHideSectionHeader == nil then MuklaOfficerSuiteDB.raidHideSectionHeader = false end
+    if MuklaOfficerSuiteDB.useMOSRaidTab == nil then MuklaOfficerSuiteDB.useMOSRaidTab = false end
+    local monitorWidth = tonumber(MuklaOfficerSuiteDB.performanceMonitorWidth)
+    local monitorHeight = tonumber(MuklaOfficerSuiteDB.performanceMonitorHeight)
+    if not monitorWidth or monitorWidth ~= monitorWidth or monitorWidth >= 1e300 or monitorWidth <= -1e300 then monitorWidth = 360 end
+    if not monitorHeight or monitorHeight ~= monitorHeight or monitorHeight >= 1e300 or monitorHeight <= -1e300 then monitorHeight = 360 * 572 / 1024 end
+    MuklaOfficerSuiteDB.performanceMonitorWidth = math.max(300, math.min(720, monitorWidth))
+    MuklaOfficerSuiteDB.performanceMonitorHeight = math.max(148, math.min(460, monitorHeight))
     if MuklaOfficerSuiteDB.rosterShowClass == nil then MuklaOfficerSuiteDB.rosterShowClass = true end
     if MuklaOfficerSuiteDB.rosterShowLevel == nil then MuklaOfficerSuiteDB.rosterShowLevel = true end
     if MuklaOfficerSuiteDB.rosterShowZone == nil then MuklaOfficerSuiteDB.rosterShowZone = true end

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.126 - 2026-10-04
+
+- Restore Performance's earlier component palette, add a milky results underlay below the toolbars, compact its text and remember Live Monitor's size.
+- Add indented feature sections and Keybindings in Settings; optionally replace the standard Raid tab with compact MOS groups.
+- Add Ready Check and a styled Raid Info window; fix raid header sizing and leftover separators, compact minimized Settings and update the minimap icon.
+
 ## 0.5.0-dev.125 - 2026-10-04
 
 - Add minimap quick menus for guild, raid and profiler actions, with a new supplied icon; left click opens or restores the dashboard.

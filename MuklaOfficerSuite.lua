@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.125"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.126"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -33,6 +33,7 @@ local raidSessionController
 local HandleGuildScanFailure
 local scanProgress
 local raidScanProgress
+local nativeRaidTab
 local RefreshCurrentPageLayout
 local ApplyNavigationLayout
 local RefreshRosterPage
@@ -138,7 +139,9 @@ end, {
         if raidPage.lifecycle and raidPage.lifecycle.SyncTrackingSetting then raidPage.lifecycle:SyncTrackingSetting() end
         if RefreshRosterPage and rosterPage:IsVisible() then RefreshRosterPage() end
         if RefreshRaidPage and raidPage:IsVisible() then RefreshRaidPage() end
+        if nativeRaidTab then nativeRaidTab:Sync() end
     end,
+    useMOSRaidTabChanged = function() if nativeRaidTab then nativeRaidTab:Sync() end end,
     minimapVisibilityChanged = function()
         if not MOS.minimapButton then return end
         MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon
@@ -157,7 +160,18 @@ MOS.Modules.Settings.CreateRaidSettings(configurationPage, {
 detachedSettingsWindow.AttachView(settingsView)
 dashboardView.settingsButton:SetScript("OnClick", function() detachedSettingsWindow.Toggle() end)
 
-local performanceModule = MOS.Modules.Performance.Create(contentPanel.mosPageHost or contentPanel)
+local performanceModule = MOS.Modules.Performance.Create(contentPanel.mosPageHost or contentPanel, {
+    loadMonitorSize = function() return MOS.Database.GetSetting("performanceMonitorWidth"), MOS.Database.GetSetting("performanceMonitorHeight") end,
+    saveMonitorSize = function(width, height)
+        MOS.Database.SetSetting("performanceMonitorWidth", width)
+        MOS.Database.SetSetting("performanceMonitorHeight", height)
+    end,
+})
+nativeRaidTab = MOS.Modules.NativeRaidTab.Create({
+    isEnabled = function() return MOS.Database.GetSetting("useMOSRaidTab") end,
+    ensureDatabase = MOS.Database.Ensure,
+    openRaidInfo = MOS.Modules.RaidInfo.Open,
+})
 
 scanProgress = MOS.UI.Components.ProgressBar.Create(UIState.statusBar, 280, 16)
 scanProgress:SetPoint("LEFT", UIState.statusBar, "LEFT", 4, 0)
@@ -814,6 +828,7 @@ MOS.Core.EventDispatcher.Attach(MOS, {
         MOS.sidebarCollapsed = MuklaOfficerSuiteDB.sidebarCollapsed and true or false
         raidPage.lootMasterController.resetOnLoad()
         ApplyNavigationLayout()
+        nativeRaidTab:Sync()
     end,
     GUILD_ROSTER_UPDATE = function()
         MOS.Core.GuildScanController.HandleRosterUpdate(MOS.guildScanController)

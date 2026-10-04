@@ -1,0 +1,107 @@
+local MOS = MuklaOfficerSuite
+MOS.Modules.RaidInfo = MOS.Modules.RaidInfo or {}
+local RaidInfo, serial = MOS.Modules.RaidInfo, 0
+
+function RaidInfo.Create(parent, service)
+    local UI = MOS.UI.Components
+    service = service or MOS.Services.RaidInfo
+    local frame = UI.CreateContainer(nil, parent or UIParent)
+    frame:SetWidth(440); frame:SetHeight(130); frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    frame:SetFrameStrata("FULLSCREEN_DIALOG"); frame:SetFrameLevel(220)
+    frame.title = UI.CreateHeading(frame, "", 3, "gold"); frame.title:SetText("Raid Info")
+    frame.close = UI.CreateWindowButton(frame, nil, "close")
+    UI.Window.StyleProjectDialog(frame)
+    frame:Hide()
+    serial = serial + 1
+    local scrollName = "MuklaOfficerSuiteRaidInfoScroll" .. serial
+    local scroll = UI.CreateScrollFrame(scrollName, frame, "UIPanelScrollFrameTemplate")
+    local canvas = UI.CreateContainer(nil, scroll); scroll:SetScrollChild(canvas)
+    local bar = getglobal(scrollName .. "ScrollBar"); UI.RegisterSkinnedScrollBar(bar)
+    local headings, rows, entries = {}, {}, {}
+    local names = {"Instance", "Raid ID", "Resets in"}
+    local index
+    for index = 1, 3 do
+        headings[index] = UI.CreateLabel(frame, nil, "OVERLAY", "GameFontNormalSmall")
+        headings[index]:SetText(names[index]); headings[index]:SetJustifyH("LEFT")
+    end
+    local empty = UI.CreateLabel(frame, nil, "OVERLAY", "GameFontHighlightSmall")
+    empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -58); empty:SetWidth(420); empty:SetJustifyH("LEFT")
+    local active, controller = false, {}
+    local function Measure(width)
+        local nameWidth, idWidth = math.max(1, width - 184), 84
+        local y, index = 0, 1
+        for index = 1, table.getn(entries) do
+            local row = rows[index]
+            if not row then
+                row = UI.CreateContainer(nil, canvas); rows[index] = row
+                row.cells = {}
+                for cell = 1, 3 do row.cells[cell] = UI.CreateLabel(row, nil, "OVERLAY", "GameFontHighlightSmall"); row.cells[cell]:SetJustifyH("LEFT") end
+                UI.StyleWarmListRow(row, false)
+            end
+            local values = {entries[index].name, tostring(entries[index].id or "-"), service.FormatReset(entries[index].resetSeconds)}
+            local widths, left, height = {nameWidth, idWidth, 100}, 4, 26
+            for cell = 1, 3 do
+                local label = row.cells[cell]
+                label:ClearAllPoints(); label:SetPoint("TOPLEFT", row, "TOPLEFT", left, -6)
+                label:SetWidth(math.max(1, widths[cell] - 8)); label:SetHeight(0); label:SetText(values[cell])
+                if label.SetWordWrap then label:SetWordWrap(true) end
+                height = math.max(height, UI.MeasureTextHeight(label, math.max(1, widths[cell] - 8), true) + 12)
+                left = left + widths[cell]
+            end
+            row:ClearAllPoints(); row:SetPoint("TOPLEFT", canvas, "TOPLEFT", 0, -y); row:SetWidth(width); row:SetHeight(height); row:Show()
+            y = y + height + 2
+        end
+        for index = table.getn(entries) + 1, table.getn(rows) do rows[index]:Hide() end
+        return math.max(1, y - 2)
+    end
+    local function Render()
+        local available
+        entries, available = service.Read(entries)
+        local height = math.min(360, math.max(118, 70 + table.getn(entries) * 28))
+        frame:SetHeight(height)
+        local width, contentHeight, overflow, maximum = UI.ResolveScrollLayout(420, height - 68, 20, Measure)
+        local positions = {10, 10 + width - 184, 10 + width - 100}
+        for index = 1, 3 do
+            headings[index]:ClearAllPoints(); headings[index]:SetPoint("TOPLEFT", frame, "TOPLEFT", positions[index], -38)
+            headings[index]:SetWidth(index == 1 and width - 184 or (index == 2 and 84 or 100)); headings[index]:Show()
+        end
+        scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -58); scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10 - (overflow and 20 or 0), 10)
+        canvas:SetWidth(width); canvas:SetHeight(contentHeight)
+        if bar then
+            bar:ClearAllPoints(); bar:SetWidth(16); bar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -74); bar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 26)
+        end
+        if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
+        UI.ApplyScrollRange(scroll, bar, maximum); scroll.mosRaidInfoMaximum = maximum
+        if table.getn(entries) > 0 then empty:Hide(); scroll:Show()
+        else empty:SetText(available and "You have no saved instances." or "Saved instance information is unavailable."); empty:Show(); scroll:Hide() end
+    end
+    local function Activate()
+        if active then return end
+        active = true; frame:RegisterEvent("UPDATE_INSTANCE_INFO")
+        service.Request(); Render()
+    end
+    local function Deactivate() active = false; frame:UnregisterEvent("UPDATE_INSTANCE_INFO") end
+    frame:SetScript("OnShow", Activate); frame:SetScript("OnHide", Deactivate)
+    frame:SetScript("OnEvent", function() if active and event == "UPDATE_INSTANCE_INFO" then Render() end end)
+    frame.close:SetScript("OnClick", function() controller:Close() end)
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function()
+        if not active then return end
+        local maximum = scroll.mosRaidInfoMaximum or 0
+        local offset = math.max(0, math.min(maximum, scroll:GetVerticalScroll() - (tonumber(arg1) or 0) * 28))
+        scroll:SetVerticalScroll(offset); if bar then bar:SetValue(offset) end
+    end)
+    function controller:Open()
+        if active then service.Request(); Render() else frame:Show(); Activate() end
+    end
+    function controller:Close() frame:Hide(); Deactivate() end
+    function controller:IsVisible() return frame:IsVisible() end
+    return controller
+end
+
+local dialog
+function RaidInfo.Open()
+    if not dialog then dialog = RaidInfo.Create(UIParent) end
+    dialog:Open()
+    return dialog
+end

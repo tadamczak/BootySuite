@@ -46,6 +46,55 @@ local function AlignReset(heading)
     heading.resetButton:SetPoint("TOPRIGHT", owner, "TOPRIGHT", -12, y)
 end
 
+local function FeatureOpen(page, key)
+    return (not page.topSectionState or page.topSectionState.ui) and (not page.uiFeatureState or page.uiFeatureState[key])
+end
+
+local function PlaceSection(heading, page, y, inset)
+    heading:ClearAllPoints(); heading:SetPoint("TOPLEFT", page, "TOPLEFT", inset or 0, y)
+    if heading.SetExpanded then heading:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, y) end
+end
+
+-- Empty feature groups reserve a body inset when opened. Expansion state stays
+-- in this page instance rather than profile SavedVariables.
+function Settings.LayoutFollowingSections(page, y)
+    local uiVisible = not page.topSectionState or page.topSectionState.ui
+    for _, section in ipairs(page.uiEmptySections or {}) do
+        PlaceSection(section.heading, page, y, 12)
+        section.heading.label:SetText((section.expanded and "-  " or "+  ") .. section.heading.baseText)
+        section.heading:SetExpanded(section.expanded)
+        if uiVisible then section.heading:Show() else section.heading:Hide() end
+        local childrenVisible = uiVisible and section.expanded
+        if childrenVisible then
+            y = y - 28
+            PlaceSection(section.general, page, y, 24)
+            section.general.label:SetText((section.generalOpen and "-  " or "+  ") .. "General")
+            section.general:Show(); y = y - 28 - (section.generalOpen and 12 or 0)
+            PlaceSection(section.layout, page, y, 24)
+            section.layout.label:SetText((section.layoutOpen and "-  " or "+  ") .. "Layout")
+            section.layout:Show(); y = y - (section.layoutOpen and 12 or 0)
+        else section.general:Hide(); section.layout:Hide() end
+        if uiVisible then y = y - 28 end
+    end
+    local keys, state = page.keybindings, page.topSectionState
+    if keys and state then
+        PlaceSection(keys.heading, page, y)
+        keys.heading.label:SetText((state.keybindings and "-  " or "+  ") .. "Keybindings")
+        keys.heading:SetExpanded(state.keybindings); keys.heading:Show(); y = y - 28
+        if state.keybindings then
+            PlaceSection(keys.general, page, y, 24)
+            keys.general.label:SetText((state.keybindingsGeneral and "-  " or "+  ") .. "General")
+            keys.general:Show(); y = y - 28
+            if state.keybindingsGeneral then
+                page.keybindingGrid = page.keybindingGrid or {keys.check}
+                local height = MOS.UI.Components.Settings.LayoutGrid(page, page.keybindingGrid, 40, y, page:GetWidth() - 52, 26)
+                keys.check:Show(); y = y - height - 12
+            else keys.check:Hide() end
+        else keys.general:Hide(); keys.check:Hide() end
+    end
+    return y
+end
+
 function Settings.LayoutGeneral(page)
     if not page.generalGrid then return 0 end
     local state = page.uiSectionState
@@ -94,36 +143,36 @@ end
 function Settings.LayoutRaidGrid(page, offset)
     local data, C = page.responsiveRaid, MOS.UI.Components.Settings
     local group, list, shell = data.group, data.list, data.shell
-    local width = math.max(1, page:GetWidth() - 64)
+    local width = math.max(1, page:GetWidth() - 52)
     local function At(control, x, y)
         control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
         AlignReset(control)
     end
     local y = -318 + offset
-    At(shell.groupHeading, 48, y); y = y - 38
-    At(group.displayHeading, 52, y); y = y - 26
+    At(shell.groupHeading, 36, y); y = y - 38
+    At(group.displayHeading, 40, y); y = y - 26
     group.displayChecks.mosMaxColumns = 3
-    y = y - C.LayoutGrid(page, group.displayChecks, 52, y, width, 26) - 8
-    At(group.sizeHeading, 52, y); y = y - 24
-    y = y - C.LayoutGrid(page, group.autoChecks, 52, y, width, 26) - 22
-    y = y - C.LayoutGrid(page, group.sliders, 52, y, width, 56, true)
-    At(group.colorHeading, 52, y); y = y - 24
-    y = y - C.LayoutGrid(page, group.colorChecks, 52, y, width, 26)
-    y = y - C.LayoutGrid(page, group.colors, 52, y, width, 28) - 16
-    At(group.lightnessLabel,52,y); y=y-34
+    y = y - C.LayoutGrid(page, group.displayChecks, 40, y, width, 26) - 8
+    At(group.sizeHeading, 40, y); y = y - 24
+    y = y - C.LayoutGrid(page, group.autoChecks, 40, y, width, 26) - 22
+    y = y - C.LayoutGrid(page, group.sliders, 40, y, width, 56, true)
+    At(group.colorHeading, 40, y); y = y - 24
+    y = y - C.LayoutGrid(page, group.colorChecks, 40, y, width, 26)
+    y = y - C.LayoutGrid(page, group.colors, 40, y, width, 28) - 16
+    At(group.lightnessLabel,40,y); y=y-34
     if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting("raidGroupOddLightness") or 5) end
-    At(group.tileColorHeading, 52, y); y = y - 26
-    y = y - C.LayoutGrid(page, group.tileColors, 52, y, width, 28) - 24
-    At(shell.listHeading, 48, y); At(shell.listDivider, 48, y - 20); shell.listDivider:SetWidth(math.max(1, page:GetWidth() - 84)); y = y - 44
-    At(list.displayHeading,52,y);y=y-26
-    y = y - C.LayoutGrid(page, list.checks, 52, y, width, 26) - 24
-    At(list.sizeHeading,52,y);y=y-38
-    y = y - C.LayoutGrid(page, list.sliders, 52, y, width, 56, true)
-    At(list.colorHeading,52,y);y=y-26
-    y = y - C.LayoutGrid(page, list.colors, 52, y, width, 28) - 16
-    At(list.lightnessLabel,52,y);y=y-34
+    At(group.tileColorHeading, 40, y); y = y - 26
+    y = y - C.LayoutGrid(page, group.tileColors, 40, y, width, 28) - 24
+    At(shell.listHeading, 36, y); At(shell.listDivider, 36, y - 20); shell.listDivider:SetWidth(math.max(1, page:GetWidth() - 48)); y = y - 44
+    At(list.displayHeading,40,y);y=y-26
+    y = y - C.LayoutGrid(page, list.checks, 40, y, width, 26) - 24
+    At(list.sizeHeading,40,y);y=y-38
+    y = y - C.LayoutGrid(page, list.sliders, 40, y, width, 56, true)
+    At(list.colorHeading,40,y);y=y-26
+    y = y - C.LayoutGrid(page, list.colors, 40, y, width, 28) - 16
+    At(list.lightnessLabel,40,y);y=y-34
     if not list.lightnessField.mosEditing then list.lightnessField:SetText(MOS.Database.GetSetting("raidListOddLightness") or 5) end
-    shell.panel:ClearAllPoints(); shell.panel:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -306 + offset); shell.panel:SetPoint("BOTTOMRIGHT", page, "TOPLEFT", page:GetWidth() - 12, y + 8)
+    shell.panel:ClearAllPoints(); shell.panel:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -306 + offset); shell.panel:SetPoint("BOTTOMRIGHT", page, "TOPLEFT", page:GetWidth() - 12, y + 8)
     return y - (-1126 + offset)
 end
 
@@ -151,6 +200,11 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
     end
     viewport:Hide()
     page.uiHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "UI", -10)
+    page.keybindings = {
+        heading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Keybindings", -38),
+        general = MOS.UI.Components.Settings.CreateAccordion(page, "General", -66),
+        check = Settings.CreateSavedCheckbox(page, nil, 40, -94, "Use MOS as default Raid tab", "useMOSRaidTab", "Default Raid tab", "Opens MOS Raid Management from the Raid tab in the social window.", options.useMOSRaidTabChanged),
+    }
     local uiContent = MOS.UI.Components.CreateContainer(nil, page)
     uiContent:SetHeight(224); page.uiContent = uiContent
     local generalHeading = MOS.UI.Components.Settings.CreateAccordion(uiContent, "General", -38)
@@ -202,6 +256,7 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         for index = 1, table.getn(page.chromeChecks) do local check = page.chromeChecks[index]; check:SetChecked(MOS.Database.GetSetting(check.settingKey) and 1 or nil) end
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
+        page.keybindings.check:SetChecked(MOS.Database.GetSetting("useMOSRaidTab") and 1 or nil)
         if page.topSectionState then Settings.ApplyTopSections(page) end
     end
     page.ApplySavedSettings = function()
@@ -247,9 +302,9 @@ function Settings.CreateRosterAppearance(page)
 end
 
 function Settings.CreatePrimarySections(page)
-    local rosterHeading = MOS.UI.Components.CreateHeading(page, "", 3, "gold")
-    rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150)
-    rosterHeading:SetText("Roster")
+    local C = MOS.UI.Components
+    page.uiFeatureState = { roster = false, raid = false }
+    local rosterHeading = C.Settings.CreateSectionAccordion(page, "Roster", -150, 12)
     local rosterGeneral = MOS.UI.Components.Settings.CreateAccordion(page, "General", -178)
     page.rosterLiveTrackingCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteRosterLiveTracking", 52, -206, "Live tracking", "rosterLiveTrackingEnabled", "Roster live tracking", "Keeps the guild roster current while Roster is open. This may have a small performance impact only while the Roster window is open, not while it is closed.", RosterTrackingChanged)
     page.rosterLayoutChecks = {}
@@ -262,9 +317,26 @@ function Settings.CreatePrimarySections(page)
     local rosterLayout = MOS.UI.Components.Settings.CreateAccordion(page, "Layout", -206)
     page.rosterClassColorsCheck = Settings.CreateSavedCheckbox(page, "MuklaOfficerSuiteClassColors", 52, -234, "Use class colors", "rosterClassColors", nil, nil, RefreshRosterLayout)
     Settings.CreateRosterAppearance(page)
-    local raidHeading = MOS.UI.Components.CreateHeading(page, "", 3, "gold")
-    raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -206)
-    raidHeading:SetText("Raid")
+    local raidHeading = C.Settings.CreateSectionAccordion(page, "Raid", -206, 12)
+    local function ToggleFeature(key)
+        page.uiFeatureState[key] = not page.uiFeatureState[key]
+        Settings.ApplyTopSections(page)
+    end
+    rosterHeading:SetScript("OnClick", function() ToggleFeature("roster") end)
+    raidHeading:SetScript("OnClick", function() ToggleFeature("raid") end)
+    page.uiEmptySections = {}
+    for _, title in ipairs({ "Guild Statistics", "Raid Statistics", "CSR", "Performance" }) do
+        local section = {
+            heading = C.Settings.CreateSectionAccordion(page, title, -234, 12),
+            general = C.Settings.CreateAccordion(page, "General", -262),
+            layout = C.Settings.CreateAccordion(page, "Layout", -290),
+            expanded = false, generalOpen = false, layoutOpen = false,
+        }
+        section.heading:SetScript("OnClick", function() section.expanded = not section.expanded; Settings.ApplyTopSections(page) end)
+        section.general:SetScript("OnClick", function() section.generalOpen = not section.generalOpen; Settings.ApplyTopSections(page) end)
+        section.layout:SetScript("OnClick", function() section.layoutOpen = not section.layoutOpen; Settings.ApplyTopSections(page) end)
+        table.insert(page.uiEmptySections, section)
+    end
     local debugHeading = MOS.UI.Components.Settings.CreateSectionAccordion(page, "Debug", -645)
     debugHeading:SetScript("OnClick", function()
         page.topSectionState.debug = not page.topSectionState.debug
@@ -662,7 +734,8 @@ function Settings.ApplyRaidAccordions(controls)
     if not controls then return end
     local state = controls.state
     local uiVisible = not controls.page.topSectionState or controls.page.topSectionState.ui
-    local expanded = state.layout and uiVisible
+    local raidVisible = FeatureOpen(controls.page, "raid")
+    local expanded = state.layout and raidVisible
     controls.layout.label:SetText((expanded and "-  " or "+  ") .. "Layout")
     controls.general.label:SetText((state.general and "-  " or "+  ") .. controls.general.baseText)
     controls.leader.label:SetText((state.leader and "-  " or "+  ") .. controls.leader.baseText)
@@ -689,23 +762,23 @@ function Settings.ApplyRaidAccordions(controls)
         if expanded then controls.layoutControls[controlIndex]:Show() else controls.layoutControls[controlIndex]:Hide() end
     end
     for controlIndex = 1, table.getn(controls.generalControls or {}) do
-        if state.general and uiVisible then controls.generalControls[controlIndex]:Show() else controls.generalControls[controlIndex]:Hide() end
+        if state.general and raidVisible then controls.generalControls[controlIndex]:Show() else controls.generalControls[controlIndex]:Hide() end
     end
     if controls.columnsPanel then controls.columnsPanel:Hide() end
 
     local offset = controls.raidOffset or 0
-    controls.general:ClearAllPoints(); controls.general:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, -230 + offset)
+    controls.general:ClearAllPoints(); controls.general:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, -230 + offset)
     if controls.generalControls and controls.generalControls[1] then
-        controls.generalControls[1]:ClearAllPoints(); controls.generalControls[1]:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 52, -252 + offset)
+        controls.generalControls[1]:ClearAllPoints(); controls.generalControls[1]:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 40, -252 + offset)
     end
     local generalHeight = 26
     if controls.generalControls and table.getn(controls.generalControls) > 1 then
-        generalHeight = MOS.UI.Components.Settings.LayoutGrid(controls.page, controls.generalControls, 52, -252 + offset, controls.page:GetWidth() - 64, 26)
+        generalHeight = MOS.UI.Components.Settings.LayoutGrid(controls.page, controls.generalControls, 40, -252 + offset, controls.page:GetWidth() - 52, 26)
     end
     local generalExtra = state.general and math.max(0, generalHeight - 26) or 0
     local layoutY = (state.general and -280 or -258) + offset - generalExtra
     controls.layout:ClearAllPoints()
-    controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, layoutY)
+    controls.layout:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, layoutY)
 
     local layoutOffset = offset + (state.general and 0 or 22) - generalExtra
     Settings.OffsetRaidLayoutControls(controls, layoutOffset)
@@ -727,27 +800,31 @@ function Settings.ApplyRaidAccordions(controls)
         end
     end
     controls.leader:ClearAllPoints()
-    controls.leader:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, leaderY)
+    controls.leader:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, leaderY)
     controls.loot:ClearAllPoints()
-    controls.loot:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 36, lootY)
+    controls.loot:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 24, lootY)
     if controls.page.topSectionState and not controls.page.topSectionState.ui then
         debugY = (controls.page.uiHeadingY or -38) - 28
         chatY = debugY - 30
+    elseif not raidVisible then
+        debugY = -206 + offset - 28
     end
+    debugY = Settings.LayoutFollowingSections(controls.page, debugY)
+    chatY = debugY - 30
     controls.debugHeading:ClearAllPoints()
     controls.debugHeading:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 0, debugY)
     controls.debugHeading:SetPoint("TOPRIGHT", controls.page, "TOPRIGHT", 0, debugY)
 
     if controls.opacityLabel then
         controls.opacityLabel:ClearAllPoints()
-        controls.opacityLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 52, opacityY)
+        controls.opacityLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 40, opacityY)
         controls.opacityField:ClearAllPoints()
         controls.opacityField:SetPoint("LEFT", controls.opacityLabel, "RIGHT", 8, 0)
         controls.focusLabel:ClearAllPoints()
-        controls.focusLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 222, opacityY)
+        controls.focusLabel:SetPoint("TOPLEFT", controls.page, "TOPLEFT", 210, opacityY)
         controls.focusField:ClearAllPoints()
         controls.focusField:SetPoint("LEFT", controls.focusLabel, "RIGHT", 8, 0)
-        if state.loot and uiVisible then
+        if state.loot and raidVisible then
             controls.opacityLabel:Show(); controls.opacityField:Show(); controls.focusLabel:Show(); controls.focusField:Show()
         else
             controls.opacityLabel:Hide(); controls.opacityField:Hide(); controls.focusLabel:Hide(); controls.focusField:Hide()
@@ -786,7 +863,12 @@ function Settings.ApplyUIVisibility(controls)
     if sections then
         Root(sections.rosterHeading); Root(sections.rosterGeneral); Root(sections.rosterLayout); Root(sections.raidHeading)
     end
-    Root(controls.general); Root(controls.layout); Root(controls.leader); Root(controls.loot)
+    local function RaidRoot(control) if FeatureOpen(page, "raid") then control:Show() else control:Hide() end end
+    RaidRoot(controls.general); RaidRoot(controls.layout); RaidRoot(controls.leader); RaidRoot(controls.loot)
+    if sections then
+        if FeatureOpen(page, "roster") then sections.rosterGeneral:Show(); sections.rosterLayout:Show()
+        else sections.rosterGeneral:Hide(); sections.rosterLayout:Hide() end
+    end
     if not visible then
         page.rosterLiveTrackingCheck:Hide(); page.rosterClassColorsCheck:Hide()
         page.playerDetailsControl:Hide(); page.playerDetailsControl.fieldLabel:Hide(); page.playerDetailsControl.panel:Hide()
@@ -839,29 +921,33 @@ end
 
 function Settings.ApplyRosterAccordions(page, sections, raidControls)
     local state = page.rosterAccordionState
-    local uiVisible = not page.topSectionState or page.topSectionState.ui
+    local uiVisible = FeatureOpen(page, "roster")
     local topOffset = page.settingsTopOffset or 0
-    sections.rosterHeading:ClearAllPoints(); sections.rosterHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -150 + topOffset)
-    sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 36, -178 + topOffset)
-    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, -238 + topOffset)
+    PlaceSection(sections.rosterHeading, page, -150 + topOffset, 12)
+    if sections.rosterHeading.label then
+        sections.rosterHeading.label:SetText((uiVisible and "-  " or "+  ") .. "Roster")
+        sections.rosterHeading:SetExpanded(uiVisible)
+    end
+    sections.rosterGeneral:ClearAllPoints(); sections.rosterGeneral:SetPoint("TOPLEFT", page, "TOPLEFT", 24, -178 + topOffset)
+    page.rosterLiveTrackingCheck:ClearAllPoints(); page.rosterLiveTrackingCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, -238 + topOffset)
     sections.rosterGeneral.label:SetText((state.general and "-  " or "+  ") .. sections.rosterGeneral.baseText)
     sections.rosterLayout.label:SetText((state.layout and "-  " or "+  ") .. sections.rosterLayout.baseText)
     if state.general and uiVisible then sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Show()
     else sections.rosterGeneral:UnlockHighlight(); page.rosterLiveTrackingCheck:Hide() end
     local details = page.playerDetailsControl
-    details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, -206 + topOffset)
+    details.fieldLabel:ClearAllPoints(); details.fieldLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 44, -206 + topOffset)
     if state.general and uiVisible then details:Show(); details.fieldLabel:Show()
     else details:Hide(); details.fieldLabel:Hide(); details.panel:Hide() end
     local layoutY = (state.general and -266 or -206) + topOffset
-    sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 36, layoutY)
+    sections.rosterLayout:ClearAllPoints(); sections.rosterLayout:SetPoint("TOPLEFT", page, "TOPLEFT", 24, layoutY)
     if state.layout and uiVisible then sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Show()
     else sections.rosterLayout:UnlockHighlight(); page.rosterClassColorsCheck:Hide() end
-    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, layoutY - 28)
+    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, layoutY - 28)
     local index
     page.canShowOfficerOption = Settings.CanShowOfficerOption()
     for index = 1, table.getn(page.rosterLayoutChecks or {}) do
         local check = page.rosterLayoutChecks[index]
-        check:ClearAllPoints(); check:SetPoint("TOPLEFT", page, "TOPLEFT", 52 + math.mod(index - 1, 2) * 260, layoutY - 56 - math.floor((index - 1) / 2) * 26)
+        check:ClearAllPoints(); check:SetPoint("TOPLEFT", page, "TOPLEFT", 40 + math.mod(index - 1, 2) * 260, layoutY - 56 - math.floor((index - 1) / 2) * 26)
         if state.layout and uiVisible and (check.settingKey ~= "rosterShowOfficerNote" or page.canShowOfficerOption) then check:Show() else check:Hide() end
     end
     local gridHeight = 0
@@ -872,23 +958,27 @@ function Settings.ApplyRosterAccordions(page, sections, raidControls)
             local check = page.rosterLayoutChecks[index]
             if check.settingKey ~= "rosterShowOfficerNote" or page.canShowOfficerOption then table.insert(page.rosterGrid, check) end
         end
-        gridHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterGrid, 52, layoutY - 56, page:GetWidth() - 64, 26)
+        gridHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterGrid, 40, layoutY - 56, page:GetWidth() - 52, 26)
     end
     local colorY = layoutY - 68 - gridHeight
-    page.rosterDisplayHeading:ClearAllPoints(); page.rosterDisplayHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 56, layoutY - 28)
-    page.rosterColorHeading:ClearAllPoints(); page.rosterColorHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 56, colorY)
+    page.rosterDisplayHeading:ClearAllPoints(); page.rosterDisplayHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 44, layoutY - 28)
+    page.rosterColorHeading:ClearAllPoints(); page.rosterColorHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 44, colorY)
     AlignReset(page.rosterDisplayHeading); AlignReset(page.rosterColorHeading)
-    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 52, colorY - 26)
-    local colorHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterColors, 56, colorY - 54, page:GetWidth() - 68, 28)
-    page.rosterLightnessLabel:ClearAllPoints(); page.rosterLightnessLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 56, colorY - 54 - colorHeight)
+    page.rosterClassColorsCheck:ClearAllPoints(); page.rosterClassColorsCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 40, colorY - 26)
+    local colorHeight = MOS.UI.Components.Settings.LayoutGrid(page, page.rosterColors, 44, colorY - 54, page:GetWidth() - 56, 28)
+    page.rosterLightnessLabel:ClearAllPoints(); page.rosterLightnessLabel:SetPoint("TOPLEFT", page, "TOPLEFT", 44, colorY - 54 - colorHeight)
     if not page.rosterLightnessField.mosEditing then page.rosterLightnessField:SetText(MOS.Database.GetSetting("rosterOddLightness") or 5) end
     local method = state.layout and uiVisible and "Show" or "Hide"
     if page.rosterDisplayHeading.resetButton then page.rosterDisplayHeading.resetButton[method](page.rosterDisplayHeading.resetButton); page.rosterColorHeading.resetButton[method](page.rosterColorHeading.resetButton) end
     page.rosterDisplayHeading[method](page.rosterDisplayHeading); page.rosterColorHeading[method](page.rosterColorHeading)
     page.rosterLightnessLabel[method](page.rosterLightnessLabel); page.rosterLightnessField[method](page.rosterLightnessField)
     for index = 1, table.getn(page.rosterColors) do page.rosterColors[index][method](page.rosterColors[index]) end
-    local raidHeadingY = state.layout and (colorY - 90 - colorHeight) or layoutY - 38
-    sections.raidHeading:ClearAllPoints(); sections.raidHeading:SetPoint("TOPLEFT", page, "TOPLEFT", 24, raidHeadingY)
+    local raidHeadingY = uiVisible and (state.layout and (colorY - 90 - colorHeight) or layoutY - 38) or -178 + topOffset
+    PlaceSection(sections.raidHeading, page, raidHeadingY, 12)
+    if sections.raidHeading.label then
+        local open = FeatureOpen(page, "raid")
+        sections.raidHeading.label:SetText((open and "-  " or "+  ") .. "Raid"); sections.raidHeading:SetExpanded(open)
+    end
     raidControls.raidOffset = raidHeadingY - (-206)
     Settings.ApplyRaidAccordions(raidControls)
 end
@@ -943,7 +1033,7 @@ end
 
 function Settings.CreateDetachedWindow()
     return MOS.UI.Components.Window.Create({
-        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings", compact = true, plainHeader = true, viewportWidthInset = 16, viewportHeightInset = 42,
+        name = "MuklaOfficerSuiteSettingsWindow", title = "Settings", compact = true, plainHeader = true, minimizedWidth = 250, viewportWidthInset = 16, viewportHeightInset = 42,
         update = function(view) Settings.UpdateScroll(view.viewport, view.page, view.page.settingsContentHeight or 960) end,
         refresh = function(view) if view.page.RefreshAllSettings then view.page.RefreshAllSettings() end end,
         attach = function(view, content) Settings.AttachShell(view, content, content, true) end,
