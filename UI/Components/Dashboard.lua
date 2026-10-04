@@ -505,9 +505,10 @@ function Dashboard.BindWindow(view, options)
             view.minimized = true; frame.mosMinimized = true
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end
-            frame:SetMinResize(250, 30); frame:SetMaxResize(250, 30); frame:SetWidth(250); frame:SetHeight(30)
+            local minimizedHeight = MOS.UI.Components.MinimizedWindowHeight or 30
+            frame:SetMinResize(250, minimizedHeight); frame:SetMaxResize(250, minimizedHeight); frame:SetWidth(250); frame:SetHeight(minimizedHeight)
             frame:ClearAllPoints()
-            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.minimizedLeft or view.leftBeforeMinimize or 0, view.minimizedBottom or ((view.bottomBeforeMinimize or 0) + view.heightBeforeMinimize - 30))
+            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.minimizedLeft or view.leftBeforeMinimize or 0, view.minimizedBottom or ((view.bottomBeforeMinimize or 0) + view.heightBeforeMinimize - minimizedHeight))
             MOS.UI.Components.SetWindowButtonAction(view.minimizeButton, "maximize")
             Dashboard.ApplyMinimizedChrome(view)
         end

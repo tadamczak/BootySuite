@@ -67,14 +67,22 @@ function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel, i
     button.sectionFade:SetTexture("Interface\\Buttons\\WHITE8X8")
     button.sectionFade:SetGradientAlpha("HORIZONTAL", 0.82, 0.70, 0.43, 0.24, 0.82, 0.70, 0.43, 0)
     button.sectionFade:SetPoint("TOPLEFT", button.sectionFill, "TOPRIGHT", 0, 0); button.sectionFade:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
+    button.ruleCap = button:CreateTexture(nil, "ARTWORK")
+    local ornament = MOS.UI.Components.ClassicAsset("Decor\\title-right.tga")
+    button.rule:SetTexture(ornament); button.rule:SetTexCoord(5/128, 100/128, 0, 1)
+    button.ruleCap:SetTexture(ornament); button.ruleCap:SetTexCoord(100/128, 1, 0, 1)
+    button.ruleCap:SetPoint("RIGHT", button, "RIGHT", 0, 0); button.ruleCap:SetWidth(14); button.ruleCap:SetHeight(8)
+    local ruleShow, ruleHide = button.rule.Show, button.rule.Hide
+    button.rule.Show = function(self) ruleShow(self); button.ruleCap:Show() end
+    button.rule.Hide = function(self) ruleHide(self); button.ruleCap:Hide() end
     button.RefreshRule = function(self)
         -- A FontString's anchored bounds may still describe its previous text.
         -- Measure the caption instead of anchoring a rule to that stale edge.
         self.label:SetWidth(0)
         self.rule:ClearAllPoints()
         self.rule:SetPoint("LEFT", self, "LEFT", (self.label.mosAccordionPrefixInset or 0) + (self.label.mosHeadingIconInset or 0) + self.label:GetStringWidth() + 10, 0)
-        self.rule:SetPoint("RIGHT", self, "RIGHT", 0, 0)
-        self.rule:SetHeight(1)
+        self.rule:SetPoint("RIGHT", self.ruleCap, "LEFT", 0, 0)
+        self.rule:SetHeight(8)
     end
     button.SetExpanded = function(self, expanded)
         self.sectionExpanded = expanded
@@ -93,7 +101,7 @@ function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel, i
     button.mosSectionInset = inset or 0
     button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", button.mosSectionInset, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button:RefreshRule()
-    button.rule:SetTexture(unpack(MOS.UI.Components.TextColors.gold)); button.rule:Show()
+    button.rule:Show()
     return button
 end
 

@@ -60,6 +60,26 @@ function Results.IsBaseGame(entry,schema)
     if schema=="loginMemory" and entry.event=="ADDON_LOADED" then owner=entry.addon end
     return type(owner)=="string" and string.find(string.lower(owner),"^blizzard_")~=nil or false
 end
+function Results.CanFilterAddons(schema)
+    return fields[schema]~=nil and schema~="heapDrops" and schema~="frameGaps"
+end
+function Results.IsAddonResult(entry,schema)
+    if not Results.CanFilterAddons(schema) then return true end
+    if schema=="operations" or schema=="slow" then return true end
+    if schema=="loginMemory" then
+        -- Keep the login milestones so the loading sequence remains readable.
+        return entry.event~="ADDON_LOADED" or type(entry.addon)=="string" and entry.addon~="" and not Results.IsBaseGame(entry,schema)
+    end
+    local owner=entry.owner
+    if owner==nil and (schema=="callbacks" or schema=="memoryActivity") then owner=entry.name end
+    if type(owner)=="string" and owner~="" and string.lower(owner)~="unknown owner" and string.lower(owner)~="unknown" then
+        return not Results.IsBaseGame(entry,schema)
+    end
+    local source=type(entry.source)=="string" and string.lower(string.gsub(entry.source,"\\","/")) or ""
+    -- The file marker is essential: a chunk label or frame name proves no owner.
+    local _,_,folder=string.find(source,"^@.*interface/addons/([^/]+)/")
+    return folder~=nil and not string.find(folder,"^blizzard_") and true or false
+end
 function Results.Create()
     local view={rows={},order={}}
     view.compare=function(left,right)
@@ -84,7 +104,7 @@ function Results.Bind(view,source,schema,column,descending,onlyAddons,revision)
     for key in pairs(view.order) do view.order[key]=nil end
     local count=0
     for index,entry in ipairs(source) do
-        if not onlyAddons or not Results.IsBaseGame(entry,schema) then
+        if not onlyAddons or Results.IsAddonResult(entry,schema) then
             count=count+1
             if count<=table.getn(view.rows) then view.rows[count]=entry else table.insert(view.rows,entry) end
             view.order[entry]=index

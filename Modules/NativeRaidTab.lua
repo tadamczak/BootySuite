@@ -130,8 +130,9 @@ function NativeRaidTab.Create(options)
     local function Invite()
         if service.CanConvert() then service.Convert(); Refresh(); return end
         if not service.CanInvite() then return end
+        if inviteDialog and inviteDialog:IsVisible() then inviteDialog:Hide(); return end
         if not inviteDialog then
-            inviteDialog = UI.Window.CreateProjectConfirmation("MuklaOfficerSuiteRaidTabInvite", "Add Member", "Invite", "leader")
+            inviteDialog = UI.Window.CreateProjectConfirmation("MuklaOfficerSuiteRaidTabInvite", "Add Member", "Invite", "leader", {modal = false})
             inviteDialog.memberName = UI.CreateFramedEditBox(inviteDialog, "MuklaOfficerSuiteRaidTabInviteName", 304)
             inviteDialog.memberName:SetPoint("TOPLEFT", inviteDialog, "TOPLEFT", 8, -62)
             inviteDialog.memberName:SetAutoFocus(false)
@@ -173,7 +174,7 @@ function NativeRaidTab.Create(options)
         panel.invite.mosFlowFitLabel = true; panel.ready.mosFlowFitLabel = true; panel.info.mosFlowFitLabel = true
         panel.invite:SetScript("OnClick", Invite)
         panel.ready:SetScript("OnClick", function() MOS.Services.Raid.ReadyCheck() end)
-        panel.info:SetScript("OnClick", function() if options.openRaidInfo then options.openRaidInfo() end end)
+        panel.info:SetScript("OnClick", function() if options.openRaidInfo then options.openRaidInfo(FriendsFrame) end end)
         groupHost = UI.CreateContainer(nil, panel)
         groupHost:SetPoint("TOPLEFT", panel, "TOPLEFT", 6, -4)
         groupHost:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -6, 4)
@@ -196,6 +197,7 @@ function NativeRaidTab.Create(options)
             panel:UnregisterEvent("RAID_ROSTER_UPDATE"); panel:UnregisterEvent("PARTY_MEMBERS_CHANGED"); panel:UnregisterEvent("PARTY_LEADER_CHANGED"); panel:UnregisterEvent("PLAYER_ENTERING_WORLD")
             groups:Hide()
             if inviteDialog then inviteDialog:Hide() end
+            if options.closeRaidInfo then options.closeRaidInfo(FriendsFrame) end
             RestorePortrait()
         end)
         panel:SetScript("OnEvent", Refresh)

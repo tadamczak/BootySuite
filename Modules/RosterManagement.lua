@@ -99,9 +99,12 @@ function RosterManagement.CreateGuildControls(page)
     end
     function controls.OpenAddMember()
         if not MOS.Services.Roster.CanInviteMember() then return false end
+        if page.guildInviteDialog and page.guildInviteDialog:IsShown() then
+            page.guildInviteDialog:Hide(); return true
+        end
         if not page.guildInviteDialog then
             local C = MOS.UI.Components
-            local dialog = C.Window.CreateProjectConfirmation("MuklaOfficerSuiteGuildInvite", "Add Member", "Invite", "roster")
+            local dialog = C.Window.CreateProjectConfirmation("MuklaOfficerSuiteGuildInvite", "Add Member", "Invite", "roster", {modal=false})
             dialog:SetWidth(320)
             dialog.memberName = C.CreateFramedEditBox(dialog, "MuklaOfficerSuiteGuildInviteName", 304)
             dialog.memberName:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -62); dialog.memberName:SetMaxLetters(24)

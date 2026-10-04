@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.131"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.132"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -171,7 +171,8 @@ local performanceModule = MOS.Modules.Performance.Create(contentPanel.mosPageHos
 nativeRaidTab = MOS.Modules.NativeRaidTab.Create({
     isEnabled = function() return MOS.Database.GetSetting("useMOSRaidTab") end,
     ensureDatabase = MOS.Database.Ensure,
-    openRaidInfo = MOS.Modules.RaidInfo.Open,
+    openRaidInfo = MOS.Modules.RaidInfo.Toggle,
+    closeRaidInfo = MOS.Modules.RaidInfo.CloseOwned,
 })
 
 scanProgress = MOS.UI.Components.ProgressBar.Create(UIState.statusBar, 280, 16)

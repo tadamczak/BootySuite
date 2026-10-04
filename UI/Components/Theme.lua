@@ -82,6 +82,7 @@ function UI.SetButtonLabelInsets(button, left, right)
     button.label:SetPoint("LEFT", button, "LEFT", left, 0)
     button.label:SetPoint("RIGHT", button, "RIGHT", -right, 0)
     button.label:SetJustifyH("LEFT")
+    if UI.ApplyButtonCaptionBaseline then UI.ApplyButtonCaptionBaseline(button) end
 end
 
 UI.TextColors = {

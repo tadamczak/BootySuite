@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.132 - 2026-10-04
+
+- Fix New Roll click blocking, add Open roll and a compact Add rollers picker, use filled dice and allow raid assistants to organize rolls.
+- Make addon filtering table-specific, darken Profiler results and observe ten seconds after login.
+- Improve responsive raid headers, native dialog toggles and Loot Master sizing, spacing and default opacity.
+- Match minimized window heights, reuse title ornaments in existing accordion rules and place addon tooltips at the game's default anchor.
+
 ## 0.5.0-dev.131 - 2026-10-04
 
 - Separate Game UI and Addon UI settings; restore General/Layout and give the native Raid tab independent group options with a compact eight-group default.

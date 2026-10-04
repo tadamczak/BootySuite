@@ -2,6 +2,7 @@ local MOS = MuklaOfficerSuite
 local Window = {}
 local projectBackdrop = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 4, right = 4, top = 4, bottom = 4 } }
 MOS.UI.Components.Window = Window
+Window.MinimizedHeight = MOS.UI.Components.MinimizedWindowHeight or 30
 
 function Window.ApplyProjectSurface(frame)
     -- Registered dropdowns may already own a skinned nine-slice. Hide it before
@@ -29,7 +30,12 @@ function Window.Create(options)
 
     local titleBar = MOS.UI.Components.CreateContainer(nil, window)
     titleBar:SetFrameLevel(window:GetFrameLevel() + 1)
-    titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 4, options.plainHeader and -4 or -8); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -4, options.plainHeader and -4 or -8); titleBar:SetHeight(options.plainHeader and 26 or (options.compact and 28 or 36))
+    local function ApplyTitleBarGeometry(minimized)
+        local inset = (minimized or options.plainHeader) and -4 or -8
+        titleBar:ClearAllPoints(); titleBar:SetPoint("TOPLEFT", window, "TOPLEFT", 4, inset); titleBar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -4, inset)
+        titleBar:SetHeight(minimized and (Window.MinimizedHeight - 8) or (options.plainHeader and 26 or (options.compact and 28 or 36)))
+    end
+    ApplyTitleBarGeometry(false)
     if not options.plainHeader then
         MOS.UI.Components.RegisterSkinnedSurface(titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
     end
@@ -50,7 +56,7 @@ function Window.Create(options)
     if options.compact then
         resize.texture:Hide(); resize:ClearAllPoints(); resize:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", 0, 0)
     end
-    resize:SetFrameStrata("FULLSCREEN_DIALOG"); resize:SetFrameLevel(window:GetFrameLevel() + 250); resize:EnableMouse(true)
+    resize:SetFrameLevel(window:GetFrameLevel() + 1); resize:EnableMouse(true)
     MOS.UI.Components.AttachTooltip(resize, "Resize Settings", "Drag to change the window size.")
     resize:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
     resize:SetScript("OnMouseUp", function() window:StopMovingOrSizing(); if view then options.update(view) end end)
@@ -93,6 +99,7 @@ function Window.Create(options)
         if not view then return end
         if window.minimized then
             window.minimized = false
+            ApplyTitleBarGeometry(false)
             if options.minimizedWidth then ApplyResizeBounds(window.expandedWidth, window.expandedHeight)
             else window:SetHeight(window.expandedHeight or 620) end
             content:Show(); resize:Show(); view.viewport:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
@@ -101,7 +108,8 @@ function Window.Create(options)
             window.minimized = true; window.expandedHeight = window:GetHeight(); window.expandedWidth = window:GetWidth()
             window:SetScript("OnUpdate", nil)
             view.viewport:Hide(); content:Hide(); resize:Hide()
-            local height = options.plainHeader and 34 or (options.compact and 44 or 50)
+            local height = Window.MinimizedHeight
+            ApplyTitleBarGeometry(true)
             if options.minimizedWidth then
                 local width = math.min(options.minimizedWidth, UIParent:GetWidth() - 16)
                 window:SetMinResize(width, height); window:SetMaxResize(width, height)
@@ -120,6 +128,7 @@ function Window.Create(options)
     end
     window:SetScript("OnHide", function() window:SetScript("OnUpdate", nil) end)
     window.Open = function()
+        ApplyTitleBarGeometry(false)
         if not view then return end
         if window:IsVisible() then
             if window.minimized then minimize:GetScript("OnClick")() end
@@ -128,7 +137,7 @@ function Window.Create(options)
         end
         local minimized = window.minimized
         window.minimized = false
-        ApplyResizeBounds(options.minimizedWidth and minimized and window.expandedWidth or nil, options.minimizedWidth and minimized and window.expandedHeight or nil)
+        ApplyResizeBounds(minimized and window.expandedWidth or nil, minimized and window.expandedHeight or nil)
         content:Show(); resize:Show(); MOS.UI.Components.SetWindowButtonAction(minimize, "minimize")
         window:Show(); view.viewport:SetVerticalScroll(0); view.viewport:Show()
         if view.scrollBar then view.scrollBar:SetValue(0) end
@@ -195,9 +204,9 @@ function Window.StyleProjectDialog(frame, iconKey)
     if frame.close then frame.close:ClearAllPoints(); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6) end
 end
 
-function Window.CreateProjectConfirmation(name, title, action, iconKey)
+function Window.CreateProjectConfirmation(name, title, action, iconKey, options)
     local UI = MOS.UI.Components
-    local frame = UI.CreateConfirmation(name)
+    local frame = UI.CreateConfirmation(name, options)
     frame.title:SetText(title); Window.StyleProjectDialog(frame, iconKey or "info")
     frame:SetWidth(320); frame:SetHeight(118)
     frame.label:ClearAllPoints(); frame.label:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -38)

@@ -68,7 +68,7 @@ function Database.Ensure()
     if type(MuklaOfficerSuiteDB.lmAutoLootPresets) ~= "number" then MuklaOfficerSuiteDB.lmAutoLootPresets = 0 end
     if type(MuklaOfficerSuiteDB.lmAutoLootExceptions) ~= "string" then MuklaOfficerSuiteDB.lmAutoLootExceptions = "" end
     if type(MuklaOfficerSuiteDB.lmAutoLootInclusions) ~= "string" then MuklaOfficerSuiteDB.lmAutoLootInclusions = "" end
-    if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 30 end
+    if tonumber(MuklaOfficerSuiteDB.outOfFocusOpacity) == nil then MuklaOfficerSuiteDB.outOfFocusOpacity = 100 end
     if MuklaOfficerSuiteDB.chatActionLogs == nil then MuklaOfficerSuiteDB.chatActionLogs = false end
     if MuklaOfficerSuiteDB.raidClassColors == nil then MuklaOfficerSuiteDB.raidClassColors = true end
     MuklaOfficerSuiteDB.raidGroupOddLightness = math.max(0,math.min(100,tonumber(MuklaOfficerSuiteDB.raidGroupOddLightness) or 5))

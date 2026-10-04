@@ -1,11 +1,12 @@
 local MOS = MuklaOfficerSuite
 local UI = MOS.UI.Components
+UI.MinimizedWindowHeight = 30
 
 function UI.CreateResizeGrip(parent)
     local grip = UI.CreateControl(nil, parent)
     grip:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -7, 7)
     grip:SetWidth(18); grip:SetHeight(18)
-    grip:SetFrameLevel(parent:GetFrameLevel() + 100)
+    grip:SetFrameLevel(parent:GetFrameLevel() + 1)
     grip.texture = grip:CreateTexture(nil, "OVERLAY")
     local function ApplySkin(skin)
         grip.texture:ClearAllPoints()
@@ -72,13 +73,18 @@ function UI.GetItemLabel(itemId)
     return "|c" .. (itemQualityHex[tonumber(itemQuality) or 1] or "ffffffff") .. "[" .. itemName .. "]|r"
 end
 
-function UI.AnchorTooltipRightOfCursor(owner)
-    local x, y = GetCursorPosition()
-    local scale = UIParent:GetEffectiveScale() or 1
-    GameTooltip:SetOwner(owner, "ANCHOR_NONE")
+function UI.AnchorTooltip(owner)
     GameTooltip:ClearAllPoints()
-    GameTooltip:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", (x / scale) + 18, (y / scale) + 10)
+    if type(GameTooltip_SetDefaultAnchor) == "function" then
+        GameTooltip_SetDefaultAnchor(GameTooltip, owner or UIParent)
+    else
+        GameTooltip:SetOwner(owner or UIParent, "ANCHOR_NONE")
+        GameTooltip:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -(tonumber(CONTAINER_OFFSET_X) or 0) - 13, tonumber(CONTAINER_OFFSET_Y) or 70)
+        GameTooltip.default = 1
+    end
 end
+
+UI.AnchorTooltipRightOfCursor = UI.AnchorTooltip
 
 function UI.ShowItemTooltip(owner)
     if not owner or not owner.itemId then return end
@@ -397,7 +403,7 @@ function UI.CreateReadOnlyInput(parent, name, width)
     return field
 end
 
-function UI.CreateConfirmation(name)
+function UI.CreateConfirmation(name, options)
     local frame = UI.CreateTextPrompt(name, "Confirm", "", "No", function() return true end)
     frame:SetWidth(440); frame:SetHeight(150); frame:SetFrameLevel(600)
     frame.edit:Hide(); frame.message:Hide()
@@ -405,9 +411,13 @@ function UI.CreateConfirmation(name)
     frame.no, frame.yes = frame.accept, frame.cancel
     frame.no:SetFrameLevel(601); frame.yes:SetFrameLevel(601)
     frame.yes:SetText("Yes")
-    local blocker = UI.CreateControl(nil, UIParent)
-    blocker:SetAllPoints(UIParent); blocker:SetFrameStrata("FULLSCREEN_DIALOG"); blocker:SetFrameLevel(599); blocker:EnableMouse(true); blocker:Hide()
-    frame:SetScript("OnHide", function() blocker:Hide(); frame.onYes = nil; frame.onNo = nil end)
+    local blocker
+    if not options or options.modal ~= false then
+        blocker = UI.CreateControl(nil, UIParent)
+        blocker:SetAllPoints(UIParent); blocker:SetFrameStrata("FULLSCREEN_DIALOG"); blocker:SetFrameLevel(599); blocker:EnableMouse(true); blocker:Hide()
+    end
+    frame.mosModalBlocker = blocker
+    frame:SetScript("OnHide", function() if blocker then blocker:Hide() end; frame.onYes = nil; frame.onNo = nil end)
     frame.no:SetScript("OnClick", function() local callback = frame.onNo; frame:Hide(); if callback then callback() end end)
     frame.yes:SetScript("OnClick", function() local callback = frame.onYes; frame:Hide(); if callback then callback() end end)
     frame.close = UI.CreateWindowButton(frame, nil, "close")
@@ -415,7 +425,7 @@ function UI.CreateConfirmation(name)
     frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -12); frame.close:SetScript("OnClick", function() frame:Hide() end)
     frame.Open = function(self, message, onYes, onNo)
         self.label:SetText(message); self.onYes = onYes; self.onNo = onNo
-        blocker:Show(); self:Show()
+        if blocker then blocker:Show() end; self:Show()
     end
     return frame
 end
@@ -784,6 +794,19 @@ function UI.SetOpenButtonBorder(button, visible, openEdge)
     border.mosOpenEdge = openEdge; border:Show()
 end
 
+function UI.ApplyButtonCaptionBaseline(button)
+    local bottom = tonumber(button.mosCaptionBottomInset)
+    local label = button.label
+    if not bottom or not label then return end
+    local left = button.mosLabelInsets and button.mosLabelInsets[1]
+        or (button.mosClassicIconKey and ((button.mosClassicIconInset or 7) + (button.mosClassicIconSize or 13) + 4) or 0)
+    local right = button.mosLabelInsets and button.mosLabelInsets[2] or 4
+    label:ClearAllPoints(); label:SetPoint("TOPLEFT", button, "TOPLEFT", left, 0)
+    label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -right, bottom)
+    label:SetHeight(math.max(1, button:GetHeight() - bottom)); label:SetJustifyV("BOTTOM")
+    label:SetJustifyH(button.mosLabelJustify or (button.mosClassicIconKey and "LEFT" or "CENTER"))
+end
+
 function UI.FitButtonLabel(button, available)
     local label = button.label or button
     if not label or not label.GetFont then return end
@@ -806,6 +829,7 @@ function UI.FitButtonLabel(button, available)
         label:SetWidth(math.max(1,button:GetWidth()-start-26-(button.mosActionTrailing or 0)))
         label:SetHeight(math.max(fitted+3,button:GetHeight()-4));label:SetJustifyH("LEFT");label:SetJustifyV("MIDDLE")
     end
+    UI.ApplyButtonCaptionBaseline(button)
 end
 
 -- Shared action icons use the authored gold atlas in either visual skin.

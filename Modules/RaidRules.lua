@@ -18,6 +18,11 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
     frame.close = UI.CreateWindowButton(frame, nil, "close"); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
     frame.minimize = UI.CreateWindowButton(frame, nil, "minimize"); frame.minimize:SetPoint("RIGHT", frame.close, "LEFT", -4, 0)
+    local function LayoutHeader(minimized)
+        frame.title:ClearAllPoints(); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, minimized and -4 or -8)
+        frame.title:SetHeight(minimized and 22 or 18)
+        frame.close:ClearAllPoints(); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, minimized and -4 or -6)
+    end
     local content = UI.CreateContainer(nil, frame); content:SetAllPoints(frame); frame.content = content
     frame.divider = UI.CreateContainer(nil, content)
     frame.divider:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -24); frame.divider:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -24); frame.divider:SetHeight(4)
@@ -25,7 +30,8 @@ function RaidManagement.CreateLootRulesDialog(options)
     UI.JoinSurfaceEdges(frame.divider, true, false)
     frame.minimize:SetScript("OnClick", function()
         frame.minimized = not frame.minimized
-        if frame.minimized then content:Hide(); frame:SetHeight(32); UI.SetWindowButtonAction(frame.minimize, "maximize")
+        LayoutHeader(frame.minimized)
+        if frame.minimized then content:Hide(); frame:SetHeight(UI.Window.MinimizedHeight); UI.SetWindowButtonAction(frame.minimize, "maximize")
         else frame:SetHeight(560); content:Show(); UI.SetWindowButtonAction(frame.minimize, "minimize") end
     end)
     local headers = { { "Guild rank", 8, 190 }, { "SR", 224, 66 }, { "Reycoin", 310, 92 }, { "CSR", 422, 66 }, { "Highly Contested Items", 508, 158 } }
@@ -90,6 +96,7 @@ function RaidManagement.CreateLootRulesDialog(options)
     frame.Open = function(self)
         self.LayoutReference()
         self.minimized = false; self:SetHeight(560); content:Show(); UI.SetWindowButtonAction(self.minimize, "minimize")
+        LayoutHeader(false)
         local ranks = {
             { index = "silverback", name = "Silverback" }, { index = "chimp", name = "Chimp" }, { index = "baboon", name = "Baboon" },
             { index = "alt", name = "Alt" }, { index = "guest", name = "Guest" }, { index = "macaque", name = "Macaque" },
