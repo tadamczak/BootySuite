@@ -88,14 +88,43 @@ function RosterManagement.CreateGuildControls(page)
     page.guildInfoButton:Hide(); page.guildAddButton:Hide(); page.guildControlButton:Hide()
     RosterManagement.BindPermissionEvents(page)
 
-    StaticPopupDialogs["MUKLA_OFFICER_SUITE_GUILD_INVITE"] = {
-        text = "Invite a character to the guild", button1 = "Invite", button2 = "Cancel", hasEditBox = 1, maxLetters = 24,
-        OnAccept = function() local name = getglobal(this:GetParent():GetName() .. "EditBox"):GetText(); if MOS.Services.Roster.CanManage("invite") and name and name ~= "" and type(GuildInvite) == "function" then GuildInvite(name) end end,
-        OnShow = function() getglobal(this:GetName() .. "EditBox"):SetFocus() end,
-        timeout = 0, whileDead = 1, hideOnEscape = 1,
-    }
-    page.guildInfoButton:SetScript("OnClick", function() page.guildInfoEditor:Open(type(GetGuildInfoText) == "function" and GetGuildInfoText() or "") end)
-    page.guildAddButton:SetScript("OnClick", function() if MOS.Services.Roster.CanManage("invite") then MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_GUILD_INVITE") end end)
+    local controls = { scanButton = scanButton, refreshButton = refreshButton, exportButton = exportButton }
+    function controls.OpenGMOTD()
+        page.guildMotdEditor:Open(type(GetGuildRosterMOTD) == "function" and GetGuildRosterMOTD() or "")
+        return true
+    end
+    function controls.OpenGuildInformation()
+        page.guildInfoEditor:Open(type(GetGuildInfoText) == "function" and GetGuildInfoText() or "")
+        return true
+    end
+    function controls.OpenAddMember()
+        if not MOS.Services.Roster.CanManage("invite") or type(GuildInvite) ~= "function" then return false end
+        if not page.guildInviteDialog then
+            local C = MOS.UI.Components
+            local dialog = C.Window.CreateProjectConfirmation("MuklaOfficerSuiteGuildInvite", "Add Member", "Invite")
+            dialog:SetWidth(320)
+            dialog.memberName = C.CreateFramedEditBox(dialog, "MuklaOfficerSuiteGuildInviteName", 304)
+            dialog.memberName:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -62); dialog.memberName:SetMaxLetters(24)
+            dialog.memberName:SetScript("OnEscapePressed", function() dialog:Hide() end)
+            dialog.memberName:SetScript("OnEnterPressed", function() dialog.yes:GetScript("OnClick")() end)
+            local hidden=dialog:GetScript("OnHide")
+            dialog:SetScript("OnHide", function() if hidden then hidden() end;dialog.memberName:ClearFocus() end)
+            page.guildInviteDialog = dialog
+        end
+        local dialog = page.guildInviteDialog
+        dialog:Open("Character name", function()
+            local name = string.gsub(string.gsub(dialog.memberName:GetText() or "", "^%s+", ""), "%s+$", "")
+            if MOS.Services.Roster.CanManage("invite") and type(GuildInvite) == "function" and name ~= "" then GuildInvite(name) end
+        end)
+        dialog.label:SetHeight(18); dialog:SetHeight(128)
+        dialog.memberName:SetText(""); dialog.memberName:SetFocus()
+        return true
+    end
+    function controls.GetQuickState()
+        return { gmotd = true, guildInformation = true, addMember = MOS.Services.Roster.CanManage("invite") and type(GuildInvite) == "function" }
+    end
+    page.guildInfoButton:SetScript("OnClick", controls.OpenGuildInformation)
+    page.guildAddButton:SetScript("OnClick", controls.OpenAddMember)
     page.guildControlButton:SetScript("OnClick", function() if not MOS.Services.Roster.CanManage("control") then return end; if type(GuildControlPopupFrame_Toggle) == "function" then GuildControlPopupFrame_Toggle() elseif type(ToggleGuildFrame) == "function" then ToggleGuildFrame() end end)
 
     page.footer = MOS.UI.Components.CreateControl(nil, page)
@@ -104,7 +133,7 @@ function RosterManagement.CreateGuildControls(page)
     MOS.UI.Components.RegisterSkinnedSurface(page.footer, "content", { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12 }, {0.025, 0.022, 0.018, 0.99}, {0.36, 0.36, 0.34, 1})
     page.footer.guild = MOS.UI.Components.CreateLabel(page.footer, nil, "OVERLAY", "GameFontNormalSmall"); page.footer.guild:SetPoint("TOPLEFT", page.footer, "TOPLEFT", 8, -4)
     page.footer.motd = MOS.UI.Components.CreateLabel(page.footer, nil, "OVERLAY", "GameFontHighlightSmall"); page.footer.motd:SetPoint("BOTTOMLEFT", page.footer, "BOTTOMLEFT", 8, 6); page.footer.motd:SetJustifyH("LEFT")
-    page.footer:SetScript("OnClick", function() page.guildMotdEditor:Open(type(GetGuildRosterMOTD) == "function" and GetGuildRosterMOTD() or "") end)
+    page.footer:SetScript("OnClick", controls.OpenGMOTD)
     MOS.UI.Components.AttachTooltip(page.footer, "Guild Message of the Day", "Click to edit the guild message of the day.")
     page.footer:Hide()
     local font, size, flags = page.footer.guild:GetFont()
@@ -116,7 +145,7 @@ function RosterManagement.CreateGuildControls(page)
     page.footer.rule:SetPoint("TOPLEFT", page.footer, "BOTTOMLEFT", 8, -8)
     page.footer.rule:SetPoint("TOPRIGHT", page.footer, "BOTTOMRIGHT", 0, -8)
     page.footer.rule:SetHeight(1); page.footer.rule:SetTexture(0.55, 0.42, 0.16, 0.75)
-    return { scanButton = scanButton, refreshButton = refreshButton, exportButton = exportButton }
+    return controls
 end
 
 function RosterManagement.CreateGuildActionHandler(options)

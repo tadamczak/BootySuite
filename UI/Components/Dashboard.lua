@@ -92,7 +92,7 @@ function Dashboard.ApplyMinimizedChrome(view)
     view.titleBar:ClearAllPoints()
     view.titleBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -5)
     view.titleBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 5)
-    view.titleBar:SetHeight(30); view.titleBar:Show()
+    view.titleBar:SetHeight(20); view.titleBar:Show()
     view.windowControls:ClearAllPoints()
     view.windowControls:SetPoint("RIGHT", view.titleBar, "RIGHT", -5, 0); view.windowControls:Show()
     view.title:ClearAllPoints(); view.title:SetPoint("LEFT", view.titleBar, "LEFT", 5, 0)
@@ -396,9 +396,16 @@ function Dashboard.RestoreGeometry(frame, settings)
     end
 end
 
+function Dashboard.OpenWindow(view)
+    -- Opening an entry point must never act as a close toggle. Show the owner
+    -- before restoring so its native compact bounds are available again.
+    view.frame:Show()
+    if view.minimized and view.ToggleMinimize then view.ToggleMinimize(true) end
+end
+
 function Dashboard.BindWindow(view, options)
     local frame, grip = view.frame, view.resizeGrip
-    -- Anchored child bounds can still describe the 250x40 shell during Show.
+    -- Anchored child bounds can still describe the 250x30 shell during Show.
     -- Reuse one finalizer and detach it after the next rendered frame.
     local finalizer = CreateFrame("Frame", nil, frame)
     finalizer:EnableMouse(false); finalizer:Hide()
@@ -412,7 +419,7 @@ function Dashboard.BindWindow(view, options)
     end
     finalizer:SetScript("OnHide", function() finalizer:SetScript("OnUpdate", nil) end)
     -- Native layout-cache is loaded after VARIABLES_LOADED and can contain the
-    -- 250x40 minimized shell. SavedVariables alone own durable geometry.
+    -- 250x30 minimized shell. SavedVariables alone own durable geometry.
     frame:RegisterEvent("PLAYER_LOGIN")
     frame:SetScript("OnEvent", function()
         if event ~= "PLAYER_LOGIN" then return end
@@ -453,8 +460,8 @@ function Dashboard.BindWindow(view, options)
     end)
     grip:SetScript("OnHide", function() frame:StopMovingOrSizing(); this:SetScript("OnUpdate", nil) end)
 
-    view.ToggleMinimize = function()
-        if options.isLootMasterMode() then return end
+    view.ToggleMinimize = function(restoreOnly)
+        if options.isLootMasterMode() and not (restoreOnly == true and view.minimized) then return end
         CancelRestoreLayout()
         if view.minimized then
             view.minimizedLeft, view.minimizedBottom = frame:GetLeft(), frame:GetBottom()
@@ -490,9 +497,9 @@ function Dashboard.BindWindow(view, options)
             view.minimized = true; frame.mosMinimized = true
             view.sidebar:Hide(); view.contentPanel:Hide(); options.statusBar:Hide(); view.versionText:Hide(); view.resizeGrip:Hide(); view.sidebarToggle:Hide()
             if options.setNavigationVisible then options.setNavigationVisible(false) end
-            frame:SetMinResize(250, 40); frame:SetMaxResize(250, 40); frame:SetWidth(250); frame:SetHeight(40)
+            frame:SetMinResize(250, 30); frame:SetMaxResize(250, 30); frame:SetWidth(250); frame:SetHeight(30)
             frame:ClearAllPoints()
-            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.minimizedLeft or view.leftBeforeMinimize or 0, view.minimizedBottom or ((view.bottomBeforeMinimize or 0) + view.heightBeforeMinimize - 40))
+            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", view.minimizedLeft or view.leftBeforeMinimize or 0, view.minimizedBottom or ((view.bottomBeforeMinimize or 0) + view.heightBeforeMinimize - 30))
             MOS.UI.Components.SetWindowButtonAction(view.minimizeButton, "maximize")
             Dashboard.ApplyMinimizedChrome(view)
         end
@@ -506,10 +513,12 @@ function Dashboard.CreateMinimapButton(options)
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp"); button:RegisterForDrag("LeftButton")
     local icon = button:CreateTexture(nil, "BACKGROUND")
     icon:SetWidth(20); icon:SetHeight(20); icon:SetPoint("CENTER", button, "CENTER", 0, 0)
-    icon:SetTexture("Interface\\Icons\\INV_Misc_Note_01")
+    icon:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\MinimapIcon")
+    button.icon = icon
     local border = button:CreateTexture(nil, "OVERLAY")
     border:SetWidth(52); border:SetHeight(52); border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    button.border = border
 
     button.Position = function()
         options.ensureDatabase()
@@ -525,11 +534,18 @@ function Dashboard.CreateMinimapButton(options)
         options.setAngle(math.deg(math.atan2((y / scale) - minimapY, (x / scale) - minimapX)))
         button.Position()
     end
-    button:SetScript("OnClick", options.onClick)
+    button:SetScript("OnClick", function()
+        if arg1 == "RightButton" then
+            if options.onContextMenu then options.onContextMenu(button)
+            elseif options.onClick then options.onClick() end
+        elseif options.onOpen then options.onOpen(button)
+        elseif options.onClick then options.onClick() end
+    end)
     button:SetScript("OnEnter", function()
         MOS.UI.Components.AnchorTooltipRightOfCursor(this)
         GameTooltip:AddLine("Mukla Officer Suite")
-        GameTooltip:AddLine("Click to open the dashboard", 1, 1, 1)
+        GameTooltip:AddLine("Left click: open the dashboard", 1, 1, 1)
+        GameTooltip:AddLine("Right click: quick menu", 1, 1, 1)
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -537,5 +553,6 @@ function Dashboard.CreateMinimapButton(options)
         this:SetScript("OnUpdate", this.UpdateDragPosition)
     end)
     button:SetScript("OnDragStop", function() this:SetScript("OnUpdate", nil) end)
+    button:SetScript("OnHide", function() button:SetScript("OnUpdate", nil) end)
     return button
 end

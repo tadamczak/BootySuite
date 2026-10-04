@@ -161,7 +161,7 @@ function Performance.Create(parent)
     page.bodyHost=UI.CreateContainer(nil,page)
     page.canvas = UI.CreateResponsiveCanvas(page.bodyHost, "MuklaOfficerSuitePerformanceBody")
     page.header=UI.CreateContainer(nil,page)
-    page.title = UI.CreateHeading(page.header, "Performance", 1, "gold")
+    page.title = UI.CreateHeading(page.header, "BootyProfiler", 1, "gold")
     page.message = UI.CreateLabel(page.bodyHost, nil, "OVERLAY", "GameFontHighlight")
     page.message:SetJustifyH("CENTER");page.message:SetJustifyV("MIDDLE");if page.message.SetWordWrap then page.message:SetWordWrap(true) end
     local module = { frame = page, items = {}, rows = {}, sessionEntries = {}, callbackEntries = {}, callbackDetails = {}, memoryEntries = {}, metricFlow = {}, detailsExpanded = {}, sectionState = {}, snapshots = {}, familyPages = {}, familyPage = 1, callbackView = "time", measureMemory = false, loginPage = 1, loginPaging = {} }
@@ -1093,6 +1093,7 @@ function Performance.Create(parent)
     function module:SelectTab(tab)
         if tab~="MOS" and tab~="All Addons" and tab~="Analyze Login" and tab~="Health Check" then return false end
         self:CancelFamilyJob();self.familyModel=nil;self.tab=tab
+        if tab=="MOS" or tab=="All Addons" then self.lastProfile=tab end
         self.sectionState={};self.detailsExpanded={};self.expandedFamily=nil;self.familyPages={};self.familyPage=1
         if page.advancedMenu then page.advancedMenu:Hide() end
         page.canvas.layoutViewport:SetVerticalScroll(0);Subscribe();self:Refresh();return true
@@ -1166,7 +1167,7 @@ function Performance.Create(parent)
         local enable=not status.loaded
         if not self.addonDialog then self.addonDialog=UI.Window.CreateProjectConfirmation(nil,"BootyProfiler","Reload now");self.addonDialog:SetWidth(400) end
         self.addonDialog.title:SetText(enable and "Enable BootyProfiler" or "Disable BootyProfiler")
-        self.addonDialog:Open(enable and "Enable BootyProfiler and reload the UI to load it?" or "Stop measurements and disable BootyProfiler, then reload the UI? Export any recording you want to keep first.",function()
+        self.addonDialog:Open(enable and "Enable BootyProfiler and reload the UI to load it?" or "Do you want to disable BootyProfiler Addon? This will reload your UI - please export any recordings you want to keep.",function()
             local bridge=MOS.Core.ProfilerBridge
             if not enable and module.monitor then module.monitor:Close() end
             local changed,failure=bridge.SetAddonEnabled(enable)
@@ -1223,6 +1224,51 @@ function Performance.Create(parent)
         end
         if self.monitor:IsShown() then self.monitor:Close() else return self.monitor:Open() end
         return true
+    end
+    -- Explicit menu requests read current addon state, without showing the page
+    -- or subscribing hidden result views to live refresh notifications.
+    function module:GetQuickState()
+        local bridge=MOS.Core.ProfilerBridge
+        local status=bridge and bridge.GetAddonStatus(true) or {}
+        self.addonStatus=status
+        local provider=bridge and bridge.Resolve()
+        local state=provider and provider.GetState() or {}
+        local ready=provider~=nil and not (status.reloadRequired and status.pendingEnabled==false)
+        return {
+            installed=status.installed and true or false,loaded=status.loaded and true or false,ready=ready,
+            toggleLabel=status.reloadRequired and "Reload UI" or status.loaded and "Disable" or "Enable",
+            toggleEnabled=status.reloadRequired and status.canReload or status.loaded and status.canDisable or not status.loaded and status.canEnable or false,
+            recording=state.recording and true or false,startStopLabel=state.recording and "Stop" or "Start",startStopEnabled=ready,
+            resetEnabled=ready and state.session~=nil,exportEnabled=ready and state.session~=nil and not state.recording,
+            memory=self.measureMemory and true or false,memoryEnabled=ready and not state.recording,
+            liveEnabled=ready and provider.LiveMonitor~=nil and Performance.CreateLiveMonitor~=nil,
+            healthEnabled=ready and provider.GetLastHealthReport~=nil,
+        }
+    end
+    function module:ExecuteQuickAction(action)
+        local bridge=MOS.Core.ProfilerBridge
+        local quick=self:GetQuickState()
+        if action=="addon" then if quick.toggleEnabled then self:ToggleAddon();return true end;return false end
+        if not quick.ready then return false end
+        local provider,failure=bridge.Connect()
+        if not provider then self.notice=failure;return false end
+        self.provider=provider
+        if action=="live" then return quick.liveEnabled and self:ToggleMonitor() or false end
+        if action=="health" then return quick.healthEnabled and self:SelectTab("Health Check") or false end
+        if action=="startStop" then
+            if provider.GetState().recording then self:Stop();return true end
+            local profile=self.lastProfile
+            if not profile then
+                local session=provider.GetState().session
+                profile=session and (session.callbacksRequested and "All Addons" or "MOS") or "All Addons"
+            end
+            self:SelectTab(profile)
+            return self:Start()
+        end
+        if action=="reset" then if quick.resetEnabled then self:Reset();return true end;return false end
+        if action=="export" then return quick.exportEnabled and self:Export() or false end
+        if action=="memory" then if quick.memoryEnabled then self:ToggleMemoryCapture();return true end;return false end
+        return false
     end
     function module:Show()
         local bridge=MOS.Core.ProfilerBridge

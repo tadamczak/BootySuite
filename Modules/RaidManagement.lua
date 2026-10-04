@@ -1017,7 +1017,7 @@ function RaidManagement.RefreshPage(renderer)
     local issues
     local importInfo = attendance and attendance.softReserveImport
     local raidId = attendance and (attendance.snapshotId or (importInfo and importInfo.id))
-    if attendance and raidId then
+    if attendance and raidId and renderer.isScanReady() then
         local savedText = attendance.lastSavedAt and date("%Y-%m-%d %H:%M", attendance.lastSavedAt) or "Not saved yet"
         if MOS.UI.Components.IsClassicSkin() and not lootMasterMode then
             local issueCount = 0
@@ -1062,6 +1062,7 @@ function RaidManagement.RefreshPage(renderer)
     end
     renderer.unavailable:Hide()
     if not renderer.isScanReady() then
+        RaidManagement.ClearSessionHeader(page)
         RaidManagement.ShowScanRequiredState(page, rows)
         return
     end
@@ -1122,6 +1123,13 @@ function RaidManagement.ShowScanningState(page, rows)
     page.softReserveWarning:Hide(); page.missingSoftReserveWarning:Hide(); page.invalidSoftReserveWarning:Hide()
 end
 
+function RaidManagement.UpdateActionAvailability(page, testRaid)
+    local controls = page.refreshControls
+    MOS.UI.Components.SetButtonEnabled(controls.export, not testRaid)
+    MOS.UI.Components.SetClassicButtonDisabled(controls.export, testRaid and true or false)
+    controls.shareSr:Enable(); controls.import:Enable()
+end
+
 function RaidManagement.ShowReadyState(page, lootMasterMode)
     if lootMasterMode and page.toolDropdowns then for _, panel in pairs(page.toolDropdowns) do panel:Hide() end end
     local controls = page.refreshControls
@@ -1141,12 +1149,7 @@ function RaidManagement.ShowReadyState(page, lootMasterMode)
     else
         controls.resetFilters:Show(); controls.raidLeaderTools:Show(); controls.lootMasterTools:Show(); controls.addStatistics:Hide(); controls.export:Show(); controls.quit:Show()
         controls.leaderMode:Hide(); controls.mode:Hide(); controls.lootRules:Hide(); controls.sendLootRules:Hide(); controls.import:Hide(); controls.shareSr:Hide(); controls.resetLoot:Hide()
-        if page.isTestRaid and page.isTestRaid() then
-            controls.export:Disable(); MOS.UI.Components.SetClassicButtonDisabled(controls.export, true)
-        else
-            controls.export:Enable(); MOS.UI.Components.SetClassicButtonDisabled(controls.export, false)
-        end
-        controls.shareSr:Enable(); controls.import:Enable()
+        RaidManagement.UpdateActionAvailability(page, page.isTestRaid and page.isTestRaid())
         controls.live:Hide(); controls.scan:Hide(); controls.minimize:Hide()
         RaidManagement.UpdateToolSubmenu(page)
     end
@@ -2285,17 +2288,148 @@ function RaidManagement.SetActions(page, viewButton, raidLeaderToolsButton, loot
     }
 end
 
+local function InvokeActionSource(source)
+    local handler = source:GetScript("OnClick")
+    if not handler then return false end
+    local previous = this
+    this = source
+    local ok, message = pcall(handler)
+    this = previous
+    if not ok then error(message) end
+    return true
+end
+
+local function ToolSpecs(page, kind)
+    local controls = page.refreshControls
+    page.toolActionSpecs = page.toolActionSpecs or {
+        leader = {{key = "rl-mode", source = controls.leaderMode, caption = "RL Mode"}},
+        loot = {
+            {key = "loot-mode", source = controls.mode, caption = "Loot Master Mode"},
+            {key = "reset-loot", source = controls.resetLoot, caption = "Reset Loot"},
+            {key = "import-sr", source = controls.import, caption = "Import SR"},
+            {key = "share-sr", source = controls.shareSr, caption = "Share SR"},
+            {key = "loot-rules", source = controls.lootRules, caption = "Loot Rules"},
+            {key = "send-loot-rules", source = controls.sendLootRules, caption = "Send Loot Rules"},
+            {key = "reycoin", source = controls.reycoin, caption = "Reycoin list"},
+        },
+    }
+    return page.toolActionSpecs[kind]
+end
+
+local function SourceEnabled(source)
+    if not source then return false end
+    if not source.IsEnabled then return true end
+    local enabled = source:IsEnabled()
+    return enabled ~= nil and enabled ~= false and enabled ~= 0
+end
+
+local function ToolCaption(spec)
+    local caption = spec.source and spec.source.label and spec.source.label:GetText()
+    return caption and caption ~= "" and caption or spec.caption
+end
+
 local function InvokeToolChoice()
     local option = this
-    local source = option.toolSource
     option:GetParent():Hide()
-    local handler = source:GetScript("OnClick")
-    if handler then
-        this = source
-        local ok, message = pcall(handler)
-        this = option
-        if not ok then error(message) end
+    InvokeActionSource(option.toolSource)
+end
+
+-- Explicit actions let other entry points reuse the actual dialogs and session
+-- workflows without reaching into this module's private controls.
+function RaidManagement.CreateQuickActions(options, loadSelectedRaid)
+    local page, controls = options.page, options.page.refreshControls
+    local actions = {}
+    local function ActiveSession()
+        if options.isSessionActive then return options.isSessionActive() and true or false end
+        if options.isTestRaid and options.isTestRaid() then return true end
+        local attendance = options.getAttendance()
+        return attendance and (attendance._sessionDraft or attendance.sessionStartedAt) and true or false
     end
+    function actions:GetState()
+        local active = ActiveSession()
+        local test = options.isTestRaid and options.isTestRaid() and true or false
+        local attendance = options.getAttendance()
+        return {
+            active = active, test = test, primaryLabel = active and "Open Raid" or "Start new raid",
+            canStart = not active and options.isInRaid() and true or false,
+            canTest = not active, canLoad = true,
+            canSave = active and not test and attendance ~= nil, canQuit = active,
+            canTools = active and attendance ~= nil,
+        }
+    end
+    function actions:GetTools(kind)
+        local specs, entries = ToolSpecs(page, kind), {}
+        local state = self:GetState()
+        RaidManagement.UpdateActionAvailability(page, state.test)
+        for index = 1, table.getn(specs or {}) do
+            local spec = specs[index]
+            entries[index] = {id = spec.key, text = ToolCaption(spec), enabled = state.canTools and SourceEnabled(spec.source)}
+        end
+        return entries
+    end
+    function actions:GetRecentSnapshots(limit)
+        local history, entries = options.getRaidHistory() or {}, {}
+        limit = math.max(0, math.min(5, math.floor(tonumber(limit) or 5)))
+        for index = 1, math.min(limit, table.getn(history)) do
+            local snapshot = history[index]
+            local savedAt = snapshot.savedAt or snapshot.updatedAt
+            local stamp = savedAt and date("%Y-%m-%d", savedAt) or ""
+            entries[index] = {id = snapshot.id, date = stamp,
+                text = tostring(snapshot.id or "Unknown") .. (stamp ~= "" and " | " .. stamp or ""),
+                enabled = true}
+        end
+        return entries
+    end
+    local function OpenRaid()
+        if options.openRaidManagement then options.openRaidManagement() end
+    end
+    function actions:Run(key, snapshotId)
+        local state = self:GetState()
+        if key == "primary" then
+            if not state.active and not state.canStart then return false end
+            OpenRaid()
+            if not state.active then return InvokeActionSource(controls.scan) end
+            return true
+        elseif key == "test" then
+            if not state.canTest then return false end
+            OpenRaid(); return InvokeActionSource(controls.testRaid)
+        elseif key == "save" then
+            if not state.canSave then return false end
+            OpenRaid(); return InvokeActionSource(controls.export)
+        elseif key == "quit" then
+            if not state.canQuit then return false end
+            OpenRaid(); return InvokeActionSource(controls.quit)
+        elseif key == "load" then
+            if not state.canLoad or not snapshotId then return false end
+            local history, found = options.getRaidHistory() or {}, false
+            for index = 1, table.getn(history) do
+                if history[index].id == snapshotId then found = true; break end
+            end
+            if not found then return false end
+            OpenRaid(); page.selectedRaidHistoryId = snapshotId
+            return loadSelectedRaid() and true or false
+        end
+        if not state.canTools then return false end
+        for _, kind in ipairs({"leader", "loot"}) do
+            local specs = ToolSpecs(page, kind)
+            for index = 1, table.getn(specs) do
+                local spec = specs[index]
+                if spec.key == key then
+                    OpenRaid()
+                    local current = self:GetState()
+                    RaidManagement.UpdateActionAvailability(page, current.test)
+                    if not current.canTools or not SourceEnabled(spec.source) then return false end
+                    return InvokeActionSource(spec.source)
+                end
+            end
+        end
+        return false
+    end
+    return actions
+end
+
+function RaidManagement.GetQuickActions()
+    return RaidManagement.quickActions
 end
 
 function RaidManagement.UpdateToolSubmenu(page)
@@ -2311,18 +2445,17 @@ function RaidManagement.UpdateToolSubmenu(page)
     local toggle = key == "leader" and controls.raidLeaderTools or controls.lootMasterTools
     local panel = page.toolDropdowns[key]
     if not panel then
-        local sources = key == "leader" and {controls.leaderMode} or {controls.mode, controls.resetLoot, controls.import, controls.shareSr, controls.lootRules, controls.sendLootRules, controls.reycoin}
-        local captions = key == "leader" and {"RL Mode"} or {"Loot Master Mode", "Reset Loot", "Import SR", "Share SR", "Loot Rules", "Send Loot Rules", "Reycoin list"}
-        panel = UI.CreateDropdownPanel(page, toggle, 230, 8 + table.getn(sources) * 24 + (table.getn(sources) - 1) * 4, 80)
+        local specs = ToolSpecs(page, key)
+        panel = UI.CreateDropdownPanel(page, toggle, 230, 8 + table.getn(specs) * 24 + (table.getn(specs) - 1) * 4, 80)
         panel.mosMinimumFrameLevel = page:GetFrameLevel() + 80
         UI.Window.ApplyProjectSurface(panel)
         UI.RegisterSkinCallback(function() UI.Window.ApplyProjectSurface(panel) end)
         panel:ClearAllPoints(); panel:SetPoint("TOPRIGHT", toggle, "BOTTOMRIGHT", 0, -2)
         if panel.SetClampedToScreen then panel:SetClampedToScreen(true) end
-        for index = 1, table.getn(sources) do
+        for index = 1, table.getn(specs) do
             local option = UI.CreateButton(panel, nil, "", 222, 24)
             option:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4 - (index - 1) * 28)
-            option.toolSource = sources[index]; option.toolCaption = captions[index]
+            option.toolSource = specs[index].source; option.toolCaption = specs[index].caption
             UI.SetProjectButtonOutline(option, false)
             option:SetScript("OnEnter", function() UI.SetProjectButtonOutline(this, true) end)
             option:SetScript("OnLeave", function() UI.SetProjectButtonOutline(this, false) end)
@@ -2345,8 +2478,7 @@ function RaidManagement.UpdateToolSubmenu(page)
         option:SetText(caption and caption ~= "" and caption or option.toolCaption)
         option.label:ClearAllPoints(); option.label:SetPoint("LEFT", option, "LEFT", 4, 0); option.label:SetWidth(0)
         choiceWidth = math.max(choiceWidth, option.label:GetStringWidth() + 16)
-        local enabled = not option.toolSource.IsEnabled or option.toolSource:IsEnabled()
-        UI.SetButtonEnabled(option, enabled ~= false and enabled ~= 0)
+        UI.SetButtonEnabled(option, SourceEnabled(option.toolSource))
     end
     for index = 1, table.getn(panel.options) do
         panel.options[index]:SetWidth(choiceWidth)
@@ -3158,7 +3290,7 @@ function RaidManagement.AttachActionHandlers(options)
         options.refresh()
     end
     local function LoadSelectedRaid()
-        if not options.page.selectedRaidHistoryId then return end
+        if not options.page.selectedRaidHistoryId then return false end
         local resumeTracking = MOS.Database.GetSetting("raidLiveTrackingEnabled")
         if options.loadRaidSnapshot(options.page.selectedRaidHistoryId) then
             if resumeTracking then MOS.Database.SetSetting("raidLiveTrackingEnabled", false); options.setLiveTracking(false) end
@@ -3170,7 +3302,9 @@ function RaidManagement.AttachActionHandlers(options)
                     options.saveRaidRoster(); options.setHistoricalLoaded(false); MOS.Database.SetSetting("raidLiveTrackingEnabled", true); options.setLiveTracking(true); options.refresh()
                 end, StopLoadedTracking)
             end
+            return true
         end
+        return false
     end
     controls.loadRaid:SetScript("OnClick", LoadSelectedRaid)
     for _, button in ipairs(controls.historyLoadButtons) do
@@ -3351,6 +3485,8 @@ function RaidManagement.AttachActionHandlers(options)
             options.printMessage("Raid live tracking stopped.")
         end
     end)
+    RaidManagement.quickActions = RaidManagement.CreateQuickActions(options, LoadSelectedRaid)
+    return RaidManagement.quickActions
 end
 
 function RaidManagement.CreateAutoLootControls(page, view)
