@@ -90,7 +90,7 @@ function MasterLootEvents.Create(raid, announce)
         if not sender then return end
         local confirmed, link = raid.ConfirmReyCoinTrade(sender, recipient, itemName)
         if not confirmed then confirmed, link = raid.ConfirmSoftReserveTrade(sender, recipient, itemName) end
-        if confirmed then announce(sender .. " traded " .. link .. " to " .. recipient .. ".") end
+        if confirmed then announce("TradeConfirmed", {player=sender, item=link, recipient=recipient}) end
     end)
 
     bagEvents:SetScript("OnEvent", function()
@@ -128,7 +128,7 @@ function MasterLootEvents.Create(raid, announce)
             pendingLocalTrade = nil
             local confirmed, link = raid.ConfirmReyCoinTrade(trade.sender, trade.recipient, trade.link)
             if not confirmed then confirmed, link = raid.ConfirmSoftReserveTrade(trade.sender, trade.recipient, trade.link) end
-            if confirmed then announce(trade.sender .. " traded " .. link .. " to " .. trade.recipient .. ".") end
+            if confirmed then announce("TradeConfirmed", {player=trade.sender, item=link, recipient=trade.recipient}) end
         end
     end)
 

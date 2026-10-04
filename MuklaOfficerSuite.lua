@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.132"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.133"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -637,6 +637,7 @@ raidSessionController = MOS.Modules.RaidSessionController.Create({
         return MOS.Services.Raid.IsInRaid() and not MOS.Core.GuildScanController.IsPending(MOS.guildScanController)
             and not MOS.raidSessionDraft and not MOS.raidScanReady and not IsTestRaid()
     end,
+    applyRaidPreset = MOS.Services.AutoLoot.ApplyRaidPreset,
     cancelRaidScan = function()
         if MOS.Core.GuildScanController.GetMode(MOS.guildScanController) == "raid" then
             MOS.Core.GuildScanController.Finish(MOS.guildScanController)
@@ -654,7 +655,7 @@ local raidQuickActions = MOS.Modules.RaidManagement.AttachActionHandlers({
     getSrUrl = function() return MOS.Services.RaidRes.GetUrl(GetRaidAttendance()) end,
     getRollForExport = function() return MOS.Services.RaidRes.GetRollForExport(GetRaidAttendance()) end,
     setSrUrl = function(value) return MOS.Services.RaidRes.SetUrl(GetRaidAttendance(), value) end,
-    shareSrUrl = function(value) return MOS.Services.Raid.SendRaidWarning("Please put your SR: " .. tostring(value or "")) end,
+    shareSrUrl = function(value) return MOS.Services.Raid.SendLootMessage("SRLink", {link=tostring(value or "")}) end,
     shareMissingSrNames = MOS.Services.Raid.SendRaidWarningList,
     getAttendance = GetRaidAttendance,
     getRaidHistory = MOS.Database.GetSoftReserveHistory,
@@ -789,6 +790,7 @@ MOS.Core.Commands.Attach({
         local window = MOS.Modules.MasterLootWindow
         if window and window.OpenLinkedItemRoll then window.OpenLinkedItemRoll(itemLink) end
     end,
+    openNewRoll = function() return MOS.Modules.MasterLootWindow.OpenNewRollDialog() end,
     printLayoutDiagnostics = function()
         DEFAULT_CHAT_FRAME:AddMessage("MOS layout diagnostics: current=" .. tostring(currentPage) .. " raidVisible=" .. tostring(raidPage:IsVisible()))
         MOS.Modules.RaidManagement.PrintListLayoutDiagnostics(raidPage, visibleRaidMembers, selectedRaidMemberName)

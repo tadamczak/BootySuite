@@ -40,6 +40,8 @@ function AutoLoot.Allows(name, quality, rarities, exclusions, inclusions)
 end
 -- Preserve existing saved preset bit positions; Kara10 has no supplied exclusions.
 AutoLoot.PresetNames = { "ZG", "Kara10", "MC", "Onyxia's Lair", "BWL" }
+local raidPresetMasks = { ["Zul'Gurub"]=1, ["Karazhan10"]=2, ["Lower Karazhan Halls"]=2,
+    ["Molten Core"]=4, ["Onyxia's Lair"]=8, ["Blackwing Lair"]=16 }
 local presets = {
     { "* Bijou *", "* Coin", "Razzashi Hatchling", "Blood Scythe" }, {},
     { "Tome of Tranquilizing Shot", "Recipe *" },
@@ -69,4 +71,12 @@ function AutoLoot.ApplyPresets(text, mask)
         end
     end
     return table.concat(entries, ", ")
+end
+
+function AutoLoot.ApplyRaidPreset(raidName)
+    MOS.Database.Ensure()
+    local mask = raidPresetMasks[raidName] or 0
+    MOS.Database.SetSetting("lmAutoLootExceptions", AutoLoot.ApplyPresets(MuklaOfficerSuiteDB.lmAutoLootExceptions, mask))
+    MOS.Database.SetSetting("lmAutoLootPresets", mask)
+    return mask
 end

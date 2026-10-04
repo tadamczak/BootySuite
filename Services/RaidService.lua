@@ -471,10 +471,11 @@ end
 function RaidService.ProcessLootRoll(roll, name, value, range, reyCoinUsed, reyCoinItem)
     local normalizedName = string.lower(name)
     if roll.allowedNames and not roll.allowedNames[normalizedName] then return nil, "not selected for this roll" end
-    if roll.allowedTypes and not roll.allowedTypes[range] then return nil, "wrong roll, use a selected roll type" end
     local policy = RaidService.GetLootRollPolicy(roll, range)
-    local valid = policy.valid(roll, normalizedName, range, reyCoinUsed) and true or false
-    local invalidReason = not valid and policy.reason(roll, normalizedName, range, reyCoinUsed, reyCoinItem) or nil
+    local selected = not roll.allowedTypes or roll.allowedTypes[range]
+    local valid = selected and policy.valid(roll, normalizedName, range, reyCoinUsed) and true or false
+    local invalidReason = not selected and "wrong roll, use a selected roll type"
+        or (not valid and policy.reason(roll, normalizedName, range, reyCoinUsed, reyCoinItem) or nil)
 
     local rollKey = name .. ":" .. range
     local previousResult = roll.seen[rollKey]
@@ -786,7 +787,7 @@ function RaidService.ConfirmReyCoinTrade(sender, recipient, itemLink)
 end
 
 function RaidService.PrefixLootMasterMessage(message)
-    return "[Loot Master]: " .. tostring(message or "")
+    return MOS.Services.LootMessages.Prefix(tostring(message or ""))
 end
 
 function RaidService.QueueLootAwardForReceipt(recipient, itemLink, historyKey, lines, quantity)
@@ -1351,7 +1352,7 @@ end
 
 function RaidService.SendLootRules(rules)
     rules = rules or MOS.Database.GetLootRules()
-    local sent, errorMessage = RaidService.SendRaidWarning("=== LOOT RULES ===")
+    local sent, errorMessage = RaidService.SendLootMessage("RulesHeader")
     if not sent then return false, errorMessage end
     local ranks = {
         { "Silverback", "silverback" }, { "Chimp", "chimp" }, { "Baboon", "baboon" },
@@ -1370,35 +1371,19 @@ function RaidService.SendLootRules(rules)
         if hasReyCoin then parts[table.getn(parts) + 1] = "RC" end
         if hasCSR then parts[table.getn(parts) + 1] = "CSR" end
         local rights = table.getn(parts) > 0 and table.concat(parts, ", ") or "None"
-        sent, errorMessage = RaidService.SendRaidWarning(rankName .. ": " .. rights)
+        sent, errorMessage = RaidService.SendLootMessage("RankRules", {rank=rankName, rights=rights})
         if not sent then return false, errorMessage end
     end
     return true
 end
 
 function RaidService.SendRaidWarningList(names)
-    local firstPrefix = "Members missing SR: "
-    local continuedPrefix = "Members missing SR (cont.): "
-    local maximumLength = 240
-    local message = firstPrefix
-    local hasNames = false
-    local index
-    for index = 1, table.getn(names or {}) do
-        local name = tostring(names[index] or "")
-        if name ~= "" then
-            local separator = hasNames and ", " or ""
-            if hasNames and string.len(message) + string.len(separator) + string.len(name) > maximumLength then
-                local sent, errorMessage = RaidService.SendRaidWarning(message)
-                if not sent then return false, errorMessage end
-                message = continuedPrefix .. name
-            else
-                message = message .. separator .. name
-            end
-            hasNames = true
-        end
-    end
-    if not hasNames then return false, "There are no raid members missing a Soft Reserve." end
-    return RaidService.SendRaidWarning(message)
+    if not names or table.getn(names) == 0 then return false, "There are no raid members missing a Soft Reserve." end
+    return RaidService.SendLootMessage("MissingSR", {players=table.concat(names, ", "), playerNames=names})
+end
+
+function RaidService.SendLootMessage(key, values)
+    return MOS.Services.LootMessages.Send(key, values, RaidService.SendRaidWarning)
 end
 
 function RaidService.GetRaidMemberInfo(index)

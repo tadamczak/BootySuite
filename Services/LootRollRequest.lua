@@ -116,16 +116,7 @@ function Request.HasBlockingTie(roll,groups)
 end
 
 function Request.BuildRerollWarnings(names,link)
-    local prefix,suffix="[Loot Master] "," reroll for "..link
-    local messages,caption={},""
-    for _,name in ipairs(names) do
-        if string.len(prefix..name..suffix)>255 then return nil,"The item link is too long for a raid warning." end
-        local joined=caption=="" and name or caption..", "..name
-        if string.len(prefix..joined..suffix)>255 then table.insert(messages,prefix..caption..suffix);caption=name
-        else caption=joined end
-    end
-    if caption~="" then table.insert(messages,prefix..caption..suffix) end
-    return messages
+    return MOS.Services.LootMessages.BuildPlayerMessages("Reroll", names, {item=link})
 end
 
 function Request.CreateRerollRequest(roll,range)

@@ -51,7 +51,7 @@ Left-click the minimap icon to open or close the dashboard, or restore it when m
 
 - **Open or close -** Use `/mos`, `/mukla`, `/mos show`, or `/mos open`.
 - **Hide -** Use `/mos hide` to close the main window.
-- **Manual item roll -** Use `/mos roll [linked item]` for Tmog, OS, MS and RC. Append player names to restrict participants; append types to replace the defaults, for example `/mos roll [linked item] Player1 Player2 SR`.
+- **Manual item roll -** Use `/mos roll` to open New Roll, or `/mos roll [linked item]` for Tmog, OS, MS and RC. Append player names to restrict participants; append types to replace the defaults, for example `/mos roll [linked item] Player1 Player2 SR`.
 - **Guild shortcut -** Use `/mos scan` to open Guild and access its scan controls.
 - **Saved roster status -** Use `/mos status` to print the number of saved guild members.
 - **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
@@ -118,6 +118,8 @@ In **LM Config**, choose **Auto Loot**, **Shift Loot** (hold Shift when opening 
 - **Trade tracking -** Track pending SR or Reycoin delivery when a Transmog winner temporarily receives the item.
 - **Roll history -** Review rounds, winners, trades, and prior rolls for the item.
 
+Starting a new raid automatically selects the matching LM Config exclusions preset while keeping your manual exclusions. Incorrect roll types from selected participants remain visible as invalid rows and cannot win.
+
 Pending trades survive closing the loot window or refreshing the current roster. Starting, loading or ending a raid cancels its previous pending transactions.
 
 Saved raids retain received loot, completed roll/trade history and used SR/Reycoin rights, even for players who leave before you save. Loading creates an independent copy of that history. Older snapshots retain only information they originally saved. Active awards and unfinished trades stay available. Repeated ordinary loot combines into one quantity entry; separately assigned items and tracked trades keep their own records.
@@ -179,15 +181,17 @@ Under **UI > Layout**, choose **Right side view**, **Top tab view** or **Bottom 
 Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can be toggled by clicking either the checkbox or its label.
 
 - **Profiles -** Current profile shows the active configuration as text, with Save beside it. Select a saved profile under Load profile to enable Load, Delete and Export. New profile + Add creates and activates a copy of your current settings; Save updates the current profile, including pending percentage edits. Gold feedback appears beside the action buttons. Only the latest action remains visible; saving before Add or Load shows both results. Load and Add ask whether to save changed settings first. Delete requires confirmation; deleting the current snapshot leaves your live settings available to save again. Export opens saved settings for copying. Profiles exclude guild, raid and loot records.
-- **Collapsible sections -** Profile, UI (including Guild and Raid), and Debug start collapsed after reload. Expansion is remembered while playing and when reopening Settings.
+- **Collapsible sections -** Profile, Addon UI, Game UI, Addon Messages, Keybindings and Debug start collapsed after reload. Expansion is remembered while playing and when reopening Settings.
 
 - **Resets -** Each Display, Size and Member tile color subsection has Reset to default with confirmation. Reset to defaults at the bottom-right of Settings resets all settings after confirmation, preserving saved profiles, guild data and raid history.
 - **Saved raids -** The Raid start screen lists Name, Raid and Time. Use the load or delete icon on each row; New Raid creates a session while grouped in a raid.
 - **Appearance -** Open Settings from the gear icon to configure the addon skin, colors, navigation style, and window behavior live. The skins are named **Default** (formerly Classic) and **Classic WIP** (formerly Default). Existing profile appearances are preserved.
-- **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them. Multiselect menus use a bottom **Select All** toggle.
+- **Settings layout -** Consistent spacing, readable foreground labels, padded overlay dropdowns, full-width separators, and scrolling keep every accordion section accessible; dropdowns close when clicking outside them or using another button/dropdown. Multiselect menus use a bottom **Select All** toggle.
 - **Settings window -** Settings reopen from the top with your current saved values. Settings and saved raid lists use the full content width when scrolling is unnecessary; the scrollbar only takes space while needed.
 - **Resizable window -** Settings can be resized within the available game screen; long sections remain available through scrolling.
 - **Raid group interaction -** Drop a member on another member or on free group background. Hidden role icons release name space; hiding the group border and setting group spacing to zero joins the tiles.
+- **Sparse groups -** Group View > Display has Hide empty groups. Enable it to use automatic vertical or horizontal group sizing. Complete rows fill spare height; an incomplete final row can fill the width. Main Raid and Game UI > Layout > Raid keep separate preferences.
+- **Loot Master messages -** Addon Messages > Loot Master lets you edit or disable each automatic message and its prefix. Use the optional `%item`, `%rolls`, `%players` and other variables listed beside each field. Enter or leaving the field saves; Escape discards the edit. These choices are saved in Settings profiles.
 - **Raid group appearance -** Group View > Display can hide the group border independently of its header. Group tile color controls header text, header background and border colors, with its own confirmed reset. These choices are included in settings profiles.
 - **Guild preferences -** General contains live tracking and Player details style. Layout groups visibility options under Display and row appearance under Member tile color: class colors, background, main text, hover and Odd record lightness (0-100%). The lightness value brightens even rows toward white while typing; 0% keeps all row backgrounds identical. All Settings accordions start collapsed after reload. Raid Group View and List View have independent lightness fields under Member tile color. Addon UI > Layout groups Menu type under General and header/status visibility under Display; Raid List View groups its controls under Display, Size and Member tile color.
 - **Raid -** Configure Loot Master opacity and related raid preferences.

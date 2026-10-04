@@ -238,8 +238,8 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
     invalidWarning.ping:SetScript("OnClick", function()
         local names = MOS.Services.Raid.GetSoftReserveIssues(getAttendance(), page.getSoftReserveRules and page.getSoftReserveRules()).invalidNames
         if table.getn(names) == 0 then return end
-        local sent = MOS.Services.Raid.SendRaidWarning("Members with invalid SR loot rights: " .. table.concat(names, ", "))
-        if sent then MOS.Services.Raid.SendRaidWarning("Their invalid Soft Reserves will not be considered for loot and will be removed.") end
+        local sent = MOS.Services.Raid.SendLootMessage("InvalidSR", {players=table.concat(names, ", "), playerNames=names})
+        if sent then MOS.Services.Raid.SendLootMessage("InvalidSRNotice") end
     end)
 end
 

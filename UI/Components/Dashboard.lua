@@ -524,7 +524,7 @@ end
 
 function Dashboard.CreateMinimapButton(options)
     local UI = MOS.UI.Components
-    local button = CreateFrame("Button", "MuklaOfficerSuiteMinimapButton", UIParent)
+    local button = MOS.UI.Components.CreateControl("MuklaOfficerSuiteMinimapButton", UIParent)
     button:SetWidth(32); button:SetHeight(32); button:SetFrameStrata("MEDIUM"); button:SetFrameLevel(8)
     button:SetMovable(true)
     if button.SetClampedToScreen then button:SetClampedToScreen(true) end

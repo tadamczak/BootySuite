@@ -1591,21 +1591,27 @@ function RaidManagement.ApplyGroupTileAppearance(panel, header, height, settings
     if settings.raidGroupShowHeader then panel.headerBackground:Show() else panel.headerBackground:Hide() end
 end
 
-function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin, showBorder, fitWidth)
-    local columnCount = math.max(1, math.min(4, tonumber(columns) or 2))
+function RaidManagement.CalculateGroupGeometry(width, height, columns, preferredTileWidth, tileHeight, showHeader, autoTileWidth, configuredHeaderHeight, groupMargin, showBorder, fitWidth, visibleCount, autoVertical, autoHorizontal)
+    local columnCount = math.floor(math.max(1, math.min(4, tonumber(columns) or 2)))
     local availableWidth = math.max(1, tonumber(width) or 1)
-    local margin = math.max(0, tonumber(groupMargin) or 8)
+    local margin = math.max(0, tonumber(groupMargin) or 0)
     if fitWidth then
         columnCount = math.min(columnCount, math.max(1, math.floor(availableWidth)))
         if columnCount > 1 then margin = math.min(margin, math.max(0, math.floor((availableWidth - columnCount) / (columnCount - 1)))) end
     end
-    local groupRows = math.ceil(8 / columnCount)
+    visibleCount = math.floor(math.max(0, math.min(8, tonumber(visibleCount) or 8)))
+    local groupRows = math.ceil(visibleCount / columnCount)
     local preferredWidth = (columnCount * (tonumber(preferredTileWidth) or 280)) + ((columnCount - 1) * margin)
     local layoutWidth = autoTileWidth and availableWidth or math.min(availableWidth, preferredWidth)
     local columnWidth = math.max(1, math.floor((layoutWidth - ((columnCount - 1) * margin)) / columnCount))
-    local headerHeight = showHeader and math.max(14, tonumber(configuredHeaderHeight) or 22) or 0
-    local groupHeight = headerHeight + ((tonumber(tileHeight) or 20) * 5) + (showBorder == false and 0 or 4)
-    local contentHeight = (groupRows * groupHeight) + ((groupRows - 1) * margin)
+    local headerHeight = showHeader and math.max(12, tonumber(configuredHeaderHeight) or 18) or 0
+    local rowHeight = tonumber(tileHeight) or 22
+    local groupHeight = headerHeight + rowHeight * 5
+    if autoVertical and visibleCount > 0 and visibleCount < 8 and math.mod(visibleCount, columnCount) == 0 then
+        groupHeight = math.max(groupHeight, ((tonumber(height) or 1) - (groupRows - 1) * margin) / groupRows)
+        rowHeight = (groupHeight - headerHeight) / 5
+    end
+    local contentHeight = math.max(0, (groupRows * groupHeight) + ((groupRows - 1) * margin))
     return {
         columns = columnCount,
         rows = groupRows,
@@ -1614,25 +1620,26 @@ function RaidManagement.CalculateGroupGeometry(width, height, columns, preferred
         columnWidth = columnWidth,
         headerHeight = headerHeight,
         groupHeight = groupHeight,
+        tileHeight = rowHeight, visibleCount = visibleCount, autoHorizontal = autoHorizontal,
         contentHeight = contentHeight,
         canvasHeight = math.max(tonumber(height) or 1, contentHeight),
         maximumScroll = math.max(0, contentHeight - (tonumber(height) or 1)),
         margin = margin,
-        tileInset = showBorder == false and 0 or (fitWidth and math.min(4, math.floor((columnWidth - 1) / 2)) or 4),
+        tileInset = 0,
     }
 end
 
 function RaidManagement.CalculateGroupSlotColumns(slotWidth, reserveRoleIcon, reserveLootIcon, showLevel, showClass, offline, fitWidth)
     if fitWidth then
         local width = math.max(1, tonumber(slotWidth) or 1)
-        local padding = math.min(5, (width - 1) / 10)
-        local right = math.min(6, (width - 1) / 10)
+        local padding = math.min(3, (width - 1) / 10)
+        local right = math.min(3, (width - 1) / 10)
         local available = math.max(1, width - padding - right)
         local nameMinimum = math.min(16, available)
-        local role = reserveRoleIcon and available >= nameMinimum + 18
-        if role then available = available - 18 end
-        local loot = reserveLootIcon and available >= nameMinimum + 18
-        if loot then available = available - 18 end
+        local role = reserveRoleIcon and available >= nameMinimum + 12
+        if role then available = available - 12 end
+        local loot = reserveLootIcon and available >= nameMinimum + 12
+        if loot then available = available - 12 end
         local offlineWidth = offline and available >= nameMinimum + 46 and 42 or 0
         if offlineWidth > 0 then available = available - offlineWidth - 4 end
         local levelWidth = showLevel and available >= nameMinimum + 29 and 24 or 0
@@ -1640,7 +1647,7 @@ function RaidManagement.CalculateGroupSlotColumns(slotWidth, reserveRoleIcon, re
         local preferredClass = math.max(36, math.min(64, math.floor(width * 0.25)))
         local classWidth = showClass and available >= nameMinimum + preferredClass + 5 and preferredClass or 0
         if classWidth > 0 then available = available - classWidth - 5 end
-        return { nameInset = padding + (role and 18 or 0) + (loot and 18 or 0), nameWidth = available,
+        return { nameInset = padding + (role and 12 or 0) + (loot and 12 or 0), nameWidth = available,
             classWidth = classWidth, levelWidth = levelWidth, offlineWidth = offlineWidth,
             showRoleIcon = role, showLootIcon = loot, rightInset = right, iconInset = padding }
     end
@@ -2190,7 +2197,9 @@ local function GroupGeometry(page, width, height)
     if page.mosCompactGroupWidth and not page.getGroupSettings then
         return RaidManagement.CalculateGroupGeometry(width, height, width < 260 and 1 or 2, width, 20, true, true, 22, 6, db.raidGroupShowBorder)
     end
-    return RaidManagement.CalculateGroupGeometry(width, height, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder, page.getGroupSettings ~= nil)
+    local hidden = db.raidGroupHideEmptyGroups
+    return RaidManagement.CalculateGroupGeometry(width, height, db.raidGroupColumns, db.raidGroupTileWidth, db.raidGroupTileHeight, db.raidGroupShowHeader, db.raidGroupAutoTileWidth, db.raidGroupHeaderHeight, db.raidGroupMargin, db.raidGroupShowBorder, true,
+        hidden and page.visibleGroupCount or 8, hidden and db.raidGroupAutoAdjustVertically, hidden and db.raidGroupAutoAdjustHorizontally)
 end
 
 function RaidManagement.MeasureGroupHeight(width, page)
@@ -2202,7 +2211,7 @@ function RaidManagement.ResolveGroupViewport(page)
     local width, height
     if page.mosGroupLayout then
         local pageWidth, pageHeight = PageSpan(page)
-        width = pageWidth - page.mosGroupLeft - 4
+        width = pageWidth - page.mosGroupLeft - (page.mosCompactGroupWidth and 0 or 4)
         height = pageHeight + page.mosGroupTop - page.mosGroupBottom
     else width, height = PageSpan(page.groupFrame); width = width + (page.mosGroupScrollGutter or 0) end
     width, height = math.max(1, width), math.max(1, height)
@@ -2213,7 +2222,7 @@ function RaidManagement.ResolveGroupViewport(page)
     if page.mosGroupLayout then
         page.groupFrame:ClearAllPoints()
         page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", page.mosGroupLeft, page.mosGroupTop)
-        page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -4 - page.mosGroupScrollGutter, page.mosGroupBottom)
+        page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -(page.mosCompactGroupWidth and 0 or 4) - page.mosGroupScrollGutter, page.mosGroupBottom)
     end
     if page.mosCompactGroupWidth then
         -- Wheel/clipping geometry uses the same supplied rectangle, even while
@@ -2229,16 +2238,32 @@ function RaidManagement.RefreshGroupView(page)
     renderer.ensureDatabase()
     if page.getGroupSettings then page.groupSettings = page.getGroupSettings() end
     local settings = GroupSettings(page)
+    local roster = page.groupRoster or {}; page.groupRoster = roster
+    local memberCount = math.floor(math.max(0, math.min(40, tonumber(renderer.getRaidMemberCount()) or 0)))
+    local index
+    for index = 1, 8 do page.groupCounts[index] = 0 end
+    for index = 1, memberCount do
+        local member = roster[index] or {}; roster[index] = member
+        member[1], member[2], member[3], member[4], member[5], member[6], member[7], member[8] = renderer.getRaidMemberInfo(index)
+        member[3] = math.floor(math.max(1, math.min(8, tonumber(member[3]) or 1)))
+        if member[1] then page.groupCounts[member[3]] = page.groupCounts[member[3]] + 1 end
+    end
+    for index = memberCount + 1, table.getn(roster) do
+        for field = 1, 8 do roster[index][field] = nil end
+    end
+    page.visibleGroupCount = 0
+    for index = 1, 8 do if page.groupCounts[index] > 0 then page.visibleGroupCount = page.visibleGroupCount + 1 end end
     local width, height, maximum = RaidManagement.ResolveGroupViewport(page)
     local backgroundColor = settings.raidGroupBackgroundColor
     local textColor = settings.raidGroupTextColor
     local lootMethod, raidLootMasterIndex = renderer.getLootMasterInfo()
     local compact = page.mosCompactGroupWidth ~= nil
     local legacyCompact = compact and not page.getGroupSettings
-    local slotHeight = legacyCompact and 20 or tonumber(settings.raidGroupTileHeight) or 20
+    local slotHeight = legacyCompact and 20 or tonumber(settings.raidGroupTileHeight) or 22
     local tileTextSize = legacyCompact and 10 or tonumber(settings.raidGroupTileTextSize) or 10
     local headerTextSize = legacyCompact and 10 or tonumber(settings.raidGroupHeaderTextSize) or 10
     local geometry = GroupGeometry(page, width, height)
+    slotHeight = geometry.tileHeight
     local columns, groupRows = geometry.columns, geometry.rows
     local layoutWidth, xOffset, columnWidth = geometry.layoutWidth, geometry.xOffset, geometry.columnWidth
     local headerHeight, groupHeight = geometry.headerHeight, geometry.groupHeight
@@ -2249,32 +2274,36 @@ function RaidManagement.RefreshGroupView(page)
     if compact and page.groupFrame.UpdateScrollChildRect then page.groupFrame:UpdateScrollChildRect() end
     MOS.UI.Components.ApplyScrollRange(page.groupFrame, page.groupScrollBar, maximum)
     local groupIndex, slotIndex
+    local visibleIndex = 0
     for groupIndex = 1, 8 do
-        page.groupCounts[groupIndex] = 0
-        local column = math.mod(groupIndex - 1, columns)
-        local row = math.floor((groupIndex - 1) / columns)
-        local x, y = xOffset + (column * (columnWidth + geometry.margin)), -yOffset - (row * (groupHeight + geometry.margin))
+        local visible = not settings.raidGroupHideEmptyGroups or page.groupCounts[groupIndex] > 0
+        local column = math.mod(visibleIndex, columns)
+        local row = math.floor(visibleIndex / columns)
+        local rowCount = row == groupRows - 1 and geometry.visibleCount - row * columns or columns
+        local panelWidth = geometry.autoHorizontal and rowCount > 0 and rowCount < columns
+            and (layoutWidth - (rowCount - 1) * geometry.margin) / rowCount or columnWidth
+        local x, y = xOffset + (column * (panelWidth + geometry.margin)), -yOffset - (row * (groupHeight + geometry.margin))
         local panel = page.groupPanels[groupIndex]
-        panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(columnWidth); panel:SetHeight(groupHeight)
+        panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y); panel:SetWidth(panelWidth); panel:SetHeight(groupHeight)
+        if visible then panel:Show(); visibleIndex = visibleIndex + 1 else panel:Hide() end
         local header = page.groupHeaders[groupIndex]
         RaidManagement.ApplyGroupTileAppearance(panel, header, headerHeight, settings)
         SetFontSize(header, headerTextSize)
-        header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -4, -4)
-        if page.getGroupSettings then
-            local headerInset = math.min(4, math.floor((columnWidth - 1) / 2))
-            header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", headerInset, 0); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -headerInset, 0)
-            header.mosFitFontSize = headerTextSize
-            MOS.UI.Components.FitButtonLabel(header, math.max(1, columnWidth - headerInset * 2)); header:SetJustifyH("CENTER")
-            if header.SetWordWrap then header:SetWordWrap(false) end
-            header:SetHeight(math.max(1, headerHeight)); header:SetJustifyV("MIDDLE")
-        end
-        if legacyCompact or settings.raidGroupShowHeader then header:Show(); panel.headerBackground:Show() else header:Hide() end
+        local headerInset = math.min(4, math.floor((panelWidth - 1) / 2))
+        header:ClearAllPoints(); header:SetPoint("TOPLEFT", panel, "TOPLEFT", headerInset, 0); header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -headerInset, 0)
+        header.mosFitFontSize = headerTextSize
+        MOS.UI.Components.FitButtonLabel(header, math.max(1, panelWidth - headerInset * 2)); header:SetJustifyH("CENTER")
+        if header.SetWordWrap then header:SetWordWrap(false) end
+        header:SetHeight(math.max(1, headerHeight)); header:SetJustifyV("MIDDLE")
+        if visible and (legacyCompact or settings.raidGroupShowHeader) then header:Show(); panel.headerBackground:Show() else header:Hide() end
         for slotIndex = 1, 5 do
             local slot = page.groupSlots[groupIndex][slotIndex]
             SetFontSize(slot.name, tileTextSize); SetFontSize(slot.level, tileTextSize); SetFontSize(slot.class, tileTextSize); SetFontSize(slot.empty, tileTextSize); SetFontSize(slot.offline, tileTextSize)
-            slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x + groupInset, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(columnWidth - groupInset * 2); slot:SetHeight(slotHeight)
+            slot:ClearAllPoints(); slot:SetPoint("TOPLEFT", page.groupCanvas, "TOPLEFT", x, y - headerHeight - ((slotIndex - 1) * slotHeight)); slot:SetWidth(panelWidth); slot:SetHeight(slotHeight)
+            slot.mosGroupWidth = panelWidth
+            if visible then slot:Show() else slot:Hide() end
             if page.getGroupSettings then
-                slot.empty.mosFitFontSize = tileTextSize; MOS.UI.Components.FitButtonLabel(slot.empty, math.max(1, columnWidth - groupInset * 2 - 4)); slot.empty:SetJustifyH("CENTER")
+                slot.empty.mosFitFontSize = tileTextSize; MOS.UI.Components.FitButtonLabel(slot.empty, math.max(1, panelWidth - groupInset * 2 - 4)); slot.empty:SetJustifyH("CENTER")
             end
             MOS.UI.Components.SetAlternatingRowColor(slot, backgroundColor, slotIndex, settings.raidGroupOddLightness); slot:SetBackdropBorderColor(0.42, 0.42, 0.42, 1)
             MOS.UI.Components.SetClassicRowShade(slot, math.mod(slotIndex, 2) == 0, false)
@@ -2292,8 +2321,9 @@ function RaidManagement.RefreshGroupView(page)
     local activeName
     for activeName in pairs(activeNames) do activeNames[activeName] = nil end
     local raidIndex
-    for raidIndex = 1, renderer.getRaidMemberCount() do
-        local name, _, subgroup = renderer.getRaidMemberInfo(raidIndex)
+    for raidIndex = 1, memberCount do
+        local member = roster[raidIndex]
+        local name, subgroup = member[1], member[3]
         subgroup = math.max(1, math.min(8, tonumber(subgroup) or 1))
         if name then activeNames[name] = true end
         local placement = name and page.groupDisplaySlots[name]
@@ -2304,10 +2334,11 @@ function RaidManagement.RefreshGroupView(page)
     for activeName in pairs(page.groupDisplaySlots) do
         if not activeNames[activeName] then page.groupDisplaySlots[activeName] = nil end
     end
-    for raidIndex = 1, renderer.getRaidMemberCount() do
-        local name, raidRank, subgroup, level, class, classFile, zone, online = renderer.getRaidMemberInfo(raidIndex)
+    for raidIndex = 1, memberCount do
+        local member = roster[raidIndex]
+        local name, raidRank, subgroup, level = member[1], member[2], member[3], member[4]
+        local class, classFile, zone, online = member[5], member[6], member[7], member[8]
         subgroup = math.max(1, math.min(8, tonumber(subgroup) or 1))
-        page.groupCounts[subgroup] = page.groupCounts[subgroup] + 1
         local placement = name and page.groupDisplaySlots[name]
         local slot = placement and placement.group == subgroup and reserved[subgroup][placement.slot] == raidIndex and page.groupSlots[subgroup][placement.slot] or nil
         if not slot then
@@ -2323,7 +2354,7 @@ function RaidManagement.RefreshGroupView(page)
                 end
             end
         end
-        if slot then
+        if slot and name then
             local memberIndex = renderer.getRaidMemberIndex and renderer.getRaidMemberIndex(raidIndex) or raidIndex
             slot.raidIndex = memberIndex
             slot.hasMember = true; slot.displayedMember.name = name or "Unknown"; slot.displayedMember.raidRank = raidRank or 0
@@ -2333,13 +2364,11 @@ function RaidManagement.RefreshGroupView(page)
             local showRoleIcon = settings.raidGroupShowRoleIcon and (tonumber(raidRank) or 0) > 0
             local showLevel = not legacyCompact and online and settings.raidGroupShowLevel
             local showClass = not legacyCompact and settings.raidGroupShowClass
-            local slotWidth = columnWidth - groupInset * 2
+            local slotWidth = slot.mosGroupWidth
             local showOffline = not online and (not page.getGroupSettings or not settings.raidGroupShowClass)
-            local columns = RaidManagement.CalculateGroupSlotColumns(slotWidth, showRoleIcon, showLootMasterIcon, showLevel, showClass, showOffline, page.getGroupSettings ~= nil)
-            if page.getGroupSettings then
-                showRoleIcon, showLootMasterIcon = columns.showRoleIcon, columns.showLootIcon
-                showLevel, showClass = columns.levelWidth > 0, columns.classWidth > 0
-            end
+            local columns = RaidManagement.CalculateGroupSlotColumns(slotWidth, showRoleIcon, showLootMasterIcon, showLevel, showClass, showOffline, true)
+            showRoleIcon, showLootMasterIcon = columns.showRoleIcon, columns.showLootIcon
+            showLevel, showClass = columns.levelWidth > 0, columns.classWidth > 0
             if showRoleIcon and (tonumber(raidRank) or 0) == 2 then
                 slot.crown:SetTexture("Interface\\GroupFrame\\UI-Group-LeaderIcon"); slot.crown:Show()
             elseif showRoleIcon and (tonumber(raidRank) or 0) == 1 then
@@ -2349,7 +2378,8 @@ function RaidManagement.RefreshGroupView(page)
             end
             local iconInset = columns.iconInset or 5
             slot.crown:ClearAllPoints(); slot.crown:SetPoint("LEFT", slot, "LEFT", iconInset, 0)
-            slot.lootMasterIcon:ClearAllPoints(); slot.lootMasterIcon:SetPoint("LEFT", slot, "LEFT", iconInset + (showRoleIcon and 18 or 0), 0)
+            slot.crown:SetWidth(10); slot.crown:SetHeight(10); slot.lootMasterIcon:SetWidth(10); slot.lootMasterIcon:SetHeight(10)
+            slot.lootMasterIcon:ClearAllPoints(); slot.lootMasterIcon:SetPoint("LEFT", slot, "LEFT", iconInset + (showRoleIcon and 12 or 0), 0)
             if showLootMasterIcon then slot.lootMasterIcon:Show() else slot.lootMasterIcon:Hide() end
             local nameInset, nameWidth = columns.nameInset, columns.nameWidth
             local classWidth, levelWidth, offlineWidth = columns.classWidth, columns.levelWidth, columns.offlineWidth
@@ -3761,6 +3791,7 @@ function RaidManagement.AttachActionHandlers(options)
     sessionPrompt:SetBackdropColor(0.03, 0.025, 0.02, 1)
     if sessionPrompt.SetClampedToScreen then sessionPrompt:SetClampedToScreen(true) end
     local promptTitle = MOS.UI.Components.CreateHeading(sessionPrompt, "", 1, "gold", "raids")
+    sessionPrompt.title = promptTitle
     promptTitle:SetPoint("TOPLEFT", sessionPrompt, "TOPLEFT", 18, -16); promptTitle:SetText("Raid session is still active")
     local promptText = MOS.UI.Components.CreateLabel(sessionPrompt, nil, "OVERLAY", "GameFontHighlight")
     promptText:SetPoint("TOPLEFT", promptTitle, "BOTTOMLEFT", 0, -12); promptText:SetWidth(350); promptText:SetJustifyH("LEFT")
@@ -3770,9 +3801,14 @@ function RaidManagement.AttachActionHandlers(options)
     saveButton:SetPoint("BOTTOMLEFT", sessionPrompt, "BOTTOMLEFT", 48, 18)
     continueButton:SetPoint("LEFT", saveButton, "RIGHT", 18, 0)
     local closeButton = MOS.UI.Components.CreateWindowButton(sessionPrompt, nil, "close")
+    sessionPrompt.close = closeButton
     closeButton:SetPoint("TOPRIGHT", sessionPrompt, "TOPRIGHT", -10, -10)
     MOS.UI.Components.AttachTooltip(closeButton, "Not now", "Keep the session data and pause tracking until you choose what to do.")
     MOS.UI.Components.Window.StyleProjectDialog(sessionPrompt)
+    promptTitle:SetHeight(16); promptTitle:SetJustifyV("MIDDLE")
+    promptText:ClearAllPoints(); promptText:SetPoint("TOPLEFT", sessionPrompt.projectDivider, "BOTTOMLEFT", 6, -10)
+    promptText:SetPoint("TOPRIGHT", sessionPrompt.projectDivider, "BOTTOMRIGHT", -6, -10)
+    promptText:SetHeight(48); promptText:SetJustifyV("TOP")
     sessionPrompt.continueButton, sessionPrompt.saveButton, sessionPrompt.closeButton = continueButton, saveButton, closeButton
     sessionPrompt:Hide()
     continueButton:SetScript("OnClick", function()

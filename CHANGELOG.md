@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0-dev.133 - 2026-10-04
+
+- Add editable, individually switchable Loot Master messages and open New Roll with `/mos roll`.
+- Apply the matching LM exclusions preset when starting a raid; display rejected roll types as invalid results.
+- Fit the native Raid grid without extra border/padding and add independent hide-empty and group-size adjustment options to both raid views.
+- Fix dropdown dismissal on other controls, red button surfaces, centered captions, Raid Info styling and session-warning headings; darken Profiler content further.
+
 ## 0.5.0-dev.132 - 2026-10-04
 
 - Fix New Roll click blocking, add Open roll and a compact Add rollers picker, use filled dice and allow raid assistants to organize rolls.

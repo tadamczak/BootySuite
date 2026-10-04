@@ -19,6 +19,10 @@ local keys = {
     "raidListBackgroundColor", "raidListTextColor", "raidListHoverColor", "raidListPressedColor",
 }
 local nativeIndex
+for nativeIndex = 1, table.getn(MOS.Services and MOS.Services.LootMessages and MOS.Services.LootMessages.SettingKeys or {}) do
+    table.insert(keys, MOS.Services.LootMessages.SettingKeys[nativeIndex])
+end
+for _, suffix in ipairs({"HideEmptyGroups", "AutoAdjustVertically", "AutoAdjustHorizontally"}) do table.insert(keys, "raidGroup" .. suffix) end
 for nativeIndex = 1, table.getn(MOS.Database.NativeRaidGroupKeys or {}) do
     table.insert(keys, MOS.Database.NativeRaidGroupKeys[nativeIndex])
 end

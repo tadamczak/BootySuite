@@ -77,7 +77,7 @@ function FilterPanel.Refresh(panel, values, selected, onChanged, dynamicWidth, p
     for optionIndex = 1, table.getn(values) do
         local checkbox = panel.options[optionIndex]
         if not checkbox then
-            checkbox = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+            checkbox = UI.CreateCheckButton(nil, panel, "UICheckButtonTemplate")
             checkbox:SetWidth(20)
             checkbox:SetHeight(20)
             checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10 - ((optionIndex - 1) * 20))
