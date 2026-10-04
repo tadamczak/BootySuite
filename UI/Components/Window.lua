@@ -120,7 +120,12 @@ function Window.Create(options)
     end
     window:SetScript("OnHide", function() window:SetScript("OnUpdate", nil) end)
     window.Open = function()
-        if window:IsVisible() or not view then return end
+        if not view then return end
+        if window:IsVisible() then
+            if window.minimized then minimize:GetScript("OnClick")() end
+            window:Raise()
+            return
+        end
         local minimized = window.minimized
         window.minimized = false
         ApplyResizeBounds(options.minimizedWidth and minimized and window.expandedWidth or nil, options.minimizedWidth and minimized and window.expandedHeight or nil)

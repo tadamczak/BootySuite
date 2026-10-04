@@ -11,13 +11,13 @@ Mukla Officer Suite is a World of Warcraft 1.12.1 addon for guild officers and r
 - [Installation](#installation)
 - [Basic Usage](#basic-usage)
 - [Commands](#commands)
-- [Roster](#roster)
+- [Guild](#guild)
 - [Guild Statistics](#guild-statistics)
 - [Raid](#raid)
 - [Loot Master Mode](#loot-master-mode)
 - [Raid Statistics](#raid-statistics)
 - [CSR](#csr)
-- [Performance](#performance)
+- [Profiler](#profiler)
 - [Settings](#settings)
 - [About](#about)
 - [How to record raid session](#how-to-record-raid-session)
@@ -43,20 +43,22 @@ LM config and Reycoin list use the same diagonal resize grip as the main window.
 
 The top-right buttons open Settings, minimize or restore the dashboard, and close it. Addon windows use matching gold controls: a line minimizes, a square restores, and X closes. The minimized window remembers its dragged position during the current session; restoring returns to the expanded window's previous position.
 
-Left-click the minimap icon to open or close the dashboard, or restore it when minimized. Right-click for a compact gold quick menu with guild dialogs, raid controls, the five latest saved raids, statistics, CSR, Profiler and About. Drag the icon anywhere on screen; its position survives reloads. **Test Raid** and quick **Load Raid** are unavailable during an active raid session; **New raid** becomes **Open Raid**. Add Member appears only with invite permission. Loot Master shortcuts open their chosen dialog directly.
+Left-click the minimap icon to open or close the dashboard, or restore it when minimized. Right-click for a compact gold quick menu with guild dialogs, raid controls, the five latest saved raids, CSR, Profiler, Settings and About. Guild Stats and Raid Stats are inside their Guild and Raid menus. Hover Guild, Raid or Profiler to open its submenu; click the parent to open that page. Hold Shift and drag with the left mouse button to move the icon anywhere on screen; its position survives reloads. **Test Raid** and quick **Load Raid** are unavailable during an active raid session; **New raid** becomes **Open Raid**. Add Member appears only with invite permission. Loot Master shortcuts open their chosen dialog directly.
 
 ### Commands
 
 - **Open or close -** Use `/mos`, `/mukla`, `/mos show`, or `/mos open`.
 - **Hide -** Use `/mos hide` to close the main window.
 - **Manual item roll -** Use `/mos roll [linked item]` for Tmog, OS, MS and RC. Append player names to restrict participants; append types to replace the defaults, for example `/mos roll [linked item] Player1 Player2 SR`.
-- **Roster shortcut -** Use `/mos scan` to open Roster and access its scan controls.
+- **Guild shortcut -** Use `/mos scan` to open Guild and access its scan controls.
 - **Saved roster status -** Use `/mos status` to print the number of saved guild members.
 - **Minimap button -** Use `/mos minimap` to show or hide the minimap button.
 - **Layout diagnostics -** Use `/mos layout` when diagnosing window-layout problems.
 - **Client API diagnostics -** Use `/mos capabilities` to report the available client APIs and extension markers. BootyProfiler sessions capture the same information when recording starts.
 
-### Roster
+### Guild
+
+This tab and its quick-menu entry are grey and unavailable when your character is not in a guild.
 
 - **Guild roster -** Browse saved guild members with class, rank, level, zone, notes, online status, and last-online information.
 - **Table headers -** Click sortable headings to change order; click again to reverse it.
@@ -64,19 +66,19 @@ Left-click the minimap icon to open or close the dashboard, or restore it when m
 - **Member details -** Expand a player to review additional information and available officer actions.
 - **Guild actions -** Invite, promote, demote, remove, ignore, report, or manage eligible members according to your permissions.
 - **Guild information -** Review or edit Guild Information and Message of the Day.
-- **Roster scan -** Refresh and save current guild data when you explicitly request it.
+- **Guild scan -** Refresh and save current guild data when you explicitly request it.
 
-Large guild scans finish in stages; the previous saved roster stays available until the new scan completes. Roster Live Tracking pauses when its view is hidden. An explicitly requested scan can still finish after you close the window.
+Large guild scans finish in stages; the previous saved roster stays available until the new scan completes. Guild Live Tracking pauses when its view is hidden. An explicitly requested scan can still finish after you close the window.
 
-Expanded roster rows stay highlighted. Roster rows expand with player name, level/class, rank, last online, public and officer notes, and permitted rank arrows. The attached Window style uses compact labels, larger metadata values and smaller padded note displays. Click a note to edit it in an Accept/Cancel window. Officer notes and guild administration controls appear only with the required permissions. Right-click a member for a compact menu beside the cursor with Whisper, Invite, Target, Report or Ignore Player; click outside to close. Report opens a reason form and Submit sends a GM ticket.
+Expanded roster rows stay highlighted. Guild rows expand with player name, level/class, rank, last online, public and officer notes, and permitted rank arrows. The attached Window style uses compact labels, larger metadata values and smaller padded note displays. Click a note to edit it in an Accept/Cancel window. Officer notes and guild administration controls appear only with the required permissions. Right-click a member for a compact menu beside the cursor with Whisper, Invite, Target, Report or Ignore Player; click outside to close. Report opens a reason form and Submit sends a GM ticket.
 
 ### Guild Statistics
 
-- **Export Roster -** Scan the guild roster and confirm a reload to save it to disk.
+- **Export Guild -** Scan the guild roster and confirm a reload to save it to disk.
 - **Member filters -** Filter the saved roster independently by rank, class, exact level, or the `Search...` field. Rank and Class remain as the default captions when every option is active; one selected option is shown by name and larger selections use an `X selected` count. **Select all** toggles every option on or off.
 - **Grouping and sorting -** Sort by any column, or group by class, rank, or level. Group rows expand as accordions; sorting applies inside each group.
 - **Raw Data -** Toggle the table to review member totals by rank, class, and non-empty level band. Each section starts collapsed and shows its unique member count; Group by is disabled in this view.
-- **Visible count -** Review the number of members currently included by the filters beside the Export Roster and Refresh Data actions.
+- **Visible count -** Review the number of members currently included by the filters beside the Export Guild and Refresh Data actions.
 
 ### Raid
 
@@ -90,7 +92,7 @@ Expanded roster rows stay highlighted. Roster rows expand with player name, leve
 - **Loot rules -** Configure SR, Highly Contested Items, Reycoin, and CSR rights by guild rank.
 - **Reycoin list -** Review used Reycoins and pending item trades.
 - **Narrow raid windows -** Raid Leader Tools and Loot Master Tools wrap to a left-aligned row. Warnings move below the roster as compact headers when space is limited.
-- **Raid header -** The Raid section label has its own row. Save Session and Quit remain right aligned while the row fits; in narrow windows, saved date, warning count and both actions move together to a left-aligned second row.
+- **Raid header -** The Raid section label has its own row. Save Raid and End Raid remain right aligned while the row fits; in narrow windows, saved date, warning count and both actions move together to a left-aligned second row.
 - **Saved raids -** Keep up to ten numbered snapshots. Saving requires a unique Raid ID. Loading, editing and saving a historical raid creates a new snapshot under that exact ID while preserving the original.
 
 ### Loot Master Mode
@@ -133,13 +135,13 @@ Restore keeps recent loot sources and roll rounds. Active awards and unfinished 
 - **View raid -** Open the selected contributing raid in Raid Statistics.
 - **CSR Test Lab -** Simulate players, ranks, reservations, awards, and elapsed time without changing saved raid data.
 
-### Performance
+### Profiler
 
-- **Optional BootyProfiler -** Install the separate addon beside MOS. Performance keeps its illustrated background across all views and shows installation/load information when needed. **Enable** activates an installed addon with a UI reload; it is unavailable when BootyProfiler is missing. **Disable** is at the right of the top toolbar.
-- **Minimap shortcuts -** Performance's quick menu offers Enable/Disable, Live Monitor, advanced Start/Stop, Reset, Export, a Memory checkbox and Health Check. Switching Memory keeps the menu open. A first quick Start records **All Addons**; later starts use your last selected MOS/All profile. Memory applies to the next All Addons scan and cannot change while recording. A missing BootyProfiler makes this menu unavailable. Export recordings before confirming Disable and its UI reload.
-- **Advanced Profiler -** Beside **Live Monitor**, choose **Profile MOS**, **Profile All** or **Analyze Login** from Advanced Profiler. Profile views have one **Start / Stop** button. MOS measures selected operations; All also intercepts frame callbacks. Opening or changing views does not start or change a capture. Each view shows its matching capture status and last-scan date/duration.
+- **Optional BootyProfiler -** Install the separate addon beside MOS. Profiler keeps its illustrated background across all views and shows installation/load information when needed. **Enable** activates an installed addon with a UI reload; it is unavailable when BootyProfiler is missing. **Disable** is at the right of the top toolbar.
+- **Minimap shortcuts -** Profiler's quick menu offers Live Monitor, advanced Start/Stop, Reset, Export, a Memory checkbox, Health Check and Enable/Disable at the end. Switching Memory keeps the menu open. A first quick Start records **All Addons**; later starts use your last selected MOS/All profile. Memory applies to the next All Addons scan and cannot change while recording. A missing BootyProfiler makes this menu unavailable. Export recordings before confirming Disable and its UI reload.
+- **Advanced Profiler -** Beside **Live Monitor**, choose **Profile MOS**, **Profile All** or **Analyze Login** from Advanced Profiler. Profile views have one **Start / Stop** button. MOS measures selected operations; All also intercepts frame callbacks. Opening or changing views does not start or change a capture. Each view shows its matching capture status and last-scan date/duration. While one profile is recording, the other profile shows a centered notice and its recording controls are disabled; return to the recording profile to stop it.
 - **MOS -** Review selected MOS operations, call counts, total/average/maximum times and recent slow calls.
-- **Reading results -** Sections start closed on opening or changing views, without saving their expansion state. Expand the tables you need; a short introduction explains what to inspect. Frame callbacks is the main All Addons ranking. While recording, counters update and table rows stay in place; **Update ranking**, the last recording action, refreshes their selection/order. **Stop** shows final rankings. Hover a summary card or column heading for its meaning.
+- **Reading results -** Sections start closed on opening or changing views, without saving their expansion state. Expand the tables you need; a short introduction explains what to inspect. Frame callbacks is the main All Addons ranking. While recording, counters update and table rows stay in place; **Update ranking**, the last recording action, refreshes their selection/order. **Stop** shows final rankings. Click any result column to sort; click again to reverse the order. **Hide game UI** removes known game callbacks and Blizzard addons, while unidentified entries stay visible. Hover a summary card or column heading for its meaning.
 - **All Addons -** Review intercepted OnEvent/OnUpdate costs by source addon and expandable frame families. Summaries show the minimum, maximum and average valid sampled FPS and network latency across the whole recording. Family and child lists have pages of 50 records. Discovery is gradual; unknown sources and partial coverage are explicit. Refresh memory requests native addon memory statistics when supported.
 - **Callback memory -** Set **Memory: ON** before Start in All Addons. **Memory by addon** appears for a memory capture or native snapshot; it groups observed callback heap growth by identified source. **View: Memory** ranks frame families. Unsupported callback measurements show **Not measured**; an asterisk marks totals with unmeasured calls. Growth, net change and peak are shared-memory changes during execution, not owned addon RAM; nested readings overlap.
 - **Analyze Login -** Open this view from Advanced Profiler to see the login summary and loading-stage table. Choose its **Analyze Login** action, then **Reload now** or **Later** to arm one capture. It records loading and five seconds after entering the world, saves the report and stops. Login time ends at first world entry; Window and Net heap delta describe the interval ending at the current row. Earlier loading remains in the baseline.
@@ -150,30 +152,30 @@ Restore keeps recent loot sources and roll rounds. Active awards and unfinished 
 
 Measured heap change refers to the global Lua heap, not total allocations or owned memory. MOS measures selected entry points; All Addons measures intercepted frame callbacks. Source-addon labels identify implementation sources, including shared libraries. XML scripts can omit their addon file and some functions expose no source; those owners remain Unknown. Frame labels may show actual parent/reference context without claiming addon ownership. Native memory by addon is available only when the client exposes its counters. Self time excludes timed nested callbacks, while inclusive times overlap. FPS samples do not prove the cause of a drop. Clock quality and interception overhead need verification on your client.
 
-Statistics, CSR and Performance adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, choosing or clearing a calendar date refreshes the results immediately.
+Statistics, CSR and Profiler adapt their controls and tables to the window size. Guild and raid statistics stack their panels in narrow windows. At very small sizes, scroll the page to reach every section. In Raid Statistics, choosing or clearing a calendar date refreshes the results immediately.
 
 ### Settings
 
-**Keybindings > General > Use MOS as default Raid tab** replaces the game's Raid tab with a compact MOS group view. It works without starting or saving a MOS raid session. Disable the option to return to the standard panel. Raid Info shows your saved instance IDs and reset times; raid leaders and assistants can use Ready Check from Raid Leader Tools.
+**Keybindings > General > Use MOS as default Raid tab** replaces the game's Raid tab with a compact MOS group view. It works without starting or saving a MOS raid session. The native Raid header keeps its action buttons and shows the MOS minimap logo while this view is selected. Disable the option to return to the standard panel. Raid Info shows your saved instance IDs and reset times; raid leaders and assistants can use Ready Check from Raid Leader Tools.
 
-UI settings group Roster, Raid, Guild Statistics, Raid Statistics, CSR and Performance in indented sections. New sections contain General and Layout placeholders for future options. Minimizing Settings temporarily narrows it; restoring returns its expanded size. Live Monitor remembers the size chosen by dragging its resize corner, including after a UI reload.
+UI settings group Guild, Raid, Guild Statistics, Raid Statistics, CSR and Profiler in indented sections. New sections contain General and Layout placeholders for future options. Minimizing Settings temporarily narrows it; restoring returns its expanded size. Live Monitor remembers the size chosen by dragging its resize corner, including after a UI reload.
 
-**UI > Roster > General > Player details style** selects **Collapsible** (the default expanded roster row) or **Window**, a compact member panel attached to the right of the main window. The panel shows guild details, editable notes when permitted, rank controls, Remove (with confirmation), and Group Invite. Unavailable rank controls remain visible in grey. The choice is saved in settings profiles.
+**UI > Guild > General > Player details style** selects **Collapsible** (the default expanded roster row) or **Window**, a compact member panel attached to the right of the main window. The panel shows guild details, editable notes when permitted, rank controls, Remove (with confirmation), and Group Invite. Unavailable rank controls remain visible in grey. The choice is saved in settings profiles.
 
 **UI > Layout** can hide the status/version bar, guild logo, or addon name and ornaments. These options default to off. **Hide header bar** removes the entire header and moves window controls to a compact row inside the content. In top Tab View the gold outer edge moves below the tabs, which retain their position. Menu type and Use Icon Tabs share one row. With the bottom bar hidden, resize by dragging the bottom-right corner. Hiding both logo and name reduces the header to the window controls. In tab views, narrow headers hide side ornaments and align the title left so window controls remain accessible. These preferences are saved in profiles under **Profile > General**. Hiding every roster filter also removes its empty row.
 
-**Show section header** is in **UI > Roster > Layout > Display**; **Hide section header** remains in **UI > Raid > General**. In Raid it hides the section label while keeping the selected raid name visible.
+**Show section header** is in **UI > Guild > Layout > Display**; **Hide section header** remains in **UI > Raid > General**. In Raid it hides the section label while keeping the selected raid name visible.
 
-Under **UI > Roster > Layout**, choose visible columns, filters and column headers. Officer notes require guild permission. Hidden class, rank and search filters do not restrict results. These preferences are saved in profiles. Show Player Status switches between guild columns (name, zone, level, class) and player-status columns (name, rank, notes, last online). Column preferences apply within each mode; both Officer note and its Settings checkbox require permission. Export Roster is in Guild Statistics; Refresh Data and guild actions stay at the bottom of Roster. Refresh Data is hidden while UI > Roster > General > Live tracking is enabled; with tracking disabled it is unavailable only while a scan is pending. MOTD, the table with member counts/status, and guild actions share the standard content frame, with horizontal separators between sections. The main window retains its project gold outer border; header keeps its bottom separator, content keeps horizontal separators, and the status bar keeps its top and right borders. Only the table section stretches when resizing vertically; its counts and status switch stay above the bottom actions, below the table. The guild message wraps to additional lines; guild status remains on one line with text fitted to the available width. Columns share the available width according to their contents. The main window can be narrowed to 350 pixels. Settings uses a compact plain header, one gold outer frame and a horizontal content separator. Resize it by dragging its unmarked bottom-right corner; UI General and Layout expand independently, and its single-line options adapt to up to four measured columns, down to a 350-pixel window.
+Under **UI > Guild > Layout**, choose visible columns, filters and column headers. Officer notes require guild permission. Hidden class, rank and search filters do not restrict results. These preferences are saved in profiles. Show Player Status switches between guild columns (name, zone, level, class) and player-status columns (name, rank, notes, last online). Column preferences apply within each mode; both Officer note and its Settings checkbox require permission. Export Guild is in Guild Statistics; Refresh Data and guild actions stay at the bottom of Guild. Refresh Data is hidden while UI > Guild > General > Live tracking is enabled; with tracking disabled it is unavailable only while a scan is pending. MOTD, the table with member counts/status, and guild actions share the standard content frame, with horizontal separators between sections. The main window retains its project gold outer border; header keeps its bottom separator, content keeps horizontal separators, and the status bar keeps its top and right borders. Only the table section stretches when resizing vertically; its counts and status switch stay above the bottom actions, below the table. The guild message wraps to additional lines; guild status remains on one line with text fitted to the available width. Columns share the available width according to their contents. The main window can be narrowed to 350 pixels. Settings uses a compact plain header, one gold outer frame and a horizontal content separator. Resize it by dragging its unmarked bottom-right corner; UI General and Layout expand independently, and its single-line options adapt to up to four measured columns, down to a 350-pixel window.
 
-Roster and Raid filter controls share the framed search input, aligned 24-unit controls, toolbar background and bottom separator. Their redundant Filters caption is omitted.
+Guild and Raid filter controls share the framed search input, aligned 24-unit controls, toolbar background and bottom separator. Their redundant Filters caption is omitted.
 
-Under **UI > Layout**, choose **Right side view**, **Top tab view** or **Bottom tab view**. Both tab views reveal **Use Icon Tabs** beside the dropdown. Top Tab view uses a compact window-control strip; tabs overlap it and protrude above the window. Bottom Tab view places navigation below the status bar when visible, or below the content when hidden. Tabs extend beyond the bottom window frame. Top and bottom text tabs use the available window width. Saved raid lists stop growing at 500 UI units. Narrow text tabs shorten Guild Statistics and Raid Statistics to Stats and Performance to Perf. Text and icon tabs join the content frame; the selected tab keeps its gold outline, white caption and gradient highlight while inactive tabs are recessed. Enable it to replace tab captions with the sidebar icons and matching highlights.
+Under **UI > Layout**, choose **Right side view**, **Top tab view** or **Bottom tab view**. Both tab views reveal **Use Icon Tabs** beside the dropdown. Top Tab view uses a compact window-control strip; tabs overlap it and protrude above the window. Bottom Tab view places navigation below the status bar when visible, or below the content when hidden. Tabs extend beyond the bottom window frame. Top and bottom text tabs use the available window width. Saved raid lists stop growing at 500 UI units. Narrow text tabs shorten Guild Statistics and Raid Statistics to Stats and Profiler to Prof. Text and icon tabs join the content frame; the selected tab keeps its gold outline, white caption and gradient highlight while inactive tabs are recessed. Enable it to replace tab captions with the sidebar icons and matching highlights.
 
 Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can be toggled by clicking either the checkbox or its label.
 
 - **Profiles -** Current profile shows the active configuration as text, with Save beside it. Select a saved profile under Load profile to enable Load, Delete and Export. New profile + Add creates and activates a copy of your current settings; Save updates the current profile, including pending percentage edits. Gold feedback appears beside the action buttons. Only the latest action remains visible; saving before Add or Load shows both results. Load and Add ask whether to save changed settings first. Delete requires confirmation; deleting the current snapshot leaves your live settings available to save again. Export opens saved settings for copying. Profiles exclude guild, raid and loot records.
-- **Collapsible sections -** Profile, UI (including Roster and Raid), and Debug start collapsed after reload. Expansion is remembered while playing and when reopening Settings.
+- **Collapsible sections -** Profile, UI (including Guild and Raid), and Debug start collapsed after reload. Expansion is remembered while playing and when reopening Settings.
 
 - **Resets -** Each Display, Size and Member tile color subsection has Reset to default with confirmation. Reset to defaults at the bottom-right of Settings resets all settings after confirmation, preserving saved profiles, guild data and raid history.
 - **Saved raids -** The Raid start screen lists Name, Raid and Time. Use the load or delete icon on each row; New Raid creates a session while grouped in a raid.
@@ -183,7 +185,7 @@ Drag the diagonal bottom-right grip to resize Settings. Multiselect filters can 
 - **Resizable window -** Settings can be resized within the available game screen; long sections remain available through scrolling.
 - **Raid group interaction -** Drop a member on another member or on free group background. Hidden role icons release name space; hiding the group border and setting group spacing to zero joins the tiles.
 - **Raid group appearance -** Group View > Display can hide the group border independently of its header. Group tile color controls header text, header background and border colors, with its own confirmed reset. These choices are included in settings profiles.
-- **Roster preferences -** General contains live tracking and Player details style. Layout groups visibility options under Display and row appearance under Member tile color: class colors, background, main text, hover and Odd record lightness (0-100%). The lightness value brightens even rows toward white while typing; 0% keeps all row backgrounds identical. All Settings accordions start collapsed after reload. Raid Group View and List View have independent lightness fields under Member tile color. UI Layout groups Menu type under General and header/status visibility under Display; Raid List View groups its controls under Display, Size and Member tile color.
+- **Guild preferences -** General contains live tracking and Player details style. Layout groups visibility options under Display and row appearance under Member tile color: class colors, background, main text, hover and Odd record lightness (0-100%). The lightness value brightens even rows toward white while typing; 0% keeps all row backgrounds identical. All Settings accordions start collapsed after reload. Raid Group View and List View have independent lightness fields under Member tile color. UI Layout groups Menu type under General and header/status visibility under Display; Raid List View groups its controls under Display, Size and Member tile color.
 - **Raid -** Configure Loot Master opacity and related raid preferences.
 - **Logging -** Enable optional concise addon messages in chat.
 - **Reset options -** Restore supported settings to their defaults.
@@ -262,12 +264,12 @@ Common scenarios:
 
 ### 6. Save the raid
 
-1. Choose **Save Session**.
+1. Choose **Save Raid**.
 2. Enter a unique **Raid ID**. The exact value is saved; no timestamp suffix is added.
 3. Enable **Save raid statistics** to add the raid to Raid Statistics.
 4. Enable **Save attendance** if attendance should contribute to player statistics.
 5. Enable **Save CSR** if this raid should contribute to CSR.
-6. Confirm **Save Session** and complete the requested reload when shown.
+6. Confirm **Save Raid** and complete the requested reload when shown.
 
 Disabling **Save attendance** keeps the raid record but marks Attendance as Off. Attendance can only be enabled when raid statistics are saved.
 
@@ -285,7 +287,7 @@ Raid column headers shrink together when space is tight and grow back as space r
 
 The Loot Master Tools menu can open a standalone, movable Reycoin list. Opening Loot Master Mode closes the standalone list; its toolbar can reopen the same list beside the LM window.
 
-Raid import, save, reset and quit dialogs can be moved by dragging their background. Reset and Quit require confirmation, with the confirming action on the right.
+Raid import, save, reset and quit dialogs can be moved by dragging their background. Reset and End Raid require confirmation, with the confirming action on the right.
 
 In Reycoin list, enter a player name and optionally an item, then choose Add. A name without an item creates a Manual entry.
 

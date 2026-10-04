@@ -573,7 +573,7 @@ function Dashboard.CreateMinimapButton(options)
     local prefix = string.format("|cff%02x%02x%02x", math.floor(orange[1] * 255), math.floor(orange[2] * 255), math.floor(orange[3] * 255))
     local leftHint = prefix .. "Left click:|r |cffffffffopen or close the dashboard|r"
     local rightHint = prefix .. "Right click:|r |cffffffffquick menu|r"
-    local dragHint = prefix .. "Drag:|r |cffffffffmove anywhere on screen|r"
+    local dragHint = prefix .. "Shift + left drag:|r |cffffffffmove anywhere on screen|r"
     button:SetScript("OnEnter", function()
         MOS.UI.Components.AnchorTooltipRightOfCursor(this)
         GameTooltip:AddLine("Mukla Officer Suite", unpack(UI.Theme.colors.goldText))
@@ -584,6 +584,7 @@ function Dashboard.CreateMinimapButton(options)
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     button:SetScript("OnDragStart", function()
+        if type(IsShiftKeyDown) ~= "function" or not IsShiftKeyDown() then return end
         button.dragging = true; button:StartMoving()
     end)
     button:SetScript("OnDragStop", FinishDrag)

@@ -435,6 +435,7 @@ if MOS.Diagnostics.Wrap then RenderTable=MOS.Diagnostics.Wrap("Guild Statistics 
 
 function GuildStatistics.AttachExport(view, button)
     button:SetParent(view.actionPanel or view.page); button:ClearAllPoints(); button:SetWidth(100); button:SetHeight(26); button:Show()
+    button:SetText("Export Guild")
     UI.StyleActionButton(button); UI.SetClassicButtonIcon(button, "save", 13, 7, 0); UI.SetClassicButtonLabelOffset(button, 2)
     view.exportButton = button
 end

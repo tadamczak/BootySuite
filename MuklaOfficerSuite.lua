@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.128"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.129"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -431,9 +431,12 @@ RefreshRaidPage = function()
 end
 
 local function ShowPage(pageName)
+    pageName = MOS.Modules.Navigation.ResolvePage(pageName, currentPage)
+    if not pageName then return false end
     currentPage = pageName
     MOS.ModuleRegistry.Show(pageName)
     if navigation then navigation.SetActive(pageName) else MOS.Modules.Navigation.SetActive(menuButtons, pageName) end
+    return true
 end
 
 MOS.OpenRaidStatistics = function(raidId)
@@ -547,7 +550,7 @@ MOS.Core.GuildScanController.Create({
     onStart = function(scanMode, controller)
         if MOS.Core.GuildScanController.GetOrigin(controller) == "roster_live" then return end
         if scanMode == "raid" then controller.progressLabel = "Scanning raid"
-        elseif scanMode == "reload" then controller.progressLabel = "Preparing roster export"
+        elseif scanMode == "reload" then controller.progressLabel = "Preparing guild export"
         elseif scanMode == "quiet" then controller.progressLabel = "Refreshing guild data"
         else controller.progressLabel = "Scanning guild data" end
         if scanMode == "raid" then
@@ -712,6 +715,8 @@ local function ToggleDashboard()
 end
 
 local minimapMenu = MOS.Modules.MinimapMenu.Create({
+    isInGuild = MOS.Services.Roster.IsInGuild,
+    openSettings = detachedSettingsWindow.Open,
     menuOptions = {
         backgroundTexture = "Interface\\AddOns\\MuklaOfficerSuite\\Textures\\QuickMenuBackground",
         backgroundAspect = 252 / 512,
@@ -766,7 +771,7 @@ MOS.Core.Commands.Attach({
         DEFAULT_CHAT_FRAME:AddMessage("MOS layout diagnostics: current=" .. tostring(currentPage) .. " raidVisible=" .. tostring(raidPage:IsVisible()))
         MOS.Modules.RaidManagement.PrintListLayoutDiagnostics(raidPage, visibleRaidMembers, selectedRaidMemberName)
         if currentPage == "raid" or raidPage:IsVisible() then return end
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS roster: height=%.1f row=%d capacity=%d shown=%d filtered=%d offset=%d", rosterPage.measuredHeight or 0, rowHeight, rosterPage.measuredCapacity or 0, rosterPage.measuredShown or 0, rosterPage.measuredCount or 0, rosterPage.measuredOffset or 0))
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS Guild: height=%.1f row=%d capacity=%d shown=%d filtered=%d offset=%d", rosterPage.measuredHeight or 0, rowHeight, rosterPage.measuredCapacity or 0, rosterPage.measuredShown or 0, rosterPage.measuredCount or 0, rosterPage.measuredOffset or 0))
         local lastRow = rows[rosterPage.measuredShown or 0]
         if lastRow and lastRow:GetBottom() and rosterLastScan:GetTop() then
             DEFAULT_CHAT_FRAME:AddMessage(string.format("MOS geometry: viewport=%.1f gap=%.1f", rosterPage.tableViewport:GetHeight(), lastRow:GetBottom() - rosterLastScan:GetTop()))
@@ -807,12 +812,12 @@ CompletePendingGuildScan = function(snapshot)
         SetStatus("Raid roster updated", "success")
         Print("Raid scanned. Members: " .. raidCount)
     elseif scanMode == "reload" then
-        Print("Roster scanned. Confirm the reload to save it to disk.")
+        Print("Guild data scanned. Confirm the reload to save it to disk.")
         MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_RELOAD")
-        SetStatus("Roster ready to export", "success")
+        SetStatus("Guild data ready to export", "success")
     elseif scanMode ~= "quiet" then
         SetStatus("Guild roster updated", "success")
-        Print("Roster scanned. Members: " .. CountSavedMembers())
+        Print("Guild data scanned. Members: " .. CountSavedMembers())
     end
     if scanMode ~= "shared" then RefreshRosterPage(scanMode ~= "quiet") end
     MOS.Core.GuildScanController.ClearOrigin(MOS.guildScanController)
@@ -840,8 +845,14 @@ MOS.Core.EventDispatcher.Attach(MOS, {
         nativeRaidTab:Sync()
     end,
     GUILD_ROSTER_UPDATE = function()
+        if navigation.RefreshAvailability() then minimapMenu:Close() end
         MOS.Core.GuildScanController.HandleRosterUpdate(MOS.guildScanController)
         MOS.Modules.RosterManagement.HandleGuildRosterUpdate(rosterPage.dataController, false, MOS.Core.GuildScanController.IsPending(MOS.guildScanController))
+    end,
+    PLAYER_GUILD_UPDATE = function(unit)
+        if unit == nil or unit == "player" then
+            if navigation.RefreshAvailability() then minimapMenu:Close() end
+        end
     end,
     RAID_ROSTER_UPDATE = function()
         raidPage.lifecycle:OnWorldContextChanged()
