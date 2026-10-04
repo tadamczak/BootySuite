@@ -3,6 +3,47 @@ local MOS = MuklaOfficerSuite
 MOS.Database = MOS.Database or {}
 local Database = MOS.Database
 
+-- Native Raid settings use their own durable keys; they never inherit the main
+-- addon layout. Compact defaults fit all eight groups in the stock raid panel.
+local nativeRaidGroupFields = {
+    { "Columns", 2, 1, 4, true },
+    { "ShowClass", true }, { "ShowLevel", true }, { "ShowHeader", true }, { "ShowBorder", true },
+    { "HeaderTextColor", { 1, 0.82, 0 } }, { "HeaderBackgroundColor", { 0.025, 0.025, 0.025 } },
+    { "BorderColor", { 0.48, 0.38, 0.20 } },
+    { "ShowLootMaster", true }, { "ShowRoleIcon", true }, { "ClassColors", true }, { "AutoTileWidth", true },
+    { "TileWidth", 160, 160, 340 }, { "TileHeight", 13, 13, 28 }, { "HeaderHeight", 14, 14, 40 },
+    { "Margin", 4, 0, 32 }, { "TileTextSize", 10, 8, 16 }, { "HeaderTextSize", 10, 8, 16 },
+    { "BackgroundColor", { 0.025, 0.025, 0.025 } }, { "TextColor", { 1, 1, 1 } },
+    { "HoverColor", { 0.12, 0.09, 0.025 } }, { "PressedColor", { 0.20, 0.14, 0.03 } },
+    { "OddLightness", 5, 0, 100 },
+}
+Database.NativeRaidGroupKeys, Database.NativeRaidGroupSuffixes = {}, {}
+local nativeIndex
+for nativeIndex = 1, table.getn(nativeRaidGroupFields) do
+    local suffix = nativeRaidGroupFields[nativeIndex][1]
+    Database.NativeRaidGroupKeys[nativeIndex] = "nativeRaidGroup" .. suffix
+    Database.NativeRaidGroupSuffixes[nativeIndex] = suffix
+end
+
+local function EnsureNativeRaidGroupSettings()
+    local index
+    for index = 1, table.getn(nativeRaidGroupFields) do
+        local field = nativeRaidGroupFields[index]
+        local key = Database.NativeRaidGroupKeys[index]
+        local value, default = MuklaOfficerSuiteDB[key], field[2]
+        if field[3] then
+            value = tonumber(value)
+            if not value or value ~= value then value = default end
+            if field[5] then value = math.floor(value) end
+            MuklaOfficerSuiteDB[key] = math.max(field[3], math.min(field[4], value))
+        elseif type(default) == "table" then
+            if type(value) ~= "table" then
+                MuklaOfficerSuiteDB[key] = { default[1], default[2], default[3] }
+            end
+        elseif value == nil then MuklaOfficerSuiteDB[key] = default end
+    end
+end
+
 function Database.Ensure()
     if type(MuklaOfficerSuiteDB) ~= "table" then
         MuklaOfficerSuiteDB = {}
@@ -40,6 +81,7 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.rosterHideSectionHeader == nil then MuklaOfficerSuiteDB.rosterHideSectionHeader = false end
     if MuklaOfficerSuiteDB.raidHideSectionHeader == nil then MuklaOfficerSuiteDB.raidHideSectionHeader = false end
     if MuklaOfficerSuiteDB.useMOSRaidTab == nil then MuklaOfficerSuiteDB.useMOSRaidTab = false end
+    EnsureNativeRaidGroupSettings()
     local monitorWidth = tonumber(MuklaOfficerSuiteDB.performanceMonitorWidth)
     local monitorHeight = tonumber(MuklaOfficerSuiteDB.performanceMonitorHeight)
     if not monitorWidth or monitorWidth ~= monitorWidth or monitorWidth >= 1e300 or monitorWidth <= -1e300 then monitorWidth = 360 end
@@ -355,6 +397,15 @@ function Database.ResetRaidGroupView()
     MuklaOfficerSuiteDB.raidGroupTextColor = { 1, 1, 1 }
     MuklaOfficerSuiteDB.raidGroupHoverColor = { 0.12, 0.09, 0.025 }
     MuklaOfficerSuiteDB.raidGroupPressedColor = { 0.20, 0.14, 0.03 }
+end
+
+function Database.ResetNativeRaidGroupView()
+    Database.Ensure()
+    local index
+    for index = 1, table.getn(Database.NativeRaidGroupKeys) do
+        MuklaOfficerSuiteDB[Database.NativeRaidGroupKeys[index]] = nil
+    end
+    EnsureNativeRaidGroupSettings()
 end
 
 function Database.ResetRaidListView()

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.131 - 2026-10-04
+
+- Separate Game UI and Addon UI settings; restore General/Layout and give the native Raid tab independent group options with a compact eight-group default.
+- Use Guild Add Member styling for native Raid actions, reorder accordion signs/icons and remove the active raid identity icon.
+- Replace the minimap/Raid logo with the supplied artwork and preserve its circular ornament inside the game border.
+
 ## 0.5.0-dev.130 - 2026-10-04
 
 - Fix guildless raid creation and protect saved sessions when joining a different raid; Continue offers an explicit data refresh.

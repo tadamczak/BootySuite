@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.130"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.131"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -142,6 +142,7 @@ end, {
         if nativeRaidTab then nativeRaidTab:Sync() end
     end,
     useMOSRaidTabChanged = function() if nativeRaidTab then nativeRaidTab:Sync() end end,
+    nativeRaidLayoutChanged = function() if nativeRaidTab then nativeRaidTab:Sync() end end,
     minimapVisibilityChanged = function()
         if not MOS.minimapButton then return end
         MuklaOfficerSuiteDB.minimap.hidden = MuklaOfficerSuiteDB.hideMinimapIcon

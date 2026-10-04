@@ -24,10 +24,26 @@ function Settings.CreateAccordion(parent, text, y, iconKey)
     button:SetBackdropColor(0, 0, 0, 0)
     button:SetBackdropBorderColor(0, 0, 0, 0)
     button.label = MOS.UI.Components.CreateHeading(button, "", 3, "orange")
-    button.label:SetPoint("LEFT", button, "LEFT", 0, 0)
+    button.indicator = MOS.UI.Components.CreateHeading(button, "+", 3, "orange")
+    button.indicator:SetPoint("LEFT", button, "LEFT", 0, 0)
+    button.indicator:SetWidth(10)
+    button.label:SetPoint("LEFT", button, "LEFT", 12, 0)
+    button.label.mosAccordionPrefixInset = 12
     button.baseText = text
+    if MOS.UI.Components.SetHeadingIcon and iconKey ~= false then MOS.UI.Components.SetHeadingIcon(button.label, iconKey or "about") end
+    local setText, setFont, setColor = button.label.SetText, button.label.SetFont, button.label.SetTextColor
+    button.label.SetText = function(self, value)
+        local sign = string.sub(value or "", 1, 1)
+        button.indicator:SetText((sign == "+" or sign == "-") and sign or "")
+        setText(self, string.gsub(value or "", "^[%+%-]%s+", ""))
+    end
+    button.label.SetFont = function(self, path, size, flags)
+        setFont(self, path, size, flags); button.indicator:SetFont(path, size, flags)
+    end
+    button.label.SetTextColor = function(self, red, green, blue, alpha)
+        setColor(self, red, green, blue, alpha); button.indicator:SetTextColor(red, green, blue, alpha)
+    end
     button.label:SetText("+  " .. text)
-    if MOS.UI.Components.SetHeadingIcon and iconKey ~= false then MOS.UI.Components.SetHeadingIcon(button.label, iconKey or "settings") end
     button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     -- Section decoration belongs to the heading, so collapsed feature groups
     -- cannot leave their rules visible in the shared scroll child.
@@ -37,7 +53,7 @@ function Settings.CreateAccordion(parent, text, y, iconKey)
     return button
 end
 
-function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel)
+function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel, iconKey)
     local button = Settings.CreateAccordion(parent, text, y, false)
     button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button:SetHeight(20)
@@ -56,7 +72,7 @@ function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel)
         -- Measure the caption instead of anchoring a rule to that stale edge.
         self.label:SetWidth(0)
         self.rule:ClearAllPoints()
-        self.rule:SetPoint("LEFT", self, "LEFT", (self.label.mosHeadingIconInset or 0) + self.label:GetStringWidth() + 10, 0)
+        self.rule:SetPoint("LEFT", self, "LEFT", (self.label.mosAccordionPrefixInset or 0) + (self.label.mosHeadingIconInset or 0) + self.label:GetStringWidth() + 10, 0)
         self.rule:SetPoint("RIGHT", self, "RIGHT", 0, 0)
         self.rule:SetHeight(1)
     end
@@ -73,7 +89,7 @@ function Settings.CreateSectionAccordion(parent, text, y, inset, headingLevel)
     button.sectionFill:SetWidth(30); button:SetExpanded(false)
     local font, _, flags = button.label:GetFont()
     button.label:SetFont(font, MOS.UI.Components.HeadingSizes[headingLevel or 2] + MOS.UI.Components.GetTextSizeDelta(parent), flags)
-    if MOS.UI.Components.SetHeadingIcon then MOS.UI.Components.SetHeadingIcon(button.label, "settings") end
+    if MOS.UI.Components.SetHeadingIcon then MOS.UI.Components.SetHeadingIcon(button.label, iconKey or "list") end
     button.mosSectionInset = inset or 0
     button:ClearAllPoints(); button:SetPoint("TOPLEFT", parent, "TOPLEFT", button.mosSectionInset, y); button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, y)
     button:RefreshRule()
@@ -140,16 +156,25 @@ function Settings.CreateSlider(parent, name, x, y, label, key, minimum, maximum,
     getglobal(name .. "High"):SetText(tostring(maximum))
     slider:SetScript("OnShow", function()
         binding.ensure()
-        this:SetValue(binding.get(this.settingKey))
+        Settings.SynchronizeSlider(this, binding.get(this.settingKey))
     end)
     slider:SetScript("OnValueChanged", function()
         binding.ensure()
         local value = math.floor(this:GetValue() + 0.5)
-        binding.set(this.settingKey, value)
         getglobal(this:GetName() .. "Text"):SetText(this.settingLabel .. ": " .. value)
+        if this.mosSynchronizing then return end
+        binding.set(this.settingKey, value)
         if this.onChanged then this.onChanged(this.settingKey) end
     end)
     return slider
+end
+
+function Settings.SynchronizeSlider(slider, value)
+    getglobal(slider:GetName() .. "Text"):SetText(slider.settingLabel .. ": " .. math.floor(value + 0.5))
+    if slider:GetValue() == value then return end
+    slider.mosSynchronizing = true
+    slider:SetValue(value)
+    slider.mosSynchronizing = nil
 end
 
 function Settings.SetSliderEnabled(slider, enabled)

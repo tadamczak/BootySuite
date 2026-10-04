@@ -18,6 +18,10 @@ local keys = {
     "raidListShowLootMaster", "raidListShowRoleIcon", "raidListShowFilters", "raidListShowSearch", "raidListRowWidth", "raidListRowHeight",
     "raidListBackgroundColor", "raidListTextColor", "raidListHoverColor", "raidListPressedColor",
 }
+local nativeIndex
+for nativeIndex = 1, table.getn(MOS.Database.NativeRaidGroupKeys or {}) do
+    table.insert(keys, MOS.Database.NativeRaidGroupKeys[nativeIndex])
+end
 table.sort(keys)
 
 local function Store()
