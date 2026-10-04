@@ -89,6 +89,16 @@ function NativeRaidTab.Create(options)
         if inviteDialog then inviteDialog:Hide() end
         RestorePortrait()
     end
+    local function LayoutToolbar(width)
+        -- Owner bounds are authoritative; native anchored button widths can
+        -- still report their previous size. Budget all three actions first.
+        local gap = math.min(4, math.max(0, (width - 3) / 2))
+        local available = math.min(260, math.max(3, math.floor(width - gap * 2)))
+        local first = math.max(1, math.floor(available * 90 / 260))
+        panel.invite.mosFlowWidth, panel.ready.mosFlowWidth = first, first
+        panel.info.mosFlowWidth = available - first * 2
+        panel.toolbar:SetHeight(UI.LayoutFlow(panel.toolbar, panel.toolbarControls, 0, 0, width, gap))
+    end
     local function Refresh()
         if rendering or not panel or not panel:IsVisible() then return end
         rendering = true
@@ -99,8 +109,8 @@ function NativeRaidTab.Create(options)
         panel.toolbar:SetPoint("TOPLEFT", FriendsFrame, "TOPLEFT", headerX, -headerY)
         panel.toolbar:SetPoint("TOPRIGHT", FriendsFrame, "TOPRIGHT", -headerRight, -headerY)
         panel.toolbar:SetWidth(headerWidth)
-        local toolbarHeight = UI.LayoutFlow(panel.toolbar, panel.toolbarControls, 0, 0, headerWidth, 4)
-        panel.toolbar:SetHeight(toolbarHeight)
+        LayoutToolbar(headerWidth)
+        local toolbarHeight = 22
         local width, height, left, top, right, bottom = NativeRaidTab.GetContentRect(FriendsFrame, toolbarHeight)
         panel:ClearAllPoints()
         panel:SetPoint("TOPLEFT", FriendsFrame, "TOPLEFT", left, -top)
@@ -121,7 +131,7 @@ function NativeRaidTab.Create(options)
         if service.CanConvert() then service.Convert(); Refresh(); return end
         if not service.CanInvite() then return end
         if not inviteDialog then
-            inviteDialog = UI.Window.CreateProjectConfirmation("MuklaOfficerSuiteRaidTabInvite", "Add Member", "Invite")
+            inviteDialog = UI.Window.CreateProjectConfirmation("MuklaOfficerSuiteRaidTabInvite", "Add Member", "Invite", "leader")
             inviteDialog.memberName = UI.CreateFramedEditBox(inviteDialog, "MuklaOfficerSuiteRaidTabInviteName", 304)
             inviteDialog.memberName:SetPoint("TOPLEFT", inviteDialog, "TOPLEFT", 8, -62)
             inviteDialog.memberName:SetAutoFocus(false)
@@ -149,8 +159,14 @@ function NativeRaidTab.Create(options)
         panel.invite = UI.CreateButton(toolbar, nil, "Add Member", 90, 22)
         panel.ready = UI.CreateButton(toolbar, nil, "Ready Check", 90, 22)
         panel.info = UI.CreateButton(toolbar, nil, "Raid Info", 80, 22)
+        UI.SetClassicButtonVariant(panel.invite, "red")
+        UI.SetClassicButtonVariant(panel.ready, "red")
+        UI.SetClassicButtonVariant(panel.info, "red")
         panel.toolbar = toolbar; panel.toolbarControls = { panel.invite, panel.ready, panel.info }
-        panel.invite.mosFlowWidth = 90; panel.ready.mosFlowWidth = 90; panel.info.mosFlowWidth = 80
+        for index = 1, table.getn(panel.toolbarControls) do
+            local label = panel.toolbarControls[index].label
+            if label.SetWordWrap then label:SetWordWrap(false) end
+        end
         panel.invite.mosFlowFitLabel = true; panel.ready.mosFlowFitLabel = true; panel.info.mosFlowFitLabel = true
         panel.invite:SetScript("OnClick", Invite)
         panel.ready:SetScript("OnClick", function() MOS.Services.Raid.ReadyCheck() end)

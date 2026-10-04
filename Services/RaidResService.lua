@@ -421,26 +421,93 @@ function RaidResService.SetUrl(attendance, value)
     return true
 end
 
+-- Saved raids own their durable loot records. Runtime award queues, lookup
+-- indexes and UI objects stay with their controllers and are never copied.
+local lootScalarFields = { "recordId", "sourceRecordId", "itemId", "name", "link", "icon", "count", "ordinaryReceipt", "awardHistoryKey", "tradedFrom", "tradedTo" }
+local memberScalarFields = { "name", "raidRank", "subgroup", "level", "class", "classFile", "zone", "online", "guildRank", "guildMember", "sr", "srSourceName" }
+local function CopyLootRecords(source)
+    local records, index, fieldIndex = {}, nil, nil
+    for index = 1, table.getn(source or {}) do
+        local original, record = source[index], {}
+        for fieldIndex = 1, table.getn(lootScalarFields) do
+            local key = lootScalarFields[fieldIndex]
+            local value = original[key]
+            if type(value) == "string" or type(value) == "number" or type(value) == "boolean" then record[key] = value end
+        end
+        if original.rollHistory and table.getn(original.rollHistory) > 0 then
+            record.rollHistory = {}
+            local historyIndex
+            for historyIndex = 1, table.getn(original.rollHistory) do
+                if type(original.rollHistory[historyIndex]) == "string" then table.insert(record.rollHistory, original.rollHistory[historyIndex]) end
+            end
+        end
+        table.insert(records, record)
+    end
+    return records
+end
+
+local function CopyConsumedReserves(source)
+    if type(source) ~= "table" then return nil end
+    local consumed, itemId, usedAt = {}, nil, nil
+    for itemId, usedAt in pairs(source) do
+        if tonumber(itemId) and type(usedAt) == "number" then consumed[itemId] = usedAt end
+    end
+    if next(consumed) == nil then return nil end
+    return consumed
+end
+
+local function CopySavedMember(member, snapshot)
+    local savedMember, fieldIndex = {}, nil
+    for fieldIndex = 1, table.getn(memberScalarFields) do
+        local key = memberScalarFields[fieldIndex]
+        local value = member[key]
+        if type(value) == "string" or type(value) == "number" or type(value) == "boolean" then savedMember[key] = value end
+    end
+    if member.srItemIds and table.getn(member.srItemIds) > 0 then
+        savedMember.srItemIds = {}
+        local itemIndex
+        for itemIndex = 1, table.getn(member.srItemIds) do table.insert(savedMember.srItemIds, member.srItemIds[itemIndex]) end
+    end
+    if member.loot and table.getn(member.loot) > 0 then
+        savedMember.loot = CopyLootRecords(member.loot)
+        local lootIndex
+        for lootIndex = 1, table.getn(savedMember.loot) do
+            snapshot.nextLootRecordId = math.max(snapshot.nextLootRecordId, tonumber(savedMember.loot[lootIndex].recordId) or 0)
+        end
+    end
+    savedMember.reyCoinUsedAt = tonumber(member.reyCoinUsedAt)
+    savedMember.reyCoinItemLink = type(member.reyCoinItemLink) == "string" and member.reyCoinItemLink or nil
+    savedMember.srConsumedAt = CopyConsumedReserves(member.srConsumedAt)
+    return savedMember
+end
+
+local function HasRecordedLootState(member)
+    return member and ((member.loot and table.getn(member.loot) > 0)
+        or (tonumber(member.reyCoinUsedAt) or 0) > 0
+        or (member.srConsumedAt and next(member.srConsumedAt) ~= nil))
+end
+
 function RaidResService.BuildSnapshot(attendance)
     if not attendance or type(attendance.members) ~= "table" then return nil end
     local importInfo = EnsureSnapshotImport(attendance)
     if not importInfo.id and not attendance.snapshotId then return nil end
-    local snapshot = { version = 3, id = attendance.snapshotId or importInfo.id, raidResId = importInfo.id, srUrl = importInfo.url, rollForExport = importInfo.rollForExport, raidName = attendance.raidName, source = importInfo.origin or "raidres", startedAt = attendance.sessionStartedAt or attendance.scannedAt, savedAt = attendance.lastSavedAt, updatedAt = time(), assignedCount = 0, unmatched = {}, missingNames = {}, members = {} }
-    local index, itemIndex
+    local snapshot = { version = 4, id = attendance.snapshotId or importInfo.id, raidResId = importInfo.id, srUrl = importInfo.url, rollForExport = importInfo.rollForExport, raidName = attendance.raidName, source = importInfo.origin or "raidres", startedAt = attendance.sessionStartedAt or attendance.scannedAt, savedAt = attendance.lastSavedAt, updatedAt = time(), assignedCount = 0, unmatched = {}, missingNames = {}, members = {}, nextLootRecordId = tonumber(attendance.nextLootRecordId) or 0 }
+    local index, itemIndex, savedNames = nil, nil, {}
     for index = 1, table.getn(attendance.members or {}) do
         local member = attendance.members[index]
-        local savedMember = {
-            name = member.name, raidRank = member.raidRank, subgroup = member.subgroup, level = member.level,
-            class = member.class, classFile = member.classFile, zone = member.zone, online = member.online,
-            guildRank = member.guildRank, guildMember = member.guildMember,
-        }
-        if member.srItemIds and table.getn(member.srItemIds) > 0 then
-            local itemIds = {}
-            for itemIndex = 1, table.getn(member.srItemIds) do itemIds[itemIndex] = member.srItemIds[itemIndex] end
-            savedMember.srItemIds = itemIds; savedMember.sr = member.sr; savedMember.srSourceName = member.srSourceName
-            snapshot.assignedCount = snapshot.assignedCount + 1
-        end
+        local savedMember = CopySavedMember(member, snapshot)
+        if savedMember.srItemIds then snapshot.assignedCount = snapshot.assignedCount + 1 end
+        savedNames[string.lower(member.name or "")] = true
         table.insert(snapshot.members, savedMember)
+    end
+    for index = 1, table.getn(attendance.departedMembers or {}) do
+        local member = attendance.departedMembers[index]
+        local key = string.lower(member.name or "")
+        if key ~= "" and not savedNames[key] and HasRecordedLootState(member) then
+            snapshot.departedMembers = snapshot.departedMembers or {}
+            table.insert(snapshot.departedMembers, CopySavedMember(member, snapshot))
+            savedNames[key] = true
+        end
     end
     for index = 1, table.getn(importInfo.unmatchedReservations or {}) do
         local reservation = importInfo.unmatchedReservations[index]; local itemIds = {}
@@ -454,15 +521,36 @@ end
 function RaidResService.RestoreSnapshot(snapshot)
     if not snapshot or not snapshot.id then return nil end
     local members, index, itemIndex = {}, 0, 0
+    local hasLootHistory = (tonumber(snapshot.version) or 0) >= 4
+    local nextLootRecordId = hasLootHistory and (tonumber(snapshot.nextLootRecordId) or 0) or 0
     if snapshot.members and table.getn(snapshot.members) > 0 then
         for index = 1, table.getn(snapshot.members) do
             local source, member = snapshot.members[index], {}
             local key, value
-            for key, value in pairs(source) do
-                if key ~= "srItemIds" then member[key] = value end
+            if hasLootHistory then
+                local fieldIndex
+                for fieldIndex = 1, table.getn(memberScalarFields) do
+                    key = memberScalarFields[fieldIndex]; value = source[key]
+                    if type(value) == "string" or type(value) == "number" or type(value) == "boolean" then member[key] = value end
+                end
+            else
+                for key, value in pairs(source) do
+                    if key ~= "srItemIds" and key ~= "loot" and key ~= "srConsumedAt"
+                        and key ~= "reyCoinUsedAt" and key ~= "reyCoinItemLink" then member[key] = value end
+                end
             end
             if source.srItemIds then member.srItemIds = {}; for itemIndex = 1, table.getn(source.srItemIds) do member.srItemIds[itemIndex] = source.srItemIds[itemIndex] end end
-            member.loot = {}; table.insert(members, member)
+            member.loot = hasLootHistory and CopyLootRecords(source.loot) or {}
+            if hasLootHistory then
+                member.reyCoinUsedAt = tonumber(source.reyCoinUsedAt)
+                member.reyCoinItemLink = type(source.reyCoinItemLink) == "string" and source.reyCoinItemLink or nil
+                member.srConsumedAt = CopyConsumedReserves(source.srConsumedAt)
+                local lootIndex
+                for lootIndex = 1, table.getn(member.loot) do
+                    nextLootRecordId = math.max(nextLootRecordId, tonumber(member.loot[lootIndex].recordId) or 0)
+                end
+            end
+            table.insert(members, member)
         end
     else
         for index = 1, table.getn(snapshot.softReserves or {}) do
@@ -479,9 +567,27 @@ function RaidResService.RestoreSnapshot(snapshot)
         unmatched[index] = { name = source.name, itemIds = ids, manualOnly = source.manualOnly == true and true or nil }; unmatchedNames[index] = source.name
     end
     for index = 1, table.getn(snapshot.missingNames or {}) do missingNames[index] = snapshot.missingNames[index] end
+    local departedMembers
+    if hasLootHistory then
+        local savedNames = {}
+        for index = 1, table.getn(members) do savedNames[string.lower(members[index].name or "")] = true end
+        for index = 1, table.getn(snapshot.departedMembers or {}) do
+            local source = snapshot.departedMembers[index]
+            local key = string.lower(source.name or "")
+            if key ~= "" and not savedNames[key] and HasRecordedLootState(source) then
+                local member = CopySavedMember(source, { nextLootRecordId = nextLootRecordId })
+                member.loot = member.loot or {}
+                local lootIndex
+                for lootIndex = 1, table.getn(member.loot) do nextLootRecordId = math.max(nextLootRecordId, tonumber(member.loot[lootIndex].recordId) or 0) end
+                departedMembers = departedMembers or {}
+                table.insert(departedMembers, member)
+                savedNames[key] = true
+            end
+        end
+    end
     local attendance = {
         addonVersion = MOS.version, scannedAt = snapshot.updatedAt, scannedAtText = snapshot.updatedAt and date("%Y-%m-%d %H:%M:%S", snapshot.updatedAt) or "", sessionStartedAt = snapshot.startedAt or snapshot.updatedAt, lastSavedAt = snapshot.savedAt or snapshot.updatedAt,
-        raidName = snapshot.raidName, snapshotId = snapshot.id, updatedBy = UnitName("player"), members = members,
+        raidName = snapshot.raidName, snapshotId = snapshot.id, updatedBy = UnitName("player"), members = members, departedMembers = departedMembers, nextLootRecordId = nextLootRecordId,
         softReserveImport = { id = snapshot.raidResId or snapshot.id, origin = snapshot.source, url = snapshot.srUrl or "", rollForExport = snapshot.rollForExport or "", importedAt = snapshot.updatedAt, unmatchedNames = unmatchedNames, unmatchedReservations = unmatched, missingNames = missingNames },
         _loadedSnapshotId = snapshot.id,
         _sessionDraft = true,

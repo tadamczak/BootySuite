@@ -129,6 +129,8 @@ local sections = {
     heapDrops={title="Heap drop windows",nested=true,hint="Memory decreases between readings and frame pauses in those intervals. This does not prove cleanup caused a pause."},
     frameGaps={title="Other slow frame gaps",nested=true,hint="Pauses of at least 50 ms not already shown with memory drops. The cause can be game, addon or profiler work."},
 }
+local sectionIcons={operations="performance",slow="stop",callbacks="guild_stats",callbackDetails="groups",callbackSlow="stop",memory="memory",loginMemory="analyze",technical="info",technicalTiming="monitor",technicalCoverage="groups",technicalSources="list",technicalHealth="health",technicalSupport="settings",memoryGC="memory",heapDrops="memory",frameGaps="stop"}
+for name,key in pairs(sectionIcons) do sections[name].icon=key end
 local liveValues={"calls","count","time","selfTime","timedCalls","peak","failures","memory","maxTime","maxMemory","heapSamples","heapRise","heapDelta","heapPeak","heapUnsupportedCalls"}
 local function ShortSource(value)
     value=string.gsub(tostring(value or ""),"[%c]"," ")
@@ -163,7 +165,7 @@ function Performance.Create(parent,options)
     page.bodyHost=UI.CreateContainer(nil,page)
     page.canvas = UI.CreateResponsiveCanvas(page.bodyHost, "MuklaOfficerSuitePerformanceBody")
     page.header=UI.CreateContainer(nil,page)
-    page.title = UI.CreateHeading(page.header, "BootyProfiler", 1, "gold")
+    page.title = UI.CreateHeading(page.header, "BootyProfiler", 1, "gold", "performance")
     page.messageHost=UI.CreateContainer(nil,page.bodyHost);page.messageHost:EnableMouse(false)
     page.message = UI.CreateLabel(page.messageHost, nil, "OVERLAY", "GameFontHighlight")
     page.message:SetJustifyH("CENTER");page.message:SetJustifyV("MIDDLE");if page.message.SetWordWrap then page.message:SetWordWrap(true) end
@@ -700,8 +702,6 @@ function Performance.Create(parent,options)
         local row = module.rows[index]
         if row then return row end
         row = UI.CreateControl(nil,page.canvas)
-        row.contentDim=MOS.UI.Components.CreateTexture(row,nil,"BORDER")
-        row.contentDim:SetTexture(0,0,0,1);row.contentDim:SetAlpha(0.72);row.contentDim:SetAllPoints(row)
         row.label=UI.CreateLabel(row,nil,"OVERLAY","GameFontHighlightSmall")
         row.detail=UI.CreateLabel(row,nil,"OVERLAY","GameFontHighlightSmall")
         row.columns, row.values = {}, {}
@@ -725,7 +725,7 @@ function Performance.Create(parent,options)
         if row.headerHits then for _,hit in ipairs(row.headerHits) do hit:Hide() end end
         if row.previous then row.previous:Hide();row.next:Hide() end
         row:SetScript("OnClick",nil);row.familyName=nil
-        row.contentDim:Show()
+        if row.heading then row.heading:Hide() end
         row.reportTitle,row.reportHint,row.reportSchema=item.text,item.hint,nil
         if row.label.SetNonSpaceWrap then row.label:SetNonSpaceWrap(true) end
         row:EnableMouse(item.hint~=nil)
@@ -926,14 +926,18 @@ function Performance.Create(parent,options)
                     height=math.max(24,UI.MeasureTextHeight(row.label,rowWidth-16)+12)
                     row:EnableMouse(true);UI.SetRowColor(row,rowColor,0.045)
                 elseif item.kind=="heading" then
-                    FontSize(row.label,12);row.label:SetTextColor(unpack(item.severity and item.severity>=2 and healthColors[item.severity+1] or UI.Theme.colors.goldText))
-                    height=UI.MeasureTextHeight(row.label,rowWidth-16)+16
+                    if not row.heading then row.heading=UI.CreateHeading(row,"",3,"gold","health") end
+                    row.label:Hide();row.heading:ClearAllPoints();row.heading:SetPoint("TOPLEFT",row,"TOPLEFT",8,-6)
+                    row.heading:SetWidth(math.max(1,rowWidth-16));row.heading:SetHeight(0);FontSize(row.heading,12)
+                    row.heading:SetText(item.text);row.heading:SetTextColor(unpack(item.severity and item.severity>=2 and healthColors[item.severity+1] or UI.Theme.colors.goldText));row.heading:Show()
+                    height=UI.MeasureTextHeight(row.heading,rowWidth-16)+16
                 elseif item.kind=="section" then
                     row.label:Hide();row:EnableMouse(false)
                     local name=item.operation
                     local toggle=page.sectionToggles[name]
                     if not toggle then
                         toggle=UI.Settings.CreateSectionAccordion(page.canvas,item.text,0)
+                        UI.SetHeadingIcon(toggle.label,sections[name].icon or "info")
                         toggle.reportModule=module;toggle.reportSection=name;toggle:SetScript("OnClick",SectionClick)
                         UI.SetProjectButtonOutline(toggle,true)
                         UI.AttachTooltip(toggle,item.text,item.hint)
@@ -1011,6 +1015,9 @@ function Performance.Create(parent,options)
         page.backgroundHost=UI.CreateContainer(nil,page);page.backgroundHost:EnableMouse(false)
         page.backgroundHost:SetFrameLevel(page:GetFrameLevel())
         page.art=UI.CreatePerformanceBackground(page.backgroundHost,1)
+        -- One shared content layer; row fills retain the project's own palette.
+        page.contentDim=MOS.UI.Components.CreateTexture(page.backgroundHost,nil,"ARTWORK")
+        page.contentDim:SetTexture(0,0,0,1);page.contentDim:SetAlpha(0.64);page.contentDim:SetAllPoints(page.backgroundHost)
         page.status=UI.CreateLabel(page.header,nil,"OVERLAY","GameFontHighlightSmall");page.status:SetJustifyH("LEFT");if page.status.SetWordWrap then page.status:SetWordWrap(true) end
         page.sectionToggles={}
         page.advancedButton:SetScript("OnClick",function() if page.advancedMenu:IsShown() then page.advancedMenu:Hide() else page.advancedMenu:Show() end end)
@@ -1102,6 +1109,7 @@ function Performance.Create(parent,options)
         page.backgroundHost:SetPoint("BOTTOMRIGHT",parent,"BOTTOMRIGHT",0,0)
         page.backgroundHost:SetWidth(width);page.backgroundHost:SetHeight(math.max(1,height-top))
         UI.LayoutPerformanceBackground(page.art,page.backgroundHost,width,math.max(1,height-top));page.art:Show()
+        if self.provider and self.tab then page.contentDim:Show() else page.contentDim:Hide() end
     end
     function module:Layout()
         local width,height=UI.GetFrameSpan(parent)
@@ -1250,7 +1258,7 @@ function Performance.Create(parent,options)
         self:Refresh()
         if not ok then return end
         if not self.loginDialog then
-            self.loginDialog=UI.Window.CreateProjectConfirmation(nil,"Analyze Login","Reload now")
+            self.loginDialog=UI.Window.CreateProjectConfirmation(nil,"Analyze Login","Reload now","analyze")
             self.loginDialog:SetWidth(400);self.loginDialog.no:SetText("Later")
             self.loginDialog.yes:SetWidth(110);self.loginDialog.no:ClearAllPoints();self.loginDialog.no:SetPoint("BOTTOMRIGHT",self.loginDialog,"BOTTOMRIGHT",-126,8)
         end
@@ -1288,8 +1296,9 @@ function Performance.Create(parent,options)
         end
         if not status or not (status.loaded and status.canDisable or not status.loaded and status.canEnable) then return end
         local enable=not status.loaded
-        if not self.addonDialog then self.addonDialog=UI.Window.CreateProjectConfirmation(nil,"BootyProfiler","Reload now");self.addonDialog:SetWidth(400) end
+        if not self.addonDialog then self.addonDialog=UI.Window.CreateProjectConfirmation(nil,"BootyProfiler","Reload now","performance");self.addonDialog:SetWidth(400) end
         self.addonDialog.title:SetText(enable and "Enable BootyProfiler" or "Disable BootyProfiler")
+        UI.SetHeadingIcon(self.addonDialog.title,enable and "enable" or "disable")
         self.addonDialog:Open(enable and "Enable BootyProfiler and reload the UI to load it?" or "Do you want to disable BootyProfiler Addon? This will reload your UI - please export any recordings you want to keep.",function()
             local bridge=MOS.Core.ProfilerBridge
             if not enable and module.monitor then module.monitor:Close() end

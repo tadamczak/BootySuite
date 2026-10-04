@@ -122,14 +122,9 @@ local function CreateWarningCard(page, dialogName, dialogTitle, background, bord
         warning.text:SetTextColor(0.92, 0.91, 0.87)
     end)
     warning.dialog = MOS.UI.Components.CreateReadOnlyDialog(dialogName, dialogTitle, 430, 260, background)
-    MOS.UI.Components.Window.StyleProjectDialog(warning.dialog)
+    MOS.UI.Components.Window.StyleProjectDialog(warning.dialog, "warning_triangle")
     warning.dialog.title:SetTextColor(1, 1, 1)
-    warning.dialog.icon = MOS.UI.Components.CreateTexture(warning.dialog, nil, "ARTWORK")
-    warning.dialog.icon:SetTexture(MOS.UI.Components.ClassicAsset("Icons\\warning_triangle.tga"))
-    warning.dialog.icon:SetVertexColor(1, 0.82, 0.28)
-    warning.dialog.icon:SetWidth(13); warning.dialog.icon:SetHeight(13)
-    warning.dialog.icon:SetPoint("TOPLEFT", warning.dialog, "TOPLEFT", 8, -8)
-    warning.dialog.title:ClearAllPoints(); warning.dialog.title:SetPoint("LEFT", warning.dialog.icon, "RIGHT", 6, 0)
+    warning.dialog.icon = warning.dialog.title.mosHeadingIcon
     warning.dialog.ok:ClearAllPoints(); warning.dialog.ok:SetPoint("BOTTOMRIGHT", warning.dialog, "BOTTOMRIGHT", -8, 8)
     warning.dialog.description = MOS.UI.Components.CreateLabel(warning.dialog, nil, "OVERLAY", "GameFontHighlightSmall")
     warning.dialog.description:SetPoint("TOPLEFT", warning.dialog, "TOPLEFT", 8, -36)
@@ -203,7 +198,7 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
         OnAccept = function() if clearUnmatched(page.listRenderer.getData()) then refresh() end end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    local confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SRDialog", "Fix Soft Reserves", "Remove")
+    local confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SRDialog", "Fix Soft Reserves", "Remove", "fix")
     page.softReserveWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR; CenterOnScreen(confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR); confirmMUKLA_OFFICER_SUITE_CLEAR_UNMATCHED_SR:Open(spec.text, spec.OnAccept) end)
     page.missingSoftReserveWarning = CreateWarningCard(page, "MuklaOfficerSuiteMissingSoftReserveDetails", "Raid members without Soft Reserve", { 0.18, 0.08, 0.01 }, { 1, 0.55, 0.08 }, { 1, 0.72, 0.18 })
     page.missingSoftReserveWarning.onDismiss = refresh
@@ -237,7 +232,7 @@ function RaidManagement.CreateSoftReserveWarnings(page, clearUnmatched, refresh,
         end,
         timeout = 0, whileDead = 1, hideOnEscape = 1,
     }
-    local confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SRDialog", "Fix Soft Reserves", "Remove SR")
+    local confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR = MOS.UI.Components.Window.CreateProjectConfirmation("MUKLA_OFFICER_SUITE_CLEAR_INVALID_SRDialog", "Fix Soft Reserves", "Remove SR", "fix")
     confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:SetWidth(300)
     invalidWarning.fix:SetScript("OnClick", function() local spec=StaticPopupDialogs.MUKLA_OFFICER_SUITE_CLEAR_INVALID_SR; CenterOnScreen(confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR); confirmMUKLA_OFFICER_SUITE_CLEAR_INVALID_SR:Open(spec.text, spec.OnAccept) end)
     invalidWarning.ping:SetScript("OnClick", function()
@@ -275,7 +270,7 @@ function RaidManagement.CreateSoftReserveFixDialog(page, applyAssignments, refre
     if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
     dialog:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 7, right = 7, top = 7, bottom = 7 } }); dialog:SetBackdropColor(0.018, 0.018, 0.016, 1)
     MOS.UI.Components.RegisterDialogSurface(dialog, "panel", { 0.018, 0.018, 0.016, 1 })
-    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -16); dialog.title:SetText("Fix Soft Reserve assignments")
+    dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold", "fix"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -16); dialog.title:SetText("Fix Soft Reserve assignments")
     MOS.UI.Components.Window.StyleProjectDialog(dialog)
     dialog.help = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontHighlightSmall"); dialog.help:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -36); dialog.help:SetText("Drag an unassigned Soft Reserve from the right onto the correct raid member.")
     dialog.leftTitle = MOS.UI.Components.CreateLabel(dialog, nil, "OVERLAY", "GameFontNormal"); dialog.leftTitle:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -72); dialog.leftTitle:SetText("Raid members without SR")

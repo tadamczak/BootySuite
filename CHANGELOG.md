@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0-dev.130 - 2026-10-04
+
+- Fix guildless raid creation and protect saved sessions when joining a different raid; Continue offers an explicit data refresh.
+- Save and restore loot, roll/trade history and consumed rights, including players who leave before saving.
+- Add project gold heading icons, smaller Settings subsections and UI > Interface > Layout for the default Raid-tab preference.
+- Disable Guild Statistics outside a guild; fit the native Raid actions on one red button row and replace the minimap/Raid logo.
+- Restore Profiler component colors with one transparent dark layer beneath the complete content area.
+
 ## 0.5.0-dev.129 - 2026-10-04
 
 - Rename Roster to Guild, Performance to Profiler and Save Session to Save Raid; disable Guild outside a guild.

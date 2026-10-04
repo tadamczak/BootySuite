@@ -24,9 +24,14 @@ function RaidStatistics.BuildEntry(attendance, saveOptions)
         attendanceEnabled = saveOptions.saveAttendance ~= false,
         csrEnabled = saveOptions.saveCSR ~= false,
     }
-    local memberIndex, lootIndex, itemIndex
-    for memberIndex = 1, table.getn(attendance.members) do
-        local member = attendance.members[memberIndex]
+    local memberIndex, lootIndex, itemIndex, collectionIndex
+    local includedNames = {}
+    for collectionIndex = 1, 2 do
+      local collection = collectionIndex == 1 and attendance.members or attendance.departedMembers
+      for memberIndex = 1, table.getn(collection or {}) do
+        local member = collection[memberIndex]
+        local key = string.lower(member.name or "")
+        if not includedNames[key] then
         local lootCount = 0
         for lootIndex = 1, table.getn(member.loot or {}) do lootCount = lootCount + (tonumber(member.loot[lootIndex].count) or 1) end
         local savedMember = {
@@ -39,7 +44,10 @@ function RaidStatistics.BuildEntry(attendance, saveOptions)
             local loot = member.loot[lootIndex]
             savedMember.lootItems[lootIndex] = { itemId = tonumber(loot.itemId), name = loot.name, count = tonumber(loot.count) or 1 }
         end
-        entry.members[memberIndex] = savedMember
+        table.insert(entry.members, savedMember)
+        includedNames[key] = true
+        end
+      end
     end
     return entry
 end

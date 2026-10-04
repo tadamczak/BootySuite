@@ -4,12 +4,12 @@ MOS.Modules.Navigation = Navigation
 Navigation.SetActive = MOS.UI.Components.Navigation.SetActive
 
 function Navigation.IsPageAvailable(name)
-    return name ~= "roster" or MOS.Services.Roster.IsInGuild()
+    return (name ~= "roster" and name ~= "statistics") or MOS.Services.Roster.IsInGuild()
 end
 
 function Navigation.ResolvePage(name, currentName)
     if Navigation.IsPageAvailable(name) then return name end
-    if currentName == "roster" then return "raid" end
+    if currentName == "roster" or currentName == "statistics" then return "raid" end
     return nil
 end
 

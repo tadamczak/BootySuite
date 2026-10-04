@@ -28,7 +28,7 @@ end
 function RosterManagement.CreateShell(page, contentPanel)
     RosterManagement.CreateSections(page)
     page.detailsOwner = contentPanel:GetParent()
-    local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold")
+    local title = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "roster")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10)
     title:SetText("Guild"); page.sectionTitle = title
 
@@ -101,7 +101,7 @@ function RosterManagement.CreateGuildControls(page)
         if not MOS.Services.Roster.CanInviteMember() then return false end
         if not page.guildInviteDialog then
             local C = MOS.UI.Components
-            local dialog = C.Window.CreateProjectConfirmation("MuklaOfficerSuiteGuildInvite", "Add Member", "Invite")
+            local dialog = C.Window.CreateProjectConfirmation("MuklaOfficerSuiteGuildInvite", "Add Member", "Invite", "roster")
             dialog:SetWidth(320)
             dialog.memberName = C.CreateFramedEditBox(dialog, "MuklaOfficerSuiteGuildInviteName", 304)
             dialog.memberName:SetPoint("TOPLEFT", dialog, "TOPLEFT", 8, -62); dialog.memberName:SetMaxLetters(24)

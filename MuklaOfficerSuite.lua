@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.129"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.130"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -466,15 +466,20 @@ local raidWorldContext = MOS.Modules.RaidManagement.CreateWorldContextController
     setReminderShownContext = function(value) MOS.raidStartReminderShownContext = value end,
     getContinuedContext = function() return MOS.raidSessionContinuedContext end,
     setContinuedContext = function(value) MOS.raidSessionContinuedContext = value end,
+    getSessionTransitionContext = function() return raidSessionController and raidSessionController:GetTransitionContext() end,
+    setTransitionPending = function(value) if raidSessionController then raidSessionController:SetTransitionPending(value) end end,
     showRaidStartReminder = function(value) if raidPage.ShowRaidStartReminder then raidPage.ShowRaidStartReminder(value) end end,
     hideRaidStartReminder = function() if raidPage.HideRaidStartReminder then raidPage.HideRaidStartReminder() end end,
-    showSessionTransitionPrompt = function(value) if raidPage.ShowSessionTransitionPrompt then raidPage.ShowSessionTransitionPrompt(value) end end,
+    showSessionTransitionPrompt = function(value)
+        if raidSessionController then raidSessionController:ConfirmTransition(value) end
+        if raidPage.ShowSessionTransitionPrompt then raidPage.ShowSessionTransitionPrompt(value) end
+    end,
     hideSessionTransitionPrompt = function() if raidPage.HideSessionTransitionPrompt then raidPage.HideSessionTransitionPrompt() end end,
 })
 MOS.ModuleRegistry.Register("raid", MOS.Modules.RaidManagement.CreateLifecycle({
     page = raidPage,
     isInRaid = IsActiveRaid,
-    getTrackingEnabled = function() return MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused end,
+    getTrackingEnabled = function() return MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused and not MOS.raidSessionTransitionPending end,
     getScanReady = function() return MOS.raidScanReady end,
     isHistoricalLoaded = function() return raidHistoricalLoaded end,
     isPresentationActive = function()
@@ -566,8 +571,9 @@ MOS.Core.GuildScanController.Create({
     onFailure = function()
         MOS.UI.Components.ProgressBar.Stop(scanProgress)
         MOS.UI.Components.ProgressBar.Stop(raidScanProgress)
-        SetStatus("Guild roster scan failed", "error")
-        Print("Guild roster scan could not finish. Please try again.")
+        local raidFailure = MOS.pendingRaidSessionId ~= nil
+        SetStatus(raidFailure and "Raid roster scan failed" or "Guild roster scan failed", "error")
+        Print(raidFailure and "Raid scan could not finish. Join a raid and try again." or "Guild roster scan could not finish. Please try again.")
         if HandleGuildScanFailure then HandleGuildScanFailure() end
     end,
 })
@@ -625,6 +631,16 @@ raidSessionController = MOS.Modules.RaidSessionController.Create({
     clearSelection = function() selectedRaidMemberName = nil end,
     showSavedPopup = function() MOS.UI.Components.ShowOpaquePopup("MUKLA_OFFICER_SUITE_ATTENDANCE_RELOAD") end,
     isLiveTrackingWanted = function() return currentPage == "raid" and MuklaOfficerSuiteDB.raidLiveTrackingEnabled and true or false end,
+    canStartNewRaid = function()
+        return MOS.Services.Raid.IsInRaid() and not MOS.Core.GuildScanController.IsPending(MOS.guildScanController)
+            and not MOS.raidSessionDraft and not MOS.raidScanReady and not IsTestRaid()
+    end,
+    cancelRaidScan = function()
+        if MOS.Core.GuildScanController.GetMode(MOS.guildScanController) == "raid" then
+            MOS.Core.GuildScanController.Finish(MOS.guildScanController)
+            MOS.UI.Components.ProgressBar.Stop(raidScanProgress)
+        end
+    end,
 })
 
 MOS.CompleteRaidSession = function(saveOptions) return raidSessionController:Complete(saveOptions) end
@@ -663,11 +679,15 @@ local raidQuickActions = MOS.Modules.RaidManagement.AttachActionHandlers({
     isSessionActive = function() return MOS.raidSessionDraft or MOS.raidScanReady or IsTestRaid() end,
     requestRosterScan = RequestRosterScan,
     saveRaidRoster = SaveActiveRaidRoster,
-    beginRaidSession = function() raidSessionController:Begin() end,
-    startNewRaid = function(raidId, raidName) raidSessionController:StartNew(raidId, raidName) end,
+    beginRaidSession = function() raidSessionController:Begin(); raidWorldContext.Update() end,
+    startNewRaid = function(raidId, raidName) return raidSessionController:StartNew(raidId, raidName) end,
     saveRaidSession = function(saveOptions) return MOS.CompleteRaidSession(saveOptions) end,
     quitRaidSession = function() raidSessionController:Quit() end,
     continueRaidSession = function(contextKey) raidSessionController:Continue(contextKey) end,
+    dismissRaidSessionTransition = function(contextKey) raidSessionController:DismissTransition(contextKey) end,
+    hasPendingRaidTransition = function() return MOS.raidSessionTransitionPending end,
+    refreshCurrentRaid = function() return raidSessionController:RefreshCurrentRaid() end,
+    cancelPendingRaidScan = function() return raidSessionController:CancelPendingRaidScan() end,
     dismissRaidStartReminder = function(contextKey) MOS.raidStartReminderContext = contextKey end,
     openRaidManagement = function()
         MOS.UI.Components.Dashboard.OpenWindow(dashboardView)
@@ -780,13 +800,15 @@ MOS.Core.Commands.Attach({
 })
 
 HandleGuildScanFailure = function()
+    local cancelledRaid = raidSessionController:CancelPendingRaidScan()
+    if cancelledRaid then RefreshRaidPage() end
     local origin = MOS.Core.GuildScanController.GetOrigin(MOS.guildScanController)
     if origin == "roster" or origin == "roster_live" then
         MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, false)
         RefreshRosterPage(false)
     elseif origin == "statistics" then
         MOS.Modules.GuildStatistics.HandleScanFailure(statisticsPage.statisticsController)
-    elseif currentPage == "raid" then
+    elseif currentPage == "raid" and not cancelledRaid then
         RefreshRaidPage()
     end
     MOS.Core.GuildScanController.ClearOrigin(MOS.guildScanController)
@@ -795,7 +817,10 @@ end
 CompletePendingGuildScan = function(snapshot)
     if not MOS.Core.GuildScanController.IsPending(MOS.guildScanController) then return false end
     local scanMode = MOS.Core.GuildScanController.GetMode(MOS.guildScanController)
-    if not SaveGuildRoster(snapshot) then return false end
+    if scanMode == "raid" and not MOS.Services.Raid.IsInRaid() then return false end
+    if scanMode == "raid" and MOS.guildScanController.raidOnly then
+        MOS.Core.GuildScanController.Finish(MOS.guildScanController)
+    elseif not SaveGuildRoster(snapshot) then return false end
     MOS.Modules.RosterManagement.SetRefreshPending(rosterPage.dataController, false)
 
     if scanMode == "shared" then
@@ -870,7 +895,7 @@ MOS.Core.EventDispatcher.Attach(MOS, {
     end,
     CHAT_MSG_LOOT = function(message)
         local attendance = MOS.Database.GetRaidAttendance()
-        local trackingLoot = MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused
+        local trackingLoot = MuklaOfficerSuiteDB.raidLiveTrackingEnabled and not MOS.raidSessionPaused and not MOS.raidSessionTransitionPending
             and not IsTestRaid() and MOS.Services.Raid.IsInRaid() and MOS.Services.RaidRes.HasSession(attendance)
         if trackingLoot and RecordRaidLoot(message) and (raidPage:IsVisible() or raidPage.lootMasterController.IsVisible()) then RefreshRaidPage() end
     end,

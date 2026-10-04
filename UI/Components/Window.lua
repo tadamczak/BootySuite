@@ -33,7 +33,7 @@ function Window.Create(options)
     if not options.plainHeader then
         MOS.UI.Components.RegisterSkinnedSurface(titleBar, "title", { bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } }, { 0.025, 0.022, 0.018, 0.98 }, { 0.42, 0.42, 0.40, 1 })
     end
-    local title = MOS.UI.Components.CreateHeading(titleBar, "", options.compact and 3 or 1, "gold")
+    local title = MOS.UI.Components.CreateHeading(titleBar, "", options.compact and 3 or 1, "gold", options.icon or "settings")
     if options.compact then local font, size, flags = title:GetFont(); title:SetFont(font, size - 1, flags) end
     title:SetPoint("LEFT", titleBar, "LEFT", options.plainHeader and 4 or 8, 0); title:SetText(options.title)
     local close = MOS.UI.Components.CreateWindowButton(titleBar, nil, "close")
@@ -173,7 +173,7 @@ function Window.CreateAttached(parent, owner, width, height, onClose)
 end
 
 -- Compact project dialog chrome shared by feature dialogs.
-function Window.StyleProjectDialog(frame)
+function Window.StyleProjectDialog(frame, iconKey)
     local UI = MOS.UI.Components
     Window.ApplyProjectSurface(frame)
     UI.RegisterSkinCallback(function() Window.ApplyProjectSurface(frame) end)
@@ -181,9 +181,11 @@ function Window.StyleProjectDialog(frame)
     frame:SetScript("OnDragStart", function() frame:StartMoving() end)
     frame:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
     if frame.title then
+        UI.SetHeadingIcon(frame.title, iconKey or frame.title.mosHeadingIconKey or "info")
         local font, _, flags = frame.title:GetFont()
         frame.title:SetFont(font, 13, flags); frame.title:SetTextColor(unpack(UI.Theme.colors.goldText))
         frame.title:ClearAllPoints(); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
+        frame.title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -42, -8); frame.title:SetJustifyH("LEFT")
     end
     frame.projectDivider = UI.CreateContainer(nil, frame)
     frame.projectDivider:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -24)
@@ -193,10 +195,10 @@ function Window.StyleProjectDialog(frame)
     if frame.close then frame.close:ClearAllPoints(); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6) end
 end
 
-function Window.CreateProjectConfirmation(name, title, action)
+function Window.CreateProjectConfirmation(name, title, action, iconKey)
     local UI = MOS.UI.Components
     local frame = UI.CreateConfirmation(name)
-    frame.title:SetText(title); Window.StyleProjectDialog(frame)
+    frame.title:SetText(title); Window.StyleProjectDialog(frame, iconKey or "info")
     frame:SetWidth(320); frame:SetHeight(118)
     frame.label:ClearAllPoints(); frame.label:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -38)
     frame.label:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -38); frame.label:SetHeight(36)

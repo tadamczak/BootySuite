@@ -11,7 +11,7 @@ local function CreateTestLab(onChanged, onExit)
     dialog:SetFrameStrata("FULLSCREEN_DIALOG"); dialog:SetFrameLevel(230)
     dialog:SetResizable(true); dialog:SetMinResize(280, 240); dialog:SetMaxResize(850, 700)
     if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
-    dialog.title = UI.CreateHeading(dialog, "CSR Test Lab", 1, "gold")
+    dialog.title = UI.CreateHeading(dialog, "CSR Test Lab", 1, "gold", "csr")
     dialog.close = UI.CreateWindowButton(dialog, nil, "close")
     UI.Window.StyleProjectDialog(dialog)
     dialog.host = UI.CreateContainer(nil, dialog)
@@ -101,7 +101,7 @@ function CSR.Create(host, getEntries, getRules, getRosterData, openRaidStatistic
     for raidFilterIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[raidFilterIndex]] = true end
     page.csrController=controller;host.csrController=controller
     controller.testLab = CreateTestLab(function() controller.testMode = true; controller:Refresh() end, function() controller.testMode = false; controller:Refresh() end)
-    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); controller.title:SetText("CSR")
+    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "csr"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); controller.title:SetText("CSR")
     controller.description = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlightSmall"); controller.description:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -40); controller.description:SetPoint("RIGHT", page, "RIGHT", -6, 0); controller.description:SetJustifyH("LEFT")
     controller.description:SetText("Unsuccessful Soft Reserves from the last 60 days. Each player-item pair accumulates independently. Each miss grants 10 CSR.")
     controller.testButton = MOS.UI.Components.CreateButton(page, nil, "CSR Test Lab", 96, 22); controller.testButton:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -10); controller.testButton:SetScript("OnClick", function() controller.testLab:Open() end)

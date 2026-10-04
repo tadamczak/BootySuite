@@ -5,7 +5,7 @@ MOS.Modules.LootRollDialog = Dialog
 -- One lazy, compact dialog; its type and player selections are transient.
 function Dialog.Create(options)
     local UI = MOS.UI.Components
-    local frame = UI.Window.CreateProjectConfirmation("MuklaOfficerSuiteNewRoll", "New Roll", "Start Roll")
+    local frame = UI.Window.CreateProjectConfirmation("MuklaOfficerSuiteNewRoll", "New Roll", "Start Roll", "dice")
     local projectOpen = frame.Open
     frame.label:SetJustifyH("LEFT")
     frame.item = UI.CreateFramedEditBox(frame, nil, 304, 22)

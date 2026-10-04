@@ -57,12 +57,13 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     page.statisticsController = controller
     host.statisticsController = controller
     controller.itemDialog = MOS.UI.Components.CreateItemListDialog("MuklaOfficerSuiteRaidStatisticsItems")
-    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); controller.title:SetText("Raid Statistics")
+    controller.title = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "raid_stats"); controller.title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10); controller.title:SetText("Raid Statistics")
     local raidNames = MOS.Services.RaidStatistics.GetRaidNames(); local raidNameIndex
     for raidNameIndex = 1, table.getn(raidNames) do controller.selectedRaids[raidNames[raidNameIndex]] = true end
     controller.filterPanel = MOS.UI.Components.CreateContainer(nil, page); controller.filterPanel:SetPoint("TOPLEFT", page, "TOPLEFT", 2, -40); controller.filterPanel:SetPoint("TOPRIGHT", page, "TOPRIGHT", -8, -40); controller.filterPanel:SetHeight(66)
     controller.filterPanel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8, insets = { left = 2, right = 2, top = 2, bottom = 2 } }); controller.filterPanel:SetBackdropColor(0.035, 0.03, 0.02, 0.94); controller.filterPanel:SetBackdropBorderColor(0.42, 0.34, 0.18, 1)
     controller.filterTitle = MOS.UI.Components.CreateLabel(controller.filterPanel, nil, "OVERLAY", "GameFontNormalSmall"); controller.filterTitle:SetPoint("TOPLEFT", controller.filterPanel, "TOPLEFT", 10, -8); controller.filterTitle:SetText("Filters")
+    MOS.UI.Components.SetHeadingIcon(controller.filterTitle,"list")
     controller.raidFilter = MOS.UI.Components.CreateDropdownButton(controller.filterPanel, nil, "Raid", 140); controller.raidFilter:SetPoint("TOPLEFT", controller.filterPanel, "TOPLEFT", 62, -6)
     controller.raidPanel = MOS.UI.Components.CreateDropdownPanel(controller.filterPanel, controller.raidFilter, 190, 178, 20)
     controller.raidDismiss = controller.raidPanel.dismiss
@@ -70,6 +71,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     UI.FilterPanel.Refresh(controller.raidPanel,raidNames,controller.selectedRaids,function() controller:Refresh() end,true,true)
     controller.raidChecks=controller.raidPanel.options
     controller.listTitle = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal"); controller.listTitle:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -120); controller.listTitle:SetText("Raids")
+    MOS.UI.Components.SetHeadingIcon(controller.listTitle,"archive")
     controller.historyToggle = MOS.UI.Components.CreateButton(page, nil, "", 18, 18)
     MOS.UI.Components.SetClassicButtonCompact(controller.historyToggle, true); MOS.UI.Components.AttachGoldHoverBorder(controller.historyToggle, 0.35, 0.35, 0.35, 1)
     UI.SetChevronButtonIcon(controller.historyToggle,"left",11)
@@ -105,7 +107,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
     controller.fromDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.fromDate) end); controller.toDate:SetScript("OnMouseDown", function() ToggleDatePicker(this, controller.toDate) end)
     MOS.UI.Components.AttachTooltip(controller.fromDate, "From date", "Optional date in YYYY-MM-DD format."); MOS.UI.Components.AttachTooltip(controller.toDate, "To date", "Optional date in YYYY-MM-DD format.")
     MOS.UI.Components.AttachTooltip(controller.fromPicker, "Choose From date", "Open the calendar."); MOS.UI.Components.AttachTooltip(controller.toPicker, "Choose To date", "Open the calendar.")
-    controller.filterStatus = MOS.UI.Components.CreateHeading(page, "", 1, "gold"); controller.filterStatus:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -120); controller.filterStatus:SetPoint("TOPRIGHT", page, "TOPRIGHT", -72, -120); controller.filterStatus:SetJustifyH("LEFT")
+    controller.filterStatus = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "raid_stats"); controller.filterStatus:SetPoint("TOPLEFT", page, "TOPLEFT", 260, -120); controller.filterStatus:SetPoint("TOPRIGHT", page, "TOPRIGHT", -72, -120); controller.filterStatus:SetJustifyH("LEFT")
     controller.headerRemove = MOS.UI.Components.CreateDeleteButton(page, nil, 22, 2); controller.headerRemove:SetPoint("TOPRIGHT", page, "TOPRIGHT", -6, -115); controller.headerRemove.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerRemove, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerRemove, "Remove raid", "Remove the selected raid from Raid Statistics and CSR history."); controller.headerRemove:Hide()
     controller.headerEdit = MOS.UI.Components.CreateIconButton(page, nil, "Interface\\Icons\\INV_Misc_Note_01", 22, 2); controller.headerEdit:SetPoint("RIGHT", controller.headerRemove, "LEFT", -5, 0); controller.headerEdit.statisticsController = controller; MOS.UI.Components.AttachGoldHoverBorder(controller.headerEdit, 0.35, 0.35, 0.35, 1); MOS.UI.Components.AttachTooltip(controller.headerEdit, "Edit raid", "Edit statistics options for the selected raid."); controller.headerEdit:Hide()
     controller.editAdd=UI.CreateButton(page,nil,"Add Entry",82,22);controller.editSave=UI.CreateButton(page,nil,"Save",62,22);controller.editCancel=UI.CreateButton(page,nil,"Cancel",68,22)
@@ -131,7 +133,7 @@ function RaidStatistics.Create(host, getEntries, deleteEntry, updateEntry)
         dialog:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
         dialog:SetBackdropColor(0.03, 0.025, 0.02, 1)
         if dialog.SetClampedToScreen then dialog:SetClampedToScreen(true) end
-        dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -17); dialog.title:SetText(title)
+        dialog.title = MOS.UI.Components.CreateHeading(dialog, "", 1, "gold", "raid_stats"); dialog.title:SetPoint("TOPLEFT", dialog, "TOPLEFT", 18, -17); dialog.title:SetText(title)
         dialog:Hide(); return dialog
     end
     controller.removeDialog = CreateModal("MuklaOfficerSuiteRemoveRaidStatisticDialog", "Remove raid from history?", 145)
