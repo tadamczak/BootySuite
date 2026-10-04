@@ -31,13 +31,15 @@ local function Group(view, shell)
     local size = Fields(view.autoChecks)
     if view.columnsButton then table.insert(size, 1, Field(view.columnsButton, "choice")) end
     Append(size, Fields(view.sliders, "slider"))
-    local color = Append(Fields(view.colorChecks), Fields(view.colors, "color"))
+    local color = Append(Fields(view.memberChoices, "choice"), Append(Fields(view.colorChecks), Fields(view.colors, "color")))
     table.insert(color, Field(view.lightnessField, "row", {view.lightnessLabel}, "Odd record lightness (%)"))
+    local tiles = Append(Fields(view.tileChoices, "choice"), Fields(view.tileColors, "color"))
+    table.insert(tiles, Field(view.headerTransparencyField, "row", {view.headerTransparencyLabel}, "Header transparency (%)"))
     return Node("Group View", shell.groupHeading, {
         Node("Display", view.displayHeading, Fields(view.displayChecks)),
         Node("Size", view.sizeHeading, size),
         Node("Member tile color", view.colorHeading, color),
-        Node("Group tile color", view.tileColorHeading, Fields(view.tileColors, "color")),
+        Node("Group tile color", view.tileColorHeading, tiles),
     })
 end
 
@@ -145,7 +147,7 @@ local function Build(page)
     local roots = {
         Node("Profile",profile.heading,{Node("General",profile.general,profileNodes)}),
         Node("Addon UI",page.uiHeading,addon),
-        Node("Game UI",game.heading,{Node("Interface",game.interface,{Field(page.interfaceCheck)}),
+        Node("Game UI",game.heading,{Node("Interface",game.interface,{Field(page.interfaceCheck),Field(page.raidLogoCheck)}),
             Node("Layout",game.layout,{Node("Raid",game.raid,{Group(game.group,game.shell)})})}),
         Node("Addon Messages",messages.heading,{Node("Loot Master",messages.loot,messageNodes)}),
         Node("Keybindings",page.keybindings.heading,{Node("General",page.keybindings.general)}),

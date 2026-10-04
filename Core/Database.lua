@@ -7,12 +7,14 @@ local Database = MOS.Database
 -- addon layout. Compact defaults fit all eight groups in the stock raid panel.
 local nativeRaidGroupFields = {
     { "Columns", 2, 1, 4, true },
-    { "ShowClass", true }, { "ShowLevel", true }, { "ShowHeader", true }, { "ShowBorder", false },
-    { "BorderSize", 1, 1, 6, true }, { "ShowHoverBorder", false }, { "HoverBorderSize", 1, 1, 6, true }, { "HoverBorderColor", { 1, 0.78, 0.2 } },
+    { "ShowClass", true }, { "ShowLevel", true }, { "ShowHeader", true }, { "ShowBorder", true },
+    { "BorderSize", 1, 1, 6, true }, { "ShowHoverBorder", true }, { "HoverBorderSize", 1, 1, 6, true }, { "HoverBorderColor", { 1, 1, 1 } },
     { "HeaderTextColor", { 1, 0.82, 0 } }, { "HeaderBackgroundColor", { 0.025, 0.025, 0.025 } },
-    { "BorderColor", { 0.48, 0.38, 0.20 } },
+    { "HeaderHoverTextColor", { 1, 1, 1 } }, { "HeaderTransparency", 100, 0, 100 },
+    { "MemberTexture", "game" }, { "BorderTexture", "game" }, { "ViewBackgroundTexture", "game" },
+    { "ViewBackgroundColor", { 0.025, 0.025, 0.025 } }, { "BorderColor", { 1, 1, 1 } },
     { "ShowLootMaster", true }, { "ShowRoleIcon", true }, { "ClassColors", true }, { "AutoTileWidth", true },
-    { "TileWidth", 160, 160, 340 }, { "TileHeight", 15, 13, 28 }, { "HeaderHeight", 12, 12, 40 },
+    { "TileWidth", 160, 160, 340 }, { "TileHeight", 16, 13, 28 }, { "HeaderHeight", 14, 12, 40 },
     { "Margin", 0, 0, 32 }, { "TileTextSize", 10, 8, 16 }, { "HeaderTextSize", 9, 8, 16 },
     { "HideEmptyGroups", false }, { "AutoAdjustVertically", false }, { "AutoAdjustHorizontally", false },
     { "BackgroundColor", { 0.025, 0.025, 0.025 } }, { "TextColor", { 1, 1, 1 } },
@@ -42,6 +44,9 @@ local function EnsureNativeRaidGroupSettings()
             if type(value) ~= "table" then
                 MuklaOfficerSuiteDB[key] = { default[1], default[2], default[3] }
             end
+        elseif type(default) == "string" then
+            local alternative = field[1] == "BorderTexture" and "project" or "color"
+            if value ~= "game" and value ~= alternative then MuklaOfficerSuiteDB[key] = default end
         elseif value == nil then MuklaOfficerSuiteDB[key] = default end
     end
 end
@@ -71,6 +76,17 @@ function Database.Ensure()
     if (tonumber(MuklaOfficerSuiteDB.groupLayoutVersion) or 0) < 3 then
         MuklaOfficerSuiteDB.raidGroupShowBorder = false; MuklaOfficerSuiteDB.nativeRaidGroupShowBorder = false
         MuklaOfficerSuiteDB.groupLayoutVersion = 3
+    end
+    if (tonumber(MuklaOfficerSuiteDB.groupLayoutVersion) or 0) < 4 then
+        -- Adopt the requested stock appearance once; later user selections,
+        -- including disabled outlines, remain durable.
+        MuklaOfficerSuiteDB.nativeRaidGroupShowBorder = true
+        MuklaOfficerSuiteDB.nativeRaidGroupShowHoverBorder = true
+        if MuklaOfficerSuiteDB.nativeRaidGroupTileHeight == 15 then MuklaOfficerSuiteDB.nativeRaidGroupTileHeight = 16 end
+        if MuklaOfficerSuiteDB.nativeRaidGroupHeaderHeight == 12 then MuklaOfficerSuiteDB.nativeRaidGroupHeaderHeight = 14 end
+        local color = MuklaOfficerSuiteDB.nativeRaidGroupBorderColor
+        if type(color) ~= "table" or color[1] == 0.48 and color[2] == 0.38 and color[3] == 0.20 then MuklaOfficerSuiteDB.nativeRaidGroupBorderColor = {1,1,1} end
+        MuklaOfficerSuiteDB.groupLayoutVersion = 4
     end
     for _, prefix in ipairs(borderPrefixes) do
         if MuklaOfficerSuiteDB[prefix .. "ShowHoverBorder"] == nil then MuklaOfficerSuiteDB[prefix .. "ShowHoverBorder"] = false end
@@ -111,6 +127,8 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.rosterHideSectionHeader == nil then MuklaOfficerSuiteDB.rosterHideSectionHeader = false end
     if MuklaOfficerSuiteDB.raidHideSectionHeader == nil then MuklaOfficerSuiteDB.raidHideSectionHeader = false end
     if MuklaOfficerSuiteDB.useMOSRaidTab == nil then MuklaOfficerSuiteDB.useMOSRaidTab = false end
+    if MuklaOfficerSuiteDB.useMOSRaidLogo == nil then MuklaOfficerSuiteDB.useMOSRaidLogo = true end
+    if MuklaOfficerSuiteDB.nativeRaidButtonStyle ~= "mos" then MuklaOfficerSuiteDB.nativeRaidButtonStyle = "game" end
     EnsureNativeRaidGroupSettings()
     local monitorWidth = tonumber(MuklaOfficerSuiteDB.performanceMonitorWidth)
     local monitorHeight = tonumber(MuklaOfficerSuiteDB.performanceMonitorHeight)
@@ -148,6 +166,12 @@ function Database.Ensure()
     if MuklaOfficerSuiteDB.raidGroupShowBorder == nil then MuklaOfficerSuiteDB.raidGroupShowBorder = false end
     if type(MuklaOfficerSuiteDB.raidGroupHeaderTextColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupHeaderTextColor = { 1, 0.82, 0 } end
     if type(MuklaOfficerSuiteDB.raidGroupHeaderBackgroundColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupHeaderBackgroundColor = { 0.025, 0.025, 0.025 } end
+    if type(MuklaOfficerSuiteDB.raidGroupHeaderHoverTextColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupHeaderHoverTextColor = {1,1,1} end
+    MuklaOfficerSuiteDB.raidGroupHeaderTransparency = math.max(0, math.min(100, tonumber(MuklaOfficerSuiteDB.raidGroupHeaderTransparency) or 0))
+    if MuklaOfficerSuiteDB.raidGroupMemberTexture ~= "game" then MuklaOfficerSuiteDB.raidGroupMemberTexture = "color" end
+    if MuklaOfficerSuiteDB.raidGroupBorderTexture ~= "game" then MuklaOfficerSuiteDB.raidGroupBorderTexture = "project" end
+    if MuklaOfficerSuiteDB.raidGroupViewBackgroundTexture ~= "game" then MuklaOfficerSuiteDB.raidGroupViewBackgroundTexture = "color" end
+    if type(MuklaOfficerSuiteDB.raidGroupViewBackgroundColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupViewBackgroundColor = {0.025,0.025,0.025} end
     if type(MuklaOfficerSuiteDB.raidGroupBorderColor) ~= "table" then MuklaOfficerSuiteDB.raidGroupBorderColor = { 0.48, 0.38, 0.20 } end
     if MuklaOfficerSuiteDB.raidGroupShowLootMaster == nil then MuklaOfficerSuiteDB.raidGroupShowLootMaster = true end
     if MuklaOfficerSuiteDB.raidGroupShowRoleIcon == nil then MuklaOfficerSuiteDB.raidGroupShowRoleIcon = true end
@@ -422,6 +446,12 @@ function Database.ResetRaidGroupView()
     MuklaOfficerSuiteDB.raidGroupHoverBorderColor = {1, 0.78, 0.2}
     MuklaOfficerSuiteDB.raidGroupHeaderTextColor = { 1, 0.82, 0 }
     MuklaOfficerSuiteDB.raidGroupHeaderBackgroundColor = { 0.025, 0.025, 0.025 }
+    MuklaOfficerSuiteDB.raidGroupHeaderHoverTextColor = {1,1,1}
+    MuklaOfficerSuiteDB.raidGroupHeaderTransparency = 0
+    MuklaOfficerSuiteDB.raidGroupMemberTexture = "color"
+    MuklaOfficerSuiteDB.raidGroupBorderTexture = "project"
+    MuklaOfficerSuiteDB.raidGroupViewBackgroundTexture = "color"
+    MuklaOfficerSuiteDB.raidGroupViewBackgroundColor = {0.025,0.025,0.025}
     MuklaOfficerSuiteDB.raidGroupBorderColor = { 0.48, 0.38, 0.20 }
     MuklaOfficerSuiteDB.raidGroupClassColors = true
     MuklaOfficerSuiteDB.raidGroupShowLootMaster = true

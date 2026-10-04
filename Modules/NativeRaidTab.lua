@@ -1,16 +1,23 @@
 local MOS = MuklaOfficerSuite
 MOS.Modules.NativeRaidTab = {}
 local NativeRaidTab = MOS.Modules.NativeRaidTab
-local contentLeft, contentTop, contentRight, contentBottom = 20, 70, 44, 84
+local contentLeft, contentTop, contentRight, contentBottom = 20, 56, 44, 80
 local headerLeft, headerTop = 72, 37
 local portraitTexture = "Interface\\AddOns\\MuklaOfficerSuite\\Textures\\MinimapIcon"
+local buttonArtwork = {
+    normal="Interface\\Buttons\\UI-Panel-Button-Up", pushed="Interface\\Buttons\\UI-Panel-Button-Down",
+    disabled="Interface\\Buttons\\UI-Panel-Button-Disabled", highlight="Interface\\Buttons\\UI-Panel-Button-Highlight",
+    coords={0,0.625,0,0.6875},
+}
 
 -- Vanilla's 384x512 FriendsFrame includes transparent artwork padding: its
 -- native hit area excludes right30/bottom45 and the tabs sit at bottom47.
 -- Keep the MOS body inside that visible panel rather than filling the canvas.
-function NativeRaidTab.GetContentRect(owner, toolbarHeight)
+function NativeRaidTab.GetContentRect(owner, toolbarHeight, showHeader)
     local width, height = MOS.UI.Components.GetFrameSpan(owner)
-    local top = math.max(contentTop, headerTop + (toolbarHeight or 0) + 8)
+    -- Stock group bodies start at70, with their14px label above the body.
+    -- Include that label in the viewport so it is not clipped by ScrollFrame.
+    local top = math.max(showHeader == false and 70 or contentTop, headerTop + (toolbarHeight or 0) - 3)
     return math.max(1, width - contentLeft - contentRight), math.max(1, height - top - contentBottom), contentLeft, top, contentRight, contentBottom
 end
 
@@ -49,6 +56,7 @@ function NativeRaidTab.Create(options)
         savedTexture, savedCoords, appliedCoords, portraitOwned = nil, nil, nil, nil
     end
     local function ApplyPortrait()
+        if MuklaOfficerSuiteDB.useMOSRaidLogo == false then RestorePortrait(); return end
         if portraitOwned then return end
         if portraitOwner ~= FriendsFrame then portrait, portraitOwner = nil, FriendsFrame end
         if not portrait and FriendsFrame.GetRegions then
@@ -89,29 +97,39 @@ function NativeRaidTab.Create(options)
         if inviteDialog then inviteDialog:Hide() end
         RestorePortrait()
     end
-    local function LayoutToolbar(width)
+    local function LayoutToolbar(width, inRaid)
         -- Owner bounds are authoritative; native anchored button widths can
         -- still report their previous size. Budget all three actions first.
         local gap = math.min(4, math.max(0, (width - 3) / 2))
-        local available = math.max(3, width - gap * 2)
-        local first = math.max(1, math.floor(available / 3))
+        local count = inRaid and 3 or 2
+        local available = math.max(count, width - gap * (count - 1))
+        local first = math.max(1, math.floor(available / count))
         panel.invite.mosFlowWidth, panel.ready.mosFlowWidth = first, first
-        panel.info.mosFlowWidth = available - first * 2
-        panel.toolbar:SetHeight(UI.LayoutFlow(panel.toolbar, panel.toolbarControls, 0, 0, width, gap))
+        panel.info.mosFlowWidth = available - first * (count - 1)
+        if inRaid then panel.ready:Show() else panel.ready:Hide() end
+        panel.toolbar:SetHeight(UI.LayoutFlow(panel.toolbar, inRaid and panel.toolbarControls or panel.preRaidControls, 0, 0, width, gap))
     end
     local function Refresh()
         if rendering or not panel or not panel:IsVisible() then return end
         rendering = true
+        local inRaid = service.IsInRaid()
         local convert = service.CanConvert()
-        panel.invite:SetText(convert and "Convert to Raid" or "Add Member")
+        local settings = service.GetGroupSettings(groupSettings)
+        MOS.Modules.RaidManagement.ApplyGroupViewBackground(panel, settings, true)
+        MOS.Modules.RaidManagement.ApplyGroupViewBackground(panel.toolbar, settings, true)
+        for index = 1, table.getn(panel.toolbarControls) do
+            UI.SetButtonArtwork(panel.toolbarControls[index], MuklaOfficerSuiteDB.nativeRaidButtonStyle ~= "mos" and buttonArtwork or nil)
+        end
+        panel.invite:SetText(inRaid and "Add Member" or "Convert to Raid")
+        ApplyPortrait()
         local headerWidth, headerX, headerY, headerRight = NativeRaidTab.GetHeaderRect(FriendsFrame)
         panel.toolbar:ClearAllPoints()
         panel.toolbar:SetPoint("TOPLEFT", FriendsFrame, "TOPLEFT", headerX, -headerY)
         panel.toolbar:SetPoint("TOPRIGHT", FriendsFrame, "TOPRIGHT", -headerRight, -headerY)
         panel.toolbar:SetWidth(headerWidth)
-        LayoutToolbar(headerWidth)
+        LayoutToolbar(headerWidth, inRaid)
         local toolbarHeight = 22
-        local width, height, left, top, right, bottom = NativeRaidTab.GetContentRect(FriendsFrame, toolbarHeight)
+        local width, height, left, top, right, bottom = NativeRaidTab.GetContentRect(FriendsFrame, toolbarHeight, not inRaid or settings.raidGroupShowHeader ~= false)
         panel:ClearAllPoints()
         panel:SetPoint("TOPLEFT", FriendsFrame, "TOPLEFT", left, -top)
         panel:SetPoint("BOTTOMRIGHT", FriendsFrame, "BOTTOMRIGHT", -right, bottom)
@@ -121,14 +139,24 @@ function NativeRaidTab.Create(options)
         groupHost:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
         local bodyHeight = height
         groupHost:SetWidth(width); groupHost:SetHeight(bodyHeight)
-        UI.SetButtonEnabled(panel.invite, convert or service.CanInvite())
+        UI.SetButtonEnabled(panel.invite, inRaid and service.CanInvite() or convert)
         UI.SetButtonEnabled(panel.ready, MOS.Services.Raid.CanReadyCheck())
-        service.ReadMembers(members)
-        groups:Render(members, width, bodyHeight)
+        if inRaid then
+            panel.description:Hide(); groupHost:Show()
+            service.ReadMembers(members)
+            groups:Render(members, width, bodyHeight)
+        else
+            groups:Hide(); groupHost:Hide()
+            if inviteDialog then inviteDialog:Hide() end
+            panel.description:SetWidth(math.max(1, math.min(300, width - 18))); panel.description:Show()
+        end
         rendering = false
     end
     local function Invite()
-        if service.CanConvert() then service.Convert(); Refresh(); return end
+        if not service.IsInRaid() then
+            if service.CanConvert() then service.Convert(); Refresh() end
+            return
+        end
         if not service.CanInvite() then return end
         if inviteDialog and inviteDialog:IsVisible() then inviteDialog:Hide(); return end
         if not inviteDialog then
@@ -155,6 +183,7 @@ function NativeRaidTab.Create(options)
         panel:SetPoint("BOTTOMRIGHT", FriendsFrame, "BOTTOMRIGHT", -right, bottom)
         panel:SetFrameLevel(FriendsFrame:GetFrameLevel() + 3)
         local toolbar = UI.CreateToolbarSurface(panel, false, true)
+        UI.SetSurfaceTransparent(toolbar, true)
         toolbar:SetHeight(22)
         panel.invite = UI.CreateButton(toolbar, nil, "Add Member", 90, 22)
         panel.ready = UI.CreateButton(toolbar, nil, "Ready Check", 90, 22)
@@ -169,6 +198,7 @@ function NativeRaidTab.Create(options)
         UI.SetClassicButtonGold(panel.ready, true)
         UI.SetClassicButtonGold(panel.info, true)
         panel.toolbar = toolbar; panel.toolbarControls = { panel.invite, panel.ready, panel.info }
+        panel.preRaidControls = {panel.invite, panel.info}
         for index = 1, table.getn(panel.toolbarControls) do
             panel.toolbarControls[index].mosFlowLabelPadding = 6
             local label = panel.toolbarControls[index].label
@@ -181,6 +211,12 @@ function NativeRaidTab.Create(options)
         groupHost = UI.CreateContainer(nil, panel)
         groupHost:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
         groupHost:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
+        panel.description = UI.CreateLabel(panel, nil, "OVERLAY", "GameFontNormal")
+        panel.description:SetPoint("TOPLEFT", panel, "TOPLEFT", 9, -29)
+        panel.description:SetJustifyH("LEFT"); panel.description:SetJustifyV("TOP")
+        panel.description:SetHeight(0)
+        if panel.description.SetWordWrap then panel.description:SetWordWrap(true) end
+        panel.description:SetText(RAID_DESCRIPTION or "Raids are groups of more than 5 people and are typically used to defeat unique challenges at high levels.\n\n|cffffffff- Raid members cannot earn credit toward most non-raid quests.\n\n- Raids grant substantially less experience for defeating monsters than normal groups.\n\n- Raids allow you to overcome challenges that might otherwise be nearly impossible.|r")
         groups = MOS.Modules.RaidManagement.CreateCompactGroupView(groupHost, {
             ensureDatabase = options.ensureDatabase or MOS.Database.Ensure,
             getLootMasterInfo = MOS.Services.Raid.GetLootMasterInfo,

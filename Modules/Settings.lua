@@ -148,6 +148,15 @@ function Settings.LayoutGroupControls(page, group, heading, y, width)
         control:ClearAllPoints(); control:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
         AlignReset(control)
     end
+    local function Choices(items)
+        for _, control in ipairs(items or {}) do
+            local label = control.fieldLabel
+            label.mosFlowWidth = label:GetStringWidth() + 2
+            label:SetHeight(control:GetHeight()); label:SetJustifyV("MIDDLE")
+            control.mosFlowWidth = 150
+            y = -MOS.UI.Components.LayoutFlow(page, {label, control}, 40, -y, width, 8) - 8
+        end
+    end
     At(heading, 36, y); y = y - 38
     At(group.displayHeading, 40, y); y = y - 26
     group.displayChecks.mosMaxColumns = 3
@@ -159,12 +168,16 @@ function Settings.LayoutGroupControls(page, group, heading, y, width)
     y = y - C.LayoutGrid(page, group.autoChecks, 40, y, width, 26) - 22
     y = y - C.LayoutGrid(page, group.sliders, 40, y, width, 56, true)
     At(group.colorHeading, 40, y); y = y - 24
+    Choices(group.memberChoices)
     y = y - C.LayoutGrid(page, group.colorChecks, 40, y, width, 26)
     y = y - C.LayoutGrid(page, group.colors, 40, y, width, 28) - 16
     At(group.lightnessLabel,40,y); y=y-34
     if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting(group.lightnessField.settingKey) or 5) end
     At(group.tileColorHeading, 40, y); y = y - 26
+    Choices(group.tileChoices)
     y = y - C.LayoutGrid(page, group.tileColors, 40, y, width, 28) - 24
+    At(group.headerTransparencyLabel, 40, y); y = y - 34
+    if not group.headerTransparencyField.mosEditing then group.headerTransparencyField:SetText(MOS.Database.GetSetting(group.headerTransparencyField.settingKey)) end
     return y
 end
 
@@ -201,6 +214,12 @@ function Settings.CreateGameUI(page, options)
     }
     page.gameUI = game
     page.interfaceCheck = Settings.CreateSavedCheckbox(page, nil, 24, -94, "Use MOS as default Raid tab", "useMOSRaidTab", "Default Raid tab", "Opens MOS Raid Management from the Raid tab in the social window.", options.useMOSRaidTabChanged)
+    page.raidLogoCheck = Settings.CreateSavedCheckbox(page, nil, 24, -120, "Use MOS logo", "useMOSRaidLogo", "MOS Raid logo", "Uses the minimap logo in the game's Raid window. Requires Use MOS as default Raid tab.", options.useMOSRaidTabChanged)
+    local saveInterface = page.interfaceCheck.SaveSetting
+    page.interfaceCheck.SaveSetting = function(self)
+        saveInterface(self)
+        MOS.UI.Components.Settings.SetCheckboxEnabled(page.raidLogoCheck, MOS.Database.GetSetting("useMOSRaidTab"))
+    end
     local function Bind(button, key)
         button:SetScript("OnClick", function() game.state[key] = not game.state[key]; Settings.ApplyTopSections(page) end)
     end
@@ -213,8 +232,9 @@ function Settings.EnsureGameRaidControls(page)
     local shell = Settings.CreateRaidViewShell(page, true)
     local factory = Settings.CreateRaidControlFactory(page, {refreshGroup = game.onLayoutChanged}, {
         keyPrefix = "nativeRaidGroup", namePrefix = "MuklaOfficerSuiteNativeRaidGroup",
-        defaults = {TileWidth = 160, TileHeight = 15, HeaderHeight = 12, Margin = 0, HeaderTextSize = 9},
+        defaults = {TileWidth = 160, TileHeight = 16, HeaderHeight = 14, Margin = 0, HeaderTextSize = 9},
         minimums = {TileHeight = 13},
+        native = true,
     })
     local group = Settings.CreateRaidGroupViewControls(page, shell, factory, game.onLayoutChanged)
     local _, columns = Settings.CreateRaidColumnControl(page, 40, 0, game.onLayoutChanged, page, "nativeRaidGroupColumns")
@@ -227,11 +247,11 @@ function Settings.EnsureGameRaidControls(page)
         local reset = Settings.CreateSectionReset(page, heading, groups, game.onLayoutChanged, button)
         table.insert(group.layoutControls, reset)
     end
-    Reset(shell.groupHeading, {group.checks, group.sliders, group.colors, group.tileColors, {group.lightnessField, columns}}, shell.groupReset)
+    Reset(shell.groupHeading, {group.checks, group.sliders, group.colors, group.tileColors, group.choices, group.percentages, {columns}}, shell.groupReset)
     Reset(group.displayHeading, {group.displayChecks})
     Reset(group.sizeHeading, {group.autoChecks, group.sliders, {columns}})
-    Reset(group.colorHeading, {group.colorChecks, group.colors, {group.lightnessField}})
-    Reset(group.tileColorHeading, {group.tileColors})
+    Reset(group.colorHeading, {group.colorChecks, group.colors, group.memberChoices, {group.lightnessField}})
+    Reset(group.tileColorHeading, {group.tileColors, group.tileChoices, {group.headerTransparencyField}})
     Settings.RefreshGameRaidControls(page)
 end
 
@@ -255,7 +275,8 @@ function Settings.RefreshGameRaidControls(page)
             control.swatch:SetTexture(color[1], color[2], color[3], 1)
         end
     end
-    if not group.lightnessField.mosEditing then group.lightnessField:SetText(MOS.Database.GetSetting(group.lightnessField.settingKey) or 5) end
+    for _, field in ipairs(group.percentages) do if not field.mosEditing then field:SetText(MOS.Database.GetSetting(field.settingKey)) end end
+    for _, choice in ipairs(group.choices) do choice:RefreshSetting() end
 end
 
 function Settings.LayoutGameUI(page, y)
@@ -276,8 +297,10 @@ function Settings.LayoutGameUI(page, y)
     local interfaceVisible = visible and game.state.interface
     if interfaceVisible then
         page.interfaceCheck:ClearAllPoints(); page.interfaceCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 24, y)
-        page.interfaceCheck:Show(); y = y - 40
-    else page.interfaceCheck:Hide() end
+        page.interfaceCheck:Show(); y = y - 28
+        page.raidLogoCheck:ClearAllPoints(); page.raidLogoCheck:SetPoint("TOPLEFT", page, "TOPLEFT", 24, y)
+        page.raidLogoCheck:Show(); y = y - 40
+    else page.interfaceCheck:Hide(); page.raidLogoCheck:Hide() end
     Accordion(game.layout, "layout", 12, visible)
     if visible then y = y - 28 end
     local raidVisible = visible and game.state.layout
@@ -390,6 +413,8 @@ function Settings.CreateShell(parent, anchorPage, onNavigationLayout, options)
         loginMessageCheck:SetChecked(MuklaOfficerSuiteDB.suppressLoginMessage and 1 or nil)
         minimapCheck:SetChecked(MuklaOfficerSuiteDB.hideMinimapIcon and 1 or nil)
         page.interfaceCheck:SetChecked(MOS.Database.GetSetting("useMOSRaidTab") and 1 or nil)
+        page.raidLogoCheck:SetChecked(MOS.Database.GetSetting("useMOSRaidLogo") and 1 or nil)
+        MOS.UI.Components.Settings.SetCheckboxEnabled(page.raidLogoCheck, MOS.Database.GetSetting("useMOSRaidTab"))
         Settings.RefreshGameRaidControls(page)
         if page.topSectionState then Settings.ApplyTopSections(page) end
     end
@@ -547,7 +572,7 @@ function Settings.CreateRaidControlFactory(page, callbacks, options)
         end
     end
     return {
-        Key = Key, Name = Name,
+        Key = Key, Name = Name, native = options.native,
         Checkbox = function(x, y, text, key)
             return controls.CreateCheckbox(page, x + 12, y, text, Key(key), Refresh)
         end,
@@ -557,13 +582,29 @@ function Settings.CreateRaidControlFactory(page, callbacks, options)
             if options.minimums and options.minimums[suffix] then minimum = options.minimums[suffix] end
             return controls.CreateSlider(page, Name(name), x + 12, y, label, Key(key), minimum, maximum, Refresh)
         end,
-        Percentage = function(name, key, parent)
-            local label, field = controls.CreatePercentageField(parent or page, Name(name), "Odd record lightness (%)", 52, 0, Key(key), 5)
+        Percentage = function(name, key, parent, text, default)
+            local label, field = controls.CreatePercentageField(parent or page, Name(name), text or "Odd record lightness (%)", 52, 0, Key(key), default or 5)
+            field:SetText(MOS.Database.GetSetting(Key(key)) or default or 5)
             field.onChanged = Refresh
             return label, field
         end,
         Color = function(x, y, label, key)
             return controls.CreateColor(page, x + 12, y, label, Key(key), Refresh)
+        end,
+        Choice = function(text, key, choices)
+            key = Key(key)
+            local _, button = MOS.UI.Components.CreateChoiceField({parent=page, x=40, y=0, label=text, width=150, height=51,
+                initialText=choices[1].text, firstY=-7, step=19, choices=choices, foregroundLabel=true, color=MOS.UI.Components.Theme.colors.white,
+                getValue=function() return MOS.Database.GetSetting(key) end,
+                onSelect=function(value) MOS.Database.SetSetting(key,value); Refresh(key) end})
+            button.settingKey = key
+            function button:RefreshSetting()
+                local value = MOS.Database.GetSetting(self.settingKey)
+                for _, choice in ipairs(self.choices) do if choice.value == value then self:SetText(choice.text); return end end
+            end
+            local hidden = button:GetScript("OnHide")
+            button:SetScript("OnHide", function() button.panel:Hide(); if hidden then hidden() end end)
+            return button
         end,
     }
 end
@@ -633,9 +674,25 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
     local headerText = factory.Color(40, -886, "Header text color", "raidGroupHeaderTextColor")
     local headerBackground = factory.Color(230, -886, "Header background color", "raidGroupHeaderBackgroundColor")
     local border = factory.Color(40, -914, "Border color", "raidGroupBorderColor")
+    local headerHover = factory.Color(230, -914, "Header hover text color", "raidGroupHeaderHoverTextColor")
+    local viewBackground = factory.Color(40, -942, "View background color", "raidGroupViewBackgroundColor")
+    local memberTexture = factory.Choice("Member tile background", "raidGroupMemberTexture", {{text="Game texture",value="game"},{text="Color",value="color"}})
+    local borderTexture = factory.Choice("Group border texture", "raidGroupBorderTexture", {{text="Game texture",value="game"},{text="MOS border",value="project"}})
+    local viewTexture = factory.Choice("View background", "raidGroupViewBackgroundTexture", {{text="Game texture",value="game"},{text="Color",value="color"}})
+    local choices = {memberTexture, borderTexture, viewTexture}
+    local tileChoices = {borderTexture, viewTexture}
+    if factory.native then
+        local buttons = factory.Choice("Action button style", "nativeRaidButtonStyle", {{text="Game texture",value="game"},{text="MOS",value="mos"}})
+        table.insert(choices, buttons); table.insert(tileChoices, buttons)
+    end
+    local transparencyLabel, transparencyField = factory.Percentage("MuklaOfficerSuiteGroupHeaderTransparency", "raidGroupHeaderTransparency", shell.panel, "Header transparency (%)", factory.native and 100 or 0)
     local lightnessLabel, lightnessField = factory.Percentage("MuklaOfficerSuiteGroupLightness", "raidGroupOddLightness", shell.panel)
+    local choiceControls = {}
+    for _, choice in ipairs(choices) do table.insert(choiceControls, choice); table.insert(choiceControls, choice.fieldLabel) end
     return {
         lightnessLabel = lightnessLabel, lightnessField = lightnessField,
+        headerTransparencyLabel=transparencyLabel, headerTransparencyField=transparencyField,
+        memberChoices={memberTexture}, tileChoices=tileChoices, choices=choices, percentages={lightnessField, transparencyField},
         displayHeading = displayHeading, sizeHeading = sizeHeading, colorHeading = colorHeading,
         displayChecks = { showClass, showLevel, showHeader, showLootMaster, showRole, showBorder, showHoverBorder, hideEmpty, autoVertical, autoHorizontal },
         hideEmpty=hideEmpty, autoVertical=autoVertical, autoHorizontal=autoHorizontal,
@@ -644,8 +701,8 @@ function Settings.CreateRaidGroupViewControls(page, shell, factory, onColumnsCha
         checks = { showClass, showLevel, showHeader, showLootMaster, showBorder, showHoverBorder, showRole, autoWidth, classColors, hideEmpty, autoVertical, autoHorizontal },
         borderSize=borderSize, hoverBorderSize=hoverBorderSize, showHoverBorder=showHoverBorder,
         width = width, height = height, headerHeight = headerHeight, margin = margin, tileTextSize = tileTextSize, headerTextSize = headerTextSize, autoWidth = autoWidth, colors = { background, text, hover, hoverBorder },
-        tileColorHeading = tileColorHeading, tileColors = {headerText, headerBackground, border},
-        layoutControls = { shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, showClass, showLevel, showHeader, showLootMaster, showBorder, showHoverBorder, showRole, hideEmpty, autoVertical, autoHorizontal, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, borderSize, hoverBorderSize, colorHeading, classColors, background, text, hover, hoverBorder, lightnessLabel, lightnessField, tileColorHeading, headerText, headerBackground, border },
+        tileColorHeading = tileColorHeading, tileColors = {headerText, headerBackground, border, headerHover, viewBackground},
+        layoutControls = Settings.MergeControls({ shell.panel, shell.groupHeading, shell.groupReset, shell.groupDivider, displayHeading, showClass, showLevel, showHeader, showLootMaster, showBorder, showHoverBorder, showRole, hideEmpty, autoVertical, autoHorizontal, sizeHeading, autoWidth, width, height, headerHeight, margin, tileTextSize, headerTextSize, borderSize, hoverBorderSize, colorHeading, classColors, background, text, hover, hoverBorder, lightnessLabel, lightnessField, tileColorHeading, headerText, headerBackground, border, headerHover, viewBackground, transparencyLabel, transparencyField }, choiceControls),
     }
 end
 
@@ -798,8 +855,8 @@ function Settings.AttachSectionResets(page, callbacks)
     end
     Add(group, group.displayHeading, {group.displayChecks}, callbacks.refreshGroup)
     Add(group, group.sizeHeading, {group.autoChecks, group.sliders, {group.columnsButton}}, callbacks.refreshGroup)
-    Add(group, group.colorHeading, {group.colorChecks, group.colors, {group.lightnessField}}, callbacks.refreshGroup)
-    Add(group, group.tileColorHeading, {group.tileColors}, callbacks.refreshGroup)
+    Add(group, group.colorHeading, {group.colorChecks, group.colors, group.memberChoices, {group.lightnessField}}, callbacks.refreshGroup)
+    Add(group, group.tileColorHeading, {group.tileColors, group.tileChoices, {group.headerTransparencyField}}, callbacks.refreshGroup)
     Add(list, list.displayHeading, {list.checks}, callbacks.refreshList)
     Add(list, list.sizeHeading, {list.sliders}, callbacks.refreshList)
     Add(list, list.colorHeading, {list.colors, {list.lightnessField}}, callbacks.refreshList)
@@ -855,7 +912,8 @@ function Settings.CreateRaidSettings(page, callbacks)
         appearanceSliders = {groupControls.borderSize, groupControls.hoverBorderSize, listControls.hoverBorderSize},
         listWidth = listControls.width,
         listHeight = listControls.height,
-        percentages = {groupControls.lightnessField, listControls.lightnessField},
+        percentages = {groupControls.lightnessField, groupControls.headerTransparencyField, listControls.lightnessField},
+        choices = groupControls.choices,
         colors = Settings.MergeControls(Settings.MergeControls(Settings.MergeControls({}, groupControls.colors), groupControls.tileColors), listControls.colors),
     }
     Settings.BindRaidViewControls(page, viewControls, shell.groupReset, shell.listReset, callbacks)
@@ -936,6 +994,7 @@ function Settings.RefreshRaidViewControls(controls)
     end
 
     for _, field in ipairs(controls.percentages or {}) do if not field.mosEditing then field:SetText(MOS.Database.GetSetting(field.settingKey) or 5) end end
+    for _, choice in ipairs(controls.choices or {}) do choice:RefreshSetting() end
     local colorIndex
     for colorIndex = 1, table.getn(controls.colors) do
         local colorControl = controls.colors[colorIndex]
