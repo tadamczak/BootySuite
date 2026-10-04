@@ -526,7 +526,12 @@ end
 local function CanGive(roll, name)
     if not roll or not panel:IsShown() or not RaidService.IsPlayerLootMaster() then return nil, nil, "Master Loot is not open." end
     if not RaidService.IsLootSessionCurrent(roll.lootSessionToken) then return nil, nil, "This roll belongs to a previous raid session." end
+    if roll.awarded or pendingAward then return nil,nil,"This item was already given or an award is pending." end
+    if roll.results then
+        if activeRoll or raidRollPending or lastRollBySource[currentLootSession]~=roll then return nil,nil,"This roll was replaced by a newer round." end
+    elseif activeRoll or raidRollPending then return nil,nil,"Wait for the current roll to finish." end
     if roll.manual then return nil, nil, "A linked item roll cannot be awarded through Master Loot." end
+    if roll.tieGroups and MOS.Services.LootRollRequest.HasBlockingTie(roll,roll.tieGroups) then return nil,nil,"Resolve the tied roll before giving loot." end
     if roll.source and roll.source ~= currentLootSession then return nil, nil, "Return to the original loot source to give this item." end
     local slot
     if roll.slot and LootSlotIsItem(roll.slot) and GetLootSlotLink(roll.slot) == roll.link then slot = roll.slot end
@@ -541,6 +546,13 @@ local function CanGive(roll, name)
     local candidate = FindCandidate(name)
     if not candidate then return nil, nil, "The player is not eligible or is out of range." end
     return candidate, slot
+end
+
+function MasterLootWindow.ResolveTies(roll)
+    roll.tieGroups=MOS.Services.LootRollRequest.GetTieGroups(roll)
+    if MOS.Services.LootRollRequest.HasBlockingTie(roll,roll.tieGroups) then
+        roll.winner,roll.winnerResult,roll.tradeWinner,roll.tradeWinnerResult=nil,nil,nil,nil
+    end
 end
 
 local function AwardToPlayer(roll, name)
@@ -964,6 +976,7 @@ RefreshResults = function()
     local liveRoll = activeRoll and activeRoll.source == currentLootSession and activeRoll or lastRollBySource[currentLootSession]
     if raidRollPending and raidRollPending.source == currentLootSession then liveRoll = raidRollPending end
     local liveResults = liveRoll and liveRoll.results
+    if liveRoll and activeRoll ~= liveRoll and not liveRoll.raidRoll then MasterLootWindow.ResolveTies(liveRoll) end
     local liveCount = liveResults and table.getn(liveResults) or 0
     firstLiveResult = math.min(firstLiveResult, math.max(1, liveCount - MAX_LIVE_ROWS + 1))
     local liveHeight = liveRoll and (22 + math.max(1, math.min(MAX_LIVE_ROWS, liveCount)) * 23) or 0
@@ -978,6 +991,7 @@ RefreshResults = function()
     else liveHeader:Hide() end
     for index = 1, MAX_LIVE_ROWS do
         local row = liveRows[index]
+        row.rerollRange = nil; if row.rerollButton then row.rerollButton:Hide() end
         local result = liveResults and liveResults[firstLiveResult + index - 1]
         if result then
             row.playerName = result.name; row.roll = liveRoll; row.result = result
@@ -1017,6 +1031,13 @@ RefreshResults = function()
                     row.giveButton:SetBackdropBorderColor(0.38, 0.38, 0.38, 0.9)
                     row.giveButton.highlight:SetAlpha(0)
                 else row.giveButton:Enable(); row.giveButton:SetAlpha(1); row.giveButton.highlight:SetAlpha(1) end
+            end
+            if not activeRoll and not liveRoll.awarded and liveRoll.source == currentLootSession then
+                for _, group in ipairs(liveRoll.tieGroups or {}) do
+                    if result.valid ~= false and result.range == group.range and result.value == group.value then
+                        row.rerollRange = group.range; row.rerollButton:Show(); row.giveButton:Hide()
+                    end
+                end
             end
             row:Show()
         elseif liveRoll and liveCount == 0 and index == 1 then
@@ -1188,10 +1209,11 @@ end
 
 Announce = function(message)
     local ok = RaidService.SendRaidWarning(message)
-    if not ok and RaidService.IsInRaid() then
+    if not ok and RaidService.IsInRaid() and type(SendChatMessage)=="function" then
         -- A master looter is not necessarily a leader or assistant.
-        SendChatMessage(RaidService.PrefixLootMasterMessage(message), "RAID")
+        ok=pcall(SendChatMessage,RaidService.PrefixLootMasterMessage(message),"RAID")
     end
+    return ok and true or false
 end
 
 local timer = MOS.UI.Components.CreateContainer(nil, UIParent)
@@ -1362,6 +1384,7 @@ FinishRoll = function()
     local roll = activeRoll
     if not roll then return end
     RaidService.FinalizeLootRoll(roll)
+    MasterLootWindow.ResolveTies(roll)
     if roll.winnerResult then
         local winnerIndex
         local index
@@ -1383,13 +1406,18 @@ FinishRoll = function()
     local history, historyKey = retention.GetHistory(roll.source, roll.historyKey, roll.link, roll.icon, roll.manual)
     roll.historyKey = historyKey
     history.rounds = history.rounds + 1
-    history.latestWinner = roll.winner
+    history.latestWinner = not MOS.Services.LootRollRequest.HasBlockingTie(roll,roll.tieGroups) and roll.winner or nil
     local lines = history.lines
     roll.summaryIndex = table.getn(lines) + 1
     table.insert(lines, "Round " .. history.rounds .. ": " ..
         (roll.winner and (roll.winner .. (roll.winnerResult and roll.winnerResult.automatic
             and " (automatic SR)" or (" (" .. roll.highest .. "/" .. (roll.winnerResult and roll.winnerResult.range or 100) .. ")")))
             or (table.getn(roll.results) > 0 and "No valid rolls" or "No rolls")))
+    if MOS.Services.LootRollRequest.HasBlockingTie(roll,roll.tieGroups) then
+        local parts={}
+        for _,group in ipairs(roll.tieGroups) do if group.affectsWinner then table.insert(parts,"Tie "..MOS.Services.LootRollRequest.CategoryNames[group.range]..": "..table.concat(group.names,", ")) end end
+        lines[roll.summaryIndex]="Round "..history.rounds..": "..table.concat(parts,"; ")
+    end
     local index
     for index = 1, table.getn(roll.results) do
         local result = roll.results[index]
@@ -1400,7 +1428,9 @@ FinishRoll = function()
     -- Loot-window rolls keep listening while the item is unawarded. A linked
     -- item has no Master Loot award event, so its listener ends with the timer.
     if roll.manual then events:UnregisterEvent("CHAT_MSG_SYSTEM") end
-    if roll.tradeWinner then
+    if MOS.Services.LootRollRequest.HasBlockingTie(roll,roll.tieGroups) then
+        Announce("Tie for "..roll.link..". Use Reroll to resolve the tied roll type.")
+    elseif roll.tradeWinner then
         Announce(roll.winner .. " receives " .. roll.link .. " with " .. roll.highest .. " Transmog and must trade it to " .. roll.tradeWinner .. ".")
     elseif roll.winnerResult and roll.winnerResult.automatic then
         Announce(roll.winner .. " wins " .. roll.link .. " as the only eligible SR.")
@@ -1453,12 +1483,12 @@ local function OnTimerUpdate()
     end
 end
 
-local function StartRoll(slot, link)
-    if activeRoll then status:SetText("A roll is already in progress"); return end
-    if raidRollPending then status:SetText("Wait for the raid roll result"); return end
-    if not link or not RaidService.IsPlayerLootMaster() then return end
+local function StartRoll(slot, link, request)
+    if activeRoll then status:SetText("A roll is already in progress"); return false end
+    if raidRollPending then status:SetText("Wait for the raid roll result"); return false end
+    if not link or not RaidService.IsPlayerLootMaster() then return false end
     local manual = not slot
-    if not manual and (not LootSlotIsItem(slot) or GetLootSlotLink(slot) ~= link) then return end
+    if not manual and (not LootSlotIsItem(slot) or GetLootSlotLink(slot) ~= link) then return false end
     retention.EnsureSource()
     local seconds = GetGlobalRollDuration()
     local count = GetNumRaidMembers() or 0
@@ -1467,6 +1497,12 @@ local function StartRoll(slot, link)
     for index = 1, count do
         local name = GetRaidRosterInfo(index)
         if name then eligible[name] = true end
+    end
+    local allowedNames
+    if request and request.names then
+        allowedNames={}
+        for index=1,table.getn(request.names) do allowedNames[string.lower(request.names[index])]=true end
+        for name in pairs(eligible) do if not allowedNames[string.lower(name)] then eligible[name]=nil end end
     end
     firstLiveResult = 1
     local _, historyKey = FindHistoryForItem(currentLootSession, slot, link)
@@ -1481,17 +1517,60 @@ local function StartRoll(slot, link)
         lootSessionToken = RaidService.GetLootSessionToken(),
         historyKey = historyKey or retention.ResolveHistoryKey(currentLootSession .. ":" .. tostring(slot or "manual"), link), manual = manual,
         duration = seconds, endsAt = GetTime() + seconds, lastRemaining = seconds, seen = {}, results = {}, highest = -1, highestPriority = -1, transmogHighest = -1, srRestricted = srRestricted, srReserved = srReserved, srAllowed = srAllowed, srNames = srNames, srRankRights = srRankRights, srRankNames = srRankNames, reyCoinRights = reyCoinRights, reyCoinUsed = reyCoinUsed }
-    events:RegisterEvent("CHAT_MSG_SYSTEM")
-    timer:SetScript("OnUpdate", OnTimerUpdate)
-    timer:Show()
-    status:SetText("Rolling for " .. link .. " - " .. seconds .. "s")
-    if srRestricted then Announce("SR for " .. link .. ": " .. table.concat(srNames, ", ")) end
-    if srRestricted then
+    activeRoll.allowedTypes=request and request.types
+    activeRoll.allowedNames=allowedNames
+    if allowedNames then
+        local filtered={}
+        for name,value in pairs(srAllowed or {}) do if allowedNames[name] then filtered[name]=value end end
+        activeRoll.srAllowed=filtered
+    end
+    for _,result in ipairs(request and request.carryResults or {}) do
+        table.insert(activeRoll.results,result);activeRoll.seen[result.name..":"..result.range]=result
+    end
+    if request and request.reroll then
+        -- The exact reroll announcement was sent after all validation.
+    elseif request then
+        local choices={}
+        for _,range in ipairs({102,101,100,99,98}) do if request.types[range] then table.insert(choices,MOS.Services.LootRollRequest.CategoryNames[range].." ("..range..")") end end
+        local announcement="ROLL FOR: "..link..". Available rolls: "..table.concat(choices,", ")..". ("..seconds.." seconds)."
+        if request.names then
+            local players=" Players: "..table.concat(request.names,", ")
+            if string.len(announcement..players)>240 then players=" Players: "..table.getn(request.names).." selected." end
+            announcement=announcement..players
+        end
+        local sent=Announce(announcement)
+        if not sent then
+            activeRoll=nil;timer:SetScript("OnUpdate",nil);timer:Hide();events:UnregisterEvent("CHAT_MSG_SYSTEM")
+            status:SetText("The roll announcement could not be sent.")
+            Refresh();return false,"The roll announcement could not be sent."
+        end
+    elseif srRestricted then
+        Announce("SR for " .. link .. ": " .. table.concat(srNames, ", "))
         Announce("ROLL FOR: " .. link .. ". Available rolls: SR (102). (" .. seconds .. " seconds).")
     else
         Announce("ROLL FOR: " .. link .. ". Available rolls: RC (101), MS (100), OS (99), Mog (98). (" .. seconds .. " seconds).")
     end
+    events:RegisterEvent("CHAT_MSG_SYSTEM")
+    timer:SetScript("OnUpdate", OnTimerUpdate)
+    timer:Show()
+    status:SetText("Rolling for " .. link .. " - " .. seconds .. "s")
     Refresh()
+    return true
+end
+
+function MasterLootWindow.Reroll(roll,range)
+    if activeRoll or raidRollPending or not roll or roll.source~=currentLootSession or not RaidService.IsPlayerLootMaster()
+        or lastRollBySource[currentLootSession]~=roll or not RaidService.IsLootSessionCurrent(roll.lootSessionToken) then return false end
+    local request,failure=MOS.Services.LootRollRequest.CreateRerollRequest(roll,range)
+    if not request then status:SetText(failure);return false end
+    if roll.slot and (not LootSlotIsItem(roll.slot) or GetLootSlotLink(roll.slot)~=roll.link) then return false end
+    local messages,errorMessage=MOS.Services.LootRollRequest.BuildRerollWarnings(request.names,roll.link)
+    if not messages then status:SetText(errorMessage);return false end
+    for _,message in ipairs(messages) do
+        local sent,failure=RaidService.SendRaidWarning(message,false)
+        if not sent then status:SetText(failure or "Cannot send a raid warning.");return false end
+    end
+    return StartRoll(roll.slot,roll.link,request)
 end
 
 local function ResolveRaidRoll(value)
@@ -1721,12 +1800,16 @@ for index = 1, MAX_LIVE_ROWS do
         local result = this:GetParent()
         if result.roll and result.playerName and not activeRoll then
             if result.result and result.result.valid ~= false then
-                result.roll.manualWinnerResult = result.result
+                if result.roll.winnerResult~=result.result then result.roll.manualWinnerResult=result.result end
                 RaidService.FinalizeLootRoll(result.roll)
             end
             ConfirmGive(result.roll, result.playerName)
         end
     end)
+    row.rerollButton=MOS.UI.Components.CreateButton(row,nil,"Reroll",78,18)
+    row.rerollButton:SetPoint("RIGHT",row,"RIGHT",-5,-1)
+    row.rerollButton:SetScript("OnClick",function() local owner=this:GetParent();MasterLootWindow.Reroll(owner.roll,owner.rerollRange) end)
+    row.rerollButton:Hide()
     row:Hide(); liveRows[index] = row
 end
 
@@ -1959,25 +2042,18 @@ function MasterLootWindow.Open()
     AutoLootNext()
 end
 
-function MasterLootWindow.OpenLinkedItemRoll(itemReference)
-    local reference = tostring(itemReference or "")
-    local link = Match(reference, "(|c%x+|Hitem:.-|h%[.-%]|h|r)")
-        or Match(reference, "(|Hitem:.-|h%[.-%]|h)")
-    if not link then
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: Usage: /mos roll [linked item]") end
-        return false
-    end
+function MasterLootWindow.StartManualRoll(request)
+    local normalized,failure=MOS.Services.LootRollRequest.Normalize(request)
+    if not normalized then return false,failure end
+    local link=normalized.link
     if not RaidService.IsInRaid() then
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: You must be in a raid to start a linked item roll.") end
-        return false
+        return false,"You must be in a raid."
     end
     if not RaidService.IsPlayerLootMaster() then
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: Only the Loot Master can start a linked item roll.") end
-        return false
+        return false,"Only the Loot Master can start a roll."
     end
     if activeRoll or raidRollPending then
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: Another roll is already in progress.") end
-        return false
+        return false,"Another roll is already in progress."
     end
     RaidService.GetLootSessionToken()
     lootSessionNumber = lootSessionNumber + 1
@@ -1991,8 +2067,26 @@ function MasterLootWindow.OpenLinkedItemRoll(itemReference)
     UpdateClassColors()
     panel:Show()
     Refresh()
-    StartRoll(nil, link)
+    return StartRoll(nil, link,normalized)
+end
+
+function MasterLootWindow.OpenLinkedItemRoll(itemReference)
+    local request,failure=MOS.Services.LootRollRequest.ParseManualRollRequest(itemReference)
+    local ok=false
+    if request then ok,failure=MasterLootWindow.StartManualRoll(request) end
+    if not ok and DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("MOS: "..tostring(failure or "Could not start the roll.")) end
+    return ok,failure
+end
+
+function MasterLootWindow.OpenNewRollDialog()
+    if not MasterLootWindow.CanStartManualRoll() then return false end
+    if not MasterLootWindow.newRollDialog then MasterLootWindow.newRollDialog=MOS.Modules.LootRollDialog.Create({start=MasterLootWindow.StartManualRoll}) end
+    MasterLootWindow.newRollDialog:Open()
     return true
+end
+
+function MasterLootWindow.CanStartManualRoll()
+    return RaidService.IsInRaid() and RaidService.IsPlayerLootMaster() and not activeRoll and not raidRollPending
 end
 
 function MasterLootWindow.ApplyAutoLootSetting()
@@ -2086,11 +2180,13 @@ events:SetScript("OnEvent", function()
             if result then
                 if not activeRoll then
                     RaidService.FinalizeLootRoll(roll)
+                    MasterLootWindow.ResolveTies(roll)
                     local history = completedRolls[roll.historyKey]
                     if history and roll.summaryIndex then
                         history.latestWinner = roll.winner
                         history.lines[roll.summaryIndex] = "Round " .. history.rounds .. ": " ..
                             (roll.winner and (roll.winner .. " (" .. roll.highest .. "/" .. (roll.winnerResult and roll.winnerResult.range or 100) .. ")") or "No valid rolls")
+                        if MOS.Services.LootRollRequest.HasBlockingTie(roll,roll.tieGroups) then history.lines[roll.summaryIndex]="Round "..history.rounds..": Tie - reroll required" end
                         table.insert(history.lines, "    " .. result.name .. " - " .. result.value .. "/" .. (result.range or 100) .. (result.valid == false and " - Invalid (" .. result.invalidReason .. ")" or ""))
                     end
                 end

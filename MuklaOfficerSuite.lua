@@ -1,5 +1,5 @@
 local ADDON_NAME = "MuklaOfficerSuite"
-local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.127"
+local VERSION = GetAddOnMetadata(ADDON_NAME, "Version") or "0.5.0-dev.128"
 local RELEASE_VERSION = GetAddOnMetadata(ADDON_NAME, "X-Release-Version") or "0.4.0"
 local PREFIX = "|cff33ff99MOS|r"
 
@@ -731,6 +731,8 @@ MOS.minimapButton = MOS.UI.Components.Dashboard.CreateMinimapButton({
     ensureDatabase = EnsureDatabase,
     getAngle = function() return MuklaOfficerSuiteDB.minimap.angle or 220 end,
     setAngle = function(value) MuklaOfficerSuiteDB.minimap.angle = value end,
+    getPosition = function() return MuklaOfficerSuiteDB.minimap.x, MuklaOfficerSuiteDB.minimap.y end,
+    setPosition = function(x, y) MuklaOfficerSuiteDB.minimap.x = x; MuklaOfficerSuiteDB.minimap.y = y end,
     onOpen = function() minimapMenu:Close(); MOS.UI.Components.Dashboard.ToggleWindow(dashboardView) end,
     onContextMenu = function(button) minimapMenu:Toggle(button) end,
 })

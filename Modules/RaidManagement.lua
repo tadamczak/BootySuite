@@ -413,6 +413,12 @@ function RaidManagement.CreateActionControls(page)
     controls.reycoin = MOS.UI.Components.CreateButton(page, nil, "Reycoin list", 100, 22)
     controls.reycoin:Hide()
     controls.reycoin:SetScript("OnClick", function() page.lootMasterController.OpenSoloReyCoin() end)
+    controls.newRoll = MOS.UI.Components.CreateButton(page, nil, "New Roll", 90, 22)
+    MOS.UI.Components.SetClassicButtonIcon(controls.newRoll,"dice")
+    controls.newRoll:Hide()
+    controls.newRoll:SetScript("OnClick",function()
+        if MOS.Modules.MasterLootWindow then MOS.Modules.MasterLootWindow.OpenNewRollDialog() end
+    end)
     controls.lootRules = MOS.UI.Components.CreateButton(page, nil, "Set Loot Rules", 102, 22)
     controls.lootRules.mosClassicReserveIconSpace = true
     MOS.UI.Components.SetClassicButtonIcon(controls.lootRules, "rules")
@@ -975,6 +981,7 @@ function RaidManagement.MountChrome(page, chrome, actions)
         lootRules = actions.lootRules,
         sendLootRules = actions.sendLootRules,
         reycoin = actions.reycoin,
+        newRoll = actions.newRoll,
         import = actions.import,
         shareSr = actions.shareSr,
         resetLoot = actions.resetLoot,
@@ -1049,6 +1056,7 @@ function RaidManagement.CreateCompactGroupView(parent, dependencies)
         members = currentMembers or {}
         page.mosCompactGroupWidth = math.max(1, tonumber(width) or 1)
         page.mosCompactGroupHeight = math.max(1, tonumber(height) or 1)
+        page:SetWidth(page.mosCompactGroupWidth); page:SetHeight(page.mosCompactGroupHeight)
         page:Show(); page.groupFrame:Show()
         RaidManagement.RefreshGroupView(page)
     end
@@ -1214,6 +1222,10 @@ function RaidManagement.UpdateActionAvailability(page, testRaid)
     MOS.UI.Components.SetButtonEnabled(controls.export, not testRaid)
     MOS.UI.Components.SetClassicButtonDisabled(controls.export, testRaid and true or false)
     controls.shareSr:Enable(); controls.import:Enable()
+    if controls.newRoll then
+        local rolls=MOS.Modules.MasterLootWindow
+        MOS.UI.Components.SetButtonEnabled(controls.newRoll,not testRaid and rolls and rolls.CanStartManualRoll and rolls.CanStartManualRoll() or false)
+    end
     if controls.readyCheck then
         MOS.UI.Components.SetButtonEnabled(controls.readyCheck, not testRaid and MOS.Services.Raid.CanReadyCheck and MOS.Services.Raid.CanReadyCheck() or false)
     end
@@ -2106,6 +2118,11 @@ function RaidManagement.ResolveGroupViewport(page)
         page.groupFrame:SetPoint("TOPLEFT", page, "TOPLEFT", page.mosGroupLeft, page.mosGroupTop)
         page.groupFrame:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -4 - page.mosGroupScrollGutter, page.mosGroupBottom)
     end
+    if page.mosCompactGroupWidth then
+        -- Wheel/clipping geometry uses the same supplied rectangle, even while
+        -- native anchored descendants retain bounds from the preceding layout.
+        page.groupFrame:SetWidth(width); page.groupFrame:SetHeight(height)
+    end
     return width, height, maximum
 end
 
@@ -2129,6 +2146,7 @@ function RaidManagement.RefreshGroupView(page)
     local contentHeight = geometry.contentHeight
     local yOffset = 0
     page.groupCanvas:SetWidth(width); page.groupCanvas:SetHeight(geometry.canvasHeight)
+    if compact and page.groupFrame.UpdateScrollChildRect then page.groupFrame:UpdateScrollChildRect() end
     MOS.UI.Components.ApplyScrollRange(page.groupFrame, page.groupScrollBar, maximum)
     local groupIndex, slotIndex
     for groupIndex = 1, 8 do
@@ -2412,6 +2430,7 @@ local function ToolSpecs(page, kind)
             {key = "loot-rules", source = controls.lootRules, caption = "Loot Rules", icon = "rules"},
             {key = "send-loot-rules", source = controls.sendLootRules, caption = "Send Loot Rules", icon = "rules"},
             {key = "reycoin", source = controls.reycoin, caption = "Reycoin list", icon = "lootmaster"},
+            {key = "new-roll", source = controls.newRoll, caption = "New Roll", icon = "dice"},
         },
     }
     return page.toolActionSpecs[kind]
@@ -3096,7 +3115,7 @@ function RaidManagement.CreateLootMasterController(options)
     local selectedName, sortKey, ascending = nil, nil, true
     local emptyFilters = {}
     local menus = {}
-    local close, minimize, config, reycoin, sr, rules, grip, title
+    local close, minimize, config, reycoin, sr, rules, grip, title, newRoll
 
     local function SaveGeometry()
         local settings = options.getSettings()
@@ -3110,7 +3129,7 @@ function RaidManagement.CreateLootMasterController(options)
     end
 
     local function LayoutToolbar()
-        local available = math.max(1, window:GetWidth() - 146)
+        local available = math.max(1, window:GetWidth() - 172)
         local font, _, flags = title:GetFont()
         title:SetWidth(0); title:SetFont(font, 12, flags)
         local width = title:GetStringWidth()
@@ -3225,6 +3244,10 @@ function RaidManagement.CreateLootMasterController(options)
         sr = UI.CreateGoldToolbarButton(window, "import")
         rules = UI.CreateGoldToolbarButton(window, "rules")
         rules:SetPoint("RIGHT", reycoin, "LEFT", -4, 0); sr:SetPoint("RIGHT", rules, "LEFT", -4, 0)
+        newRoll=UI.CreateGoldToolbarButton(window,"dice")
+        newRoll:SetPoint("RIGHT",sr,"LEFT",-4,0)
+        UI.AttachTooltip(newRoll,"New Roll","Link an item and choose who may roll and which roll types are allowed.")
+        newRoll:SetScript("OnClick",function() if MOS.Modules.MasterLootWindow then MOS.Modules.MasterLootWindow.OpenNewRollDialog() end end)
         UI.AttachTooltip(sr, "SR", "Import SR or share the SR link.")
         UI.AttachTooltip(rules, "Loot Rules", "Set or share loot rules.")
         title = UI.CreateHeading(window, "Loot Master Mode", 3, "gold")
@@ -3235,6 +3258,7 @@ function RaidManagement.CreateLootMasterController(options)
         BuildMenu(sr, {"Import SR", "Share SR Link"}, {controls.import, controls.shareSr})
         BuildMenu(rules, {"Set Loot Rules", "Share Loot Rules"}, {controls.lootRules, controls.sendLootRules})
         controller.srButton = sr; controller.rulesButton = rules
+        controller.newRollButton = newRoll
         grip = UI.CreateResizeGrip(window)
         grip:ClearAllPoints(); grip:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -6, 6)
         grip:SetFrameLevel(window:GetFrameLevel() + 250)

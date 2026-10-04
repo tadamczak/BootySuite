@@ -412,12 +412,18 @@ local openItemPolicies = {
 
 function RaidService.GetLootRollPolicy(roll, range)
     if range == 98 then return transmogPolicy end
+    if roll.allowedTypes then
+        if range == 102 then return srPolicy end
+        return openItemPolicies[range] or wrongRangePolicy
+    end
     if roll.srRestricted then return srPolicy end
     return openItemPolicies[range] or wrongRangePolicy
 end
 
 function RaidService.ProcessLootRoll(roll, name, value, range, reyCoinUsed, reyCoinItem)
     local normalizedName = string.lower(name)
+    if roll.allowedNames and not roll.allowedNames[normalizedName] then return nil, "not selected for this roll" end
+    if roll.allowedTypes and not roll.allowedTypes[range] then return nil, "wrong roll, use a selected roll type" end
     local policy = RaidService.GetLootRollPolicy(roll, range)
     local valid = policy.valid(roll, normalizedName, range, reyCoinUsed) and true or false
     local invalidReason = not valid and policy.reason(roll, normalizedName, range, reyCoinUsed, reyCoinItem) or nil
@@ -450,7 +456,7 @@ function RaidService.ProcessLootRoll(roll, name, value, range, reyCoinUsed, reyC
 end
 
 function RaidService.FinalizeLootRoll(roll)
-    if roll.srRestricted and not roll.winner then
+    if roll.srRestricted and not roll.allowedTypes and not roll.winner then
         local onlyName
         local allowedCount = 0
         local normalizedName
@@ -491,7 +497,7 @@ function RaidService.FinalizeLootRoll(roll)
     roll.winner = chosen and chosen.name or nil
     roll.highest = chosen and chosen.value or -1
     roll.winnerUsesReyCoin = chosen and chosen.range == 101 or false
-    roll.tradeWinner = chosen == transmog and main and main.name ~= transmog.name and main.name or nil
+    roll.tradeWinner = chosen and chosen.range == 98 and main and main.name ~= chosen.name and main.name or nil
     roll.tradeWinnerResult = roll.tradeWinner and main or nil
     return roll.winner, roll.tradeWinner
 end
@@ -1245,7 +1251,7 @@ function RaidService.ReadyCheck()
     return true
 end
 
-function RaidService.SendRaidWarning(message)
+function RaidService.SendRaidWarning(message, prefix)
     if not RaidService.IsInRaid() or type(SendChatMessage) ~= "function" then return false, "You must be in a raid." end
     local playerName = UnitName("player")
     local index, canWarn
@@ -1255,7 +1261,8 @@ function RaidService.SendRaidWarning(message)
         if isPlayer then canWarn = (tonumber(rank) or 0) > 0; break end
     end
     if not canWarn then return false, "Only the raid leader or an assistant can send a Raid Warning." end
-    SendChatMessage(RaidService.PrefixLootMasterMessage(message), "RAID_WARNING")
+    local ok=pcall(SendChatMessage,prefix == false and message or RaidService.PrefixLootMasterMessage(message),"RAID_WARNING")
+    if not ok then return false,"The raid warning could not be sent." end
     return true
 end
 

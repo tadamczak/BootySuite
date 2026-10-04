@@ -69,6 +69,7 @@ function UI.CreateCascadingMenu(onChoose, options)
         if row then return row end
         row = UI.CreateMenuItem(panel.canvas, "", 102, ROW_HEIGHT)
         row.SetText, row.GetText = SetRowText, GetRowText
+        row.mosLabelJustify, row.mosFitFontSize = "LEFT", fontSize
         row.menuDepth, row.menuIndex = depth, index
         row:SetScript("OnClick", Click); row:SetScript("OnEnter", Enter)
         row.icon = UI.CreateTexture(row, nil, "OVERLAY")
@@ -82,8 +83,8 @@ function UI.CreateCascadingMenu(onChoose, options)
         row.check = UI.CreateCheckButton(nil, row, "UICheckButtonTemplate")
         row.check:SetWidth(16); row.check:SetHeight(16); row.check:SetPoint("LEFT", row, "LEFT", 3, 0)
         row.check.menuRow = row; row.check:SetScript("OnClick", Click); row.check:SetScript("OnEnter", Enter)
-        if row.label.SetWordWrap then row.label:SetWordWrap(true) end
-        if row.label.SetNonSpaceWrap then row.label:SetNonSpaceWrap(true) end
+        if row.label.SetWordWrap then row.label:SetWordWrap(false) end
+        if row.label.SetNonSpaceWrap then row.label:SetNonSpaceWrap(false) end
         table.insert(panel.options, row)
         return row
     end
@@ -92,7 +93,10 @@ function UI.CreateCascadingMenu(onChoose, options)
         local text, icon = entry.text or "", entry.icon
         local geometryChanged = row.presentedText ~= text or row.presentedIcon ~= icon
             or row.presentedChecked ~= (entry.checked ~= nil) or row.presentedBranch ~= (entry.children ~= nil)
-        if row.presentedText ~= text then row:SetText(text); row.presentedText = text end
+        if row.presentedText ~= text then
+            row:SetText(string.find(text, "[\r\n]") and string.gsub(text, "[\r\n]+", " ") or text)
+            row.presentedText = text
+        end
         if row.presentedIcon ~= icon then
             if icon then row.icon:SetTexture(ICON_PATH .. icon .. ".tga"); row.icon:Show() else row.icon:Hide() end
             row.presentedIcon = icon
@@ -117,17 +121,13 @@ function UI.CreateCascadingMenu(onChoose, options)
         for index = 1, table.getn(panel.entries) do
             local row = panel.options[index]
             local label = row.label
-            local font, _, flags = label:GetFont(); label:SetFont(font, fontSize, flags)
             local captionWidth = math.max(1, width - row.captionLeft - row.captionRight)
-            label:ClearAllPoints(); label:SetPoint("TOPLEFT", row, "TOPLEFT", row.captionLeft, -3)
-            label:SetWidth(captionWidth); label:SetHeight(0); label:SetJustifyH("LEFT"); label:SetJustifyV("TOP")
-            local measured = UI.MeasureTextHeight(label, captionWidth, true)
-            local height = math.max(ROW_HEIGHT, measured + 6)
-            label:SetHeight(height - 6)
+            label:ClearAllPoints(); label:SetPoint("LEFT", row, "LEFT", row.captionLeft, 0)
+            UI.FitButtonLabel(row, captionWidth); label:SetJustifyV("MIDDLE")
             row.menuOffset = y
             row:ClearAllPoints(); row:SetPoint("TOPLEFT", panel.canvas, "TOPLEFT", 0, -y)
-            row:SetWidth(width); row:SetHeight(height)
-            y = y + height + GAP
+            row:SetWidth(width); row:SetHeight(ROW_HEIGHT)
+            y = y + ROW_HEIGHT + GAP
         end
         panel.contentHeight = math.max(1, y - GAP)
         return panel.contentHeight
@@ -143,22 +143,60 @@ function UI.CreateCascadingMenu(onChoose, options)
                 (1 - shownHeight) * bottom / 2, (1 + shownHeight) * bottom / 2)
         else UI.LayoutPerformanceBackground(panel.art, panel, width, height) end
     end
-    local function LayoutPanel(panel, depth, left, top)
+    local function LayoutPanel(panel, depth, left, top, widthLimit, retainedWidth)
         local count = table.getn(panel.entries)
         local screenWidth, screenHeight = UI.GetFrameSpan(UIParent)
+        if widthLimit then panel.menuWidthLimit = widthLimit end
+        local contentHeight = math.max(1, count * (ROW_HEIGHT + GAP) - GAP)
+        local height = math.max(32, math.min(contentHeight + 8, screenHeight - 16))
+        local gutter = contentHeight > height - 8 and 20 or 0
         local width = options.minimumWidth or 110
         for index = 1, count do
             local row, label = panel.options[index], panel.options[index].label
             local font, _, flags = label:GetFont(); label:SetFont(font, fontSize, flags); label:SetWidth(0)
-            width = math.max(width, (label:GetStringWidth() + row.captionLeft + row.captionRight + 8) / 2)
+            width = math.max(width, math.ceil(label:GetStringWidth()) + row.captionLeft + row.captionRight + 10)
         end
-        width = math.max(80, math.min(options.maximumWidth or 180, screenWidth - 16, width))
-        LayoutRows(width - 8, 0, panel)
-        local height = math.max(32, math.min(panel.contentHeight + 8, screenHeight - 16))
-        if depth > 1 and left + width > screenWidth - 8 then left = menu.panels[depth - 1].menuLeft - width + 2 end
-        left = math.max(8, math.min(screenWidth - width - 8, left))
+        if retainedWidth then width = math.max(width, retainedWidth - gutter) end
+        width = math.max(1, math.min(options.maximumWidth or screenWidth - 16, panel.menuWidthLimit or screenWidth - 16,
+            screenWidth - 16, width + gutter))
+        if depth > 1 then
+            local total = width + GAP * (depth - 1)
+            for index = 1, depth - 1 do total = total + menu.panels[index].menuWidth end
+            if total > screenWidth - 16 then
+                -- Only screen-constrained trees reduce fonts. Keep every
+                -- visible ancestor distinct instead of covering its controls.
+                local limit = math.max(1, math.floor((screenWidth - 16 - GAP * (depth - 1)) / depth))
+                for index = 1, depth - 1 do
+                    local ancestor = menu.panels[index]
+                    LayoutPanel(ancestor, index, ancestor.menuLeft, ancestor.menuTop, math.min(ancestor.menuWidth, limit))
+                end
+                width = math.min(width, limit); panel.menuWidthLimit = width
+            end
+            local minimum, maximum = screenWidth, 0
+            for index = 1, depth - 1 do
+                local ancestor = menu.panels[index]
+                minimum = math.min(minimum, ancestor.menuLeft)
+                maximum = math.max(maximum, ancestor.menuLeft + ancestor.menuWidth)
+            end
+            local right, leftSide = maximum + GAP, minimum - width - GAP
+            local direction = menu.panels[depth - 1].menuDirection or 1
+            if direction < 0 and leftSide >= 8 then left = leftSide
+            elseif right + width <= screenWidth - 8 then direction, left = 1, right
+            elseif leftSide >= 8 then direction, left = -1, leftSide
+            else
+                local shift
+                if direction < 0 then shift, left = 8 - leftSide, 8
+                else shift = screenWidth - 8 - right - width; left = right + shift end
+                for index = 1, depth - 1 do
+                    local ancestor = menu.panels[index]
+                    ancestor.menuLeft = ancestor.menuLeft + shift
+                    ancestor:ClearAllPoints(); ancestor:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", ancestor.menuLeft, ancestor.menuTop)
+                end
+            end
+            panel.menuDirection = direction
+        else left = math.max(8, math.min(screenWidth - width - 8, left)); panel.menuDirection = nil end
         top = math.max(height + 8, math.min(screenHeight - 8, top))
-        panel.menuLeft, panel.menuTop = left, top
+        panel.menuLeft, panel.menuTop, panel.menuWidth = left, top, width
         panel:ClearAllPoints(); panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
         panel:SetWidth(width); panel:SetHeight(height)
         panel.host:ClearAllPoints(); panel.host:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -4)
@@ -174,7 +212,7 @@ function UI.CreateCascadingMenu(onChoose, options)
                     local row = panel.options[index]
                     if Present(row) then changed = true end
                 end
-                if changed then LayoutPanel(panel, depth, panel.menuLeft, panel.menuTop) end
+                if changed then LayoutPanel(panel, depth, panel.menuLeft, panel.menuTop, nil, panel.menuWidth) end
             end
         end
     end
@@ -188,7 +226,7 @@ function UI.CreateCascadingMenu(onChoose, options)
         ClearAfter(depth)
         local panel = EnsurePanel(depth)
         if panel.entries ~= entries then panel.canvas.layoutViewport:SetVerticalScroll(0) end
-        panel.entries = entries
+        panel.entries, panel.menuWidthLimit = entries, nil
         local count = table.getn(entries)
         for index = 1, count do
             local row = EnsureRow(panel, depth, index)
@@ -207,7 +245,7 @@ function UI.CreateCascadingMenu(onChoose, options)
         local parent = self.panels[row.menuDepth]
         local scroll = parent.canvas.layoutViewport:GetVerticalScroll()
         local opened = self:ShowPanel(row.menuDepth + 1, row.entry.children,
-            parent.menuLeft + parent:GetWidth() - 2, parent.menuTop - 4 - row.menuOffset + scroll)
+            parent.menuLeft + parent.menuWidth + GAP, parent.menuTop - 4 - row.menuOffset + scroll)
         if opened then self.panels[row.menuDepth + 1].parentRow = row end
         return opened
     end

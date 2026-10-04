@@ -15,7 +15,7 @@ function Commands.Attach(options)
         if rollArgument then
             options.startLinkedItemRoll(rollArgument)
         elseif command == "roll" then
-            options.printMessage("Usage: /mos roll [linked item]")
+            options.printMessage("Usage: /mos roll [linked item] [players...] [Tmog OS MS RC SR]. Without types: Tmog OS MS RC.")
         elseif command == "layout" then
             options.printLayoutDiagnostics()
         elseif command == "capabilities" then

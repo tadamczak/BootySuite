@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0-dev.128 - 2026-10-04
+
+- Add custom New Roll with item, roll types and selected raiders, extended `/mos roll` commands and rerolls for tied results.
+- Allow free minimap icon placement with saved position and project-colored hints.
+- Fix Settings dividers and native Raid tab bounds; use single-line quick-menu captions, shorter names and nonoverlapping submenus.
+
 ## 0.5.0-dev.127 - 2026-10-04
 
 - Compact the minimap quick menu with small gold captions, icons, transparent rows and supplied dim artwork; avoid repeated hover layouts.
