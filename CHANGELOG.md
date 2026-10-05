@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.136 - 2026-10-05
+
+- Center project dialog titles, icons and close controls in one shared header band with balanced vertical spacing.
+
 ## 0.5.0-dev.135 - 2026-10-05
 
 - Match the stock Raid solo/party view and wait for actual conversion before showing groups.

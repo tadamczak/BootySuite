@@ -193,15 +193,19 @@ function Window.StyleProjectDialog(frame, iconKey)
         UI.SetHeadingIcon(frame.title, iconKey or frame.title.mosHeadingIconKey or "info")
         local font, _, flags = frame.title:GetFont()
         frame.title:SetFont(font, 13, flags); frame.title:SetTextColor(unpack(UI.Theme.colors.goldText))
-        frame.title:ClearAllPoints(); frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
-        frame.title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -42, -8); frame.title:SetJustifyH("LEFT")
+        -- The header interior is y=4..24. Center anchors keep text and its icon
+        -- balanced even when a caller supplies a different title rectangle.
+        if frame.title.mosHeadingIcon then frame.title.mosHeadingIconInset = 19 end
+        frame.title:ClearAllPoints(); frame.title:SetPoint("LEFT", frame, "TOPLEFT", 8, -14)
+        frame.title:SetPoint("RIGHT", frame, "TOPRIGHT", -42, -14)
+        frame.title:SetHeight(13); frame.title:SetJustifyH("LEFT"); frame.title:SetJustifyV("MIDDLE")
     end
     frame.projectDivider = UI.CreateContainer(nil, frame)
     frame.projectDivider:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -24)
     frame.projectDivider:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -24); frame.projectDivider:SetHeight(4)
     UI.RegisterSkinnedSurface(frame.projectDivider, "content", nil, {0,0,0,0}, {0.68,0.54,0.27,1})
     UI.JoinSurfaceEdges(frame.projectDivider, true, false)
-    if frame.close then frame.close:ClearAllPoints(); frame.close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6) end
+    if frame.close then frame.close:ClearAllPoints(); frame.close:SetPoint("RIGHT", frame, "TOPRIGHT", -6, -14) end
 end
 
 function Window.CreateProjectConfirmation(name, title, action, iconKey, options)
