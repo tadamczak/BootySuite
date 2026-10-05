@@ -2,7 +2,7 @@
 ## Title: Booty Suite
 ## Notes: Optional shared dashboard and plugin manager for Booty addons.
 ## Author: Mukla
-## Version: 1.0.0-dev.1
+## Version: 1.0.0-dev.2
 ## Dependencies: BootyLib
 ## OptionalDeps: BootyGuild, BootyRaider, BootyProfiler
 ## SavedVariables: BootySuiteDB

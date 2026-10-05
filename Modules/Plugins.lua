@@ -10,7 +10,7 @@ function Plugins.Inventory()
     for index=1,count do
         local success,name,title,notes,enabled,loadable,reason=pcall(GetAddOnInfo,index)
         if success and type(name)=="string" and name~="" then
-            result[name]={name=name,title=title,enabled=Flag(enabled),loadable=Flag(loadable),reason=reason,index=index}
+            result[name]={name=name,title=title,notes=type(notes)=="string" and notes or nil,enabled=Flag(enabled),loadable=Flag(loadable),reason=reason,index=index}
         end
     end
     return result
@@ -20,6 +20,20 @@ function Plugins.GetProduct(name)
         local product=Lib.GetProduct(id)
         if product and (product.addonName or product.name)==name then return product,id end
     end
+end
+local descriptions={
+    BootyLib="Shared interface, visual styles and utilities required by all Booty addons.",
+    BootySuite="One dashboard, minimap menu, combined settings and plugin controls for installed Booty addons.",
+    BootyProfiler="Live performance monitoring, addon profiling, login analysis and health checks.",
+    BootyGuild="Guild roster, member details, guild information and guild statistics.",
+    BootyRaider="Raid sessions, raid statistics, CSR, loot history, rolls and loot master tools.",
+}
+function Plugins.GetDescription(name,current)
+    if descriptions[name] then return descriptions[name] end
+    if current and type(current.notes)=="string" and string.find(current.notes,"%S") then return current.notes end
+    local product=Plugins.GetProduct(name)
+    if product and type(product.description)=="string" and string.find(product.description,"%S") then return product.description end
+    return "Additional Booty addon."
 end
 local function IsBootyAddon(name)
     return type(name)=="string" and (string.find(name,"^Booty")~=nil or Plugins.GetProduct(name)~=nil)
@@ -145,6 +159,8 @@ function Plugins.Create(parent)
     local controller={frame=frame,page=page,rows={}}
     local title=UI.CreateHeading(page,"Plugins",1,"gold","groups")
     local hint=UI.CreateComponentLabel(page,nil,"white")
+    hint:SetJustifyH("LEFT")
+    controller.hint=hint
     hint:SetText("Loading changes apply after /reload. Stop pauses current work without unloading the addon.")
     local function UpdateMessage(ok,failure)
         if not ok then Lib.Print(failure) end
@@ -153,8 +169,13 @@ function Plugins.Create(parent)
     local function EnsureRow(name)
         if controller.rows[name] then return controller.rows[name] end
         local row=UI.CreateContainer(nil,page)
-        row.label=UI.CreateComponentLabel(row,nil,"white");row.label:SetText(name)
+        row.label=UI.CreateComponentLabel(row,nil,"white");row.label:SetText(name);row.label:SetJustifyH("LEFT")
         row.status=UI.CreateComponentLabel(row,nil,"gray")
+        row.status:SetJustifyH("LEFT")
+        row.labelTooltip=UI.AttachLabelTooltip(row,row.label,name,function() return row.description end)
+        row.labelTooltip:SetScript("OnHide",function()
+            if GameTooltip and type(GameTooltip.GetOwner)=="function" and GameTooltip:GetOwner()==this then GameTooltip:Hide() end
+        end)
         row.toggle=UI.CreateButton(row,nil,"Enabled",95,26)
         row.toggle:SetScript("OnClick",function()
             local inventory=Plugins.Inventory()
@@ -184,7 +205,7 @@ function Plugins.Create(parent)
             local rowWidth=math.max(1,width-24)
             row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y);row:SetWidth(rowWidth);row:SetHeight(narrow and 84 or 38)
             row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",0,-5)
-            row.label:SetWidth(narrow and rowWidth or 150)
+            row.label:SetWidth(math.max(1,math.min(narrow and rowWidth or 150,row.label:GetStringWidth())))
             row.status:ClearAllPoints();row.status:SetPoint("TOPLEFT",row,"TOPLEFT",narrow and 0 or 155,narrow and -31 or -5)
             row.status:SetWidth(math.max(1,narrow and rowWidth or width-364))
             row.toggle:ClearAllPoints();row.stop:ClearAllPoints()
@@ -212,6 +233,7 @@ function Plugins.Create(parent)
             active[name]=true
             local row=EnsureRow(name)
             local current,product=inventory[name],Plugins.GetProduct(name)
+            row.description=Plugins.GetDescription(name,current)
             local pending=Plugins.pending[name]
             local loaded=name=="BootyLib" or name=="BootySuite" or product and product.initialized
             row.status:SetText(pending~=nil and "Pending /reload" or not current and "Not installed" or product and product.failure and "Unavailable" or loaded and (product and product.stopped and "Stopped" or "Loaded") or "Not loaded")

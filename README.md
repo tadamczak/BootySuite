@@ -20,6 +20,8 @@ Use `/bs`, `/booty` or the minimap icon to open the dashboard. Right click the i
 
 Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
 
+Hover an addon's name in Plugins to see which features it provides.
+
 ## Migration
 
 When replacing Mukla Officer Suite, keep the small `MuklaOfficerSuite` migration addon enabled alongside the new products. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.
