@@ -2,6 +2,7 @@ local Suite, Lib, UI = BootySuite, BootyLib, BootyLib.UI.Components
 local Shell = {id = "suite", name = "BootySuite", apiVersion = 1, hosts = {}, entries = {}, views = {}, controllers = {}, order = {}, providers = {}}
 Suite.Shell = Shell
 local preferredOrder = {"roster", "raid", "statistics", "raidStatistics", "csr", "profiler", "plugins", "about"}
+local preferredMenuProducts = {"guild", "raider", "profiler"}
 local function Available(id)
     local entry = Shell.entries[id]
     return entry and not entry.product.stopped and not entry.product.failure and (not entry.view.IsAvailable or entry.view.IsAvailable()) or false
@@ -94,15 +95,20 @@ function Shell.Attach(product)
     return host
 end
 function Shell.GetQuickMenu()
-    local items = {}
-    for _, id in ipairs({"guild", "raider", "profiler"}) do
+    local items, seen = {}, {}
+    local function AddProduct(id)
+        if seen[id] then return end
+        seen[id] = true
         local product = Lib.GetProduct(id)
-        if product and not product.stopped and product.GetQuickMenu then
-            local contributions = product.GetQuickMenu(Shell.hosts[id])
+        local host = Shell.hosts[id]
+        if product and host and not product.stopped and not product.failure and product.GetQuickMenu then
+            local contributions = product.GetQuickMenu(host)
             if id == "profiler" then table.insert(items, {text = "Profiler", icon = "performance", action = function() Shell.OpenView("profiler") end, children = contributions})
             else for _, entry in ipairs(contributions) do table.insert(items, entry) end end
         end
     end
+    for _, id in ipairs(preferredMenuProducts) do AddProduct(id) end
+    for _, id in ipairs(Lib.GetProducts()) do AddProduct(id) end
     table.insert(items, {text = "Settings", icon = "settings", action = Shell.OpenSettings})
     table.insert(items, {text = "About", icon = "about", action = function() Shell.OpenView("about") end})
     return items
