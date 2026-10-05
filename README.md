@@ -25,3 +25,5 @@ Hover an addon's name in Plugins to see which features it provides.
 ## Migration
 
 When replacing Mukla Officer Suite, keep the small `MuklaOfficerSuite` migration addon enabled alongside the new products. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.
+
+Settings and each dialog open above the window that launched them. Clicking a window brings its related windows forward together.

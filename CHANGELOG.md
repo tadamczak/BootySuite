@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0-dev.3 — 2026-10-05
+
+- Open Settings and its nested dialogs above the Suite dashboard.
+- Keep update notifications in an owned, reusable window with a selectable release URL.
+
 ## 1.0.0-dev.2 — 2026-10-05
 
 - Align Plugins labels to the left and describe each addon when hovering its name.
