@@ -10,15 +10,17 @@ local QUERY_COOLDOWN = 60
 local DOWNLOAD_URL = "https://github.com/tadamczak/BootySuite/releases/latest"
 
 function VersionCheck.Create(options)
+    local UI = MOS.UI.Components
     local releaseVersion = options.releaseVersion
     local peerVersion = options.addonVersion or releaseVersion
-    local frame = MOS.UI.Components.CreateContainer(nil, UIParent)
+    local frame = UI.CreateContainer(nil, UIParent)
     local channels = {}
     local lastQueryAt = -QUERY_COOLDOWN
     local shownVersions = {}
     local welcomeShown = false
     local checkDeadline = nil
     local status = "Failed to check for update. Check GitHub for latest version."
+    local updateDialog
 
     local function SetStatus(value, successful)
         status = value
@@ -29,24 +31,35 @@ function VersionCheck.Create(options)
         if options.onStatusChanged then options.onStatusChanged(value, BootySuiteDB and BootySuiteDB.lastSuccessfulVersionCheck) end
     end
 
-    StaticPopupDialogs["MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE"] = {
-        text = "A newer Booty Suite version is available: %s\nInstalled version: %s\nDownload it from GitHub Releases.",
-        button1 = "Close",
-        OnAccept = function() StaticPopup_Hide("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE") end,
-        OnShow = function()
-            local editBox = getglobal(this:GetName() .. "WideEditBox")
-            editBox:SetText(DOWNLOAD_URL)
-            editBox:SetWidth(320)
-            editBox:HighlightText()
-            editBox:ClearFocus()
-        end,
-        hasEditBox = true,
-        hasWideEditBox = true,
-        maxLetters = 120,
-        timeout = 0,
-        whileDead = 1,
-        hideOnEscape = 1,
-    }
+    local function ShowUpdate(remoteVersion)
+        if not updateDialog then
+            updateDialog = UI.CreateTextEditor("BootySuiteUpdateAvailable", "Booty Suite Update Available", 120)
+            updateDialog.save:Hide()
+            updateDialog.cancel:SetText("Close")
+            updateDialog.edit:SetScript("OnTextChanged", nil)
+            updateDialog.counter:ClearAllPoints()
+            updateDialog.counter:SetPoint("TOPLEFT", updateDialog, "TOPLEFT", 16, -42)
+            updateDialog.counter:SetWidth(398)
+            updateDialog.counter:SetJustifyH("LEFT")
+            updateDialog.counter:SetJustifyV("TOP")
+            if UI.WindowStack then UI.WindowStack.SetOwner(updateDialog, options.owner) end
+            UI.RegisterEscapeDialog(updateDialog)
+        end
+        local message = "A newer Booty Suite version is available: " .. remoteVersion .. "\nInstalled version: " .. peerVersion .. "\nDownload it from GitHub Releases."
+        updateDialog.counter:SetText(message)
+        local messageHeight = math.ceil(UI.MeasureTextHeight(updateDialog.counter, 398))
+        updateDialog.counter:SetHeight(messageHeight)
+        updateDialog.mosEditorTopInset = 42 + messageHeight + 12
+        updateDialog:SetHeight(math.max(250, updateDialog.mosEditorTopInset + 52 + 50))
+        updateDialog.scroll:ClearAllPoints()
+        updateDialog.scroll:SetPoint("TOPLEFT", updateDialog, "TOPLEFT", 16, -updateDialog.mosEditorTopInset)
+        updateDialog.scroll:SetPoint("BOTTOMRIGHT", updateDialog, "BOTTOMRIGHT", -32, 52)
+        updateDialog:Open(DOWNLOAD_URL)
+        updateDialog:SetMessage(message, false)
+        updateDialog.counter:SetTextColor(1, 1, 1)
+        updateDialog.edit:HighlightText()
+        updateDialog.edit:ClearFocus()
+    end
 
     local function Notify(remoteVersion)
         MOS.Database.Ensure()
@@ -55,7 +68,7 @@ function VersionCheck.Create(options)
         if shownVersions[remoteVersion] then return end
         shownVersions[remoteVersion] = true
         DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Booty Suite:|r New version " .. remoteVersion .. " is available. Installed version: " .. peerVersion .. ".")
-        StaticPopup_Show("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE", remoteVersion, peerVersion)
+        ShowUpdate(remoteVersion)
     end
 
     local function SendQuery(force)

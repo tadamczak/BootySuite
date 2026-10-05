@@ -35,13 +35,13 @@ function Shell.OpenView(id)
     Suite.RefreshLayout(); return controller
 end
 function Shell.OpenSettings()
-    return Lib.Core.SettingsHost.Open(Shell, {integrated = true}, Shell.providers)
+    return Lib.Core.SettingsHost.Open(Shell, {integrated = true, window = Shell.dashboard and Shell.dashboard.frame}, Shell.providers)
 end
 function Shell.Initialize()
     local db = Suite.GetDatabase()
     Shell.dashboard = UI.Dashboard.CreateWindow(Suite.version, {name = "BootySuiteDashboard", title = "Booty Suite"})
     local view = Shell.dashboard
-    Shell.versionCheck = Suite.Modules.VersionCheck.Create({addonVersion = Suite.version, releaseVersion = Suite.version, printMessage = Lib.Print,
+    Shell.versionCheck = Suite.Modules.VersionCheck.Create({addonVersion = Suite.version, releaseVersion = Suite.version, printMessage = Lib.Print, owner = view.frame,
         onStatusChanged = function(value, stamp) local about = Shell.controllers.about; if about and about.SetUpdateStatus then about:SetUpdateStatus(value, stamp) end end})
     view.statusBar = UI.Dashboard.CreateStatusBar(view.frame)
     view.frame.mosStatusBar = view.statusBar
