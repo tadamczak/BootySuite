@@ -1,4 +1,4 @@
-local MOS = MuklaOfficerSuite
+local MOS = BootySuite
 
 MOS.Modules = MOS.Modules or {}
 local About = {}
@@ -11,7 +11,7 @@ function About.Create(page, version, options)
     title:Hide()
     local artwork = MOS.UI.Components.CreateTexture(page, nil, "ARTWORK")
     artwork:SetPoint("RIGHT", page, "RIGHT", -4, 0)
-    artwork:SetTexture("Interface\\AddOns\\MuklaOfficerSuite\\Textures\\AboutArtwork")
+    artwork:SetTexture("Interface\\AddOns\\BootyLib\\Textures\\AboutArtwork")
     artwork:SetTexCoord(0.066, 0.934, 0, 1)
     artwork:SetAlpha(0.88)
     local function ResizeArtwork()
@@ -23,7 +23,7 @@ function About.Create(page, version, options)
     ResizeArtwork()
     local name = MOS.UI.Components.CreateHeading(page, "", 1, "gold", "about")
     name:SetPoint("CENTER", page, "LEFT", 105, 34)
-    name:SetText("Mukla Officer Suite")
+    name:SetText("Booty Suite")
     local versionLabel = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
     versionLabel:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -14); versionLabel:SetText("Current version:")
     local versionText = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontHighlight")
@@ -45,7 +45,7 @@ function About.Create(page, version, options)
     author:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
     author:SetText("Created by Bootybaker")
     local rights = MOS.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormalSmall")
-    rights:SetPoint("TOP", author, "BOTTOM", 0, -5); rights:SetText("Mukla Officer Suite™ - All rights reserved.")
+    rights:SetPoint("TOP", author, "BOTTOM", 0, -5); rights:SetText("Booty Suite™ - All rights reserved.")
     rights:SetTextColor(unpack(MOS.UI.Components.Theme.colors.goldText))
     local function FormatLastCheck(timestamp)
         if not timestamp then return "Never" end

@@ -1,4 +1,4 @@
-local MOS = MuklaOfficerSuite
+local MOS = BootySuite
 
 MOS.Modules.VersionCheck = MOS.Modules.VersionCheck or {}
 local VersionCheck = MOS.Modules.VersionCheck
@@ -7,7 +7,7 @@ local TOPIC = "VERSION"
 local QUERY = "QUERY"
 local RESPONSE = "RESPONSE"
 local QUERY_COOLDOWN = 60
-local DOWNLOAD_URL = "https://github.com/tadamczak/MuklaOfficerSuite/releases/latest"
+local DOWNLOAD_URL = "https://github.com/tadamczak/BootySuite/releases/latest"
 
 function VersionCheck.Create(options)
     local releaseVersion = options.releaseVersion
@@ -24,13 +24,13 @@ function VersionCheck.Create(options)
         status = value
         if successful then
             MOS.Database.Ensure()
-            MuklaOfficerSuiteDB.lastSuccessfulVersionCheck = time()
+            BootySuiteDB.lastSuccessfulVersionCheck = time()
         end
-        if options.onStatusChanged then options.onStatusChanged(value, MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.lastSuccessfulVersionCheck) end
+        if options.onStatusChanged then options.onStatusChanged(value, BootySuiteDB and BootySuiteDB.lastSuccessfulVersionCheck) end
     end
 
     StaticPopupDialogs["MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE"] = {
-        text = "A newer Mukla Officer Suite version is available: %s\nInstalled version: %s\nDownload it from GitHub Releases.",
+        text = "A newer Booty Suite version is available: %s\nInstalled version: %s\nDownload it from GitHub Releases.",
         button1 = "Close",
         OnAccept = function() StaticPopup_Hide("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE") end,
         OnShow = function()
@@ -50,11 +50,11 @@ function VersionCheck.Create(options)
 
     local function Notify(remoteVersion)
         MOS.Database.Ensure()
-        MuklaOfficerSuiteDB.latestKnownVersion = MOS.Services.Version.SelectLatest(MuklaOfficerSuiteDB.latestKnownVersion, remoteVersion)
+        BootySuiteDB.latestKnownVersion = MOS.Services.Version.SelectLatest(BootySuiteDB.latestKnownVersion, remoteVersion)
         SetStatus("New version available!", true)
         if shownVersions[remoteVersion] then return end
         shownVersions[remoteVersion] = true
-        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite:|r New version " .. remoteVersion .. " is available. Installed version: " .. peerVersion .. ".")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Booty Suite:|r New version " .. remoteVersion .. " is available. Installed version: " .. peerVersion .. ".")
         StaticPopup_Show("MUKLA_OFFICER_SUITE_UPDATE_AVAILABLE", remoteVersion, peerVersion)
     end
 
@@ -74,14 +74,14 @@ function VersionCheck.Create(options)
                 if checkDeadline and GetTime() >= checkDeadline then
                     checkDeadline = nil
                     this:SetScript("OnUpdate", nil)
-                    if MOS.Services.Version.IsNewer(MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.latestKnownVersion, peerVersion) then
+                    if MOS.Services.Version.IsNewer(BootySuiteDB and BootySuiteDB.latestKnownVersion, peerVersion) then
                         SetStatus("New version available!", false)
                     elseif status ~= "New version available!" then SetStatus("Up to date!", true) end
                 end
             end)
         else
             checkDeadline = nil; frame:SetScript("OnUpdate", nil)
-            if MOS.Services.Version.IsNewer(MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.latestKnownVersion, peerVersion) then
+            if MOS.Services.Version.IsNewer(BootySuiteDB and BootySuiteDB.latestKnownVersion, peerVersion) then
                 SetStatus("New version available!", false)
             else SetStatus("Failed to check for update. Check GitHub for latest version.", false) end
         end
@@ -107,8 +107,8 @@ function VersionCheck.Create(options)
             if not welcomeShown then
                 welcomeShown = true
                 MOS.Database.Ensure()
-                if not MuklaOfficerSuiteDB.suppressLoginMessage then
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Mukla Officer Suite " .. options.addonVersion .. " loaded.|r Type |cffffffff/mos|r to open the addon.")
+                if not MOS.GetSetting("suppressLoginMessage") then
+                    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Booty Suite " .. options.addonVersion .. " loaded.|r Type |cffffffff/mos|r to open the addon.")
                 end
             end
             SendQuery(false)
@@ -119,15 +119,15 @@ function VersionCheck.Create(options)
         CheckNow = function()
             local sent = SendQuery(true)
             if sent > 0 then
-                options.printMessage("Checking for newer Mukla Officer Suite releases among online guild and group members.")
+                options.printMessage("Checking for newer Booty Suite releases among online guild and group members.")
             else
                 options.printMessage("Version check needs an online guild, party, or raid channel.")
             end
             return sent
         end,
-        GetLatestKnownVersion = function() return MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.latestKnownVersion end,
+        GetLatestKnownVersion = function() return BootySuiteDB and BootySuiteDB.latestKnownVersion end,
         GetStatus = function() return status end,
-        GetLastSuccessfulCheck = function() return MuklaOfficerSuiteDB and MuklaOfficerSuiteDB.lastSuccessfulVersionCheck end,
+        GetLastSuccessfulCheck = function() return BootySuiteDB and BootySuiteDB.lastSuccessfulVersionCheck end,
         HandleMessage = HandleMessage,
         frame = frame,
     }

@@ -1,0 +1,15 @@
+## Interface: 11200
+## Title: Booty Suite
+## Notes: Optional shared dashboard and plugin manager for Booty addons.
+## Author: Mukla
+## Version: 1.0.0-dev.1
+## Dependencies: BootyLib
+## OptionalDeps: BootyGuild, BootyRaider, BootyProfiler
+## SavedVariables: BootySuiteDB
+
+Core\Bootstrap.lua
+Services\AddonMessageService.lua
+Modules\VersionCheck.lua
+Modules\About.lua
+Modules\Plugins.lua
+BootySuite.lua
