@@ -12,7 +12,7 @@ Booty Suite brings installed Booty addons into one World of Warcraft 1.12 dashbo
 
 ## Installation
 
-Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`. BootyGuild, BootyRaider and BootyProfiler can each be used with BootyLib alone. Adding Suite integrates their existing windows and settings automatically.
+Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`. BootyGuild, BootyRaider, BootyProfiler and BootyActionBars can each be used with BootyLib alone. Adding Suite integrates their pages, settings and Quick Menu actions automatically.
 
 ## Usage
 

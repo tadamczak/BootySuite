@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0-dev.4 — 2026-10-05
+
+- Include BootyActionBars and other installed Booty products in the shared Quick Menu.
+- Load the optional BootyActionBars product before integrating its page and settings.
+
 ## 1.0.0-dev.3 — 2026-10-05
 
 - Open Settings and its nested dialogs above the Suite dashboard.
