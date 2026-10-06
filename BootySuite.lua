@@ -8,6 +8,7 @@ Shell.PreviewGeometry = Geometry.PreviewGeometry
 Shell.ApplyGeometry = Geometry.ApplyGeometry
 Shell.CancelGeometry = Geometry.CancelGeometry
 Shell.ResetGeometry = Geometry.ResetGeometry
+Shell.ResetGeometryScale = Geometry.ResetGeometryScale
 Shell.GetGeometryReference = Geometry.GetGeometryReference
 Shell.WatchGeometry = Geometry.WatchGeometry
 Shell.UnwatchGeometry = Geometry.UnwatchGeometry

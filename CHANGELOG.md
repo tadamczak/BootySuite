@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0-dev.9 — 2026-10-07
+
+- Support BootyUI scale recovery while the dashboard is hidden, without opening its pages.
+- Keep existing window position, size and other settings during recovery.
+
 ## 1.0.0-dev.8 — 2026-10-06
 
 - Refresh BootyUI position and offsets after ordinary dashboard dragging.
