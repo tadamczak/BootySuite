@@ -12,7 +12,7 @@ Booty Suite brings installed Booty addons into one World of Warcraft 1.12 dashbo
 
 ## Installation
 
-Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`. BootyGuild, BootyRaider, BootyProfiler and BootyActionBars can each be used with BootyLib alone. Adding Suite integrates their pages, settings and Quick Menu actions automatically.
+Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`. BootyGuild, BootyRaider, BootyProfiler, BootyActionBars and BootyUI can each be used with BootyLib alone. Adding Suite integrates their pages, settings and Quick Menu actions automatically.
 
 ## Usage
 
@@ -21,6 +21,10 @@ Use `/bs`, `/booty` or the minimap icon to open the dashboard. Right click the i
 Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
 
 Hover an addon's name in Plugins to see which features it provides.
+
+With BootyUI installed, use its editor to preview the dashboard position and size, then Apply or Cancel. Closing or minimizing the dashboard cancels an unfinished preview; the previous saved layout is retained.
+
+BootyUI also previews shared Booty skins and selects native or BootyRaider content for the game's Raid tab. Its pages appear in the dashboard and Quick Menu alongside other installed products.
 
 ## Migration
 
