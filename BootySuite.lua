@@ -114,7 +114,7 @@ function Shell.Attach(product)
     for _, view in ipairs(product.views) do
         if view.id == "plugins" or view.id == "about" then error("This view identifier is reserved by Booty Suite: " .. view.id) end
     end
-    local host = {standalone = false, integrated = true, window = Shell.dashboard.frame, previewOwner = Shell.dashboard.pageHost, product = product,
+    local host = {standalone = false, integrated = true, window = Shell.dashboard.frame, product = product,
         GetView = Shell.GetView, OpenView = Shell.OpenView, OpenSettings = Shell.OpenSettings, Print = Lib.Print,
         GetPresentationSetting = Suite.GetSetting, IsIntegrated = function() return true end}
     host.Hide = function() for _, item in ipairs(product.views) do if Shell.active == item.id then Shell.dashboard.frame:Hide() end end end

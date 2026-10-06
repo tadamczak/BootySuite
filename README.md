@@ -26,8 +26,6 @@ With BootyUI installed, use its editor to preview the dashboard position and siz
 
 BootyUI also previews shared Booty skins and selects native or BootyRaider content for the game's Raid tab. Its pages appear in the dashboard and Quick Menu alongside other installed products.
 
-Appearance previews from current BootyUI survive page navigation so you can inspect Raider before applying. Closing or minimizing the shared window cancels that preview even while another page is active.
-
 ## Migration
 
 When replacing Mukla Officer Suite, keep the small `MuklaOfficerSuite` migration addon enabled alongside the new products. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.
