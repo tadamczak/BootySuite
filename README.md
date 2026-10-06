@@ -22,7 +22,7 @@ Settings includes Search and named profiles under Profile → General. Add, Save
 
 Hover an addon's name in Plugins to see which features it provides.
 
-With current BootyUI installed, drag and resize the dashboard normally, or use **Move** and its grid/snap aids, then Apply or Cancel. Closing or minimizing the dashboard cancels an unfinished preview; the previous saved layout is retained. BootyUI keeps window scale at100% and restores older saved scales at login. Type `/bui rescue` to cancel an unfinished edit and restore100% without opening its editor; expand a minimized dashboard first.
+With BootyUI installed, use its editor to preview the dashboard position, size, scale and anchor points, then Apply or Cancel. Closing or minimizing the dashboard cancels an unfinished preview; the previous saved layout is retained. Saved scale and anchors survive UI reload and minimize/restore.
 Dragging the dashboard normally updates the editor's position and offsets. During an active preview it remains a draft until Apply.
 
 BootyUI also previews shared Booty skins and selects native or BootyRaider content for the game's Raid tab. Its pages appear in the dashboard and Quick Menu alongside other installed products.
