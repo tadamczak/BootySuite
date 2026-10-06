@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.6 — 2026-10-06
+
+- Let compatible appearance editors preview across pages while retaining close/minimize cancellation.
+
 ## 1.0.0-dev.5 — 2026-10-06
 
 - Integrate the optional BootyUI editor with the shared dashboard.
