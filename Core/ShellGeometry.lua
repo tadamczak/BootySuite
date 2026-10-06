@@ -26,9 +26,7 @@ end
 local function Stored()
     if BootySuiteDB ~= nil and type(BootySuiteDB) ~= "table" then error("Invalid Booty Suite geometry data.") end
     local db = BootySuiteDB or {}
-    return {left = db.windowLeft, bottom = db.windowBottom, width = db.windowWidth, height = db.windowHeight,
-        scale=db.windowScale,anchor=db.windowAnchor,relativeId=db.windowRelativeId,relativePoint=db.windowRelativePoint,
-        offsetX=db.windowOffsetX,offsetY=db.windowOffsetY}
+    return {left = db.windowLeft, bottom = db.windowBottom, width = db.windowWidth, height = db.windowHeight}
 end
 local function WriteStored(_, rect)
     local expected = BootySuiteDB
@@ -38,14 +36,11 @@ local function WriteStored(_, rect)
     if db ~= expected or BootySuiteDB ~= expected then return false, "Booty Suite geometry ownership changed during its write." end
     db.windowLeft, db.windowBottom = rect.left, rect.bottom
     db.windowWidth, db.windowHeight = rect.width, rect.height
-    db.windowScale,db.windowAnchor,db.windowRelativeId=rect.scale,rect.anchor,rect.relativeId
-    db.windowRelativePoint,db.windowOffsetX,db.windowOffsetY=rect.relativePoint,rect.offsetX,rect.offsetY
     return true
 end
 local function GetAdapter()
     if not adapter then
         adapter = Lib.Core.WindowGeometry.Create({getFrame = Frame, getStored = Stored, writeStored = WriteStored,
-            extended=true,referenceId=function() return "booty.suite.window" end,
             getDefaults = Defaults, getLimits = Limits, getContext = Context,
             refresh = function() return Suite.RefreshLayout() end,
             isAvailable = function(id)
@@ -67,10 +62,6 @@ function Geometry.PreviewGeometry(token, rect) return GetAdapter().PreviewGeomet
 function Geometry.ApplyGeometry(token) return GetAdapter().ApplyGeometry(token) end
 function Geometry.CancelGeometry(token) return GetAdapter().CancelGeometry(token) end
 function Geometry.ResetGeometry(token) return GetAdapter().ResetGeometry(token) end
-function Geometry.GetGeometryReference(id) return GetAdapter().GetGeometryReference(id) end
-function Geometry.RestoreCommitted() return GetAdapter().RestoreCommitted("suite") end
-function Geometry.SaveManual() return GetAdapter().SaveManual("suite") end
-function Geometry.SetVisible(shown) return GetAdapter().SetVisible("suite",shown) end
 function Geometry.HasPreview() return adapter and adapter.HasPreview("suite") or false end
 function Geometry.IsApplying() return adapter and adapter.IsApplying() or false end
 function Geometry.EndPreview(reason)

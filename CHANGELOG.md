@@ -1,10 +1,5 @@
 # Changelog
 
-## 1.0.0-dev.7 — 2026-10-06
-
-- Let BootyUI preview and save dashboard scale, anchor points and offsets alongside position and size.
-- Preserve the saved anchor and scale across login, minimize/restore and screen-context changes.
-
 ## 1.0.0-dev.6 — 2026-10-06
 
 - Let compatible appearance editors preview across pages while retaining close/minimize cancellation.
