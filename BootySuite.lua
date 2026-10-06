@@ -8,6 +8,7 @@ Shell.PreviewGeometry = Geometry.PreviewGeometry
 Shell.ApplyGeometry = Geometry.ApplyGeometry
 Shell.CancelGeometry = Geometry.CancelGeometry
 Shell.ResetGeometry = Geometry.ResetGeometry
+Shell.GetGeometryReference = Geometry.GetGeometryReference
 local preferredOrder = {"roster", "raid", "statistics", "raidStatistics", "csr", "profiler", "plugins", "about"}
 local preferredMenuProducts = {"guild", "raider", "profiler"}
 local function Available(id)
@@ -68,12 +69,14 @@ function Shell.Initialize()
     local function SaveGeometry()
         if Geometry.IsApplying() then return end
         if Geometry.HasPreview() then return Geometry.CaptureManual() end
+        if Lib.Core.WindowPose then return Geometry.SaveManual() end
         db.windowWidth, db.windowHeight = view.frame:GetWidth(), view.frame:GetHeight()
         db.windowLeft, db.windowBottom = view.frame:GetLeft(), view.frame:GetBottom()
     end
     UI.Dashboard.BindWindow(view, {isLootMasterMode = function() return false end, isTabLayout = function() return db.menuStyle ~= "buttons" end,
         statusBar = view.statusBar,
         saveGeometry = SaveGeometry, saveLootGeometry = SaveGeometry, refreshLayout = function() Suite.RefreshLayout() end,
+        restoreGeometry = Lib.Core.WindowPose and Geometry.RestoreCommitted or nil,
         beforeMinimize = function()
             local preview = Geometry.HasPreview()
             local ok, failure = Geometry.EndPreview("minimized")
@@ -93,8 +96,19 @@ function Shell.Initialize()
         local ok, failure = Geometry.EndPreview("hidden")
         if not ok then Lib.Print(type(failure) == "table" and failure.message or tostring(failure)) end
         if hide then hide() end
+        Geometry.SetVisible(false)
         if Shell.active and Shell.controllers[Shell.active] and Shell.controllers[Shell.active].Hide then Shell.controllers[Shell.active]:Hide() end
     end)
+    local shown=view.frame:GetScript("OnShow")
+    view.frame:SetScript("OnShow",function()
+        if shown then shown() end
+        local ok,failure=Geometry.SetVisible(true)
+        if not ok then Lib.Print(failure.message) end
+        if Lib.Core.WindowPose and not view.minimized and not Geometry.HasPreview() then
+            ok,failure=Geometry.RestoreCommitted();if not ok then Lib.Print(failure.message) end
+        end
+    end)
+    if Lib.Core.WindowPose then Geometry.RestoreCommitted() end
     Shell.minimap = UI.Dashboard.CreateMinimapButton({name = "BootySuiteMinimapButton", title = "Booty Suite", ensureDatabase = Suite.GetDatabase,
         getAngle = function() return db.minimap.angle end, getPosition = function() return db.minimap.x, db.minimap.y end,
         setPosition = function(x, y) db.minimap.x, db.minimap.y = x, y end,
