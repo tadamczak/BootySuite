@@ -58,9 +58,9 @@ local function GetAdapter()
             end,
             isAvailable = function(id)
                 if id ~= "suite" then return false, "unknown-window" end
+                if BootySuiteDB == nil then return false, "not-ready" end
                 local frame = Frame(id)
                 if not frame then return false, "not-created" end
-                if BootySuiteDB == nil then return false, "not-ready" end
                 if not frame:IsVisible() then return false, "hidden" end
                 return true
             end,
@@ -75,6 +75,7 @@ function Geometry.PreviewGeometry(token, rect) return GetAdapter().PreviewGeomet
 function Geometry.ApplyGeometry(token) return GetAdapter().ApplyGeometry(token) end
 function Geometry.CancelGeometry(token) return GetAdapter().CancelGeometry(token) end
 function Geometry.ResetGeometry(token) return GetAdapter().ResetGeometry(token) end
+function Geometry.ResetGeometryScale(id) return GetAdapter().ResetGeometryScale(id) end
 function Geometry.GetGeometryReference(id) return GetAdapter().GetGeometryReference(id) end
 function Geometry.WatchGeometry(id, callback) return GetAdapter().WatchGeometry(id, callback) end
 function Geometry.UnwatchGeometry(id, callback) return GetAdapter().UnwatchGeometry(id, callback) end
