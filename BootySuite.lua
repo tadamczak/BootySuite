@@ -9,6 +9,8 @@ Shell.ApplyGeometry = Geometry.ApplyGeometry
 Shell.CancelGeometry = Geometry.CancelGeometry
 Shell.ResetGeometry = Geometry.ResetGeometry
 Shell.GetGeometryReference = Geometry.GetGeometryReference
+Shell.WatchGeometry = Geometry.WatchGeometry
+Shell.UnwatchGeometry = Geometry.UnwatchGeometry
 local preferredOrder = {"roster", "raid", "statistics", "raidStatistics", "csr", "profiler", "plugins", "about"}
 local preferredMenuProducts = {"guild", "raider", "profiler"}
 local function Available(id)
