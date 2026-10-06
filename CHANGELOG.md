@@ -1,10 +1,5 @@
 # Changelog
 
-## 1.0.0-dev.8 — 2026-10-06
-
-- Refresh BootyUI position and offsets after ordinary dashboard dragging.
-- Reconcile the active page after scaled dashboard bounds settle.
-
 ## 1.0.0-dev.7 — 2026-10-06
 
 - Let BootyUI preview and save dashboard scale, anchor points and offsets alongside position and size.

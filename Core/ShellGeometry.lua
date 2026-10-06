@@ -1,5 +1,4 @@
 local Suite, Lib = BootySuite, BootyLib
-local UI = Lib.UI.Components
 local Geometry = {}
 Suite.Core.ShellGeometry = Geometry
 local adapter
@@ -9,8 +8,7 @@ local function Frame(id)
     return id == "suite" and shell and shell.dashboard and shell.dashboard.frame or nil
 end
 local function Context()
-    local width, height = UI.GetFrameSpan(UIParent)
-    return {width = width, height = height,
+    return {width = UIParent:GetWidth(), height = UIParent:GetHeight(),
         scale = UIParent.GetEffectiveScale and UIParent:GetEffectiveScale() or 1}
 end
 local function Limits(_, context)
@@ -49,13 +47,7 @@ local function GetAdapter()
         adapter = Lib.Core.WindowGeometry.Create({getFrame = Frame, getStored = Stored, writeStored = WriteStored,
             extended=true,referenceId=function() return "booty.suite.window" end,
             getDefaults = Defaults, getLimits = Limits, getContext = Context,
-            refresh = function()
-                local ok, reason = Suite.RefreshLayout()
-                if ok == false then return ok, reason end
-                local view = Suite.Shell and Suite.Shell.dashboard
-                if view and view.ScheduleLayoutRefresh then view.ScheduleLayoutRefresh() end
-                return true
-            end,
+            refresh = function() return Suite.RefreshLayout() end,
             isAvailable = function(id)
                 if id ~= "suite" then return false, "unknown-window" end
                 local frame = Frame(id)
@@ -76,8 +68,6 @@ function Geometry.ApplyGeometry(token) return GetAdapter().ApplyGeometry(token) 
 function Geometry.CancelGeometry(token) return GetAdapter().CancelGeometry(token) end
 function Geometry.ResetGeometry(token) return GetAdapter().ResetGeometry(token) end
 function Geometry.GetGeometryReference(id) return GetAdapter().GetGeometryReference(id) end
-function Geometry.WatchGeometry(id, callback) return GetAdapter().WatchGeometry(id, callback) end
-function Geometry.UnwatchGeometry(id, callback) return GetAdapter().UnwatchGeometry(id, callback) end
 function Geometry.RestoreCommitted() return GetAdapter().RestoreCommitted("suite") end
 function Geometry.SaveManual() return GetAdapter().SaveManual("suite") end
 function Geometry.SetVisible(shown) return GetAdapter().SetVisible("suite",shown) end
