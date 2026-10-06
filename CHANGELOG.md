@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0-dev.5 — 2026-10-06
+
+- Integrate the optional BootyUI editor with the shared dashboard.
+- Preview, apply, cancel or reset the Suite window geometry without saving an unfinished edit on close or minimize.
+- Keep skin choices in Settings and BootyUI synchronized, including cancellation of an unfinished preview.
+- Restore the default skin through Settings Reset and reject failed page layout previews without saving them.
+
 ## 1.0.0-dev.4 — 2026-10-05
 
 - Include BootyActionBars and other installed Booty products in the shared Quick Menu.

@@ -2,12 +2,13 @@
 ## Title: Booty Suite
 ## Notes: Optional shared dashboard and plugin manager for Booty addons.
 ## Author: Mukla
-## Version: 1.0.0-dev.4
+## Version: 1.0.0-dev.5
 ## Dependencies: BootyLib
-## OptionalDeps: BootyGuild, BootyRaider, BootyProfiler, BootyActionBars
+## OptionalDeps: BootyGuild, BootyRaider, BootyProfiler, BootyActionBars, BootyUI
 ## SavedVariables: BootySuiteDB
 
 Core\Bootstrap.lua
+Core\ShellGeometry.lua
 Services\AddonMessageService.lua
 Modules\VersionCheck.lua
 Modules\About.lua
