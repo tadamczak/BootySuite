@@ -1,17 +1,6 @@
 local Suite, Lib, UI = BootySuite, BootyLib, BootyLib.UI.Components
 local Shell = {id = "suite", name = "BootySuite", apiVersion = 1, hosts = {}, entries = {}, views = {}, controllers = {}, order = {}, providers = {}}
 Suite.Shell = Shell
-local Geometry = Suite.Core.ShellGeometry
-Shell.ReadGeometry = Geometry.ReadGeometry
-Shell.BeginGeometryPreview = Geometry.BeginGeometryPreview
-Shell.PreviewGeometry = Geometry.PreviewGeometry
-Shell.ApplyGeometry = Geometry.ApplyGeometry
-Shell.CancelGeometry = Geometry.CancelGeometry
-Shell.ResetGeometry = Geometry.ResetGeometry
-Shell.ResetGeometryScale = Geometry.ResetGeometryScale
-Shell.GetGeometryReference = Geometry.GetGeometryReference
-Shell.WatchGeometry = Geometry.WatchGeometry
-Shell.UnwatchGeometry = Geometry.UnwatchGeometry
 local preferredOrder = {"roster", "raid", "statistics", "raidStatistics", "csr", "profiler", "plugins", "about"}
 local preferredMenuProducts = {"guild", "raider", "profiler"}
 local function Available(id)
@@ -49,15 +38,6 @@ end
 function Shell.OpenSettings()
     return Lib.Core.SettingsHost.Open(Shell, {integrated = true, window = Shell.dashboard and Shell.dashboard.frame}, Shell.providers)
 end
-function Shell.OpenGeometryWindow()
-    return Shell.OpenView(Shell.active or Shell.order[1] or "plugins")
-end
-function Shell.Stop()
-    local ok, failure = Geometry.EndPreview("stopped")
-    if not ok then return false, failure end
-    if Shell.dashboard then Shell.dashboard.frame:Hide() end
-    return true
-end
 function Shell.Initialize()
     local db = Suite.GetDatabase()
     Shell.dashboard = UI.Dashboard.CreateWindow(Suite.version, {name = "BootySuiteDashboard", title = "Booty Suite"})
@@ -70,24 +50,12 @@ function Shell.Initialize()
     view.frame:Hide()
     view.settingsButton:SetScript("OnClick", Shell.OpenSettings)
     local function SaveGeometry()
-        if Geometry.IsApplying() then return end
-        if Geometry.HasPreview() then return Geometry.CaptureManual() end
-        if Lib.Core.WindowPose then return Geometry.SaveManual() end
         db.windowWidth, db.windowHeight = view.frame:GetWidth(), view.frame:GetHeight()
         db.windowLeft, db.windowBottom = view.frame:GetLeft(), view.frame:GetBottom()
     end
     UI.Dashboard.BindWindow(view, {isLootMasterMode = function() return false end, isTabLayout = function() return db.menuStyle ~= "buttons" end,
         statusBar = view.statusBar,
         saveGeometry = SaveGeometry, saveLootGeometry = SaveGeometry, refreshLayout = function() Suite.RefreshLayout() end,
-        restoreGeometry = Lib.Core.WindowPose and Geometry.RestoreCommitted or nil,
-        beforeMinimize = function()
-            local preview = Geometry.HasPreview()
-            local ok, failure = Geometry.EndPreview("minimized")
-            if not ok then return false, failure end
-            -- The cancel restores the last committed rectangle before the
-            -- shared shell snapshots its expanded dimensions.
-            return true, preview
-        end,
         applyLayout = function() Suite.RefreshLayout() end, applyOrRefreshLayout = function() Suite.RefreshLayout() end,
         setNavigationVisible = function(shown)
             if Shell.navigation then for _, button in pairs(Shell.navigation.buttons) do if shown then button:Show() else button:Hide() end end end
@@ -96,22 +64,9 @@ function Shell.Initialize()
         end})
     local hide = view.frame:GetScript("OnHide")
     view.frame:SetScript("OnHide", function()
-        local ok, failure = Geometry.EndPreview("hidden")
-        if not ok then Lib.Print(type(failure) == "table" and failure.message or tostring(failure)) end
         if hide then hide() end
-        Geometry.SetVisible(false)
         if Shell.active and Shell.controllers[Shell.active] and Shell.controllers[Shell.active].Hide then Shell.controllers[Shell.active]:Hide() end
     end)
-    local shown=view.frame:GetScript("OnShow")
-    view.frame:SetScript("OnShow",function()
-        if shown then shown() end
-        local ok,failure=Geometry.SetVisible(true)
-        if not ok then Lib.Print(failure.message) end
-        if Lib.Core.WindowPose and not view.minimized and not Geometry.HasPreview() then
-            ok,failure=Geometry.RestoreCommitted();if not ok then Lib.Print(failure.message) end
-        end
-    end)
-    if Lib.Core.WindowPose then Geometry.RestoreCommitted() end
     Shell.minimap = UI.Dashboard.CreateMinimapButton({name = "BootySuiteMinimapButton", title = "Booty Suite", ensureDatabase = Suite.GetDatabase,
         getAngle = function() return db.minimap.angle end, getPosition = function() return db.minimap.x, db.minimap.y end,
         setPosition = function(x, y) db.minimap.x, db.minimap.y = x, y end,
@@ -131,7 +86,7 @@ function Shell.Attach(product)
     for _, view in ipairs(product.views) do
         if view.id == "plugins" or view.id == "about" then error("This view identifier is reserved by Booty Suite: " .. view.id) end
     end
-    local host = {standalone = false, integrated = true, window = Shell.dashboard.frame, previewOwner = Shell.dashboard.pageHost, product = product,
+    local host = {standalone = false, integrated = true, window = Shell.dashboard.frame, product = product,
         GetView = Shell.GetView, OpenView = Shell.OpenView, OpenSettings = Shell.OpenSettings, Print = Lib.Print,
         GetPresentationSetting = Suite.GetSetting, IsIntegrated = function() return true end}
     host.Hide = function() for _, item in ipairs(product.views) do if Shell.active == item.id then Shell.dashboard.frame:Hide() end end end
@@ -164,7 +119,7 @@ function Suite.RefreshLayout()
     if Shell.navigation then Shell.navigation.Apply() else UI.Dashboard.ApplyChrome(view, Suite.GetSetting) end
     if Shell.active and Shell.controllers[Shell.active] and view.frame:IsVisible() and not view.minimized then
         local controller = Shell.controllers[Shell.active]
-        if controller.OnResize then return controller:OnResize() elseif controller.RefreshLayout then return controller:RefreshLayout() end
+        if controller.OnResize then controller:OnResize() elseif controller.RefreshLayout then controller:RefreshLayout() end
     end
 end
 function Suite.RefreshProductAvailability()
@@ -232,9 +187,8 @@ end
 table.insert(Shell.providers, Shell)
 table.insert(Shell.providers, {id = "lib", name = "BootyLib", GetSettings = function()
     return {db = Lib.Data.Ensure("lib"), fields = {
-        {key = "uiSkin", label = "Interface skin", type = "choice", default = "classic", path = {"Addon UI", "General"},
-            choices = {{value = "classic", text = "Classic"}, {value = "default", text = "Classic WIP"}},
-            set = function(value) return Lib.SetSharedSkin(value) end},
+        {key = "uiSkin", label = "Interface skin", type = "choice", path = {"Addon UI", "General"},
+            choices = {{value = "classic", text = "Classic"}, {value = "default", text = "Classic WIP"}}, onChange = function(value) UI.SetSkin(value) end},
         {key = "chatActionLogs", label = "Chat action logs", type = "checkbox", path = {"Addon UI", "General"}},
         {key = "suppressLoginMessage", label = "Suppress login message", type = "checkbox", path = {"Addon UI", "General"}},
     }}

@@ -1,31 +1,5 @@
 # Changelog
 
-## 1.0.0-dev.9 — 2026-10-07
-
-- Support BootyUI scale recovery while the dashboard is hidden, without opening its pages.
-- Keep existing window position, size and other settings during recovery.
-
-## 1.0.0-dev.8 — 2026-10-06
-
-- Refresh BootyUI position and offsets after ordinary dashboard dragging.
-- Reconcile the active page after scaled dashboard bounds settle.
-
-## 1.0.0-dev.7 — 2026-10-06
-
-- Let BootyUI preview and save dashboard scale, anchor points and offsets alongside position and size.
-- Preserve the saved anchor and scale across login, minimize/restore and screen-context changes.
-
-## 1.0.0-dev.6 — 2026-10-06
-
-- Let compatible appearance editors preview across pages while retaining close/minimize cancellation.
-
-## 1.0.0-dev.5 — 2026-10-06
-
-- Integrate the optional BootyUI editor with the shared dashboard.
-- Preview, apply, cancel or reset the Suite window geometry without saving an unfinished edit on close or minimize.
-- Keep skin choices in Settings and BootyUI synchronized, including cancellation of an unfinished preview.
-- Restore the default skin through Settings Reset and reject failed page layout previews without saving them.
-
 ## 1.0.0-dev.4 — 2026-10-05
 
 - Include BootyActionBars and other installed Booty products in the shared Quick Menu.

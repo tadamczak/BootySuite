@@ -12,7 +12,7 @@ Booty Suite brings installed Booty addons into one World of Warcraft 1.12 dashbo
 
 ## Installation
 
-Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`. BootyGuild, BootyRaider, BootyProfiler, BootyActionBars and BootyUI can each be used with BootyLib alone. Adding Suite integrates their pages, settings and Quick Menu actions automatically.
+Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`. BootyGuild, BootyRaider, BootyProfiler and BootyActionBars can each be used with BootyLib alone. Adding Suite integrates their pages, settings and Quick Menu actions automatically.
 
 ## Usage
 
@@ -21,13 +21,6 @@ Use `/bs`, `/booty` or the minimap icon to open the dashboard. Right click the i
 Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
 
 Hover an addon's name in Plugins to see which features it provides.
-
-With current BootyUI installed, drag and resize the dashboard normally, or use **Move** and its grid/snap aids, then Apply or Cancel. Closing or minimizing the dashboard cancels an unfinished preview; the previous saved layout is retained. BootyUI keeps window scale at100% and restores older saved scales at login. Type `/bui rescue` to cancel an unfinished edit and restore100% without opening its editor; expand a minimized dashboard first.
-Dragging the dashboard normally updates the editor's position and offsets. During an active preview it remains a draft until Apply.
-
-BootyUI also previews shared Booty skins and selects native or BootyRaider content for the game's Raid tab. Its pages appear in the dashboard and Quick Menu alongside other installed products.
-
-Appearance previews from current BootyUI survive page navigation so you can inspect Raider before applying. Closing or minimizing the shared window cancels that preview even while another page is active.
 
 ## Migration
 
