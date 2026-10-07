@@ -22,6 +22,9 @@ Settings includes Search and named profiles under Profile → General. Add, Save
 
 Hover an addon's name in Plugins to see which features it provides.
 
+Version discovery checks online guild and group members. An unanswered query
+does not confirm the latest release; use the linked GitHub Releases page to check.
+
 If Stop cannot close the product's windows safely, its work stays paused. Resume retries that cleanup and starts the product only after it succeeds.
 
 ## Migration

@@ -89,7 +89,9 @@ function VersionCheck.Create(options)
                     this:SetScript("OnUpdate", nil)
                     if MOS.Services.Version.IsNewer(BootySuiteDB and BootySuiteDB.latestKnownVersion, peerVersion) then
                         SetStatus("New version available!", false)
-                    elseif status ~= "New version available!" then SetStatus("Up to date!", true) end
+                    elseif status ~= "New version available!" then
+                        SetStatus("No newer version reported. Check GitHub for latest release.", false)
+                    end
                 end
             end)
         else
