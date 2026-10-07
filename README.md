@@ -22,6 +22,8 @@ Settings includes Search and named profiles under Profile → General. Add, Save
 
 Hover an addon's name in Plugins to see which features it provides.
 
+If Stop cannot close the product's windows safely, its work stays paused. Resume retries that cleanup and starts the product only after it succeeds.
+
 ## Migration
 
 When replacing Mukla Officer Suite, keep the small `MuklaOfficerSuite` migration addon enabled alongside the new products. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.

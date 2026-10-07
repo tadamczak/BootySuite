@@ -145,6 +145,11 @@ function Plugins.Resume(name)
     local start=product.Start
     if type(start)~="function" then return false,"This product cannot resume without /reload." end
     local runtime=Lib.Core.Runtime
+    if product.stopCleanupPending then
+        if not runtime or type(runtime.StopProduct)~="function" then return false,"Stop cleanup is unavailable." end
+        local cleaned,result,message=pcall(runtime.StopProduct,id)
+        if not cleaned or result==false then return false,message or tostring(result) end
+    end
     local host=runtime and runtime.hosts and runtime.hosts[id]
     local ok,result,message=pcall(start,host)
     if not ok or result==false then return false,message or tostring(result) end

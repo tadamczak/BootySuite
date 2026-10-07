@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0-dev.10 — 2026-10-07
+
+- Resume waits for failed presentation cleanup to finish before restarting the selected product.
+- Keep withdrawn editor integrations absent. The prerelease number follows earlier builds without reusing their identities.
+
 ## 1.0.0-dev.4 — 2026-10-05
 
 - Include BootyActionBars and other installed Booty products in the shared Quick Menu.
