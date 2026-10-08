@@ -22,6 +22,12 @@ Settings includes Search and named profiles under Profile → General. Add, Save
 
 Hover an addon's name in Plugins to see which features it provides.
 
+Use **Open** in Plugins to select an addon's main tab. Clear **Add to menu** to
+open it in a separate window instead. Adding it again restores all its tabs
+immediately. The choice is saved and keeps the addon's work and settings.
+BootyLib and BootySuite have no separate feature tab, so these controls are
+disabled for them. Enable unloaded addons and reload before opening them.
+
 Version discovery checks online guild and group members. An unanswered query
 does not confirm the latest release; use the linked GitHub Releases page to check.
 

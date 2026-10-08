@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0-dev.12 — 2026-10-08
+
+- Add Open and a saved Add to menu choice to each feature addon in Plugins.
+- Open omitted addons in reusable separate windows; restore their tabs immediately when added to the menu.
+- Keep active work, common settings and the same addon controllers when changing presentation.
+
 ## 1.0.0-dev.11 — 2026-10-08
 
 - Version discovery reports unanswered queries without claiming the latest release or recording a successful check.

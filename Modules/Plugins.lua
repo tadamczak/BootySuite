@@ -21,6 +21,46 @@ function Plugins.GetProduct(name)
         if product and (product.addonName or product.name)==name then return product,id end
     end
 end
+local function Feature(name)
+    if name=="BootyLib" or name=="BootySuite" then return nil,"This addon does not provide a feature tab." end
+    local product,id=Plugins.GetProduct(name)
+    if not product or type(product.views)~="table" or table.getn(product.views)==0 then
+        return nil,"This addon has no registered view. Enable it and reload first."
+    end
+    return product,id
+end
+function Plugins.CanOpen(name)
+    local product,id=Feature(name)
+    if not product then return false,id end
+    local shell=Suite.Shell
+    if not shell or type(shell.CanOpenProduct)~="function" then return false,"Opening addon views is unavailable." end
+    return shell.CanOpenProduct(id)
+end
+function Plugins.Open(name)
+    local ready,failure=Plugins.CanOpen(name)
+    if not ready then return false,failure end
+    local _,id=Feature(name)
+    return Suite.Shell.OpenProduct(id)
+end
+function Plugins.IsInMenu(name)
+    local product,id=Feature(name)
+    local shell=Suite.Shell
+    return product~=nil and shell~=nil and type(shell.IsInMenu)=="function" and shell.IsInMenu(id) or false
+end
+function Plugins.CanSetInMenu(name)
+    local product,id=Feature(name)
+    if not product then return false,id end
+    local shell=Suite.Shell
+    if not shell or type(shell.CanSetInMenu)~="function" then return false,"Changing addon menu tabs is unavailable." end
+    return shell.CanSetInMenu(id)
+end
+function Plugins.SetInMenu(name,enabled)
+    if type(enabled)~="boolean" then return false,"Choose whether to add this addon to the menu." end
+    local ready,failure=Plugins.CanSetInMenu(name)
+    if not ready then return false,failure end
+    local _,id=Feature(name)
+    return Suite.Shell.SetInMenu(id,enabled)
+end
 local descriptions={
     BootyLib="Shared interface, visual styles and utilities required by all Booty addons.",
     BootySuite="One dashboard, minimap menu, combined settings and plugin controls for installed Booty addons.",
@@ -166,7 +206,7 @@ function Plugins.Create(parent)
     local hint=UI.CreateComponentLabel(page,nil,"white")
     hint:SetJustifyH("LEFT")
     controller.hint=hint
-    hint:SetText("Loading changes apply after /reload. Stop pauses current work without unloading the addon.")
+    hint:SetText("Loading changes apply after /reload. Stop pauses current work without unloading the addon. Add to menu shows the addon's tabs; Open selects its tab or opens a separate window.")
     local function UpdateMessage(ok,failure)
         if not ok then Lib.Print(failure) end
         controller:Refresh()
@@ -192,6 +232,16 @@ function Plugins.Create(parent)
             if product and product.stopped then UpdateMessage(Plugins.Resume(name))
             else UpdateMessage(Plugins.Stop(name)) end
         end)
+        row.open=UI.CreateButton(row,nil,"Open",72,26)
+        row.open:SetScript("OnClick",function() UpdateMessage(Plugins.Open(name)) end)
+        row.menuSlot=UI.CreateContainer(nil,row);row.menuSlot:SetHeight(26)
+        row.addToMenu=UI.Settings.CreateCheckbox(row.menuSlot,0,0,"Add to menu",name,nil,{
+            ensure=function() end,
+            get=function() return Plugins.IsInMenu(name) end,
+            set=function(_,value) UpdateMessage(Plugins.SetInMenu(name,value)) end,
+        })
+        row.addToMenu:ClearAllPoints();row.addToMenu:SetPoint("LEFT",row.menuSlot,"LEFT",0,0)
+        row.actions={row.open,row.menuSlot,row.toggle,row.stop}
         controller.rows[name]=row
         return row
     end
@@ -206,26 +256,29 @@ function Plugins.Create(parent)
         local y=52+hintHeight
         for _,name in ipairs(controller.names) do
             local row=controller.rows[name]
-            local narrow=width<520
             local rowWidth=math.max(1,width-24)
-            row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y);row:SetWidth(rowWidth);row:SetHeight(narrow and 84 or 38)
+            local menuWidth=math.max(114,row.addToMenu:GetWidth()+row.addToMenu.label:GetStringWidth()+7)
+            local actionWidth=72+menuWidth+95+76+18
+            local narrow=rowWidth<actionWidth+265
+            row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y);row:SetWidth(rowWidth)
+            row.open:SetWidth(72);row.menuSlot:SetWidth(menuWidth);row.menuSlot:SetHeight(math.max(26,row.addToMenu:GetHeight()))
+            row.toggle:SetWidth(95);row.stop:SetWidth(76)
             row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",0,-5)
             row.label:SetWidth(math.max(1,math.min(narrow and rowWidth or 150,row.label:GetStringWidth())))
             row.status:ClearAllPoints();row.status:SetPoint("TOPLEFT",row,"TOPLEFT",narrow and 0 or 155,narrow and -31 or -5)
-            row.status:SetWidth(math.max(1,narrow and rowWidth or width-364))
-            row.toggle:ClearAllPoints();row.stop:ClearAllPoints()
+            row.status:SetWidth(math.max(1,narrow and rowWidth or rowWidth-actionWidth-167))
+            row.open:ClearAllPoints();row.menuSlot:ClearAllPoints();row.toggle:ClearAllPoints();row.stop:ClearAllPoints()
             if narrow then
-                local buttonSpace=math.max(2,rowWidth-6)
-                local toggleWidth=math.min(95,math.floor(buttonSpace*0.55))
-                row.toggle:SetWidth(toggleWidth);row.stop:SetWidth(math.min(76,buttonSpace-toggleWidth))
-                row.toggle:SetPoint("TOPLEFT",row,"TOPLEFT",0,-55)
-                row.stop:SetPoint("LEFT",row.toggle,"RIGHT",6,0)
+                local bottom=UI.LayoutFlow(row,row.actions,0,55,rowWidth,6)
+                row:SetHeight(bottom+4)
             else
-                row.toggle:SetWidth(95);row.stop:SetWidth(76)
                 row.toggle:SetPoint("TOPRIGHT",row,"TOPRIGHT",-82,0)
                 row.stop:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0)
+                row.menuSlot:SetPoint("RIGHT",row.toggle,"LEFT",-6,0)
+                row.open:SetPoint("RIGHT",row.menuSlot,"LEFT",-6,0)
+                row:SetHeight(math.max(38,row.menuSlot:GetHeight()+6))
             end
-            y=y+(narrow and 92 or 44)
+            y=y+row:GetHeight()+6
         end
         reload:ClearAllPoints();reload:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y)
         return y+40
@@ -246,6 +299,10 @@ function Plugins.Create(parent)
             UI.SetButtonEnabled(row.toggle,current~=nil and (name~="BootyLib" or not EffectiveEnabled(name,inventory)))
             row.stop:SetText(product and product.stopped and "Resume" or "Stop")
             UI.SetButtonEnabled(row.stop,product~=nil and not product.failure and (not product.stopped or type(product.Start)=="function"))
+            local canOpen=Plugins.CanOpen(name)
+            UI.SetButtonEnabled(row.open,canOpen)
+            row.addToMenu:SetChecked(Plugins.IsInMenu(name) and 1 or nil)
+            UI.Settings.SetCheckboxEnabled(row.addToMenu,Plugins.CanSetInMenu(name))
             row:Show()
         end
         for name,row in pairs(self.rows) do if not active[name] then row:Hide() end end
