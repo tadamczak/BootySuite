@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.13 — 2026-10-09
+
+- Use current Booty names and commands throughout the dashboard.
+
 ## 1.0.0-dev.12 — 2026-10-08
 
 - Add Open and a saved Add to menu choice to each feature addon in Plugins.

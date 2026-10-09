@@ -1,8 +1,8 @@
-local MOS = BootySuite
-local Match = MOS.Core and MOS.Core.Compatibility and MOS.Core.Compatibility.Match or string.match
+local Booty = BootySuite
+local Match = Booty.Core and Booty.Core.Compatibility and Booty.Core.Compatibility.Match or string.match
 
-MOS.Services.AddonMessage = MOS.Services.AddonMessage or {}
-local AddonMessage = MOS.Services.AddonMessage
+Booty.Services.AddonMessage = Booty.Services.AddonMessage or {}
+local AddonMessage = Booty.Services.AddonMessage
 
 AddonMessage.PREFIX = "BOOTYSUITE"
 

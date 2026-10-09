@@ -19,7 +19,7 @@ local function Mount(id)
     if Shell.views[id] then return Shell.views[id] end
     local parent = UI.CreateContainer(nil, Shell.dashboard.pageHost)
     Shell.views[id] = parent
-    parent.mosContentPanel = Shell.dashboard.contentPanel
+    parent.bootyContentPanel = Shell.dashboard.contentPanel
     parent:SetPoint("TOPLEFT", Shell.dashboard.pageHost, "TOPLEFT", 1.5, -3)
     parent:SetPoint("BOTTOMRIGHT", Shell.dashboard.pageHost, "BOTTOMRIGHT", -1.5, 1.5)
     parent:Hide()
@@ -29,8 +29,8 @@ local function Dock(id)
     local parent = Shell.views[id]
     if not parent then return end
     parent:SetParent(Shell.dashboard.pageHost); parent:ClearAllPoints()
-    parent.mosWidthOwner, parent.mosWidthInset, parent.mosHeightOwner, parent.mosHeightInset = nil, nil, nil, nil
-    parent.mosContentPanel = Shell.dashboard.contentPanel
+    parent.bootyWidthOwner, parent.bootyWidthInset, parent.bootyHeightOwner, parent.bootyHeightInset = nil, nil, nil, nil
+    parent.bootyContentPanel = Shell.dashboard.contentPanel
     parent:SetPoint("TOPLEFT", Shell.dashboard.pageHost, "TOPLEFT", 1.5, -3)
     parent:SetPoint("BOTTOMRIGHT", Shell.dashboard.pageHost, "BOTTOMRIGHT", -1.5, 1.5)
     if UI.WindowStack then UI.WindowStack.Sync(parent) end
@@ -80,7 +80,7 @@ function Shell.Initialize()
     Shell.versionCheck = Suite.Modules.VersionCheck.Create({addonVersion = Suite.version, releaseVersion = Suite.version, printMessage = Lib.Print, owner = view.frame,
         onStatusChanged = function(value, stamp) local about = Shell.controllers.about; if about and about.SetUpdateStatus then about:SetUpdateStatus(value, stamp) end end})
     view.statusBar = UI.Dashboard.CreateStatusBar(view.frame)
-    view.frame.mosStatusBar = view.statusBar
+    view.frame.bootyStatusBar = view.statusBar
     UI.Dashboard.RestoreGeometry(view.frame, db)
     view.frame:Hide()
     view.settingsButton:SetScript("OnClick", Shell.OpenSettings)
@@ -299,8 +299,7 @@ table.insert(Shell.providers, {id = "lib", name = "BootyLib", GetSettings = func
 end})
 Lib.RegisterSuite(Shell)
 SlashCmdList = SlashCmdList or {}
-SLASH_BOOTYRAIDERMOS1 = nil; SlashCmdList.BOOTYRAIDERMOS = nil
-SLASH_BOOTYSUITE1 = "/bs"; SLASH_BOOTYSUITE2 = "/booty"; SLASH_BOOTYSUITE3 = "/mos"
+SLASH_BOOTYSUITE1 = "/bs"; SLASH_BOOTYSUITE2 = "/booty"
 SlashCmdList.BOOTYSUITE = function(message)
     local _, _, command = string.find(tostring(message or ""), "^%s*(%S*)")
     command = string.lower(command or "")

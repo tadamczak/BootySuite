@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/tadamczak/MuklaOfficerSuite/master/Assets/readme-header.png" width="100%" alt="Sons of Mukla"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/tadamczak/BootyLib/develop/Assets/readme-header.png" width="100%" alt="Sons of Mukla"></p>
 
 # Booty Suite
 
@@ -35,6 +35,6 @@ If Stop cannot close the product's windows safely, its work stays paused. Resume
 
 ## Migration
 
-When replacing Mukla Officer Suite, keep the small `MuklaOfficerSuite` migration addon enabled alongside the new products. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.
+To import previous data, keep **Booty Legacy Data Import** enabled alongside the new products. Its historical `MuklaOfficerSuite` folder name lets the client load your previous save file. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.
 
 Settings and each dialog open above the window that launched them. Clicking a window brings its related windows forward together.
