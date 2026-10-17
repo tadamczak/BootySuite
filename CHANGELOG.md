@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.15 — 2026-10-17
+
+- Remove the icon beside the product name on About.
+
 ## 1.0.0-dev.14 — 2026-10-17
 
 - Show “Up to date!” after version discovery finds no newer version among online peers.
