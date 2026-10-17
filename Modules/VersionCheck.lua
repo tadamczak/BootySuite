@@ -90,7 +90,7 @@ function VersionCheck.Create(options)
                     if Booty.Services.Version.IsNewer(BootySuiteDB and BootySuiteDB.latestKnownVersion, peerVersion) then
                         SetStatus("New version available!", false)
                     elseif status ~= "New version available!" then
-                        SetStatus("No newer version reported. Check GitHub for latest release.", false)
+                        SetStatus("Up to date!", false)
                     end
                 end
             end)
