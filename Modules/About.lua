@@ -21,7 +21,7 @@ function About.Create(page, version, options)
     end
     page:SetScript("OnSizeChanged", ResizeArtwork)
     ResizeArtwork()
-    local name = Booty.UI.Components.CreateHeading(page, "", 1, "gold", "about")
+    local name = Booty.UI.Components.CreateHeading(page, "", 1, "gold")
     name:SetPoint("CENTER", page, "LEFT", 105, 34)
     name:SetText("Booty Suite")
     local versionLabel = Booty.UI.Components.CreateLabel(page, nil, "OVERLAY", "GameFontNormal")
