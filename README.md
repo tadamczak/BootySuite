@@ -28,8 +28,9 @@ immediately. The choice is saved and keeps the addon's work and settings.
 BootyLib and BootySuite have no separate feature tab, so these controls are
 disabled for them. Enable unloaded addons and reload before opening them.
 
-Version discovery checks online guild and group members. An unanswered query
-does not confirm the latest release; use the linked GitHub Releases page to check.
+Version discovery checks online guild and group members. **Up to date!** means
+those peers reported no newer version. An unanswered query keeps the previous
+successful check time; use the linked GitHub Releases page to check the latest release.
 
 If Stop cannot close the product's windows safely, its work stays paused. Resume retries that cleanup and starts the product only after it succeeds.
 

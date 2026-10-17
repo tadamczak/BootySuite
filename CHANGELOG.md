@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.14 — 2026-10-17
+
+- Show “Up to date!” after version discovery finds no newer version among online peers.
+
 ## 1.0.0-dev.13 — 2026-10-09
 
 - Use current Booty names and commands throughout the dashboard.
