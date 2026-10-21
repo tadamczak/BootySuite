@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.16 — 2026-10-21
+
+- Restore the saved dashboard position and size throughout login and UI reload.
+
 ## 1.0.0-dev.15 — 2026-10-17
 
 - Remove the icon beside the product name on About.

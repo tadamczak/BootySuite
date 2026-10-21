@@ -81,8 +81,6 @@ function Shell.Initialize()
         onStatusChanged = function(value, stamp) local about = Shell.controllers.about; if about and about.SetUpdateStatus then about:SetUpdateStatus(value, stamp) end end})
     view.statusBar = UI.Dashboard.CreateStatusBar(view.frame)
     view.frame.bootyStatusBar = view.statusBar
-    UI.Dashboard.RestoreGeometry(view.frame, db)
-    view.frame:Hide()
     view.settingsButton:SetScript("OnClick", Shell.OpenSettings)
     local function SaveGeometry()
         db.windowWidth, db.windowHeight = view.frame:GetWidth(), view.frame:GetHeight()
@@ -97,6 +95,9 @@ function Shell.Initialize()
             local controller = Shell.active and Shell.controllers[Shell.active]
             if controller then if shown and controller.Show then controller:Show() elseif not shown and controller.Hide then controller:Hide() end end
         end})
+    -- Bind the view first so the late login restore retains the Suite database.
+    UI.Dashboard.RestoreGeometry(view.frame, db)
+    view.frame:Hide()
     local hide = view.frame:GetScript("OnHide")
     view.frame:SetScript("OnHide", function()
         if hide then hide() end

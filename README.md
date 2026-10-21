@@ -18,6 +18,8 @@ Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`
 
 Use `/bs`, `/booty` or the minimap icon to open the dashboard. Right click the icon for Quick Menu; Shift + left drag moves it. Use `/bs settings` for Settings and `/bs plugins` for the installed products. Loading changes take effect after `/reload`; Stop pauses a loaded product separately. Finish active raid sessions or profiler recordings before stopping or reloading.
 
+The dashboard remembers its position and size across login and `/reload`. Minimizing keeps its expanded window bounds for restoration.
+
 Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
 
 Hover an addon's name in Plugins to see which features it provides.
