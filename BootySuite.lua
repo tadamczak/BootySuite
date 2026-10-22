@@ -298,6 +298,17 @@ table.insert(Shell.providers, {id = "lib", name = "BootyLib", GetSettings = func
         {key = "suppressLoginMessage", label = "Suppress login message", type = "checkbox", path = {"Addon UI", "General"}},
     }}
 end})
+function Suite.GetProfilingTargets()
+    local diagnostics = Lib.Diagnostics
+    local descriptor = diagnostics.CreateProfilingDescriptor(Suite.version,
+        "Suite navigation, product presentation, settings opening (including the dashboard cog) and dashboard layout. Feature-controller work is attributed separately when selected.")
+    diagnostics.AddProfilingFunction(descriptor, Shell, "OpenView", "Open view")
+    diagnostics.AddProfilingFunction(descriptor, Shell, "OpenProduct", "Open product")
+    diagnostics.AddProfilingFunction(descriptor, Shell, "OpenSettings", "Open settings")
+    diagnostics.AddProfilingFunction(descriptor, Suite, "RefreshLayout", "Dashboard layout")
+    diagnostics.AddProfilingScript(descriptor, Shell.dashboard and Shell.dashboard.settingsButton, "OnClick", "Dashboard settings cog", true)
+    return descriptor
+end
 Lib.RegisterSuite(Shell)
 SlashCmdList = SlashCmdList or {}
 SLASH_BOOTYSUITE1 = "/bs"; SLASH_BOOTYSUITE2 = "/booty"

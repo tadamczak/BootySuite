@@ -41,3 +41,5 @@ If Stop cannot close the product's windows safely, its work stays paused. Resume
 To import previous data, keep **Booty Legacy Data Import** enabled alongside the new products. Its historical `MuklaOfficerSuite` folder name lets the client load your previous save file. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.
 
 Settings and each dialog open above the window that launched them. Clicking a window brings its related windows forward together.
+
+With current BootyProfiler installed, **Booty Diagnostics → Profile Booty** can measure selected BootySuite operations after you select the addon and press **Start**. **Stop** ends the capture. The report covers the listed Lua entry points; it does not measure total addon CPU, RAM or disk size.

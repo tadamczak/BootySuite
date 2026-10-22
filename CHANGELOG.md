@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.17 — 2026-10-22
+
+- Expose explicit on-demand timing targets for Booty Diagnostics without idle scanning or memory measurements.
+
 ## 1.0.0-dev.16 — 2026-10-21
 
 - Restore the saved dashboard position and size throughout login and UI reload.
