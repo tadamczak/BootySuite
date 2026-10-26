@@ -22,7 +22,7 @@ The dashboard remembers its position and size across login and `/reload`. Minimi
 
 Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
 
-Plugins shows each addon's current version. Hover its name for a description. **Add to menu** controls only the window tabs; **Add to Quick Menu** independently controls the minimap menu. Disabled or unavailable addons appear in neither menu. Assign shortcuts under **Booty addons and tabs** in WoW Key Bindings to open individual sections.
+Plugins uses a compact table with separate addon, version and status columns. Hover an addon name for its description or a shortened version/status for the full text. The Menu and Quick columns independently choose where each addon appears. **Add to menu** controls only the window tabs; **Add to Quick Menu** independently controls the minimap menu. Disabled or unavailable addons appear in neither menu. Assign shortcuts under **Booty addons and tabs** in WoW Key Bindings to open individual sections.
 
 Use **Open** in Plugins to select an addon's main tab. Clear **Add to menu** to
 open it in a separate window instead. Adding it again restores all its tabs
@@ -43,3 +43,5 @@ To import previous data, keep **Booty Legacy Data Import** enabled alongside the
 Settings and each dialog open above the window that launched them. Clicking a window brings its related windows forward together.
 
 With current BootyProfiler installed, **Booty Diagnostics → Profile Booty** can measure selected BootySuite operations after you select the addon and press **Start**. **Stop** ends the capture. The report covers the listed Lua entry points; it does not measure total addon CPU, RAM or disk size.
+
+`/bs` explains each available command. Suite chat messages use the `[BootySuite]` prefix.

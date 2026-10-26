@@ -357,5 +357,5 @@ SlashCmdList.BOOTYSUITE = function(message)
     elseif command == "about" then Shell.OpenView("about")
     elseif command == "versions" then Lib.Core.ProductCommands.PrintVersions()
     elseif command == "open" then Shell.OpenView(Shell.active or Shell.order[1])
-    else Lib.Print("/bs open | settings | about | versions") end
+    else Lib.Core.ProductCommands.Help("BootySuite", "/bs") end
 end

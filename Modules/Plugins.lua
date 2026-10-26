@@ -205,7 +205,43 @@ function Plugins.Create(parent)
     local hint=UI.CreateComponentLabel(page,nil,"white")
     hint:SetJustifyH("LEFT")
     controller.hint=hint
-    hint:SetText("Loading changes require /reload. Menu and Quick Menu are independent. Stop pauses the addon.")
+    hint:SetText("Choose where addons appear. Loading changes require /reload.")
+    local function Font(label,size)
+        local font,_,flags=label:GetFont()
+        label:SetFont(font,size,flags);label:SetHeight(size+4)
+        if label.SetWordWrap then label:SetWordWrap(false) end
+        if label.SetNonSpaceWrap then label:SetNonSpaceWrap(false) end
+    end
+    local function Cell(label,text,parent,x,y,width)
+        Font(label,11);label:ClearAllPoints();label:SetPoint("TOPLEFT",parent,"TOPLEFT",x,-y)
+        label:SetWidth(0);label:SetText(text)
+        if label:GetStringWidth()>width-2 then
+            local low,high=0,string.len(text)
+            while low<high do
+                local middle=math.floor((low+high+1)/2)
+                label:SetText(string.sub(text,1,middle).."...")
+                if label:GetStringWidth()<=width-2 then low=middle else high=middle-1 end
+            end
+            label:SetText(string.sub(text,1,low).."...")
+        end
+        label:SetWidth(math.max(1,math.min(width,label:GetStringWidth()+2)))
+    end
+    local headers,headerTitles={},{"Addon","Version","Status","Menu","Quick"}
+    for _,text in ipairs(headerTitles) do
+        local label=UI.CreateComponentLabel(page,nil,"gold");label:SetJustifyH("LEFT")
+        table.insert(headers,label)
+    end
+    controller.headers=headers
+    local function HideOwnedTooltip()
+        if GameTooltip and type(GameTooltip.GetOwner)=="function" and GameTooltip:GetOwner()==this then GameTooltip:Hide() end
+    end
+    local function LabelTooltip(parent,label,title,description)
+        local hit=UI.AttachLabelTooltip(parent,label,title,description)
+        hit:SetScript("OnHide",HideOwnedTooltip)
+        return hit
+    end
+    headers[4].tooltip=LabelTooltip(page,headers[4],"Add to menu","Show addons in the Suite window menu.")
+    headers[5].tooltip=LabelTooltip(page,headers[5],"Add to Quick Menu","Show addons in the separate Quick Menu.")
     local function UpdateMessage(ok,failure)
         if not ok then Lib.Print(failure) end
         controller:Refresh()
@@ -217,10 +253,9 @@ function Plugins.Create(parent)
         row.status=UI.CreateComponentLabel(row,nil,"gray")
         row.status:SetJustifyH("LEFT")
         row.version=UI.CreateComponentLabel(row,nil,"gold");row.version:SetJustifyH("LEFT")
-        row.labelTooltip=UI.AttachLabelTooltip(row,row.label,name,function() return row.description end)
-        row.labelTooltip:SetScript("OnHide",function()
-            if GameTooltip and type(GameTooltip.GetOwner)=="function" and GameTooltip:GetOwner()==this then GameTooltip:Hide() end
-        end)
+        row.labelTooltip=LabelTooltip(row,row.label,name,function() return row.description end)
+        row.versionTooltip=LabelTooltip(row,row.version,name.." version",function() return row.versionText end)
+        row.statusTooltip=LabelTooltip(row,row.status,name.." status",function() return row.statusText end)
         row.toggle=UI.CreateButton(row,nil,"Enabled",95,26)
         row.toggle:SetScript("OnClick",function()
             local inventory=Plugins.Inventory()
@@ -248,7 +283,9 @@ function Plugins.Create(parent)
             set=function(_,value) UpdateMessage(Plugins.SetInQuickMenu(name,value)) end,
         })
         row.addToQuickMenu:ClearAllPoints();row.addToQuickMenu:SetPoint("LEFT",row.quickSlot,"LEFT",0,0)
-        row.actions={row.open,row.menuSlot,row.quickSlot,row.toggle,row.stop}
+        UI.AttachTooltip(row.addToMenu,"Add to menu","Show this addon in the Suite window menu.")
+        UI.AttachTooltip(row.addToQuickMenu,"Add to Quick Menu","Show this addon in the separate Quick Menu.")
+        row.actions={row.menuSlot,row.quickSlot,row.open,row.toggle,row.stop}
         controller.rows[name]=row
         return row
     end
@@ -256,51 +293,62 @@ function Plugins.Create(parent)
     controller.reload=reload
     reload:SetScript("OnClick",function() UpdateMessage(Plugins.Reload()) end)
     local function Measure(width)
-        title:ClearAllPoints();title:SetPoint("TOPLEFT",page,"TOPLEFT",12,-12)
-        hint:ClearAllPoints();hint:SetPoint("TOPLEFT",page,"TOPLEFT",12,-44);hint:SetWidth(math.max(1,width-24));hint:SetHeight(0)
-        local hintHeight=math.max(32,UI.MeasureTextHeight(hint,math.max(1,width-24)))
-        hint:SetHeight(hintHeight)
-        local y=52+hintHeight
+        Font(title,16);title:ClearAllPoints();title:SetPoint("TOPLEFT",page,"TOPLEFT",12,-12)
+        Font(hint,11);hint:ClearAllPoints();hint:SetPoint("TOPLEFT",page,"TOPLEFT",12,-36)
+        hint:SetWidth(math.max(1,width-24))
+        if hint.SetWordWrap then hint:SetWordWrap(true) end
+        local hintHeight=UI.MeasureTextHeight(hint,math.max(1,width-24));hint:SetHeight(hintHeight)
+        local rowWidth=math.max(1,width-24)
+        local wide=rowWidth>=560
+        local nameWidth=math.max(118,rowWidth*0.24)
+        local versionWidth=rowWidth-nameWidth-334
+        local columns={0,nameWidth+4,nameWidth+versionWidth+8,rowWidth-228,rowWidth-192}
+        local sizes={nameWidth,versionWidth,94,32,32}
+        local y=44+hintHeight
+        for index,label in ipairs(headers) do
+            if wide then
+                Cell(label,headerTitles[index],page,12+columns[index],y,sizes[index]);label:Show()
+                if label.tooltip then label.tooltip:Show() end
+            else label:Hide();if label.tooltip then label.tooltip:Hide() end end
+        end
+        if wide then y=y+20 end
         for _,name in ipairs(controller.names) do
             local row=controller.rows[name]
-            local rowWidth=math.max(1,width-24)
-            local menuWidth=math.max(114,row.addToMenu:GetWidth()+row.addToMenu.label:GetStringWidth()+7)
-            local quickWidth=math.max(140,row.addToQuickMenu:GetWidth()+row.addToQuickMenu.label:GetStringWidth()+7)
             row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y);row:SetWidth(rowWidth)
-            row.open:SetWidth(54);row.menuSlot:SetWidth(menuWidth);row.menuSlot:SetHeight(math.max(26,row.addToMenu:GetHeight()))
-            row.quickSlot:SetWidth(quickWidth);row.quickSlot:SetHeight(math.max(26,row.addToQuickMenu:GetHeight()))
-            row.toggle:SetWidth(66);row.stop:SetWidth(62)
-            local narrow=rowWidth<320
-            local labelWidth=math.min(row.label:GetStringWidth(),150,math.max(1,rowWidth*0.4))
-            local versionWidth=math.min(110,math.max(1,rowWidth*0.5))
-            row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",0,-3);row.label:SetWidth(labelWidth)
-            row.version:ClearAllPoints();row.version:SetPoint("TOPLEFT",row,"TOPLEFT",narrow and 0 or labelWidth+4,narrow and -23 or -3);row.version:SetWidth(versionWidth)
-            row.status:ClearAllPoints();row.status:SetPoint("TOPLEFT",row,"TOPLEFT",narrow and versionWidth+4 or labelWidth+versionWidth+8,narrow and -23 or -3)
-            row.status:SetWidth(math.max(1,rowWidth-(narrow and 0 or labelWidth+4)-versionWidth-4))
-            local bottom=UI.LayoutFlow(row,row.actions,0,narrow and 44 or 23,rowWidth,4)
-            for _,check in ipairs({row.addToMenu,row.addToQuickMenu}) do
-                local slot=check:GetParent()
-                local labelWidth=math.max(1,slot:GetWidth()-check:GetWidth()-4)
-                check.label:SetWidth(labelWidth);check.label:SetHeight(20)
-                check.labelHit:SetWidth(labelWidth)
+            row.open:SetWidth(44);row.toggle:SetWidth(54);row.stop:SetWidth(50)
+            for _,button in ipairs({row.open,row.toggle,row.stop}) do
+                button:SetHeight(20);button.bootyFitFontSize=11;Font(button.label,11)
+                button.label:SetWidth(button:GetWidth()-8)
             end
-            local actionWidth=54+menuWidth+quickWidth+66+62+16
-            if rowWidth>=actionWidth+320 then
-                row.label:SetWidth(math.min(120,row.label:GetStringWidth()))
-                row.version:ClearAllPoints();row.version:SetPoint("TOPLEFT",row,"TOPLEFT",124,-3);row.version:SetWidth(96)
-                row.status:ClearAllPoints();row.status:SetPoint("TOPLEFT",row,"TOPLEFT",224,-3);row.status:SetWidth(math.max(1,rowWidth-actionWidth-232))
-                local left=rowWidth-actionWidth
-                for _,action in ipairs(row.actions) do
-                    action:ClearAllPoints();action:SetPoint("TOPLEFT",row,"TOPLEFT",left,0)
-                    left=left+action:GetWidth()+4
+            for index,check in ipairs({row.addToMenu,row.addToQuickMenu}) do
+                local slot=check:GetParent();slot:SetWidth(wide and 32 or 56);slot:SetHeight(20)
+                check:SetWidth(16);check:SetHeight(16);check:ClearAllPoints()
+                check:SetPoint("LEFT",slot,"LEFT",wide and 8 or 0,0)
+                if wide then check.label:Hide();check.labelHit:Hide()
+                else
+                    check.label:SetText(index==1 and "Menu" or "Quick");Font(check.label,11)
+                    check.label:SetWidth(38);check.labelHit:SetWidth(38);check.labelHit:SetHeight(20)
+                    check.label:Show();check.labelHit:Show()
                 end
-                bottom=26
             end
-            row:SetHeight(bottom+2)
-            y=y+row:GetHeight()+6
+            local bottom
+            if wide then
+                Cell(row.label,name,row,columns[1],3,sizes[1])
+                Cell(row.version,row.versionText,row,columns[2],3,sizes[2])
+                Cell(row.status,row.statusText,row,columns[3],3,sizes[3])
+                bottom=UI.LayoutFlow(row,row.actions,columns[4],0,rowWidth-columns[4],4)
+            else
+                local small=rowWidth<320
+                Cell(row.label,name,row,0,2,small and rowWidth or 118)
+                Cell(row.version,row.versionText,row,small and 0 or 122,small and 18 or 2,small and rowWidth or math.max(1,rowWidth-220))
+                Cell(row.status,row.statusText,row,small and 0 or rowWidth-94,small and 34 or 2,small and rowWidth or 94)
+                bottom=UI.LayoutFlow(row,row.actions,0,small and 52 or 22,rowWidth,4)
+            end
+            row:SetHeight(bottom+4);y=y+row:GetHeight()
         end
-        reload:ClearAllPoints();reload:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y)
-        return y+40
+        reload:SetHeight(22);reload:SetWidth(84);reload.bootyFitFontSize=11;Font(reload.label,11);reload.label:SetWidth(76)
+        reload:ClearAllPoints();reload:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y-8)
+        return y+42
     end
     function controller:Refresh()
         local inventory=Plugins.Inventory()
@@ -311,10 +359,10 @@ function Plugins.Create(parent)
             local row=EnsureRow(name)
             local current,product=inventory[name],Plugins.GetProduct(name)
             row.description=Plugins.GetDescription(name,current)
-            row.version:SetText(Lib.Core.ProductCommands.Version(name))
+            row.versionText=Lib.Core.ProductCommands.Version(name)
             local pending=Plugins.pending[name]
             local loaded=name=="BootyLib" or name=="BootySuite" or product and product.initialized
-            row.status:SetText(pending~=nil and "Pending /reload" or not current and "Not installed" or product and product.failure and "Unavailable" or loaded and (product and product.stopped and "Stopped" or "Loaded") or "Not loaded")
+            row.statusText=pending~=nil and "Pending /reload" or not current and "Not installed" or product and product.failure and "Unavailable" or loaded and (product and product.stopped and "Stopped" or "Loaded") or "Not loaded"
             row.toggle:SetText(EffectiveEnabled(name,inventory) and "Disable" or "Enable")
             UI.SetButtonEnabled(row.toggle,current~=nil and (name~="BootyLib" or not EffectiveEnabled(name,inventory)))
             row.stop:SetText(product and product.stopped and "Resume" or "Stop")
