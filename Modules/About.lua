@@ -8,7 +8,7 @@ function About.Create(page, version, options)
     local title = Booty.UI.Components.CreateHeading(page, "", 1, "gold", "about")
     title:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -10)
     title:SetText("About")
-    title:Hide()
+    title:Show()
     local artwork = Booty.UI.Components.CreateTexture(page, nil, "ARTWORK")
     artwork:SetPoint("RIGHT", page, "RIGHT", -4, 0)
     artwork:SetTexture("Interface\\AddOns\\BootyLib\\Textures\\AboutArtwork")
@@ -52,6 +52,7 @@ function About.Create(page, version, options)
         return date("%Y-%m-%d %H:%M", timestamp)
     end
     local module = {
+        title = title,
         Hide = function(self) page:Hide() end,
         Show = function(self)
             if options and options.getVersionStatus then self:SetUpdateStatus(options.getVersionStatus(), options.getLastSuccessfulCheck and options.getLastSuccessfulCheck()) end

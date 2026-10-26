@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.21 — 2026-10-27
+
+- Show the About heading and use a compact measured Plugins table with full text, fixed action columns and horizontal scrolling in narrow windows.
+
 ## 1.0.0-dev.20 — 2026-10-26
 
 - Match settings group icons to menu tabs, toggle Settings from its cog and offer independent addon profiles alongside combined Suite profiles.

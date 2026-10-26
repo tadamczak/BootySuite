@@ -215,16 +215,7 @@ function Plugins.Create(parent)
     local function Cell(label,text,parent,x,y,width)
         Font(label,11);label:ClearAllPoints();label:SetPoint("TOPLEFT",parent,"TOPLEFT",x,-y)
         label:SetWidth(0);label:SetText(text)
-        if label:GetStringWidth()>width-2 then
-            local low,high=0,string.len(text)
-            while low<high do
-                local middle=math.floor((low+high+1)/2)
-                label:SetText(string.sub(text,1,middle).."...")
-                if label:GetStringWidth()<=width-2 then low=middle else high=middle-1 end
-            end
-            label:SetText(string.sub(text,1,low).."...")
-        end
-        label:SetWidth(math.max(1,math.min(width,label:GetStringWidth()+2)))
+        label:SetWidth(math.max(1,label:GetStringWidth()+2))
     end
     local headers,headerTitles={},{"Addon","Version","Status","Menu","Quick"}
     for _,text in ipairs(headerTitles) do
@@ -292,63 +283,75 @@ function Plugins.Create(parent)
     local reload=UI.CreateButton(page,nil,"Reload UI",120,28)
     controller.reload=reload
     reload:SetScript("OnClick",function() UpdateMessage(Plugins.Reload()) end)
-    local function Measure(width)
-        Font(title,16);title:ClearAllPoints();title:SetPoint("TOPLEFT",page,"TOPLEFT",12,-12)
-        Font(hint,11);hint:ClearAllPoints();hint:SetPoint("TOPLEFT",page,"TOPLEFT",12,-36)
-        hint:SetWidth(math.max(1,width-24))
-        if hint.SetWordWrap then hint:SetWordWrap(true) end
-        local hintHeight=UI.MeasureTextHeight(hint,math.max(1,width-24));hint:SetHeight(hintHeight)
-        local rowWidth=math.max(1,width-24)
-        local wide=rowWidth>=560
-        local nameWidth=math.max(118,rowWidth*0.24)
-        local versionWidth=rowWidth-nameWidth-334
-        local columns={0,nameWidth+4,nameWidth+versionWidth+8,rowWidth-228,rowWidth-192}
-        local sizes={nameWidth,versionWidth,94,32,32}
-        local y=44+hintHeight
-        for index,label in ipairs(headers) do
-            if wide then
-                Cell(label,headerTitles[index],page,12+columns[index],y,sizes[index]);label:Show()
-                if label.tooltip then label.tooltip:Show() end
-            else label:Hide();if label.tooltip then label.tooltip:Hide() end end
-        end
-        if wide then y=y+20 end
+    local horizontal=UI.CreateContainer(nil,frame);horizontal:SetHeight(24);horizontal:Hide()
+    horizontal:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",8,0)
+    local left=UI.CreateButton(horizontal,nil,"<",28,20)
+    local right=UI.CreateButton(horizontal,nil,">",28,20)
+    left:SetPoint("LEFT",horizontal,"LEFT",0,0);right:SetPoint("LEFT",left,"RIGHT",6,0)
+    local scrollLabel=UI.CreateComponentLabel(horizontal,"Scroll table","gold")
+    scrollLabel:SetPoint("LEFT",right,"RIGHT",8,0)
+    controller.horizontal,controller.scrollLeft,controller.scrollRight=horizontal,left,right
+    local function Scroll(delta)
+        controller.horizontalOffset=math.max(0,math.min(controller.horizontalMaximum or 0,(controller.horizontalOffset or 0)+delta))
+        page.layoutViewport:SetHorizontalScroll(controller.horizontalOffset)
+        UI.SetButtonEnabled(left,controller.horizontalOffset>0)
+        UI.SetButtonEnabled(right,controller.horizontalOffset<(controller.horizontalMaximum or 0))
+    end
+    left:SetScript("OnClick",function() Scroll(-math.max(80,page.layoutViewport:GetWidth()/2)) end)
+    right:SetScript("OnClick",function() Scroll(math.max(80,page.layoutViewport:GetWidth()/2)) end)
+    local widths,columns={},{}
+    local function TextWidth(label,text)
+        Font(label,11);label:SetWidth(0);label:SetText(text);return math.ceil(label:GetStringWidth())+2
+    end
+    local function MeasureColumns()
+        for index,label in ipairs(headers) do widths[index]=TextWidth(label,headerTitles[index]) end
+        widths[6],widths[7],widths[8]=44,54,50
         for _,name in ipairs(controller.names) do
             local row=controller.rows[name]
-            row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y);row:SetWidth(rowWidth)
-            row.open:SetWidth(44);row.toggle:SetWidth(54);row.stop:SetWidth(50)
+            widths[1]=math.max(widths[1],TextWidth(row.label,name))
+            widths[2]=math.max(widths[2],TextWidth(row.version,row.versionText))
+            widths[3]=math.max(widths[3],TextWidth(row.status,row.statusText))
+            for index,button in ipairs({row.open,row.toggle,row.stop}) do
+                widths[index+5]=math.max(widths[index+5],TextWidth(button.label,button:GetText())+12)
+            end
+        end
+        local x=0
+        for index=1,8 do columns[index]=x;x=x+widths[index]+8 end
+        controller.tableWidth=x-8
+    end
+    local function Measure(width)
+        Font(title,16);title:ClearAllPoints();title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8)
+        Font(hint,11);hint:ClearAllPoints();hint:SetPoint("TOPLEFT",page,"TOPLEFT",8,-32)
+        hint:SetWidth(0);hint:SetWidth(hint:GetStringWidth()+2)
+        controller.contentWidth=math.max(controller.tableWidth+16,hint:GetWidth()+16)
+        for index,label in ipairs(headers) do
+            Cell(label,headerTitles[index],page,8+columns[index],54,widths[index]);label:Show()
+            if label.tooltip then label.tooltip:Show() end
+        end
+        local y=74
+        for _,name in ipairs(controller.names) do
+            local row=controller.rows[name]
+            row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",8,-y);row:SetWidth(controller.tableWidth);row:SetHeight(24)
+            Cell(row.label,name,row,columns[1],3,widths[1])
+            Cell(row.version,row.versionText,row,columns[2],3,widths[2])
+            Cell(row.status,row.statusText,row,columns[3],3,widths[3])
+            for index,action in ipairs(row.actions) do
+                local column=index+3
+                action:ClearAllPoints();action:SetPoint("TOPLEFT",row,"TOPLEFT",columns[column],0)
+                action:SetWidth(widths[column]);action:SetHeight(20)
+            end
             for _,button in ipairs({row.open,row.toggle,row.stop}) do
-                button:SetHeight(20);button.bootyFitFontSize=11;Font(button.label,11)
-                button.label:SetWidth(button:GetWidth()-8)
+                button.bootyFitFontSize=11;Font(button.label,11);button.label:SetWidth(button:GetWidth()-8)
             end
-            for index,check in ipairs({row.addToMenu,row.addToQuickMenu}) do
-                local slot=check:GetParent();slot:SetWidth(wide and 32 or 56);slot:SetHeight(20)
-                check:SetWidth(16);check:SetHeight(16);check:ClearAllPoints()
-                check:SetPoint("LEFT",slot,"LEFT",wide and 8 or 0,0)
-                if wide then check.label:Hide();check.labelHit:Hide()
-                else
-                    check.label:SetText(index==1 and "Menu" or "Quick");Font(check.label,11)
-                    check.label:SetWidth(38);check.labelHit:SetWidth(38);check.labelHit:SetHeight(20)
-                    check.label:Show();check.labelHit:Show()
-                end
+            for _,check in ipairs({row.addToMenu,row.addToQuickMenu}) do
+                check:SetWidth(16);check:SetHeight(16);check:ClearAllPoints();check:SetPoint("CENTER",check:GetParent(),"CENTER",0,0)
+                check.label:Hide();check.labelHit:Hide()
             end
-            local bottom
-            if wide then
-                Cell(row.label,name,row,columns[1],3,sizes[1])
-                Cell(row.version,row.versionText,row,columns[2],3,sizes[2])
-                Cell(row.status,row.statusText,row,columns[3],3,sizes[3])
-                bottom=UI.LayoutFlow(row,row.actions,columns[4],0,rowWidth-columns[4],4)
-            else
-                local small=rowWidth<320
-                Cell(row.label,name,row,0,2,small and rowWidth or 118)
-                Cell(row.version,row.versionText,row,small and 0 or 122,small and 18 or 2,small and rowWidth or math.max(1,rowWidth-220))
-                Cell(row.status,row.statusText,row,small and 0 or rowWidth-94,small and 34 or 2,small and rowWidth or 94)
-                bottom=UI.LayoutFlow(row,row.actions,0,small and 52 or 22,rowWidth,4)
-            end
-            row:SetHeight(bottom+4);y=y+row:GetHeight()
+            y=y+24
         end
         reload:SetHeight(22);reload:SetWidth(84);reload.bootyFitFontSize=11;Font(reload.label,11);reload.label:SetWidth(76)
-        reload:ClearAllPoints();reload:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y-8)
-        return y+42
+        reload:ClearAllPoints();reload:SetPoint("TOPLEFT",page,"TOPLEFT",8,-y-8)
+        return y+38
     end
     function controller:Refresh()
         local inventory=Plugins.Inventory()
@@ -378,7 +381,17 @@ function Plugins.Create(parent)
         for name,row in pairs(self.rows) do if not active[name] then row:Hide() end end
         local width,height=UI.GetFrameSpan(parent)
         frame:SetWidth(math.max(1,width));frame:SetHeight(math.max(1,height))
+        MeasureColumns()
         UI.LayoutResponsiveCanvas(page,Measure,nil,math.max(1,width),math.max(1,height))
+        local overflow=controller.contentWidth>page.layoutViewport:GetWidth()
+        if overflow then
+            horizontal:Show();horizontal:SetWidth(math.max(1,width-16))
+            UI.LayoutResponsiveCanvas(page,Measure,nil,math.max(1,width),math.max(1,height-24))
+        else horizontal:Hide() end
+        page:SetWidth(math.max(page.layoutViewport:GetWidth(),controller.contentWidth))
+        if page.layoutViewport.UpdateScrollChildRect then page.layoutViewport:UpdateScrollChildRect() end
+        controller.horizontalMaximum=math.max(0,page:GetWidth()-page.layoutViewport:GetWidth())
+        Scroll(0)
     end
     function controller:Show() frame:Show();self:Refresh() end
     function controller:Hide() frame:Hide() end
