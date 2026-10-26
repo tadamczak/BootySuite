@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.20 — 2026-10-26
+
+- Match settings group icons to menu tabs, toggle Settings from its cog and offer independent addon profiles alongside combined Suite profiles.
+
 ## 1.0.0-dev.19 — 2026-10-26
 
 - Replace tall plugin cards with compact version/status columns and independent menu checkboxes; explain /bs commands.

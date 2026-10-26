@@ -97,6 +97,10 @@ function Shell.OpenSettings(owner)
     if not owner or not owner.GetFrameLevel then owner = Shell.dashboard and Shell.dashboard.frame end
     return Lib.Core.SettingsHost.Open(Shell, {integrated = true, window = owner}, Shell.providers)
 end
+function Shell.ToggleSettings(owner)
+    if not owner or not owner.GetFrameLevel then owner=Shell.dashboard and Shell.dashboard.frame end
+    return Lib.Core.SettingsHost.Toggle(Shell,{integrated=true,window=owner},Shell.providers)
+end
 function Shell.Initialize()
     local db = Suite.GetDatabase()
     Shell.dashboard = UI.Dashboard.CreateWindow(Suite.version, {name = "BootySuiteDashboard", title = "Booty Suite"})
@@ -105,7 +109,7 @@ function Shell.Initialize()
         onStatusChanged = function(value, stamp) local about = Shell.controllers.about; if about and about.SetUpdateStatus then about:SetUpdateStatus(value, stamp) end end})
     view.statusBar = UI.Dashboard.CreateStatusBar(view.frame)
     view.frame.bootyStatusBar = view.statusBar
-    view.settingsButton:SetScript("OnClick", Shell.OpenSettings)
+    view.settingsButton:SetScript("OnClick", Shell.ToggleSettings)
     local function SaveGeometry()
         db.windowWidth, db.windowHeight = view.frame:GetWidth(), view.frame:GetHeight()
         db.windowLeft, db.windowBottom = view.frame:GetLeft(), view.frame:GetBottom()
@@ -147,7 +151,7 @@ function Shell.Attach(product)
         if view.id == "plugins" or view.id == "about" then error("This view identifier is reserved by Booty Suite: " .. view.id) end
     end
     local host = Lib.Core.ProductHost.Create(product, {integrated = true, window = Shell.dashboard.frame,
-        GetParent = Mount, OpenView = Shell.OpenView, OpenSettings = Shell.OpenSettings, Print = Lib.Print,
+        GetParent = Mount, OpenView = Shell.OpenView, OpenSettings = Shell.OpenSettings, ToggleSettings = Shell.ToggleSettings, Print = Lib.Print,
         GetPresentationSetting = Suite.GetSetting})
     host.IsIntegrated = function() return true end
     local close = host.Close
@@ -273,14 +277,13 @@ function Shell.Ready()
     for _, item in ipairs(builtins.views) do Shell.entries[item.id] = {product = builtins, view = item} end
     Shell.hosts.suite = {standalone = false, integrated = true, window = Shell.dashboard.frame, OpenSettings = Shell.OpenSettings, Print = Lib.Print}
     local order, items, seen, usedIcons = {}, {}, {}, {}
-    local icons = {focus="view", frame="monitor", map="ping"}
     local fallbackIcons = {"info", "analyze", "health", "memory", "rules", "loot_tools", "raid_tools", "link", "dice"}
     local function AddView(id)
         local entry = Shell.entries[id]
         if entry and Shell.IsInMenu(entry.product.id) and Shell.IsProductAvailable(entry.product) and not seen[id] then
             seen[id] = true
             table.insert(order, id)
-            local icon = icons[id] or entry.view.icon or "groups"
+            local icon = entry.product.views and entry.product.views[1] == entry.view and UI.GetProductIcon(entry.product) or entry.view.icon or "groups"
             if usedIcons[icon] then
                 for _, candidate in ipairs(fallbackIcons) do if not usedIcons[candidate] then icon=candidate;break end end
             end

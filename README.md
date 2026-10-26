@@ -20,7 +20,7 @@ Use `/bs` or `/booty` to list commands. `/bs open` or the minimap icon opens the
 
 The dashboard remembers its position and size across login and `/reload`. Minimizing keeps its expanded window bounds for restoration.
 
-Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
+Settings groups options by addon, using the same icons as the menu. Click its cog again to close it. Under Profile, each addon has its own profile list and BootySuite has a combined list. Saving a Suite profile also saves the current addon profiles; missing selections get unique Custom profiles. Loading the Suite profile restores its saved settings and addon profile selections, even if an addon profile was changed or deleted later. Reset restores preferences and keeps raid, guild and profiler history.
 
 Plugins uses a compact table with separate addon, version and status columns. Hover an addon name for its description or a shortened version/status for the full text. The Menu and Quick columns independently choose where each addon appears. **Add to menu** controls only the window tabs; **Add to Quick Menu** independently controls the minimap menu. Disabled or unavailable addons appear in neither menu. Assign shortcuts under **Booty addons and tabs** in WoW Key Bindings to open individual sections.
 
