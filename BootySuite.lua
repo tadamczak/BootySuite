@@ -7,9 +7,33 @@ function Shell.IsInMenu(productId)
     local choices = Suite.GetDatabase().menuProducts
     return not choices or choices[productId] ~= false
 end
+function Shell.IsInQuickMenu(productId)
+    local choices = Suite.GetDatabase().quickMenuProducts
+    return not choices or choices[productId] ~= false
+end
+function Shell.IsProductAvailable(product)
+    if not product or product.stopped or product.failure then return false end
+    if product.id == "suite" then return true end
+    if not product.initialized then return false end
+    local name = product.addonName or product.name
+    local pending = Suite.Modules.Plugins.pending[name]
+    if pending == false then return false end
+    if not Shell.inventory then Shell.inventory, Shell.inventoryKnown = Lib.Core.ProductCommands.Inventory() end
+    return not Shell.inventoryKnown or Shell.inventory[name] ~= nil and Shell.inventory[name].enabled
+end
+function Shell.SetInQuickMenu(productId, enabled)
+    if type(enabled) ~= "boolean" then return false, "Choose whether to add this addon to Quick Menu." end
+    local ready, reason = Shell.CanSetInMenu(productId)
+    if not ready then return false, reason end
+    local db = Suite.GetDatabase()
+    db.quickMenuProducts = db.quickMenuProducts or {}
+    db.quickMenuProducts[productId] = enabled
+    if Shell.menu then Shell.menu:Close() end
+    return true
+end
 local function Available(id)
     local entry = Shell.entries[id]
-    return entry and not entry.product.stopped and not entry.product.failure and (not entry.view.IsAvailable or entry.view.IsAvailable()) or false
+    return entry and Shell.IsProductAvailable(entry.product) and (not entry.view.IsAvailable or entry.view.IsAvailable()) or false
 end
 local function InMenu(id)
     local entry = Shell.entries[id]
@@ -143,6 +167,7 @@ function Shell.CanSetInMenu(productId)
     if product.failure then return false, product.failure end
     if not product.initialized then return false, "Addon has not finished loading." end
     if product.stopped then return false, "Resume this addon before opening it." end
+    if not Shell.IsProductAvailable(product) then return false, "Enable this addon and reload before opening it." end
     local first = product.views and product.views[1]
     if not first then return false, "This addon has no feature window." end
     return true
@@ -200,13 +225,14 @@ function Shell.SetInMenu(productId, enabled)
     return true
 end
 function Shell.GetQuickMenu()
+    Shell.inventory, Shell.inventoryKnown = Lib.Core.ProductCommands.Inventory()
     local items, seen = {}, {}
     local function AddProduct(id)
         if seen[id] then return end
         seen[id] = true
         local product = Lib.GetProduct(id)
         local host = Shell.hosts[id]
-        if product and host and Shell.IsInMenu(id) and not product.stopped and not product.failure and product.GetQuickMenu then
+        if product and host and Shell.IsInQuickMenu(id) and Shell.IsProductAvailable(product) and product.GetQuickMenu then
             local contributions = product.GetQuickMenu(host)
             if id == "profiler" then table.insert(items, {text = "Profiler", icon = "performance", action = function() Shell.OpenView("profiler") end, children = contributions})
             else for _, entry in ipairs(contributions) do table.insert(items, entry) end end
@@ -228,10 +254,13 @@ function Suite.RefreshLayout()
     end
 end
 function Suite.RefreshProductAvailability()
-    if Shell.navigation then Shell.navigation.RefreshAvailability() end
+    if Shell.dashboard then Shell.Ready() end
+    if Shell.menu then Shell.menu:Close() end
+    if Shell.active and not Available(Shell.active) then Shell.OpenView("plugins") end
     Suite.RefreshLayout()
 end
 function Shell.Ready()
+    Shell.inventory, Shell.inventoryKnown = Lib.Core.ProductCommands.Inventory()
     local builtins = {id = "suite", name = "BootySuite", views = {
         {id = "plugins", label = "Plugins", icon = "groups", create = Suite.Modules.Plugins.Create},
         {id = "about", label = "About", icon = "about", create = function(parent)
@@ -243,14 +272,21 @@ function Shell.Ready()
         end}}}
     for _, item in ipairs(builtins.views) do Shell.entries[item.id] = {product = builtins, view = item} end
     Shell.hosts.suite = {standalone = false, integrated = true, window = Shell.dashboard.frame, OpenSettings = Shell.OpenSettings, Print = Lib.Print}
-    local order, items, seen = {}, {}, {}
+    local order, items, seen, usedIcons = {}, {}, {}, {}
+    local icons = {focus="view", frame="monitor", map="ping"}
+    local fallbackIcons = {"info", "analyze", "health", "memory", "rules", "loot_tools", "raid_tools", "link", "dice"}
     local function AddView(id)
         local entry = Shell.entries[id]
-        if entry and Shell.IsInMenu(entry.product.id) and not seen[id] then
+        if entry and Shell.IsInMenu(entry.product.id) and Shell.IsProductAvailable(entry.product) and not seen[id] then
             seen[id] = true
             table.insert(order, id)
+            local icon = icons[id] or entry.view.icon or "groups"
+            if usedIcons[icon] then
+                for _, candidate in ipairs(fallbackIcons) do if not usedIcons[candidate] then icon=candidate;break end end
+            end
+            usedIcons[icon] = true
             table.insert(items, {key = id, text = entry.view.label,
-                icon = UI.ClassicAsset("Icons\\" .. (entry.view.icon or "groups") .. ".tga")})
+                icon = UI.ClassicAsset("Icons\\" .. icon .. ".tga")})
         end
     end
     for _, id in ipairs(preferredOrder) do
@@ -318,5 +354,8 @@ SlashCmdList.BOOTYSUITE = function(message)
     if command == "settings" then Shell.OpenSettings()
     elseif command == "roll" then local raider = Lib.GetProduct("raider"); if raider and raider.Command then raider.Command(message) else Lib.Print("BootyRaider is not loaded.") end
     elseif command == "plugins" then Shell.OpenView("plugins")
-    else Shell.OpenView(Shell.active or Shell.order[1]) end
+    elseif command == "about" then Shell.OpenView("about")
+    elseif command == "versions" then Lib.Core.ProductCommands.PrintVersions()
+    elseif command == "open" then Shell.OpenView(Shell.active or Shell.order[1])
+    else Lib.Print("/bs open | settings | about | versions") end
 end

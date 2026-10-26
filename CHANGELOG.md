@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.18 — 2026-10-26
+
+- Separate Menu and Quick Menu choices; hide unavailable addons, use distinct tab icons and show compact versioned plugin rows. Bare /bs lists commands; add open, about and versions.
+
 ## 1.0.0-dev.17 — 2026-10-22
 
 - Expose explicit on-demand timing targets for Booty Diagnostics without idle scanning or memory measurements.

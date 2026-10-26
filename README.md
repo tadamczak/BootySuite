@@ -16,13 +16,13 @@ Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`
 
 ## Usage
 
-Use `/bs`, `/booty` or the minimap icon to open the dashboard. Right click the icon for Quick Menu; Shift + left drag moves it. Use `/bs settings` for Settings and `/bs plugins` for the installed products. Loading changes take effect after `/reload`; Stop pauses a loaded product separately. Finish active raid sessions or profiler recordings before stopping or reloading.
+Use `/bs` or `/booty` to list commands. `/bs open` or the minimap icon opens the dashboard; `/bs about` opens About and `/bs versions` lists versions of all installed Booty addons. Right click the icon for Quick Menu; Shift + left drag moves it. Use `/bs settings` for Settings and `/bs plugins` for the installed products. Loading changes take effect after `/reload`; Stop pauses a loaded product separately. Finish active raid sessions or profiler recordings before stopping or reloading.
 
 The dashboard remembers its position and size across login and `/reload`. Minimizing keeps its expanded window bounds for restoration.
 
 Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
 
-Hover an addon's name in Plugins to see which features it provides.
+Plugins shows each addon's current version. Hover its name for a description. **Add to menu** controls only the window tabs; **Add to Quick Menu** independently controls the minimap menu. Disabled or unavailable addons appear in neither menu. Assign shortcuts under **Booty addons and tabs** in WoW Key Bindings to open individual sections.
 
 Use **Open** in Plugins to select an addon's main tab. Clear **Add to menu** to
 open it in a separate window instead. Adding it again restores all its tabs
