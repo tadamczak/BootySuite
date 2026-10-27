@@ -197,7 +197,7 @@ function Plugins.Resume(name)
     if host and host.ApplySettings then host.ApplySettings() end
     Notify();return true
 end
-function Plugins.Create(parent)
+function Plugins.Create(parent,host)
     local frame=UI.CreateContainer(nil,parent);frame:SetAllPoints(parent)
     local page=UI.CreateResponsiveCanvas(frame,"BootySuitePluginsScroll")
     local controller={frame=frame,page=page,rows={}}
@@ -283,22 +283,6 @@ function Plugins.Create(parent)
     local reload=UI.CreateButton(page,nil,"Reload UI",120,28)
     controller.reload=reload
     reload:SetScript("OnClick",function() UpdateMessage(Plugins.Reload()) end)
-    local horizontal=UI.CreateContainer(nil,frame);horizontal:SetHeight(24);horizontal:Hide()
-    horizontal:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",8,0)
-    local left=UI.CreateButton(horizontal,nil,"<",28,20)
-    local right=UI.CreateButton(horizontal,nil,">",28,20)
-    left:SetPoint("LEFT",horizontal,"LEFT",0,0);right:SetPoint("LEFT",left,"RIGHT",6,0)
-    local scrollLabel=UI.CreateComponentLabel(horizontal,"Scroll table","gold")
-    scrollLabel:SetPoint("LEFT",right,"RIGHT",8,0)
-    controller.horizontal,controller.scrollLeft,controller.scrollRight=horizontal,left,right
-    local function Scroll(delta)
-        controller.horizontalOffset=math.max(0,math.min(controller.horizontalMaximum or 0,(controller.horizontalOffset or 0)+delta))
-        page.layoutViewport:SetHorizontalScroll(controller.horizontalOffset)
-        UI.SetButtonEnabled(left,controller.horizontalOffset>0)
-        UI.SetButtonEnabled(right,controller.horizontalOffset<(controller.horizontalMaximum or 0))
-    end
-    left:SetScript("OnClick",function() Scroll(-math.max(80,page.layoutViewport:GetWidth()/2)) end)
-    right:SetScript("OnClick",function() Scroll(math.max(80,page.layoutViewport:GetWidth()/2)) end)
     local widths,columns={},{}
     local function TextWidth(label,text)
         Font(label,11);label:SetWidth(0);label:SetText(text);return math.ceil(label:GetStringWidth())+2
@@ -316,8 +300,8 @@ function Plugins.Create(parent)
             end
         end
         local x=0
-        for index=1,8 do columns[index]=x;x=x+widths[index]+8 end
-        controller.tableWidth=x-8
+        for index=1,8 do columns[index]=x;x=x+widths[index]+6 end
+        controller.tableWidth=x-6
     end
     local function Measure(width)
         Font(title,16);title:ClearAllPoints();title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8)
@@ -382,19 +366,24 @@ function Plugins.Create(parent)
         local width,height=UI.GetFrameSpan(parent)
         frame:SetWidth(math.max(1,width));frame:SetHeight(math.max(1,height))
         MeasureColumns()
+        Font(hint,11);hint:SetWidth(0)
+        local required=math.max(controller.tableWidth+16,hint:GetStringWidth()+18)
+        local contentHeight=74+table.getn(self.names)*24+38
+        if contentHeight>height+0.5 then required=required+20 end
+        self.minimumContentWidth=required
+        if host and host.FitContentWidth then
+            self.sizing=true
+            local ok,resolved=pcall(host.FitContentWidth,required)
+            self.sizing=nil
+            if not ok then error(resolved) end
+            width=resolved
+        end
+        frame:SetWidth(math.max(1,width))
         UI.LayoutResponsiveCanvas(page,Measure,nil,math.max(1,width),math.max(1,height))
-        local overflow=controller.contentWidth>page.layoutViewport:GetWidth()
-        if overflow then
-            horizontal:Show();horizontal:SetWidth(math.max(1,width-16))
-            UI.LayoutResponsiveCanvas(page,Measure,nil,math.max(1,width),math.max(1,height-24))
-        else horizontal:Hide() end
-        page:SetWidth(math.max(page.layoutViewport:GetWidth(),controller.contentWidth))
         if page.layoutViewport.UpdateScrollChildRect then page.layoutViewport:UpdateScrollChildRect() end
-        controller.horizontalMaximum=math.max(0,page:GetWidth()-page.layoutViewport:GetWidth())
-        Scroll(0)
     end
     function controller:Show() frame:Show();self:Refresh() end
-    function controller:Hide() frame:Hide() end
-    function controller:OnResize() if frame:IsVisible() then self:Refresh() end end
+    function controller:Hide() frame:Hide();if host and host.FitContentWidth then host.FitContentWidth(nil) end end
+    function controller:OnResize() if frame:IsVisible() and not self.sizing then self:Refresh() end end
     frame:Hide();return controller
 end

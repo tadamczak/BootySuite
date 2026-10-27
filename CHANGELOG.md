@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.22 — 2026-10-27
+
+- Remove horizontal scrolling from Plugins; fit full text and single-row actions using tight measured columns and a page-specific minimum window width.
+
 ## 1.0.0-dev.21 — 2026-10-27
 
 - Show the About heading and use a compact measured Plugins table with full text, fixed action columns and horizontal scrolling in narrow windows.

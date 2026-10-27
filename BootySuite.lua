@@ -257,6 +257,19 @@ function Suite.RefreshLayout()
         if controller.OnResize then controller:OnResize() elseif controller.RefreshLayout then controller:RefreshLayout() end
     end
 end
+function Shell.FitContentWidth(required)
+    local view=Shell.dashboard
+    -- Navigation publishes this from its permanent chrome and mounting insets.
+    -- Anchored child GetWidth can still report the previous resize in 1.12.
+    local inset=350-(view.contentPanel.bootyMinimumWidth or 339)
+    local minimum=math.max(350,(required or 0)+inset)
+    if not view.minimized then
+        view.frame:SetMinResize(minimum,380)
+        view.frame:SetMaxResize(math.max(1100,minimum),760)
+        if required and view.frame:GetWidth()<minimum then view.frame:SetWidth(minimum) end
+    end
+    return view.frame:GetWidth()-inset
+end
 function Suite.RefreshProductAvailability()
     if Shell.dashboard then Shell.Ready() end
     if Shell.menu then Shell.menu:Close() end
@@ -275,7 +288,7 @@ function Shell.Ready()
             return controller
         end}}}
     for _, item in ipairs(builtins.views) do Shell.entries[item.id] = {product = builtins, view = item} end
-    Shell.hosts.suite = {standalone = false, integrated = true, window = Shell.dashboard.frame, OpenSettings = Shell.OpenSettings, Print = Lib.Print}
+    Shell.hosts.suite = {standalone = false, integrated = true, window = Shell.dashboard.frame, OpenSettings = Shell.OpenSettings, Print = Lib.Print, FitContentWidth = Shell.FitContentWidth}
     local order, items, seen, usedIcons = {}, {}, {}, {}
     local fallbackIcons = {"info", "analyze", "health", "memory", "rules", "loot_tools", "raid_tools", "link", "dice"}
     local function AddView(id)

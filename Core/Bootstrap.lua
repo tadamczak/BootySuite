@@ -1,4 +1,4 @@
-BootySuite = {version = "1.0.0-dev.21", Core = {}, Modules = {}, Services = {}, Database = {}}
+BootySuite = {version = "1.0.0-dev.22", Core = {}, Modules = {}, Services = {}, Database = {}}
 local Suite, Lib = BootySuite, BootyLib
 Suite.UI = Lib.UI
 Suite.Core.Compatibility = Lib.Core.Compatibility
