@@ -92,6 +92,16 @@ function Shell.OpenView(id)
     if Shell.navigation then Shell.navigation.SetActive(id) end
     Suite.RefreshLayout(); return controller
 end
+function Shell.ToggleView(id)
+    if not Available(id) then Lib.Print("This section is unavailable. Guild sections require guild membership."); return false end
+    local entry = Shell.entries[id]
+    if not Shell.IsInMenu(entry.product.id) then return Shell.hosts[entry.product.id].ToggleDetachedView(id) end
+    if Shell.active == id and Shell.dashboard.frame:IsVisible() and not Shell.dashboard.minimized then
+        UI.Dashboard.ToggleWindow(Shell.dashboard)
+        return Shell.controllers[id] or true
+    end
+    return Shell.OpenView(id)
+end
 function Shell.OpenSettings(owner)
     -- UI handlers pass no explicit owner; detached product cogs do.
     if not owner or not owner.GetFrameLevel then owner = Shell.dashboard and Shell.dashboard.frame end
@@ -151,7 +161,8 @@ function Shell.Attach(product)
         if view.id == "plugins" or view.id == "about" then error("This view identifier is reserved by Booty Suite: " .. view.id) end
     end
     local host = Lib.Core.ProductHost.Create(product, {integrated = true, window = Shell.dashboard.frame,
-        GetParent = Mount, OpenView = Shell.OpenView, OpenSettings = Shell.OpenSettings, ToggleSettings = Shell.ToggleSettings, Print = Lib.Print,
+        GetParent = Mount, OpenView = Shell.OpenView, ToggleView = Shell.ToggleView,
+        OpenSettings = Shell.OpenSettings, ToggleSettings = Shell.ToggleSettings, Print = Lib.Print,
         GetPresentationSetting = Suite.GetSetting})
     host.IsIntegrated = function() return true end
     local close = host.Close

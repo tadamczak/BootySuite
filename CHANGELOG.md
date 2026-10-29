@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-dev.23 — 2026-10-29
+
+- A page keybinding closes Suite when that page is already open; a different page binding switches to it. A minimized dashboard is restored.
+
 ## 1.0.0-dev.22 — 2026-10-27
 
 - Remove horizontal scrolling from Plugins; fit full text and single-row actions using tight measured columns and a page-specific minimum window width.

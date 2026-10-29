@@ -45,3 +45,5 @@ Settings and each dialog open above the window that launched them. Clicking a wi
 With current BootyProfiler installed, **Booty Diagnostics → Profile Booty** can measure selected BootySuite operations after you select the addon and press **Start**. **Stop** ends the capture. The report covers the listed Lua entry points; it does not measure total addon CPU, RAM or disk size.
 
 `/bs` explains each available command. Suite chat messages use the `[BootySuite]` prefix.
+
+Press the keybinding for the currently open page again to close the dashboard. A different page binding switches to that page; using a binding while minimized restores the dashboard.
