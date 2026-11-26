@@ -7,9 +7,33 @@ function Shell.IsInMenu(productId)
     local choices = Suite.GetDatabase().menuProducts
     return not choices or choices[productId] ~= false
 end
+function Shell.IsInQuickMenu(productId)
+    local choices = Suite.GetDatabase().quickMenuProducts
+    return not choices or choices[productId] ~= false
+end
+function Shell.IsProductAvailable(product)
+    if not product or product.stopped or product.failure then return false end
+    if product.id == "suite" then return true end
+    if not product.initialized then return false end
+    local name = product.addonName or product.name
+    local pending = Suite.Modules.Plugins.pending[name]
+    if pending == false then return false end
+    if not Shell.inventory then Shell.inventory, Shell.inventoryKnown = Lib.Core.ProductCommands.Inventory() end
+    return not Shell.inventoryKnown or Shell.inventory[name] ~= nil and Shell.inventory[name].enabled
+end
+function Shell.SetInQuickMenu(productId, enabled)
+    if type(enabled) ~= "boolean" then return false, "Choose whether to add this addon to Quick Menu." end
+    local ready, reason = Shell.CanSetInMenu(productId)
+    if not ready then return false, reason end
+    local db = Suite.GetDatabase()
+    db.quickMenuProducts = db.quickMenuProducts or {}
+    db.quickMenuProducts[productId] = enabled
+    if Shell.menu then Shell.menu:Close() end
+    return true
+end
 local function Available(id)
     local entry = Shell.entries[id]
-    return entry and not entry.product.stopped and not entry.product.failure and (not entry.view.IsAvailable or entry.view.IsAvailable()) or false
+    return entry and Shell.IsProductAvailable(entry.product) and (not entry.view.IsAvailable or entry.view.IsAvailable()) or false
 end
 local function InMenu(id)
     local entry = Shell.entries[id]
@@ -68,10 +92,24 @@ function Shell.OpenView(id)
     if Shell.navigation then Shell.navigation.SetActive(id) end
     Suite.RefreshLayout(); return controller
 end
+function Shell.ToggleView(id)
+    if not Available(id) then Lib.Print("This section is unavailable. Guild sections require guild membership."); return false end
+    local entry = Shell.entries[id]
+    if not Shell.IsInMenu(entry.product.id) then return Shell.hosts[entry.product.id].ToggleDetachedView(id) end
+    if Shell.active == id and Shell.dashboard.frame:IsVisible() and not Shell.dashboard.minimized then
+        UI.Dashboard.ToggleWindow(Shell.dashboard)
+        return Shell.controllers[id] or true
+    end
+    return Shell.OpenView(id)
+end
 function Shell.OpenSettings(owner)
     -- UI handlers pass no explicit owner; detached product cogs do.
     if not owner or not owner.GetFrameLevel then owner = Shell.dashboard and Shell.dashboard.frame end
     return Lib.Core.SettingsHost.Open(Shell, {integrated = true, window = owner}, Shell.providers)
+end
+function Shell.ToggleSettings(owner)
+    if not owner or not owner.GetFrameLevel then owner=Shell.dashboard and Shell.dashboard.frame end
+    return Lib.Core.SettingsHost.Toggle(Shell,{integrated=true,window=owner},Shell.providers)
 end
 function Shell.Initialize()
     local db = Suite.GetDatabase()
@@ -81,9 +119,7 @@ function Shell.Initialize()
         onStatusChanged = function(value, stamp) local about = Shell.controllers.about; if about and about.SetUpdateStatus then about:SetUpdateStatus(value, stamp) end end})
     view.statusBar = UI.Dashboard.CreateStatusBar(view.frame)
     view.frame.bootyStatusBar = view.statusBar
-    UI.Dashboard.RestoreGeometry(view.frame, db)
-    view.frame:Hide()
-    view.settingsButton:SetScript("OnClick", Shell.OpenSettings)
+    view.settingsButton:SetScript("OnClick", Shell.ToggleSettings)
     local function SaveGeometry()
         db.windowWidth, db.windowHeight = view.frame:GetWidth(), view.frame:GetHeight()
         db.windowLeft, db.windowBottom = view.frame:GetLeft(), view.frame:GetBottom()
@@ -97,6 +133,9 @@ function Shell.Initialize()
             local controller = Shell.active and Shell.controllers[Shell.active]
             if controller then if shown and controller.Show then controller:Show() elseif not shown and controller.Hide then controller:Hide() end end
         end})
+    -- Bind the view first so the late login restore retains the Suite database.
+    UI.Dashboard.RestoreGeometry(view.frame, db)
+    view.frame:Hide()
     local hide = view.frame:GetScript("OnHide")
     view.frame:SetScript("OnHide", function()
         if hide then hide() end
@@ -122,7 +161,8 @@ function Shell.Attach(product)
         if view.id == "plugins" or view.id == "about" then error("This view identifier is reserved by Booty Suite: " .. view.id) end
     end
     local host = Lib.Core.ProductHost.Create(product, {integrated = true, window = Shell.dashboard.frame,
-        GetParent = Mount, OpenView = Shell.OpenView, OpenSettings = Shell.OpenSettings, Print = Lib.Print,
+        GetParent = Mount, OpenView = Shell.OpenView, ToggleView = Shell.ToggleView,
+        OpenSettings = Shell.OpenSettings, ToggleSettings = Shell.ToggleSettings, Print = Lib.Print,
         GetPresentationSetting = Suite.GetSetting})
     host.IsIntegrated = function() return true end
     local close = host.Close
@@ -142,6 +182,7 @@ function Shell.CanSetInMenu(productId)
     if product.failure then return false, product.failure end
     if not product.initialized then return false, "Addon has not finished loading." end
     if product.stopped then return false, "Resume this addon before opening it." end
+    if not Shell.IsProductAvailable(product) then return false, "Enable this addon and reload before opening it." end
     local first = product.views and product.views[1]
     if not first then return false, "This addon has no feature window." end
     return true
@@ -199,13 +240,14 @@ function Shell.SetInMenu(productId, enabled)
     return true
 end
 function Shell.GetQuickMenu()
+    Shell.inventory, Shell.inventoryKnown = Lib.Core.ProductCommands.Inventory()
     local items, seen = {}, {}
     local function AddProduct(id)
         if seen[id] then return end
         seen[id] = true
         local product = Lib.GetProduct(id)
         local host = Shell.hosts[id]
-        if product and host and Shell.IsInMenu(id) and not product.stopped and not product.failure and product.GetQuickMenu then
+        if product and host and Shell.IsInQuickMenu(id) and Shell.IsProductAvailable(product) and product.GetQuickMenu then
             local contributions = product.GetQuickMenu(host)
             if id == "profiler" then table.insert(items, {text = "Profiler", icon = "performance", action = function() Shell.OpenView("profiler") end, children = contributions})
             else for _, entry in ipairs(contributions) do table.insert(items, entry) end end
@@ -226,11 +268,27 @@ function Suite.RefreshLayout()
         if controller.OnResize then controller:OnResize() elseif controller.RefreshLayout then controller:RefreshLayout() end
     end
 end
+function Shell.FitContentWidth(required)
+    local view=Shell.dashboard
+    -- Navigation publishes this from its permanent chrome and mounting insets.
+    -- Anchored child GetWidth can still report the previous resize in 1.12.
+    local inset=350-(view.contentPanel.bootyMinimumWidth or 339)
+    local minimum=math.max(350,(required or 0)+inset)
+    if not view.minimized then
+        view.frame:SetMinResize(minimum,380)
+        view.frame:SetMaxResize(math.max(1100,minimum),760)
+        if required and view.frame:GetWidth()<minimum then view.frame:SetWidth(minimum) end
+    end
+    return view.frame:GetWidth()-inset
+end
 function Suite.RefreshProductAvailability()
-    if Shell.navigation then Shell.navigation.RefreshAvailability() end
+    if Shell.dashboard then Shell.Ready() end
+    if Shell.menu then Shell.menu:Close() end
+    if Shell.active and not Available(Shell.active) then Shell.OpenView("plugins") end
     Suite.RefreshLayout()
 end
 function Shell.Ready()
+    Shell.inventory, Shell.inventoryKnown = Lib.Core.ProductCommands.Inventory()
     local builtins = {id = "suite", name = "BootySuite", views = {
         {id = "plugins", label = "Plugins", icon = "groups", create = Suite.Modules.Plugins.Create},
         {id = "about", label = "About", icon = "about", create = function(parent)
@@ -241,15 +299,21 @@ function Shell.Ready()
             return controller
         end}}}
     for _, item in ipairs(builtins.views) do Shell.entries[item.id] = {product = builtins, view = item} end
-    Shell.hosts.suite = {standalone = false, integrated = true, window = Shell.dashboard.frame, OpenSettings = Shell.OpenSettings, Print = Lib.Print}
-    local order, items, seen = {}, {}, {}
+    Shell.hosts.suite = {standalone = false, integrated = true, window = Shell.dashboard.frame, OpenSettings = Shell.OpenSettings, Print = Lib.Print, FitContentWidth = Shell.FitContentWidth}
+    local order, items, seen, usedIcons = {}, {}, {}, {}
+    local fallbackIcons = {"info", "analyze", "health", "memory", "rules", "loot_tools", "raid_tools", "link", "dice"}
     local function AddView(id)
         local entry = Shell.entries[id]
-        if entry and Shell.IsInMenu(entry.product.id) and not seen[id] then
+        if entry and Shell.IsInMenu(entry.product.id) and Shell.IsProductAvailable(entry.product) and not seen[id] then
             seen[id] = true
             table.insert(order, id)
+            local icon = entry.product.views and entry.product.views[1] == entry.view and UI.GetProductIcon(entry.product) or entry.view.icon or "groups"
+            if usedIcons[icon] then
+                for _, candidate in ipairs(fallbackIcons) do if not usedIcons[candidate] then icon=candidate;break end end
+            end
+            usedIcons[icon] = true
             table.insert(items, {key = id, text = entry.view.label,
-                icon = UI.ClassicAsset("Icons\\" .. (entry.view.icon or "groups") .. ".tga")})
+                icon = UI.ClassicAsset("Icons\\" .. icon .. ".tga")})
         end
     end
     for _, id in ipairs(preferredOrder) do
@@ -297,6 +361,17 @@ table.insert(Shell.providers, {id = "lib", name = "BootyLib", GetSettings = func
         {key = "suppressLoginMessage", label = "Suppress login message", type = "checkbox", path = {"Addon UI", "General"}},
     }}
 end})
+function Suite.GetProfilingTargets()
+    local diagnostics = Lib.Diagnostics
+    local descriptor = diagnostics.CreateProfilingDescriptor(Suite.version,
+        "Suite navigation, product presentation, settings opening (including the dashboard cog) and dashboard layout. Feature-controller work is attributed separately when selected.")
+    diagnostics.AddProfilingFunction(descriptor, Shell, "OpenView", "Open view")
+    diagnostics.AddProfilingFunction(descriptor, Shell, "OpenProduct", "Open product")
+    diagnostics.AddProfilingFunction(descriptor, Shell, "OpenSettings", "Open settings")
+    diagnostics.AddProfilingFunction(descriptor, Suite, "RefreshLayout", "Dashboard layout")
+    diagnostics.AddProfilingScript(descriptor, Shell.dashboard and Shell.dashboard.settingsButton, "OnClick", "Dashboard settings cog", true)
+    return descriptor
+end
 Lib.RegisterSuite(Shell)
 SlashCmdList = SlashCmdList or {}
 SLASH_BOOTYSUITE1 = "/bs"; SLASH_BOOTYSUITE2 = "/booty"
@@ -306,5 +381,8 @@ SlashCmdList.BOOTYSUITE = function(message)
     if command == "settings" then Shell.OpenSettings()
     elseif command == "roll" then local raider = Lib.GetProduct("raider"); if raider and raider.Command then raider.Command(message) else Lib.Print("BootyRaider is not loaded.") end
     elseif command == "plugins" then Shell.OpenView("plugins")
-    else Shell.OpenView(Shell.active or Shell.order[1]) end
+    elseif command == "about" then Shell.OpenView("about")
+    elseif command == "versions" then Lib.Core.ProductCommands.PrintVersions()
+    elseif command == "open" then Shell.OpenView(Shell.active or Shell.order[1])
+    else Lib.Core.ProductCommands.Help("BootySuite", "/bs") end
 end

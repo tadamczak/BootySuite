@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.0.0-dev.23 — 2026-10-29
+
+- A page keybinding closes Suite when that page is already open; a different page binding switches to it. A minimized dashboard is restored.
+
+## 1.0.0-dev.22 — 2026-10-27
+
+- Remove horizontal scrolling from Plugins; fit full text and single-row actions using tight measured columns and a page-specific minimum window width.
+
+## 1.0.0-dev.21 — 2026-10-27
+
+- Show the About heading and use a compact measured Plugins table with full text, fixed action columns and horizontal scrolling in narrow windows.
+
+## 1.0.0-dev.20 — 2026-10-26
+
+- Match settings group icons to menu tabs, toggle Settings from its cog and offer independent addon profiles alongside combined Suite profiles.
+
+## 1.0.0-dev.19 — 2026-10-26
+
+- Replace tall plugin cards with compact version/status columns and independent menu checkboxes; explain /bs commands.
+
+## 1.0.0-dev.18 — 2026-10-26
+
+- Separate Menu and Quick Menu choices; hide unavailable addons, use distinct tab icons and show compact versioned plugin rows. Bare /bs lists commands; add open, about and versions.
+
+## 1.0.0-dev.17 — 2026-10-22
+
+- Expose explicit on-demand timing targets for Booty Diagnostics without idle scanning or memory measurements.
+
+## 1.0.0-dev.16 — 2026-10-21
+
+- Restore the saved dashboard position and size throughout login and UI reload.
+
 ## 1.0.0-dev.15 — 2026-10-17
 
 - Remove the icon beside the product name on About.

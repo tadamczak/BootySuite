@@ -2,19 +2,7 @@ local Suite,Lib,UI=BootySuite,BootyLib,BootyLib.UI.Components
 local Plugins={pending={}}
 Suite.Modules.Plugins=Plugins
 local function Flag(value) return value~=nil and value~=false and value~=0 end
-function Plugins.Inventory()
-    local result={}
-    if type(GetNumAddOns)~="function" or type(GetAddOnInfo)~="function" then return result end
-    local ok,count=pcall(GetNumAddOns)
-    if not ok or type(count)~="number" or count~=count or count<0 or count>4096 or count~=math.floor(count) then return result end
-    for index=1,count do
-        local success,name,title,notes,enabled,loadable,reason=pcall(GetAddOnInfo,index)
-        if success and type(name)=="string" and name~="" then
-            result[name]={name=name,title=title,notes=type(notes)=="string" and notes or nil,enabled=Flag(enabled),loadable=Flag(loadable),reason=reason,index=index}
-        end
-    end
-    return result
-end
+function Plugins.Inventory() return (Lib.Core.ProductCommands.Inventory()) end
 function Plugins.GetProduct(name)
     for _,id in ipairs(Lib.GetProducts()) do
         local product=Lib.GetProduct(id)
@@ -60,6 +48,16 @@ function Plugins.SetInMenu(name,enabled)
     if not ready then return false,failure end
     local _,id=Feature(name)
     return Suite.Shell.SetInMenu(id,enabled)
+end
+function Plugins.IsInQuickMenu(name)
+    local product,id=Feature(name)
+    return product~=nil and Suite.Shell.IsInQuickMenu(id) or false
+end
+function Plugins.SetInQuickMenu(name,enabled)
+    local ready,failure=Plugins.CanSetInMenu(name)
+    if not ready then return false,failure end
+    local _,id=Feature(name)
+    return Suite.Shell.SetInQuickMenu(id,enabled)
 end
 local descriptions={
     BootyLib="Shared interface, visual styles and utilities required by all Booty addons.",
@@ -154,6 +152,7 @@ function Plugins.SetEnabled(name,enabled)
     local ok,failure=pcall(action,name)
     if not ok or failure==false or failure==0 then return false,tostring(failure) end
     Plugins.pending[name]=enabled
+    if Suite.RefreshProductAvailability then Suite.RefreshProductAvailability() end
     return true
 end
 function Plugins.Reload()
@@ -198,7 +197,7 @@ function Plugins.Resume(name)
     if host and host.ApplySettings then host.ApplySettings() end
     Notify();return true
 end
-function Plugins.Create(parent)
+function Plugins.Create(parent,host)
     local frame=UI.CreateContainer(nil,parent);frame:SetAllPoints(parent)
     local page=UI.CreateResponsiveCanvas(frame,"BootySuitePluginsScroll")
     local controller={frame=frame,page=page,rows={}}
@@ -206,7 +205,34 @@ function Plugins.Create(parent)
     local hint=UI.CreateComponentLabel(page,nil,"white")
     hint:SetJustifyH("LEFT")
     controller.hint=hint
-    hint:SetText("Loading changes apply after /reload. Stop pauses current work without unloading the addon. Add to menu shows the addon's tabs; Open selects its tab or opens a separate window.")
+    hint:SetText("Choose where addons appear. Loading changes require /reload.")
+    local function Font(label,size)
+        local font,_,flags=label:GetFont()
+        label:SetFont(font,size,flags);label:SetHeight(size+4)
+        if label.SetWordWrap then label:SetWordWrap(false) end
+        if label.SetNonSpaceWrap then label:SetNonSpaceWrap(false) end
+    end
+    local function Cell(label,text,parent,x,y,width)
+        Font(label,11);label:ClearAllPoints();label:SetPoint("TOPLEFT",parent,"TOPLEFT",x,-y)
+        label:SetWidth(0);label:SetText(text)
+        label:SetWidth(math.max(1,label:GetStringWidth()+2))
+    end
+    local headers,headerTitles={},{"Addon","Version","Status","Menu","Quick"}
+    for _,text in ipairs(headerTitles) do
+        local label=UI.CreateComponentLabel(page,nil,"gold");label:SetJustifyH("LEFT")
+        table.insert(headers,label)
+    end
+    controller.headers=headers
+    local function HideOwnedTooltip()
+        if GameTooltip and type(GameTooltip.GetOwner)=="function" and GameTooltip:GetOwner()==this then GameTooltip:Hide() end
+    end
+    local function LabelTooltip(parent,label,title,description)
+        local hit=UI.AttachLabelTooltip(parent,label,title,description)
+        hit:SetScript("OnHide",HideOwnedTooltip)
+        return hit
+    end
+    headers[4].tooltip=LabelTooltip(page,headers[4],"Add to menu","Show addons in the Suite window menu.")
+    headers[5].tooltip=LabelTooltip(page,headers[5],"Add to Quick Menu","Show addons in the separate Quick Menu.")
     local function UpdateMessage(ok,failure)
         if not ok then Lib.Print(failure) end
         controller:Refresh()
@@ -217,10 +243,10 @@ function Plugins.Create(parent)
         row.label=UI.CreateComponentLabel(row,nil,"white");row.label:SetText(name);row.label:SetJustifyH("LEFT")
         row.status=UI.CreateComponentLabel(row,nil,"gray")
         row.status:SetJustifyH("LEFT")
-        row.labelTooltip=UI.AttachLabelTooltip(row,row.label,name,function() return row.description end)
-        row.labelTooltip:SetScript("OnHide",function()
-            if GameTooltip and type(GameTooltip.GetOwner)=="function" and GameTooltip:GetOwner()==this then GameTooltip:Hide() end
-        end)
+        row.version=UI.CreateComponentLabel(row,nil,"gold");row.version:SetJustifyH("LEFT")
+        row.labelTooltip=LabelTooltip(row,row.label,name,function() return row.description end)
+        row.versionTooltip=LabelTooltip(row,row.version,name.." version",function() return row.versionText end)
+        row.statusTooltip=LabelTooltip(row,row.status,name.." status",function() return row.statusText end)
         row.toggle=UI.CreateButton(row,nil,"Enabled",95,26)
         row.toggle:SetScript("OnClick",function()
             local inventory=Plugins.Inventory()
@@ -241,47 +267,75 @@ function Plugins.Create(parent)
             set=function(_,value) UpdateMessage(Plugins.SetInMenu(name,value)) end,
         })
         row.addToMenu:ClearAllPoints();row.addToMenu:SetPoint("LEFT",row.menuSlot,"LEFT",0,0)
-        row.actions={row.open,row.menuSlot,row.toggle,row.stop}
+        row.quickSlot=UI.CreateContainer(nil,row);row.quickSlot:SetHeight(26)
+        row.addToQuickMenu=UI.Settings.CreateCheckbox(row.quickSlot,0,0,"Add to Quick Menu",name,nil,{
+            ensure=function() end,
+            get=function() return Plugins.IsInQuickMenu(name) end,
+            set=function(_,value) UpdateMessage(Plugins.SetInQuickMenu(name,value)) end,
+        })
+        row.addToQuickMenu:ClearAllPoints();row.addToQuickMenu:SetPoint("LEFT",row.quickSlot,"LEFT",0,0)
+        UI.AttachTooltip(row.addToMenu,"Add to menu","Show this addon in the Suite window menu.")
+        UI.AttachTooltip(row.addToQuickMenu,"Add to Quick Menu","Show this addon in the separate Quick Menu.")
+        row.actions={row.menuSlot,row.quickSlot,row.open,row.toggle,row.stop}
         controller.rows[name]=row
         return row
     end
     local reload=UI.CreateButton(page,nil,"Reload UI",120,28)
     controller.reload=reload
     reload:SetScript("OnClick",function() UpdateMessage(Plugins.Reload()) end)
-    local function Measure(width)
-        title:ClearAllPoints();title:SetPoint("TOPLEFT",page,"TOPLEFT",12,-12)
-        hint:ClearAllPoints();hint:SetPoint("TOPLEFT",page,"TOPLEFT",12,-44);hint:SetWidth(math.max(1,width-24));hint:SetHeight(0)
-        local hintHeight=math.max(32,UI.MeasureTextHeight(hint,math.max(1,width-24)))
-        hint:SetHeight(hintHeight)
-        local y=52+hintHeight
+    local widths,columns={},{}
+    local function TextWidth(label,text)
+        Font(label,11);label:SetWidth(0);label:SetText(text);return math.ceil(label:GetStringWidth())+2
+    end
+    local function MeasureColumns()
+        for index,label in ipairs(headers) do widths[index]=TextWidth(label,headerTitles[index]) end
+        widths[6],widths[7],widths[8]=44,54,50
         for _,name in ipairs(controller.names) do
             local row=controller.rows[name]
-            local rowWidth=math.max(1,width-24)
-            local menuWidth=math.max(114,row.addToMenu:GetWidth()+row.addToMenu.label:GetStringWidth()+7)
-            local actionWidth=72+menuWidth+95+76+18
-            local narrow=rowWidth<actionWidth+265
-            row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y);row:SetWidth(rowWidth)
-            row.open:SetWidth(72);row.menuSlot:SetWidth(menuWidth);row.menuSlot:SetHeight(math.max(26,row.addToMenu:GetHeight()))
-            row.toggle:SetWidth(95);row.stop:SetWidth(76)
-            row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT",row,"TOPLEFT",0,-5)
-            row.label:SetWidth(math.max(1,math.min(narrow and rowWidth or 150,row.label:GetStringWidth())))
-            row.status:ClearAllPoints();row.status:SetPoint("TOPLEFT",row,"TOPLEFT",narrow and 0 or 155,narrow and -31 or -5)
-            row.status:SetWidth(math.max(1,narrow and rowWidth or rowWidth-actionWidth-167))
-            row.open:ClearAllPoints();row.menuSlot:ClearAllPoints();row.toggle:ClearAllPoints();row.stop:ClearAllPoints()
-            if narrow then
-                local bottom=UI.LayoutFlow(row,row.actions,0,55,rowWidth,6)
-                row:SetHeight(bottom+4)
-            else
-                row.toggle:SetPoint("TOPRIGHT",row,"TOPRIGHT",-82,0)
-                row.stop:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0)
-                row.menuSlot:SetPoint("RIGHT",row.toggle,"LEFT",-6,0)
-                row.open:SetPoint("RIGHT",row.menuSlot,"LEFT",-6,0)
-                row:SetHeight(math.max(38,row.menuSlot:GetHeight()+6))
+            widths[1]=math.max(widths[1],TextWidth(row.label,name))
+            widths[2]=math.max(widths[2],TextWidth(row.version,row.versionText))
+            widths[3]=math.max(widths[3],TextWidth(row.status,row.statusText))
+            for index,button in ipairs({row.open,row.toggle,row.stop}) do
+                widths[index+5]=math.max(widths[index+5],TextWidth(button.label,button:GetText())+12)
             end
-            y=y+row:GetHeight()+6
         end
-        reload:ClearAllPoints();reload:SetPoint("TOPLEFT",page,"TOPLEFT",12,-y)
-        return y+40
+        local x=0
+        for index=1,8 do columns[index]=x;x=x+widths[index]+6 end
+        controller.tableWidth=x-6
+    end
+    local function Measure(width)
+        Font(title,16);title:ClearAllPoints();title:SetPoint("TOPLEFT",page,"TOPLEFT",8,-8)
+        Font(hint,11);hint:ClearAllPoints();hint:SetPoint("TOPLEFT",page,"TOPLEFT",8,-32)
+        hint:SetWidth(0);hint:SetWidth(hint:GetStringWidth()+2)
+        controller.contentWidth=math.max(controller.tableWidth+16,hint:GetWidth()+16)
+        for index,label in ipairs(headers) do
+            Cell(label,headerTitles[index],page,8+columns[index],54,widths[index]);label:Show()
+            if label.tooltip then label.tooltip:Show() end
+        end
+        local y=74
+        for _,name in ipairs(controller.names) do
+            local row=controller.rows[name]
+            row:ClearAllPoints();row:SetPoint("TOPLEFT",page,"TOPLEFT",8,-y);row:SetWidth(controller.tableWidth);row:SetHeight(24)
+            Cell(row.label,name,row,columns[1],3,widths[1])
+            Cell(row.version,row.versionText,row,columns[2],3,widths[2])
+            Cell(row.status,row.statusText,row,columns[3],3,widths[3])
+            for index,action in ipairs(row.actions) do
+                local column=index+3
+                action:ClearAllPoints();action:SetPoint("TOPLEFT",row,"TOPLEFT",columns[column],0)
+                action:SetWidth(widths[column]);action:SetHeight(20)
+            end
+            for _,button in ipairs({row.open,row.toggle,row.stop}) do
+                button.bootyFitFontSize=11;Font(button.label,11);button.label:SetWidth(button:GetWidth()-8)
+            end
+            for _,check in ipairs({row.addToMenu,row.addToQuickMenu}) do
+                check:SetWidth(16);check:SetHeight(16);check:ClearAllPoints();check:SetPoint("CENTER",check:GetParent(),"CENTER",0,0)
+                check.label:Hide();check.labelHit:Hide()
+            end
+            y=y+24
+        end
+        reload:SetHeight(22);reload:SetWidth(84);reload.bootyFitFontSize=11;Font(reload.label,11);reload.label:SetWidth(76)
+        reload:ClearAllPoints();reload:SetPoint("TOPLEFT",page,"TOPLEFT",8,-y-8)
+        return y+38
     end
     function controller:Refresh()
         local inventory=Plugins.Inventory()
@@ -292,9 +346,10 @@ function Plugins.Create(parent)
             local row=EnsureRow(name)
             local current,product=inventory[name],Plugins.GetProduct(name)
             row.description=Plugins.GetDescription(name,current)
+            row.versionText=Lib.Core.ProductCommands.Version(name)
             local pending=Plugins.pending[name]
             local loaded=name=="BootyLib" or name=="BootySuite" or product and product.initialized
-            row.status:SetText(pending~=nil and "Pending /reload" or not current and "Not installed" or product and product.failure and "Unavailable" or loaded and (product and product.stopped and "Stopped" or "Loaded") or "Not loaded")
+            row.statusText=pending~=nil and "Pending /reload" or not current and "Not installed" or product and product.failure and "Unavailable" or loaded and (product and product.stopped and "Stopped" or "Loaded") or "Not loaded"
             row.toggle:SetText(EffectiveEnabled(name,inventory) and "Disable" or "Enable")
             UI.SetButtonEnabled(row.toggle,current~=nil and (name~="BootyLib" or not EffectiveEnabled(name,inventory)))
             row.stop:SetText(product and product.stopped and "Resume" or "Stop")
@@ -303,15 +358,32 @@ function Plugins.Create(parent)
             UI.SetButtonEnabled(row.open,canOpen)
             row.addToMenu:SetChecked(Plugins.IsInMenu(name) and 1 or nil)
             UI.Settings.SetCheckboxEnabled(row.addToMenu,Plugins.CanSetInMenu(name))
+            row.addToQuickMenu:SetChecked(Plugins.IsInQuickMenu(name) and 1 or nil)
+            UI.Settings.SetCheckboxEnabled(row.addToQuickMenu,Plugins.CanSetInMenu(name))
             row:Show()
         end
         for name,row in pairs(self.rows) do if not active[name] then row:Hide() end end
         local width,height=UI.GetFrameSpan(parent)
         frame:SetWidth(math.max(1,width));frame:SetHeight(math.max(1,height))
+        MeasureColumns()
+        Font(hint,11);hint:SetWidth(0)
+        local required=math.max(controller.tableWidth+16,hint:GetStringWidth()+18)
+        local contentHeight=74+table.getn(self.names)*24+38
+        if contentHeight>height+0.5 then required=required+20 end
+        self.minimumContentWidth=required
+        if host and host.FitContentWidth then
+            self.sizing=true
+            local ok,resolved=pcall(host.FitContentWidth,required)
+            self.sizing=nil
+            if not ok then error(resolved) end
+            width=resolved
+        end
+        frame:SetWidth(math.max(1,width))
         UI.LayoutResponsiveCanvas(page,Measure,nil,math.max(1,width),math.max(1,height))
+        if page.layoutViewport.UpdateScrollChildRect then page.layoutViewport:UpdateScrollChildRect() end
     end
     function controller:Show() frame:Show();self:Refresh() end
-    function controller:Hide() frame:Hide() end
-    function controller:OnResize() if frame:IsVisible() then self:Refresh() end end
+    function controller:Hide() frame:Hide();if host and host.FitContentWidth then host.FitContentWidth(nil) end end
+    function controller:OnResize() if frame:IsVisible() and not self.sizing then self:Refresh() end end
     frame:Hide();return controller
 end

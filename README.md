@@ -16,11 +16,13 @@ Install `BootyLib`, `BootySuite` and the products you want in `Interface/AddOns`
 
 ## Usage
 
-Use `/bs`, `/booty` or the minimap icon to open the dashboard. Right click the icon for Quick Menu; Shift + left drag moves it. Use `/bs settings` for Settings and `/bs plugins` for the installed products. Loading changes take effect after `/reload`; Stop pauses a loaded product separately. Finish active raid sessions or profiler recordings before stopping or reloading.
+Use `/bs` or `/booty` to list commands. `/bs open` or the minimap icon opens the dashboard; `/bs about` opens About and `/bs versions` lists versions of all installed Booty addons. Right click the icon for Quick Menu; Shift + left drag moves it. Use `/bs settings` for Settings and `/bs plugins` for the installed products. Loading changes take effect after `/reload`; Stop pauses a loaded product separately. Finish active raid sessions or profiler recordings before stopping or reloading.
 
-Settings includes Search and named profiles under Profile → General. Add, Save, Load, Delete and Export manage profiles for installed products. Reset restores preferences and keeps raid, guild and profiler history.
+The dashboard remembers its position and size across login and `/reload`. Minimizing keeps its expanded window bounds for restoration.
 
-Hover an addon's name in Plugins to see which features it provides.
+Settings groups options by addon, using the same icons as the menu. Click its cog again to close it. Under Profile, each addon has its own profile list and BootySuite has a combined list. Saving a Suite profile also saves the current addon profiles; missing selections get unique custom profiles. Loading the Suite profile selects and loads those named addon profiles. If a mapped profile was deleted, Suite recreates it from its saved backup. BootyLib has no profile list. General is the first Settings section. Reset restores preferences and keeps raid, guild and profiler history.
+
+Plugins uses a compact table with full addon names, versions and statuses. Actions stay on the same row. Column widths follow their contents, with small fixed gaps. Plugins fits the full table by setting the minimum window width it needs; there is no horizontal scrolling. Other tabs retain their normal resize limits. Hover an addon name for its description. The Menu and Quick columns independently choose where each addon appears. **Add to menu** controls only the window tabs; **Add to Quick Menu** independently controls the minimap menu. Disabled or unavailable addons appear in neither menu. Assign shortcuts under **Booty addons and tabs** in WoW Key Bindings to open individual sections.
 
 Use **Open** in Plugins to select an addon's main tab. Clear **Add to menu** to
 open it in a separate window instead. Adding it again restores all its tabs
@@ -39,3 +41,9 @@ If Stop cannot close the product's windows safely, its work stays paused. Resume
 To import previous data, keep **Booty Legacy Data Import** enabled alongside the new products. Its historical `MuklaOfficerSuite` folder name lets the client load your previous save file. Existing data and settings are imported without clearing their old source. Keep the previous SavedVariables until raid history, loot and profiles have been checked in game.
 
 Settings and each dialog open above the window that launched them. Clicking a window brings its related windows forward together.
+
+With current BootyProfiler installed, **Booty Diagnostics → Profile Booty** can measure selected BootySuite operations after you select the addon and press **Start**. **Stop** ends the capture. The report covers the listed Lua entry points; it does not measure total addon CPU, RAM or disk size.
+
+`/bs` explains each available command. Suite chat messages use the `[BootySuite]` prefix.
+
+Press the keybinding for the currently open page again to close the dashboard. A different page binding switches to that page; using a binding while minimized restores the dashboard.
